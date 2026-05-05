@@ -13,16 +13,8 @@ public class JumpState : IPlayerState
 
     public void Enter()
     {
-        // ---------------- DASH SAFETY ----------------
-        if (player.isDashing)
-        {
-            sm.ChangeState(new AirState(player, sm));
-            return;
-        }
-
-        // ---------------- CLEAN JUMP ----------------
         Vector2 v = player.rb.linearVelocity;
-        if (v.y < 0) v.y = 0; // downward momentum cancel
+        if (v.y < 0) v.y = 0;
         player.rb.linearVelocity = v;
 
         player.rb.AddForce(Vector2.up * player.jumpForce, ForceMode2D.Impulse);
@@ -32,26 +24,23 @@ public class JumpState : IPlayerState
 
     public void Update()
     {
-        // ---------------- AIR MOVEMENT ----------------
         player.ApplyMovement(player.airControl);
 
-        // ---------------- DASH ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f && !player.isDashing)
         {
             sm.ChangeState(new DashState(player, sm));
             return;
         }
 
-        // ---------------- FALL TRANSITION ----------------
+        // ---------------- FALL ----------------
         if (player.rb.linearVelocity.y < -0.1f)
         {
             sm.ChangeState(new AirState(player, sm));
             return;
         }
 
-        // ---------------- GROUNDED RETURN (SAFE) ----------------
-        // 🔥 FIX: instant flicker bug önler
-        if (player.isGrounded && player.rb.linearVelocity.y <= 0.01f)
+        // ---------------- SAFE LAND CHECK ----------------
+        if (player.isGrounded && player.rb.linearVelocity.y <= 0.05f)
         {
             sm.ChangeState(new GroundedState(player, sm));
             return;

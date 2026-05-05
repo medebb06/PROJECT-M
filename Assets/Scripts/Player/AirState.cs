@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class AirState : IPlayerState
 {
@@ -16,18 +16,21 @@ public class AirState : IPlayerState
 
     public void Update()
     {
+        // ---------------- AIR CONTROL ----------------
         player.ApplyMovement(player.airControl);
 
-        // Ground check
-        if (player.isGrounded && player.rb.linearVelocity.y <= 0.1f)
-        {
-            sm.ChangeState(new GroundedState(player, sm));
-        }
-
-        // dash mid-air tekrar yap�labilsin
+        // ---------------- DASH ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
         {
             sm.ChangeState(new DashState(player, sm));
+            return;
+        }
+
+        // ---------------- GROUNDED TRANSITION (STABLE) ----------------
+        if (player.isGrounded && player.rb.linearVelocity.y <= 0.1f)
+        {
+            sm.ChangeState(new GroundedState(player, sm));
+            return; // 🔥 CRITICAL FIX (missing before)
         }
     }
 

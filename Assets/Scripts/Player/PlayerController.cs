@@ -7,11 +7,9 @@ public class PlayerController : MonoBehaviour
     public Rigidbody2D rb;
     public Transform groundCheck;
     public LayerMask groundMask;
-
-    [Header("Visual")]
     public Transform modelPivot;
 
-    [Header("Landing Shake")]
+    [Header("Camera Shake")]
     public CinemachineImpulseSource impulseSource;
 
     // ---------------- MOVE ----------------
@@ -24,9 +22,11 @@ public class PlayerController : MonoBehaviour
     // ---------------- JUMP ----------------
     [Header("Jump")]
     public float jumpForce = 12f;
-    [Header("Jump Buffer")]
     public float jumpBufferTime = 0.15f;
-    public float jumpBufferCounter;
+    public float coyoteTime = 0.12f;
+
+    [HideInInspector] public float jumpBufferCounter;
+    [HideInInspector] public float coyoteCounter;
 
     // ---------------- DASH ----------------
     [Header("Dash")]
@@ -51,18 +51,17 @@ public class PlayerController : MonoBehaviour
     [Header("Runtime")]
     public float moveInput;
     public bool jumpHeld;
-
     public bool isGrounded;
     public float facingDir = 1f;
 
     // ---------------- STATE ----------------
     public PlayerStateMachine stateMachine;
 
-    bool wasGrounded;
-    bool inAir;
+    // ---------------- LANDING TRACK ----------------
     float highestY;
+    bool inAir;
+    bool wasGrounded;
 
-    // ---------------- IMPACT ----------------
     [System.Serializable]
     public class ImpactSettings
     {
@@ -76,7 +75,6 @@ public class PlayerController : MonoBehaviour
         public float heavyIntensity = 1.2f;
     }
 
-    [Header("Impact Settings")]
     public ImpactSettings impactSettings;
 
     void Awake()
@@ -92,24 +90,20 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        moveInput = Input.GetAxisRaw("Horizontal");
+        jumpHeld = Input.GetKey(KeyCode.Space);
 
-
-        // input
+        // buffer
         if (Input.GetKeyDown(KeyCode.Space))
             jumpBufferCounter = jumpBufferTime;
 
         jumpBufferCounter -= Time.deltaTime;
-    
-        // cooldown
+
+        // dash
+        dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
+
         if (dashCooldownTimer > 0)
             dashCooldownTimer -= Time.deltaTime;
-
-        // INPUT
-        moveInput = Input.GetAxisRaw("Horizontal");
-        jumpHeld = Input.GetKey(KeyCode.Space);
-
-        // dash single frame
-        dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
 
         // flip
         if (moveInput != 0)
@@ -118,9 +112,9 @@ public class PlayerController : MonoBehaviour
 
             if (modelPivot != null)
             {
-                Vector3 scale = modelPivot.localScale;
-                scale.x = Mathf.Abs(scale.x) * facingDir;
-                modelPivot.localScale = scale;
+                Vector3 s = modelPivot.localScale;
+                s.x = Mathf.Abs(s.x) * facingDir;
+                modelPivot.localScale = s;
             }
         }
 
@@ -129,15 +123,25 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        isGrounded = Physics2D.OverlapCircle(
-            groundCheck.position,
-            groundRadius,
-            groundMask
-        );
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundRadius, groundMask);
 
-        // ---------------- FALL TRACK ----------------
-        if (!isGrounded)
+        // ---------------- COYOTE (STABLE FIX) ----------------
+        if (isGrounded)
         {
+            coyoteCounter = coyoteTime;
+
+            // landing detect
+            if (!wasGrounded)
+            {
+                OnLand();
+                inAir = false;
+            }
+        }
+        else
+        {
+            coyoteCounter -= Time.fixedDeltaTime;
+            coyoteCounter = Mathf.Max(0, coyoteCounter);
+
             if (!inAir)
             {
                 inAir = true;
@@ -147,14 +151,6 @@ public class PlayerController : MonoBehaviour
             if (transform.position.y > highestY)
                 highestY = transform.position.y;
         }
-        else
-        {
-            if (inAir && !wasGrounded)
-            {
-                HandleLanding(highestY - transform.position.y);
-                inAir = false;
-            }
-        }
 
         wasGrounded = isGrounded;
 
@@ -163,12 +159,12 @@ public class PlayerController : MonoBehaviour
     }
 
     // ---------------- LANDING ----------------
-    void HandleLanding(float fallDistance)
+    void OnLand()
     {
-        if (impulseSource == null) return;
+        float fallDistance = highestY - transform.position.y;
 
-        if (fallDistance < impactSettings.minDistance)
-            return;
+        if (impulseSource == null) return;
+        if (fallDistance < impactSettings.minDistance) return;
 
         float intensity;
 
@@ -180,6 +176,8 @@ public class PlayerController : MonoBehaviour
             intensity = impactSettings.heavyIntensity;
 
         impulseSource.GenerateImpulse(intensity);
+
+        Debug.Log($"LAND: {fallDistance}");
     }
 
     // ---------------- MOVEMENT ----------------
@@ -190,12 +188,12 @@ public class PlayerController : MonoBehaviour
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
 
-        float accelRate = isGrounded
+        float accel = isGrounded
             ? (Mathf.Abs(targetSpeed) > 0.01f ? acceleration : deceleration)
             : acceleration * airControl;
 
         rb.linearVelocity = new Vector2(
-            rb.linearVelocity.x + speedDiff * accelRate * Time.fixedDeltaTime * control,
+            rb.linearVelocity.x + speedDiff * accel * Time.fixedDeltaTime * control,
             rb.linearVelocity.y
         );
     }
@@ -204,23 +202,14 @@ public class PlayerController : MonoBehaviour
     void ApplyGravity()
     {
         if (rb.linearVelocity.y < 0)
-        {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
-        }
+
         else if (rb.linearVelocity.y > 0 && !jumpHeld)
-        {
             rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
-        }
     }
 
-    // ---------------- STATE HELPERS ----------------
-    public float GetDashDirection()
-    {
-        return facingDir == 0 ? 1 : facingDir;
-    }
+    // ---------------- HELPERS ----------------
+    public float GetDashDirection() => facingDir == 0 ? 1 : facingDir;
 
-    public bool IsInputLocked()
-    {
-        return isDashing;
-    }
+    public bool IsInputLocked() => isDashing;
 }
