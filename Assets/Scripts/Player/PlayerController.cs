@@ -5,47 +5,49 @@ public class PlayerController : MonoBehaviour
     [Header("Refs")]
     public Rigidbody2D rb;
     public Transform groundCheck;
-    public LayerMask groundLayer;
-   
+    public LayerMask groundMask;
 
     [HideInInspector] public bool isDashing;
 
+    // ---------------- MOVE ----------------
     [Header("Move")]
     public float moveSpeed = 7f;
     public float acceleration = 45f;
     public float deceleration = 60f;
     public float airControl = 0.6f;
 
+    // ---------------- JUMP ----------------
     [Header("Jump")]
     public float jumpForce = 12f;
 
+    // ---------------- DASH ----------------
     [Header("Dash")]
-    public float dashForce = 18f;
-    public float dashDuration = 0.15f;
-    [Header("Dash Feel")]
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
-    public float dashSpeedMultiplier = 0.7f;
     public float dashCooldown = 0.4f;
     public float dashCooldownTimer;
 
-    [Header("Feel")]
+    // ---------------- FEEL (ONLY PHYSICS) ----------------
+    [Header("Physics Feel")]
     public float fallMultiplier = 2.5f;
     public float lowJumpMultiplier = 2f;
 
+    // ---------------- GROUND ----------------
     [Header("Ground")]
     public float groundRadius = 0.15f;
-    public LayerMask groundMask;
+    public LayerMask groundMask2;
 
+    // ---------------- COYOTE / BUFFER ----------------
     [Header("Coyote / Buffer")]
     public float coyoteTime = 0.12f;
     public float jumpBufferTime = 0.15f;
 
+    // ---------------- INPUT ----------------
     [Header("Runtime")]
     public float moveInput;
-    public bool jumpPressed;
     public bool jumpHeld;
     public bool dashPressed;
+
     public bool isGrounded;
     public float facingDir = 1f;
 
@@ -64,6 +66,7 @@ public class PlayerController : MonoBehaviour
     {
         if (dashCooldownTimer > 0)
             dashCooldownTimer -= Time.deltaTime;
+
         moveInput = Input.GetAxisRaw("Horizontal");
 
         if (moveInput != 0)
@@ -85,20 +88,17 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // GROUND CHECK
         isGrounded = Physics2D.OverlapCircle(
             groundCheck.position,
             groundRadius,
             groundMask
         );
 
-        // COYOTE
         if (isGrounded)
             coyoteCounter = coyoteTime;
         else
             coyoteCounter -= Time.fixedDeltaTime;
 
-        // 🔥 TEK MERKEZ GRAVITY SYSTEM (BUG FIX HERE)
         ApplyGravity();
 
         stateMachine.FixedUpdate();
@@ -106,9 +106,9 @@ public class PlayerController : MonoBehaviour
 
     // ---------------- MOVEMENT ----------------
 
-    public void ApplyMovement(float control = 1f)
+    public void ApplyMovement(float control)
     {
-        if (isDashing) return; // 🔥 KRİTİK FIX
+        if (isDashing) return;
 
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
@@ -117,15 +117,13 @@ public class PlayerController : MonoBehaviour
             ? (Mathf.Abs(targetSpeed) > 0.01f ? acceleration : deceleration)
             : acceleration * airControl;
 
-        float movement = speedDiff * accelRate;
-
         rb.linearVelocity = new Vector2(
-            rb.linearVelocity.x + movement * Time.fixedDeltaTime,
+            rb.linearVelocity.x + speedDiff * accelRate * Time.fixedDeltaTime * control,
             rb.linearVelocity.y
         );
     }
 
-    // ---------------- GRAVITY (FIXED CORE) ----------------
+    // ---------------- GRAVITY ----------------
 
     void ApplyGravity()
     {
@@ -139,7 +137,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // ---------------- JUMP SYSTEM ----------------
+    // ---------------- JUMP ----------------
 
     public bool CanJump()
     {
@@ -152,10 +150,15 @@ public class PlayerController : MonoBehaviour
         coyoteCounter = 0f;
     }
 
-    // ---------------- DASH ----------------
+    // ---------------- INPUT HELPERS ----------------
 
     public float GetDashDirection()
     {
         return facingDir == 0 ? 1 : facingDir;
+    }
+
+    public bool IsInputLocked()
+    {
+        return false; // squash removed → lock sistemi yok
     }
 }

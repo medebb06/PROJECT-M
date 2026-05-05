@@ -1,4 +1,6 @@
-﻿public class GroundedState : IPlayerState
+﻿using UnityEngine;
+
+public class GroundedState : IPlayerState
 {
     private PlayerController player;
     private PlayerStateMachine sm;
@@ -10,12 +12,19 @@
     }
 
     public void Enter() { }
+
     public void Exit() { }
 
     public void Update()
     {
-        player.ApplyMovement();
+        // ---------------- MOVEMENT ----------------
+        player.ApplyMovement(1f);
 
+        // ---------------- INPUT LOCK SAFETY ----------------
+        if (player.IsInputLocked())
+            return;
+
+        // ---------------- JUMP ----------------
         if (player.CanJump())
         {
             player.ConsumeJump();
@@ -23,7 +32,7 @@
             return;
         }
 
-        // 🔥 BURASI DOĞRU YER
+        // ---------------- DASH ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
         {
             sm.ChangeState(new DashState(player, sm));

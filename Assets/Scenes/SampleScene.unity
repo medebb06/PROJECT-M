@@ -678,6 +678,7 @@ GameObject:
   - component: {fileID: 2122615044}
   - component: {fileID: 2122615043}
   - component: {fileID: 2122615046}
+  - component: {fileID: 2122615047}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -838,7 +839,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   rb: {fileID: 2122615044}
   groundCheck: {fileID: 1942488874}
-  groundLayer:
+  groundMask:
     serializedVersion: 2
     m_Bits: 512
   isDashing: 0
@@ -847,25 +848,37 @@ MonoBehaviour:
   deceleration: 1
   airControl: 0.6
   jumpForce: 15
-  dashForce: 15
-  dashDuration: 0.15
-  dashDistance: 10
+  dashDistance: 5
   dashTime: 0.15
-  dashSpeedMultiplier: 0.5
+  dashCooldown: 0.4
+  dashCooldownTimer: 0
   fallMultiplier: 2.5
   lowJumpMultiplier: 5
   groundRadius: 0.15
-  groundMask:
+  groundMask2:
     serializedVersion: 2
-    m_Bits: 512
+    m_Bits: 0
   coyoteTime: 0.12
   jumpBufferTime: 0.15
   moveInput: 0
-  jumpPressed: 0
   jumpHeld: 0
   dashPressed: 0
   isGrounded: 0
   facingDir: 1
+--- !u!114 &2122615047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ccdd8f6987f9dd4781c0a872eafc814, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TeleportToMouse
+  cam: {fileID: 519420031}
+  rb: {fileID: 2122615044}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

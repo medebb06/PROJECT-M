@@ -9,8 +9,6 @@ public class DashState : IPlayerState
     private float dir;
     private float dashSpeed;
 
-    private float originalGravity;
-
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
         this.player = player;
@@ -24,19 +22,13 @@ public class DashState : IPlayerState
         timer = player.dashTime;
         dir = player.GetDashDirection();
 
-        // 🔥 speed (Inspector controlled)
-        dashSpeed = (player.dashDistance / player.dashTime) * player.dashSpeedMultiplier;
-
-        // gravity off → smooth dash feel
-        originalGravity = player.rb.gravityScale;
-        player.rb.gravityScale = 0f;
+        // 🔥 consistent dash speed (distance/time)
+        dashSpeed = player.dashDistance / player.dashTime;
     }
 
     public void Exit()
     {
         player.isDashing = false;
-
-        player.rb.gravityScale = originalGravity;
 
         // cooldown
         player.dashCooldownTimer = player.dashCooldown;
@@ -46,20 +38,21 @@ public class DashState : IPlayerState
     {
         timer -= Time.deltaTime;
 
-        // 🔥 FULL OVERRIDE (movement disabled via flag)
+        // 🔥 FULL OVERRIDE (no movement interference)
         player.rb.linearVelocity = new Vector2(dir * dashSpeed, 0f);
 
+        // ---------------- END TRANSITION ----------------
         if (timer <= 0f)
         {
-            // ❌ NEVER go to JumpState directly (bug fix)
+            // small smoothing frame (prevents "snap feel")
+            Vector2 v = player.rb.linearVelocity;
+            v.x *= 0.8f;
+            player.rb.linearVelocity = v;
+
             if (player.isGrounded)
-            {
                 sm.ChangeState(new GroundedState(player, sm));
-            }
             else
-            {
                 sm.ChangeState(new AirState(player, sm));
-            }
         }
     }
 
