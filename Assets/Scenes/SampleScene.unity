@@ -837,16 +837,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   rb: {fileID: 2122615044}
-  moveSpeed: 10
-  jumpForce: 15
-  dashForce: 25
   groundCheck: {fileID: 1942488874}
-  groundRadius: 0.15
   groundLayer:
     serializedVersion: 2
     m_Bits: 512
+  isDashing: 0
+  moveSpeed: 10
+  acceleration: 50
+  deceleration: 1
+  airControl: 0.6
+  jumpForce: 15
+  dashForce: 15
+  dashDuration: 0.15
+  dashDistance: 10
+  dashTime: 0.15
+  dashSpeedMultiplier: 0.5
+  fallMultiplier: 2.5
+  lowJumpMultiplier: 5
+  groundRadius: 0.15
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 512
+  coyoteTime: 0.12
+  jumpBufferTime: 0.15
   moveInput: 0
   jumpPressed: 0
+  jumpHeld: 0
   dashPressed: 0
   isGrounded: 0
   facingDir: 1

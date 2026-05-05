@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class JumpState : IPlayerState
 {
@@ -13,10 +13,11 @@ public class JumpState : IPlayerState
 
     public void Enter()
     {
-        Vector2 velocity = player.rb.linearVelocity;
+        if (player.isDashing) return; // 🔥 dash sonrası fake jump engel
 
-        velocity.y = 0f; // eski momentum temizle
-        player.rb.linearVelocity = velocity;
+        Vector2 v = player.rb.linearVelocity;
+        v.y = 0f;
+        player.rb.linearVelocity = v;
 
         player.rb.AddForce(Vector2.up * player.jumpForce, ForceMode2D.Impulse);
     }
@@ -25,7 +26,14 @@ public class JumpState : IPlayerState
 
     public void Update()
     {
-        player.ApplyMovement(); // air control burada devreye giriyor
+        player.ApplyMovement(player.airControl);
+
+        // dash mid-air de çalışsın
+        if (player.dashPressed && player.dashCooldownTimer <= 0f)
+        {
+            sm.ChangeState(new DashState(player, sm));
+            return;
+        }
 
         if (player.isGrounded && player.rb.linearVelocity.y <= 0.1f)
         {

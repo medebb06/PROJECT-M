@@ -1,9 +1,11 @@
-﻿public class GroundedState : IPlayerState
+using UnityEngine;
+
+public class AirState : IPlayerState
 {
     private PlayerController player;
     private PlayerStateMachine sm;
 
-    public GroundedState(PlayerController player, PlayerStateMachine sm)
+    public AirState(PlayerController player, PlayerStateMachine sm)
     {
         this.player = player;
         this.sm = sm;
@@ -14,20 +16,18 @@
 
     public void Update()
     {
-        player.ApplyMovement();
+        player.ApplyMovement(player.airControl);
 
-        if (player.CanJump())
+        // Ground check
+        if (player.isGrounded && player.rb.linearVelocity.y <= 0.1f)
         {
-            player.ConsumeJump();
-            sm.ChangeState(new JumpState(player, sm));
-            return;
+            sm.ChangeState(new GroundedState(player, sm));
         }
 
-        // 🔥 BURASI DOĞRU YER
+        // dash mid-air tekrar yap�labilsin
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
         {
             sm.ChangeState(new DashState(player, sm));
-            return;
         }
     }
 
