@@ -7,6 +7,11 @@ public class PlayerController : MonoBehaviour
     public Transform groundCheck;
     public LayerMask groundMask;
 
+    public SquashStretch squashStretch;
+
+    [Header("Visual")]
+    public Transform modelPivot; // 🔥 FLIP BURADA
+
     [HideInInspector] public bool isDashing;
 
     // ---------------- MOVE ----------------
@@ -27,7 +32,7 @@ public class PlayerController : MonoBehaviour
     public float dashCooldown = 0.4f;
     public float dashCooldownTimer;
 
-    // ---------------- FEEL (ONLY PHYSICS) ----------------
+    // ---------------- FEEL ----------------
     [Header("Physics Feel")]
     public float fallMultiplier = 2.5f;
     public float lowJumpMultiplier = 2f;
@@ -35,7 +40,6 @@ public class PlayerController : MonoBehaviour
     // ---------------- GROUND ----------------
     [Header("Ground")]
     public float groundRadius = 0.15f;
-    public LayerMask groundMask2;
 
     // ---------------- COYOTE / BUFFER ----------------
     [Header("Coyote / Buffer")]
@@ -58,8 +62,19 @@ public class PlayerController : MonoBehaviour
 
     void Awake()
     {
+        rb.freezeRotation = true; // 🔥 CRITICAL FIX
+
         stateMachine = new PlayerStateMachine();
         stateMachine.Initialize(new GroundedState(this, stateMachine));
+
+        if (squashStretch == null)
+            squashStretch = GetComponentInChildren<SquashStretch>();
+
+        if (squashStretch != null)
+        {
+            squashStretch.IsGrounded = () => isGrounded;
+            squashStretch.rb = rb;
+        }
     }
 
     void Update()
@@ -69,8 +84,18 @@ public class PlayerController : MonoBehaviour
 
         moveInput = Input.GetAxisRaw("Horizontal");
 
+        // 🔥 FLIP SYSTEM (ROTATION YOK)
         if (moveInput != 0)
+        {
             facingDir = Mathf.Sign(moveInput);
+
+            if (modelPivot != null)
+            {
+                Vector3 scale = modelPivot.localScale;
+                scale.x = Mathf.Abs(scale.x) * facingDir;
+                modelPivot.localScale = scale;
+            }
+        }
 
         if (Input.GetKeyDown(KeyCode.Space))
             jumpBufferCounter = jumpBufferTime;
@@ -100,7 +125,6 @@ public class PlayerController : MonoBehaviour
             coyoteCounter -= Time.fixedDeltaTime;
 
         ApplyGravity();
-
         stateMachine.FixedUpdate();
     }
 
@@ -159,6 +183,6 @@ public class PlayerController : MonoBehaviour
 
     public bool IsInputLocked()
     {
-        return false; // squash removed → lock sistemi yok
+        return false;
     }
 }
