@@ -8,12 +8,8 @@ public class PlayerController : MonoBehaviour
     public Transform groundCheck;
     public LayerMask groundMask;
 
-    public SquashStretch squashStretch;
-
     [Header("Visual")]
     public Transform modelPivot;
-
-    [HideInInspector] public bool isDashing;
 
     [Header("Landing Shake")]
     public CinemachineImpulseSource impulseSource;
@@ -34,8 +30,10 @@ public class PlayerController : MonoBehaviour
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
-    public float dashCooldownTimer;
-    public bool dashPressed;
+
+    [HideInInspector] public float dashCooldownTimer;
+    [HideInInspector] public bool dashPressed;
+    [HideInInspector] public bool isDashing;
 
     // ---------------- FEEL ----------------
     [Header("Physics Feel")]
@@ -54,29 +52,24 @@ public class PlayerController : MonoBehaviour
     public bool isGrounded;
     public float facingDir = 1f;
 
-    float coyoteCounter;
-    float jumpBufferCounter;
-
+    // ---------------- STATE ----------------
     public PlayerStateMachine stateMachine;
 
-    // ---------------- FALL TRACK ----------------
-    float fallStartY;
-    bool trackingFall;
     bool wasGrounded;
+    bool inAir;
+    float highestY;
 
-    // ---------------- IMPACT SETTINGS ----------------
+    // ---------------- IMPACT ----------------
     [System.Serializable]
     public class ImpactSettings
     {
-        public float minDistance = 1.5f;
+        public float minDistance = 2f;
+        public float lightDistance = 4f;
+        public float mediumDistance = 7f;
+        public float heavyDistance = 10f;
 
-        public float lightDistance = 3f;
-        public float mediumDistance = 6f;
-        public float heavyDistance = 9f;
-
-        [Header("Intensity")]
-        public float lightIntensity = 0.3f;
-        public float mediumIntensity = 0.7f;
+        public float lightIntensity = 0.25f;
+        public float mediumIntensity = 0.6f;
         public float heavyIntensity = 1.2f;
     }
 
@@ -96,15 +89,15 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // cooldown
         if (dashCooldownTimer > 0)
             dashCooldownTimer -= Time.deltaTime;
 
+        // INPUT
         moveInput = Input.GetAxisRaw("Horizontal");
-
-        if (Input.GetKeyDown(KeyCode.Space))
-            jumpBufferCounter = 0.15f;
-
         jumpHeld = Input.GetKey(KeyCode.Space);
+
+        // dash single frame
         dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
 
         // flip
@@ -131,41 +124,37 @@ public class PlayerController : MonoBehaviour
             groundMask
         );
 
-        // ---------------- FALL START ----------------
+        // ---------------- FALL TRACK ----------------
         if (!isGrounded)
         {
-            if (!trackingFall)
+            if (!inAir)
             {
-                trackingFall = true;
-                fallStartY = transform.position.y;
+                inAir = true;
+                highestY = transform.position.y;
+            }
+
+            if (transform.position.y > highestY)
+                highestY = transform.position.y;
+        }
+        else
+        {
+            if (inAir && !wasGrounded)
+            {
+                HandleLanding(highestY - transform.position.y);
+                inAir = false;
             }
         }
 
-        // coyote
-        if (isGrounded)
-            coyoteCounter = 0.12f;
-        else
-            coyoteCounter -= Time.fixedDeltaTime;
+        wasGrounded = isGrounded;
 
         ApplyGravity();
         stateMachine.FixedUpdate();
-
-        // ---------------- LAND DETECT ----------------
-        if (!wasGrounded && isGrounded)
-        {
-            OnLand();
-            trackingFall = false;
-        }
-
-        wasGrounded = isGrounded;
     }
 
     // ---------------- LANDING ----------------
-    void OnLand()
+    void HandleLanding(float fallDistance)
     {
         if (impulseSource == null) return;
-
-        float fallDistance = fallStartY - transform.position.y;
 
         if (fallDistance < impactSettings.minDistance)
             return;
@@ -173,24 +162,13 @@ public class PlayerController : MonoBehaviour
         float intensity;
 
         if (fallDistance < impactSettings.lightDistance)
-        {
             intensity = impactSettings.lightIntensity;
-            Debug.Log("LIGHT LAND");
-        }
         else if (fallDistance < impactSettings.mediumDistance)
-        {
             intensity = impactSettings.mediumIntensity;
-            Debug.Log("MEDIUM LAND");
-        }
         else
-        {
             intensity = impactSettings.heavyIntensity;
-            Debug.Log("HEAVY LAND");
-        }
 
         impulseSource.GenerateImpulse(intensity);
-
-        Debug.Log("FALL DIST: " + fallDistance);
     }
 
     // ---------------- MOVEMENT ----------------
@@ -224,18 +202,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // ---------------- HELPERS ----------------
-    public bool CanJump()
-    {
-        return jumpBufferCounter > 0f && coyoteCounter > 0f;
-    }
-
-    public void ConsumeJump()
-    {
-        jumpBufferCounter = 0f;
-        coyoteCounter = 0f;
-    }
-
+    // ---------------- STATE HELPERS ----------------
     public float GetDashDirection()
     {
         return facingDir == 0 ? 1 : facingDir;

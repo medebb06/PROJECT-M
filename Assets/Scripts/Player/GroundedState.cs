@@ -17,25 +17,25 @@ public class GroundedState : IPlayerState
 
     public void Update()
     {
-        // ---------------- MOVEMENT ----------------
-        player.ApplyMovement(1f);
-
         // ---------------- INPUT LOCK SAFETY ----------------
         if (player.IsInputLocked())
             return;
 
-        // ---------------- JUMP ----------------
-        if (player.CanJump())
-        {
-            player.ConsumeJump();
-            sm.ChangeState(new JumpState(player, sm));
-            return;
-        }
+        // ---------------- MOVEMENT ----------------
+        player.ApplyMovement(1f);
 
-        // ---------------- DASH ----------------
+        // ---------------- DASH (PRIORITY) ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
         {
             sm.ChangeState(new DashState(player, sm));
+            return;
+        }
+
+        // ---------------- JUMP (DIRECT SYSTEM FIX) ----------------
+        // CanJump sistemi kaldırıldı → artık grounded + input
+        if (player.isGrounded && Input.GetKeyDown(KeyCode.Space))
+        {
+            sm.ChangeState(new JumpState(player, sm));
             return;
         }
     }

@@ -1233,9 +1233,7 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 512
-  squashStretch: {fileID: 0}
   modelPivot: {fileID: 901546197}
-  isDashing: 0
   impulseSource: {fileID: 2122615049}
   moveSpeed: 10
   acceleration: 30
@@ -1247,6 +1245,7 @@ MonoBehaviour:
   dashCooldown: 0.4
   dashCooldownTimer: 0
   dashPressed: 0
+  isDashing: 0
   fallMultiplier: 2.5
   lowJumpMultiplier: 2
   groundRadius: 0.15
@@ -1256,9 +1255,9 @@ MonoBehaviour:
   facingDir: 1
   impactSettings:
     minDistance: 5
-    lightDistance: 5
-    mediumDistance: 10
-    heavyDistance: 15
+    lightDistance: 8
+    mediumDistance: 14
+    heavyDistance: 19
     lightIntensity: 0.3
     mediumIntensity: 0.7
     heavyIntensity: 1.2
