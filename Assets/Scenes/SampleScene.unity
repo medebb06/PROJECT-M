@@ -1240,6 +1240,8 @@ MonoBehaviour:
   deceleration: 1
   airControl: 0.6
   jumpForce: 15
+  jumpBufferTime: 0.15
+  jumpBufferCounter: 0
   dashDistance: 5
   dashTime: 0.15
   dashCooldown: 0.4
@@ -1254,7 +1256,7 @@ MonoBehaviour:
   isGrounded: 0
   facingDir: 1
   impactSettings:
-    minDistance: 5
+    minDistance: 6
     lightDistance: 8
     mediumDistance: 14
     heavyDistance: 19

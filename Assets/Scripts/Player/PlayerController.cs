@@ -24,6 +24,9 @@ public class PlayerController : MonoBehaviour
     // ---------------- JUMP ----------------
     [Header("Jump")]
     public float jumpForce = 12f;
+    [Header("Jump Buffer")]
+    public float jumpBufferTime = 0.15f;
+    public float jumpBufferCounter;
 
     // ---------------- DASH ----------------
     [Header("Dash")]
@@ -89,6 +92,14 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+
+
+        // input
+        if (Input.GetKeyDown(KeyCode.Space))
+            jumpBufferCounter = jumpBufferTime;
+
+        jumpBufferCounter -= Time.deltaTime;
+    
         // cooldown
         if (dashCooldownTimer > 0)
             dashCooldownTimer -= Time.deltaTime;
