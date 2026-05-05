@@ -475,6 +475,7 @@ GameObject:
   - component: {fileID: 1003360551}
   - component: {fileID: 1003360550}
   - component: {fileID: 1003360552}
+  - component: {fileID: 1003360553}
   m_Layer: 0
   m_Name: CinemachineCamera
   m_TagString: Untagged
@@ -559,6 +560,30 @@ MonoBehaviour:
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
   FollowOffset: {x: 0, y: 0, z: -10}
+--- !u!114 &1003360553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1003360549}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00b2d199b96b516448144ab30fb26aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineImpulseListener
+  ApplyAfter: 2
+  ChannelMask: 1
+  Gain: 1
+  Use2DDistance: 0
+  UseCameraSpace: 1
+  SignalCombinationMode: 0
+  ReactionSettings:
+    m_SecondaryNoise: {fileID: 0}
+    AmplitudeGain: 1
+    FrequencyGain: 1
+    Duration: 1
+    m_NoiseOffsets: {x: 0, y: 0, z: 0}
 --- !u!1 &1019604008
 GameObject:
   m_ObjectHideFlags: 0
@@ -1102,6 +1127,7 @@ GameObject:
   - component: {fileID: 2122615046}
   - component: {fileID: 2122615047}
   - component: {fileID: 2122615048}
+  - component: {fileID: 2122615049}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -1208,8 +1234,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 512
   squashStretch: {fileID: 0}
-  modelPivot: {fileID: 0}
+  modelPivot: {fileID: 901546197}
   isDashing: 0
+  impulseSource: {fileID: 2122615049}
   moveSpeed: 10
   acceleration: 30
   deceleration: 1
@@ -1219,16 +1246,22 @@ MonoBehaviour:
   dashTime: 0.15
   dashCooldown: 0.4
   dashCooldownTimer: 0
+  dashPressed: 0
   fallMultiplier: 2.5
   lowJumpMultiplier: 2
   groundRadius: 0.15
-  coyoteTime: 0.12
-  jumpBufferTime: 0.15
   moveInput: 0
   jumpHeld: 0
-  dashPressed: 0
   isGrounded: 0
   facingDir: 1
+  impactSettings:
+    minDistance: 5
+    lightDistance: 5
+    mediumDistance: 10
+    heavyDistance: 15
+    lightIntensity: 0.3
+    mediumIntensity: 0.7
+    heavyIntensity: 1.2
 --- !u!114 &2122615047
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1257,11 +1290,111 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SquashStretch
   rb: {fileID: 2122615044}
   visual: {fileID: 901546197}
-  stretchFactor: 0.08
+  stretchCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  squashCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   maxStretch: 0.25
-  squashFactor: 0.12
   maxSquash: 0.35
   recoverySpeed: 14
+  impactDuration: 0.12
+--- !u!114 &2122615049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 180ecf9b41d478f468eb3e9083753217, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineImpulseSource
+  ImpulseDefinition:
+    ImpulseChannel: 1
+    ImpulseShape: 2
+    CustomImpulseShape:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    ImpulseDuration: 0.2
+    ImpulseType: 0
+    DissipationRate: 0.25
+    RawSignal: {fileID: 0}
+    AmplitudeGain: 1
+    FrequencyGain: 1
+    RepeatMode: 0
+    Randomize: 1
+    TimeEnvelope:
+      AttackShape:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      DecayShape:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      AttackTime: 0
+      SustainTime: 0.2
+      DecayTime: 0.7
+      ScaleWithImpact: 1
+      HoldForever: 0
+    ImpactRadius: 100
+    DirectionMode: 0
+    DissipationMode: 2
+    DissipationDistance: 100
+    PropagationSpeed: 343
+  DefaultVelocity: {x: 0, y: -1, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

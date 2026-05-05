@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using Unity.Cinemachine;
 
 public class PlayerController : MonoBehaviour
 {
@@ -10,9 +11,12 @@ public class PlayerController : MonoBehaviour
     public SquashStretch squashStretch;
 
     [Header("Visual")]
-    public Transform modelPivot; // 🔥 FLIP BURADA
+    public Transform modelPivot;
 
     [HideInInspector] public bool isDashing;
+
+    [Header("Landing Shake")]
+    public CinemachineImpulseSource impulseSource;
 
     // ---------------- MOVE ----------------
     [Header("Move")]
@@ -31,6 +35,7 @@ public class PlayerController : MonoBehaviour
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
     public float dashCooldownTimer;
+    public bool dashPressed;
 
     // ---------------- FEEL ----------------
     [Header("Physics Feel")]
@@ -41,16 +46,10 @@ public class PlayerController : MonoBehaviour
     [Header("Ground")]
     public float groundRadius = 0.15f;
 
-    // ---------------- COYOTE / BUFFER ----------------
-    [Header("Coyote / Buffer")]
-    public float coyoteTime = 0.12f;
-    public float jumpBufferTime = 0.15f;
-
     // ---------------- INPUT ----------------
     [Header("Runtime")]
     public float moveInput;
     public bool jumpHeld;
-    public bool dashPressed;
 
     public bool isGrounded;
     public float facingDir = 1f;
@@ -60,21 +59,39 @@ public class PlayerController : MonoBehaviour
 
     public PlayerStateMachine stateMachine;
 
+    // ---------------- FALL TRACK ----------------
+    float fallStartY;
+    bool trackingFall;
+    bool wasGrounded;
+
+    // ---------------- IMPACT SETTINGS ----------------
+    [System.Serializable]
+    public class ImpactSettings
+    {
+        public float minDistance = 1.5f;
+
+        public float lightDistance = 3f;
+        public float mediumDistance = 6f;
+        public float heavyDistance = 9f;
+
+        [Header("Intensity")]
+        public float lightIntensity = 0.3f;
+        public float mediumIntensity = 0.7f;
+        public float heavyIntensity = 1.2f;
+    }
+
+    [Header("Impact Settings")]
+    public ImpactSettings impactSettings;
+
     void Awake()
     {
-        rb.freezeRotation = true; // 🔥 CRITICAL FIX
+        rb.freezeRotation = true;
 
         stateMachine = new PlayerStateMachine();
         stateMachine.Initialize(new GroundedState(this, stateMachine));
 
-        if (squashStretch == null)
-            squashStretch = GetComponentInChildren<SquashStretch>();
-
-        if (squashStretch != null)
-        {
-            squashStretch.IsGrounded = () => isGrounded;
-            squashStretch.rb = rb;
-        }
+        if (impulseSource == null)
+            impulseSource = GetComponent<CinemachineImpulseSource>();
     }
 
     void Update()
@@ -84,7 +101,13 @@ public class PlayerController : MonoBehaviour
 
         moveInput = Input.GetAxisRaw("Horizontal");
 
-        // 🔥 FLIP SYSTEM (ROTATION YOK)
+        if (Input.GetKeyDown(KeyCode.Space))
+            jumpBufferCounter = 0.15f;
+
+        jumpHeld = Input.GetKey(KeyCode.Space);
+        dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
+
+        // flip
         if (moveInput != 0)
         {
             facingDir = Mathf.Sign(moveInput);
@@ -97,18 +120,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Space))
-            jumpBufferCounter = jumpBufferTime;
-
-        jumpHeld = Input.GetKey(KeyCode.Space);
-
-        if (Input.GetKeyDown(KeyCode.LeftShift))
-            dashPressed = true;
-
         stateMachine.Update();
-
-        jumpBufferCounter -= Time.deltaTime;
-        dashPressed = false;
     }
 
     void FixedUpdate()
@@ -119,17 +131,69 @@ public class PlayerController : MonoBehaviour
             groundMask
         );
 
+        // ---------------- FALL START ----------------
+        if (!isGrounded)
+        {
+            if (!trackingFall)
+            {
+                trackingFall = true;
+                fallStartY = transform.position.y;
+            }
+        }
+
+        // coyote
         if (isGrounded)
-            coyoteCounter = coyoteTime;
+            coyoteCounter = 0.12f;
         else
             coyoteCounter -= Time.fixedDeltaTime;
 
         ApplyGravity();
         stateMachine.FixedUpdate();
+
+        // ---------------- LAND DETECT ----------------
+        if (!wasGrounded && isGrounded)
+        {
+            OnLand();
+            trackingFall = false;
+        }
+
+        wasGrounded = isGrounded;
+    }
+
+    // ---------------- LANDING ----------------
+    void OnLand()
+    {
+        if (impulseSource == null) return;
+
+        float fallDistance = fallStartY - transform.position.y;
+
+        if (fallDistance < impactSettings.minDistance)
+            return;
+
+        float intensity;
+
+        if (fallDistance < impactSettings.lightDistance)
+        {
+            intensity = impactSettings.lightIntensity;
+            Debug.Log("LIGHT LAND");
+        }
+        else if (fallDistance < impactSettings.mediumDistance)
+        {
+            intensity = impactSettings.mediumIntensity;
+            Debug.Log("MEDIUM LAND");
+        }
+        else
+        {
+            intensity = impactSettings.heavyIntensity;
+            Debug.Log("HEAVY LAND");
+        }
+
+        impulseSource.GenerateImpulse(intensity);
+
+        Debug.Log("FALL DIST: " + fallDistance);
     }
 
     // ---------------- MOVEMENT ----------------
-
     public void ApplyMovement(float control)
     {
         if (isDashing) return;
@@ -148,7 +212,6 @@ public class PlayerController : MonoBehaviour
     }
 
     // ---------------- GRAVITY ----------------
-
     void ApplyGravity()
     {
         if (rb.linearVelocity.y < 0)
@@ -161,8 +224,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // ---------------- JUMP ----------------
-
+    // ---------------- HELPERS ----------------
     public bool CanJump()
     {
         return jumpBufferCounter > 0f && coyoteCounter > 0f;
@@ -174,8 +236,6 @@ public class PlayerController : MonoBehaviour
         coyoteCounter = 0f;
     }
 
-    // ---------------- INPUT HELPERS ----------------
-
     public float GetDashDirection()
     {
         return facingDir == 0 ? 1 : facingDir;
@@ -183,6 +243,6 @@ public class PlayerController : MonoBehaviour
 
     public bool IsInputLocked()
     {
-        return false;
+        return isDashing;
     }
 }
