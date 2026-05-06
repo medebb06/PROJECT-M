@@ -2,12 +2,12 @@
 
 public class DashState : IPlayerState
 {
-    private PlayerController player;
-    private PlayerStateMachine sm;
+    PlayerController player;
+    PlayerStateMachine sm;
 
-    private float timer;
-    private float dir;
-    private float dashSpeed;
+    float timer;
+    float dir;
+    float speed;
 
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
@@ -18,10 +18,12 @@ public class DashState : IPlayerState
     public void Enter()
     {
         player.isDashing = true;
-        timer = player.dashTime;
 
+        timer = player.dashTime;
         dir = player.GetDashDirection();
-        dashSpeed = player.dashDistance / player.dashTime;
+        speed = player.dashDistance / player.dashTime;
+
+        player.afterImageTimer = 0f; // hemen spawn başlasın
     }
 
     public void Exit()
@@ -34,7 +36,9 @@ public class DashState : IPlayerState
     {
         timer -= Time.deltaTime;
 
-        player.rb.linearVelocity = new Vector2(dir * dashSpeed, 0f);
+        player.rb.linearVelocity = new Vector2(dir * speed, 0f);
+
+        HandleAfterImage();
 
         if (timer <= 0f)
         {
@@ -43,6 +47,37 @@ public class DashState : IPlayerState
             else
                 sm.ChangeState(new AirState(player, sm));
         }
+    }
+
+    void HandleAfterImage()
+    {
+        player.afterImageTimer -= Time.deltaTime;
+
+        if (player.afterImageTimer > 0f)
+            return;
+
+        player.afterImageTimer = player.afterImageSpacing;
+
+        SpawnGhost();
+    }
+
+    void SpawnGhost()
+    {
+        if (player.afterImagePrefab == null) return;
+
+        GameObject obj = Object.Instantiate(
+            player.afterImagePrefab,
+            player.transform.position,
+            Quaternion.identity
+        );
+
+        var ghost = obj.GetComponent<AfterImage>();
+
+        ghost.Init(
+            player.playerSprite.sprite,
+            player.modelPivot.localScale,
+            player.facingDir < 0
+        );
     }
 
     public void FixedUpdate() { }

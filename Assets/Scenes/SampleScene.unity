@@ -1241,12 +1241,16 @@ MonoBehaviour:
   airControl: 0.6
   jumpForce: 15
   jumpBufferTime: 0.15
-  jumpBufferCounter: 0
   coyoteTime: 0.2
+  jumpBufferCounter: 0
   coyoteCounter: 0
-  dashDistance: 5
-  dashTime: 0.15
-  dashCooldown: 0.4
+  dashDistance: 4
+  dashTime: 0.2
+  dashCooldown: 0.5
+  afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
+  afterImageSpacing: 0.05
+  afterImageTimer: 0
+  playerSprite: {fileID: 901546199}
   dashCooldownTimer: 0
   dashPressed: 0
   isDashing: 0
@@ -1258,12 +1262,12 @@ MonoBehaviour:
   isGrounded: 0
   facingDir: 1
   impactSettings:
-    minDistance: 6
-    lightDistance: 8
-    mediumDistance: 14
-    heavyDistance: 19
-    lightIntensity: 0.3
-    mediumIntensity: 0.7
+    minDistance: 5
+    lightDistance: 7
+    mediumDistance: 12
+    heavyDistance: 17
+    lightIntensity: 0.25
+    mediumIntensity: 0.6
     heavyIntensity: 1.2
 --- !u!114 &2122615047
 MonoBehaviour:

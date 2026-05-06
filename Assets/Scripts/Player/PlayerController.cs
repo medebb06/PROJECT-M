@@ -33,6 +33,12 @@ public class PlayerController : MonoBehaviour
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
+    [Header("Dash FX")]
+    public GameObject afterImagePrefab;
+    public float afterImageSpacing = 0.05f;
+
+    [HideInInspector] public float afterImageTimer;
+    public SpriteRenderer playerSprite;
 
     [HideInInspector] public float dashCooldownTimer;
     [HideInInspector] public bool dashPressed;
