@@ -88,7 +88,14 @@ public class PlayerController : MonoBehaviour
     float highestY;
     bool inAir;
     bool wasGrounded;
-
+    void OnCollisionStay2D(Collision2D col)
+    {
+        if (col.gameObject.CompareTag("Player"))
+        {
+            // ❌ fiziksel push override
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+        }
+    }
     void Awake()
     {
         rb.freezeRotation = true;

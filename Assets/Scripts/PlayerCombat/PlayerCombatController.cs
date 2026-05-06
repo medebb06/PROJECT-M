@@ -79,13 +79,9 @@ public class PlayerCombatController : MonoBehaviour
 
     IEnumerator DoAttack(int i)
     {
-        // 🔥 DASH GIRDIYSE ANINDA KES
-        if (!player.canAttack)
-        {
-            isAttacking = false;
-            yield break;
-        }
+        isAttacking = true;
 
+        // 🔥 micro hit delay (feel)
         yield return new WaitForSeconds(0.03f);
 
         float t = 0f;
@@ -98,21 +94,27 @@ public class PlayerCombatController : MonoBehaviour
 
         while (t < duration)
         {
-            // 🔥 KRİTİK: DASH CHECK LOOP İÇİNDE
-            if (!player.canAttack)
+            // ❌ DASH veya ATTACK LOCK olursa çık
+            if (!player.canAttack || player.isDashing)
             {
                 isAttacking = false;
                 yield break;
             }
 
             t += Time.deltaTime;
-            player.rb.MovePosition(Vector2.Lerp(start, target, t / duration));
+
+            float lerp = t / duration;
+
+            player.rb.MovePosition(Vector2.Lerp(start, target, lerp));
+
             yield return null;
         }
 
-        // HIT
+        // 🔥 HIT CHECK
+        Vector2 boxCenter = player.rb.position + dir * 0.6f;
+
         Collider2D[] hits = Physics2D.OverlapBoxAll(
-            player.rb.position + dir * 0.6f,
+            boxCenter,
             new Vector2(attackRange, attackHeight),
             0f,
             enemyLayer
@@ -123,7 +125,11 @@ public class PlayerCombatController : MonoBehaviour
             var dmg = h.GetComponentInParent<IDamageable>();
             if (dmg == null) continue;
 
-            Vector2 kb = new Vector2(dir.x * knockback[i].x, knockback[i].y);
+            Vector2 kb = new Vector2(
+                dir.x * knockback[i].x,
+                knockback[i].y
+            );
+
             dmg.TakeDamage(damage[i], kb);
         }
 
