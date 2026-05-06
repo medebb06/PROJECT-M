@@ -143,11 +143,11 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 5
+  m_Mass: 200
   m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 3
-  m_Material: {fileID: 0}
+  m_AngularDamping: 100
+  m_GravityScale: 5
+  m_Material: {fileID: 6200000, guid: 74076d9c467dbc14cbad6b36d234433f, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -170,6 +170,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6add95a4cc062884982c8752454bc26a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  hp: 3
-  knockbackMultiplier: 5
-  knockbackControlLock: 0.15
+  rb: {fileID: 3904047089114868763}

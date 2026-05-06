@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
 {
@@ -7,10 +8,13 @@ public class PlayerCombatController : MonoBehaviour
 
     PlayerController player;
 
+    [Header("Combo")]
     public float comboResetTime = 0.8f;
     public float inputBufferTime = 0.2f;
 
-    public float attackRange = 0.8f;
+    [Header("Attack")]
+    public float attackRange = 0.9f;
+    public float attackHeight = 1.2f;
 
     public int[] damage = { 1, 1, 2, 3 };
 
@@ -41,88 +45,86 @@ public class PlayerCombatController : MonoBehaviour
         comboTimer -= Time.deltaTime;
         bufferTimer -= Time.deltaTime;
 
+        // 🔥 INPUT
         if (Input.GetMouseButtonDown(0))
         {
-            if (!player.canControl)
-            {
-                bufferedAttack = true;
-                return;
-            }
-
             bufferTimer = inputBufferTime;
         }
 
         if (comboTimer <= 0f)
             comboStep = 0;
 
-        if (!player.canControl)
-            return;
-
-        if (bufferedAttack)
-        {
-            bufferedAttack = false;
-            Attack();
-            return;
-        }
-
+        // 🔥 buffered attack ALWAYS works (dash sonrası da)
         if (bufferTimer > 0f && !isAttacking)
         {
-            Attack();
             bufferTimer = 0f;
+            Attack();
         }
     }
 
     void Attack()
     {
+        if (!player.canAttack)
+            return;
+
         isAttacking = true;
 
         comboStep++;
-        if (comboStep > 4)
-            comboStep = 1;
+        if (comboStep > 4) comboStep = 1;
 
         comboTimer = comboResetTime;
 
         StartCoroutine(DoAttack(comboStep - 1));
     }
 
-    System.Collections.IEnumerator DoAttack(int i)
+    IEnumerator DoAttack(int i)
     {
+        // 🔥 DASH GIRDIYSE ANINDA KES
+        if (!player.canAttack)
+        {
+            isAttacking = false;
+            yield break;
+        }
+
+        yield return new WaitForSeconds(0.03f);
+
         float t = 0f;
         float duration = 0.18f;
 
-        Vector2 dir = new Vector2(player.facingDir, 0f);
+        Vector2 dir = player.facingDir > 0 ? Vector2.right : Vector2.left;
+
+        Vector2 start = player.rb.position;
+        Vector2 target = start + dir * moveDistance[i];
 
         while (t < duration)
         {
-            if (!player.canControl) yield break;
+            // 🔥 KRİTİK: DASH CHECK LOOP İÇİNDE
+            if (!player.canAttack)
+            {
+                isAttacking = false;
+                yield break;
+            }
 
             t += Time.deltaTime;
-
-            player.rb.linearVelocity = new Vector2(
-                dir.x * (moveDistance[i] / duration),
-                player.rb.linearVelocity.y
-            );
-
+            player.rb.MovePosition(Vector2.Lerp(start, target, t / duration));
             yield return null;
         }
 
-        Vector2 pos = (Vector2)attackPoint.position + dir * moveDistance[i];
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(pos, attackRange, enemyLayer);
+        // HIT
+        Collider2D[] hits = Physics2D.OverlapBoxAll(
+            player.rb.position + dir * 0.6f,
+            new Vector2(attackRange, attackHeight),
+            0f,
+            enemyLayer
+        );
 
         foreach (var h in hits)
         {
-            IDamageable dmg = h.GetComponent<IDamageable>();
+            var dmg = h.GetComponentInParent<IDamageable>();
+            if (dmg == null) continue;
 
-            if (dmg != null)
-            {
-                Vector2 kb = new Vector2(
-                    dir.x * knockback[i].x,
-                    knockback[i].y
-                );
-
-                dmg.TakeDamage(damage[i], kb);
-            }
+            Vector2 kb = new Vector2(dir.x * knockback[i].x, knockback[i].y);
+            dmg.TakeDamage(damage[i], kb);
         }
 
         isAttacking = false;

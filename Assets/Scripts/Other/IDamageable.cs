@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.Analytics.IAnalytic;
 
 public interface IDamageable
 {

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class DashState : IPlayerState
 {
@@ -10,6 +11,8 @@ public class DashState : IPlayerState
     float speed;
     float fxTimer;
 
+    int originalLayer;
+
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
         this.player = player;
@@ -20,28 +23,48 @@ public class DashState : IPlayerState
     {
         player.isDashing = true;
         player.canControl = false;
+        player.isInvincible = true;
+        player.isAttackLocked = true;
 
         timer = player.dashTime;
         dir = player.GetDashDirection();
         speed = player.dashDistance / player.dashTime;
 
+        // 🔥 STORE LAYER
+        originalLayer = player.gameObject.layer;
+
+        // 🔥 DASH LAYER (Enemy ile etkileşmez)
+        player.gameObject.layer = LayerMask.NameToLayer("Dash");
+
         fxTimer = 0f;
         SpawnGhost();
-        fxTimer = player.afterImageSpacing;
     }
 
     public void Exit()
     {
         player.isDashing = false;
         player.canControl = true;
+        player.isInvincible = false;
+
+        // 🔥 RESTORE LAYER
+        player.gameObject.layer = originalLayer;
+
         player.dashCooldownTimer = player.dashCooldown;
+
+        player.StartCoroutine(UnlockAttack());
+    }
+
+    IEnumerator UnlockAttack()
+    {
+        yield return null;
+        player.isAttackLocked = false;
     }
 
     public void Update()
     {
         timer -= Time.deltaTime;
 
-        player.rb.linearVelocity = new Vector2(dir * speed, 0f);
+        player.rb.linearVelocity = new Vector2(dir * speed, player.rb.linearVelocity.y);
 
         HandleAfterImage();
 
@@ -57,6 +80,7 @@ public class DashState : IPlayerState
     void HandleAfterImage()
     {
         fxTimer -= Time.deltaTime;
+
         if (fxTimer > 0f) return;
 
         fxTimer = player.afterImageSpacing;

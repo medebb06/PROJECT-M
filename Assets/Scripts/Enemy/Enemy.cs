@@ -1,42 +1,71 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class Enemy : MonoBehaviour, IDamageable
 {
-    public int hp = 3;
+    public Rigidbody2D rb;
 
-    private Rigidbody2D rb;
-
-    public float knockbackMultiplier = 1f;
-    public float knockbackControlLock = 0.15f;
-
-    bool isStunned;
+    bool isKnocked;
+    Coroutine knockRoutine;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>(); // 🔥 otomatik bağla
+        rb = GetComponent<Rigidbody2D>();
+
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
-    public void TakeDamage(int damage, Vector2 knockback)
+    public void TakeDamage(int dmg, Vector2 kb)
     {
-        hp -= damage;
+        Debug.Log($"🔥 DAMAGE RECEIVED | dmg:{dmg} kb:{kb}");
 
-        if (rb != null)
+        if (knockRoutine != null)
+            StopCoroutine(knockRoutine);
+
+        knockRoutine = StartCoroutine(KnockbackRoutine(kb));
+    }
+
+    IEnumerator KnockbackRoutine(Vector2 kb)
+    {
+        isKnocked = true;
+
+        // ❗ HARD STOP
+        rb.linearVelocity = Vector2.zero;
+
+        // 🔥 instant impulse (stable)
+        rb.linearVelocity = kb;
+
+        Debug.Log("💥 KNOCKBACK START");
+
+        float t = 0f;
+        float duration = 0.12f;
+
+        while (t < duration)
         {
-            rb.linearVelocity = Vector2.zero;
-            rb.AddForce(knockback * knockbackMultiplier, ForceMode2D.Impulse);
+            t += Time.deltaTime;
+
+            // ❗ stabilize Y so sliding olmaz
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x * 0.9f, rb.linearVelocity.y);
+
+            yield return null;
         }
 
-        if (!isStunned)
-            StartCoroutine(StunRoutine());
+        rb.linearVelocity = Vector2.zero;
 
-        if (hp <= 0)
-            Destroy(gameObject);
+        isKnocked = false;
+        knockRoutine = null;
     }
-
-    System.Collections.IEnumerator StunRoutine()
+    public bool CanBeHitDuringDash()
     {
-        isStunned = true;
-        yield return new WaitForSeconds(knockbackControlLock);
-        isStunned = false;
+        return true; // şimdilik hep true
+    }
+    void FixedUpdate()
+    {
+        if (isKnocked)
+            return;
+
+        // AI HERE (important)
     }
 }

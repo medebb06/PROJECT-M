@@ -58,6 +58,9 @@ public class PlayerController : MonoBehaviour
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
+    [HideInInspector] public bool isInvincible;
+    [HideInInspector] public bool isAttackLocked;
+    public Collider2D col;
 
     [Header("Dash FX")]
     public GameObject afterImagePrefab;
@@ -68,6 +71,7 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public float dashCooldownTimer;
     [HideInInspector] public bool dashPressed;
+    public bool canAttack => !isDashing && !isAttackLocked;
 
     // ---------------- INPUT ----------------
     [Header("Runtime")]
