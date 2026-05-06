@@ -455,7 +455,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 0.8773585, g: 0.5382698, b: 0, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -1107,7 +1107,7 @@ Transform:
   m_GameObject: {fileID: 1942488873}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.9, z: 0}
+  m_LocalPosition: {x: 0, y: -1.01, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1234,6 +1234,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 512
   modelPivot: {fileID: 901546197}
+  dustPrefab: {fileID: 8723947070286554742, guid: a3a97ebe1e9c79d45b320fc00f3366a0, type: 3}
+  footPoint: {fileID: 1942488874}
   impulseSource: {fileID: 2122615049}
   moveSpeed: 10
   acceleration: 30
