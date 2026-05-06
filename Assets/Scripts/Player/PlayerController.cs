@@ -63,6 +63,7 @@ public class PlayerController : MonoBehaviour
     public bool jumpHeld;
     public bool isGrounded;
     public float facingDir = 1f;
+    public Transform attackPoint;
 
     // ---------------- STATE ----------------
     public PlayerStateMachine stateMachine;
@@ -102,6 +103,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        attackPoint.localPosition = new Vector3(0.6f * facingDir, 0, 0);
         moveInput = Input.GetAxisRaw("Horizontal");
         jumpHeld = Input.GetKey(KeyCode.Space);
 
