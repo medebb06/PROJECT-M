@@ -3,6 +3,23 @@ using Unity.Cinemachine;
 
 public class PlayerController : MonoBehaviour
 {
+    [System.Serializable]
+    public class ImpactSettings
+    {
+        public float minDistance = 2f;
+
+        public float lightDistance = 4f;
+        public float mediumDistance = 7f;
+        public float heavyDistance = 10f;
+
+        [Header("Shake Intensity")]
+        public float lightIntensity = 0.25f;
+        public float mediumIntensity = 0.6f;
+        public float heavyIntensity = 1.2f;
+    }
+
+    public ImpactSettings impactSettings;
+
     [Header("Refs")]
     public Rigidbody2D rb;
     public Transform groundCheck;
@@ -15,6 +32,10 @@ public class PlayerController : MonoBehaviour
 
     [Header("Camera Shake")]
     public CinemachineImpulseSource impulseSource;
+
+    // ---------------- CONTROL ----------------
+    [HideInInspector] public bool isDashing;
+    [HideInInspector] public bool canControl = true;
 
     // ---------------- MOVE ----------------
     [Header("Move")]
@@ -37,6 +58,7 @@ public class PlayerController : MonoBehaviour
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
+
     [Header("Dash FX")]
     public GameObject afterImagePrefab;
     public float afterImageSpacing = 0.05f;
@@ -46,16 +68,6 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public float dashCooldownTimer;
     [HideInInspector] public bool dashPressed;
-    [HideInInspector] public bool isDashing;
-
-    // ---------------- FEEL ----------------
-    [Header("Physics Feel")]
-    public float fallMultiplier = 2.5f;
-    public float lowJumpMultiplier = 2f;
-
-    // ---------------- GROUND ----------------
-    [Header("Ground")]
-    public float groundRadius = 0.15f;
 
     // ---------------- INPUT ----------------
     [Header("Runtime")]
@@ -63,32 +75,15 @@ public class PlayerController : MonoBehaviour
     public bool jumpHeld;
     public bool isGrounded;
     public float facingDir = 1f;
+
     public Transform attackPoint;
 
     // ---------------- STATE ----------------
     public PlayerStateMachine stateMachine;
 
-    // ---------------- LANDING TRACK ----------------
     float highestY;
     bool inAir;
     bool wasGrounded;
-
-    [System.Serializable]
-
-
-    public class ImpactSettings
-    {
-        public float minDistance = 2f;
-        public float lightDistance = 4f;
-        public float mediumDistance = 7f;
-        public float heavyDistance = 10f;
-
-        public float lightIntensity = 0.25f;
-        public float mediumIntensity = 0.6f;
-        public float heavyIntensity = 1.2f;
-    }
-
-    public ImpactSettings impactSettings;
 
     void Awake()
     {
@@ -97,39 +92,34 @@ public class PlayerController : MonoBehaviour
         stateMachine = new PlayerStateMachine();
         stateMachine.Initialize(new GroundedState(this, stateMachine));
 
-        if (impulseSource == null)
+        if (!impulseSource)
             impulseSource = GetComponent<CinemachineImpulseSource>();
     }
 
     void Update()
     {
-        attackPoint.localPosition = new Vector3(0.6f * facingDir, 0, 0);
         moveInput = Input.GetAxisRaw("Horizontal");
         jumpHeld = Input.GetKey(KeyCode.Space);
 
-        // buffer
+        // ✅ JUMP BUFFER (FIX)
         if (Input.GetKeyDown(KeyCode.Space))
             jumpBufferCounter = jumpBufferTime;
 
-        jumpBufferCounter -= Time.deltaTime;
+        jumpBufferCounter = Mathf.Max(0, jumpBufferCounter - Time.deltaTime);
 
-        // dash
+        // DASH
         dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
-
         if (dashCooldownTimer > 0)
             dashCooldownTimer -= Time.deltaTime;
 
-        // flip
+        // FACE
         if (moveInput != 0)
         {
             facingDir = Mathf.Sign(moveInput);
 
-            if (modelPivot != null)
-            {
-                Vector3 s = modelPivot.localScale;
-                s.x = Mathf.Abs(s.x) * facingDir;
-                modelPivot.localScale = s;
-            }
+            Vector3 s = modelPivot.localScale;
+            s.x = Mathf.Abs(s.x) * facingDir;
+            modelPivot.localScale = s;
         }
 
         stateMachine.Update();
@@ -137,24 +127,23 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundRadius, groundMask);
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.15f, groundMask);
 
-        // ---------------- COYOTE (STABLE FIX) ----------------
+        // ---------------- COYOTE FIX ----------------
         if (isGrounded)
         {
             coyoteCounter = coyoteTime;
 
-            // landing detect
             if (!wasGrounded)
             {
+                SpawnDust();
                 OnLand();
                 inAir = false;
             }
         }
         else
         {
-            coyoteCounter -= Time.fixedDeltaTime;
-            coyoteCounter = Mathf.Max(0, coyoteCounter);
+            coyoteCounter = Mathf.Max(0, coyoteCounter - Time.fixedDeltaTime);
 
             if (!inAir)
             {
@@ -172,14 +161,14 @@ public class PlayerController : MonoBehaviour
         stateMachine.FixedUpdate();
     }
 
-    // ---------------- LANDING ----------------
     void OnLand()
     {
-        SpawnDust();
+        if (!impulseSource) return;
+
         float fallDistance = highestY - transform.position.y;
 
-        if (impulseSource == null) return;
-        if (fallDistance < impactSettings.minDistance) return;
+        if (fallDistance < impactSettings.minDistance)
+            return;
 
         float intensity;
 
@@ -191,14 +180,11 @@ public class PlayerController : MonoBehaviour
             intensity = impactSettings.heavyIntensity;
 
         impulseSource.GenerateImpulse(intensity);
-
-        Debug.Log($"LAND: {fallDistance}");
     }
 
-    // ---------------- MOVEMENT ----------------
     public void ApplyMovement(float control)
     {
-        if (isDashing) return;
+        if (!canControl) return;
 
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
@@ -212,31 +198,23 @@ public class PlayerController : MonoBehaviour
             rb.linearVelocity.y
         );
     }
-    // ---------------- DUST ----------------
-    public void SpawnDust()
-    {
-        if (dustPrefab == null) return;
 
-        Vector3 pos = footPoint != null ? footPoint.position : transform.position;
-
-        GameObject obj = Instantiate(dustPrefab, pos, Quaternion.identity);
-
-        // optional: scale tweak (feel)
-        obj.transform.localScale = Vector3.one;
-    }
-
-    // ---------------- GRAVITY ----------------
     void ApplyGravity()
     {
         if (rb.linearVelocity.y < 0)
-            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
+            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * 1.5f * Time.fixedDeltaTime;
 
         else if (rb.linearVelocity.y > 0 && !jumpHeld)
-            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
+            rb.linearVelocity += Vector2.up * Physics2D.gravity.y * 1.2f * Time.fixedDeltaTime;
     }
 
-    // ---------------- HELPERS ----------------
-    public float GetDashDirection() => facingDir == 0 ? 1 : facingDir;
+    public void SpawnDust()
+    {
+        if (!dustPrefab) return;
 
-    public bool IsInputLocked() => isDashing;
+        Vector3 pos = footPoint ? footPoint.position : transform.position;
+        Instantiate(dustPrefab, pos, Quaternion.identity);
+    }
+
+    public float GetDashDirection() => facingDir == 0 ? 1 : facingDir;
 }

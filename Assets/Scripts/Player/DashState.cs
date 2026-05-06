@@ -8,6 +8,7 @@ public class DashState : IPlayerState
     float timer;
     float dir;
     float speed;
+    float fxTimer;
 
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
@@ -18,17 +19,21 @@ public class DashState : IPlayerState
     public void Enter()
     {
         player.isDashing = true;
+        player.canControl = false;
 
         timer = player.dashTime;
         dir = player.GetDashDirection();
         speed = player.dashDistance / player.dashTime;
 
-        player.afterImageTimer = 0f; // hemen spawn başlasın
+        fxTimer = 0f;
+        SpawnGhost();
+        fxTimer = player.afterImageSpacing;
     }
 
     public void Exit()
     {
         player.isDashing = false;
+        player.canControl = true;
         player.dashCooldownTimer = player.dashCooldown;
     }
 
@@ -51,19 +56,16 @@ public class DashState : IPlayerState
 
     void HandleAfterImage()
     {
-        player.afterImageTimer -= Time.deltaTime;
+        fxTimer -= Time.deltaTime;
+        if (fxTimer > 0f) return;
 
-        if (player.afterImageTimer > 0f)
-            return;
-
-        player.afterImageTimer = player.afterImageSpacing;
-
+        fxTimer = player.afterImageSpacing;
         SpawnGhost();
     }
 
     void SpawnGhost()
     {
-        if (player.afterImagePrefab == null) return;
+        if (!player.afterImagePrefab || !player.playerSprite) return;
 
         GameObject obj = Object.Instantiate(
             player.afterImagePrefab,
@@ -73,11 +75,14 @@ public class DashState : IPlayerState
 
         var ghost = obj.GetComponent<AfterImage>();
 
-        ghost.Init(
-            player.playerSprite.sprite,
-            player.modelPivot.localScale,
-            player.facingDir < 0
-        );
+        if (ghost != null)
+        {
+            ghost.Init(
+                player.playerSprite.sprite,
+                player.modelPivot.localScale,
+                player.facingDir < 0
+            );
+        }
     }
 
     public void FixedUpdate() { }

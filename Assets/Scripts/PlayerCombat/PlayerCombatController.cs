@@ -1,18 +1,15 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class PlayerCombatController : MonoBehaviour
 {
-    [Header("Refs")]
     public Transform attackPoint;
     public LayerMask enemyLayer;
 
-    private PlayerController player;
+    PlayerController player;
 
-    [Header("Combo")]
     public float comboResetTime = 0.8f;
     public float inputBufferTime = 0.2f;
 
-    [Header("Attack Data")]
     public float attackRange = 0.8f;
 
     public int[] damage = { 1, 1, 2, 3 };
@@ -21,16 +18,18 @@ public class PlayerCombatController : MonoBehaviour
 
     public Vector2[] knockback =
     {
-        new Vector2(3, 1),
-        new Vector2(4, 1),
-        new Vector2(5, 1.2f),
-        new Vector2(6, 1.5f)
+        new Vector2(3,1),
+        new Vector2(4,1),
+        new Vector2(5,1.2f),
+        new Vector2(6,1.5f)
     };
 
     int comboStep;
     float comboTimer;
     float bufferTimer;
+
     bool isAttacking;
+    bool bufferedAttack;
 
     void Awake()
     {
@@ -43,10 +42,28 @@ public class PlayerCombatController : MonoBehaviour
         bufferTimer -= Time.deltaTime;
 
         if (Input.GetMouseButtonDown(0))
+        {
+            if (!player.canControl)
+            {
+                bufferedAttack = true;
+                return;
+            }
+
             bufferTimer = inputBufferTime;
+        }
 
         if (comboTimer <= 0f)
             comboStep = 0;
+
+        if (!player.canControl)
+            return;
+
+        if (bufferedAttack)
+        {
+            bufferedAttack = false;
+            Attack();
+            return;
+        }
 
         if (bufferTimer > 0f && !isAttacking)
         {
@@ -65,9 +82,7 @@ public class PlayerCombatController : MonoBehaviour
 
         comboTimer = comboResetTime;
 
-        int index = comboStep - 1;
-
-        StartCoroutine(DoAttack(index));
+        StartCoroutine(DoAttack(comboStep - 1));
     }
 
     System.Collections.IEnumerator DoAttack(int i)
@@ -77,9 +92,10 @@ public class PlayerCombatController : MonoBehaviour
 
         Vector2 dir = new Vector2(player.facingDir, 0f);
 
-        // küçük forward lunge
         while (t < duration)
         {
+            if (!player.canControl) yield break;
+
             t += Time.deltaTime;
 
             player.rb.linearVelocity = new Vector2(
@@ -90,7 +106,6 @@ public class PlayerCombatController : MonoBehaviour
             yield return null;
         }
 
-        // HIT
         Vector2 pos = (Vector2)attackPoint.position + dir * moveDistance[i];
 
         Collider2D[] hits = Physics2D.OverlapCircleAll(pos, attackRange, enemyLayer);
@@ -111,13 +126,5 @@ public class PlayerCombatController : MonoBehaviour
         }
 
         isAttacking = false;
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (attackPoint == null) return;
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(attackPoint.position, attackRange);
     }
 }

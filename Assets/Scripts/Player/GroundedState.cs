@@ -2,8 +2,8 @@
 
 public class GroundedState : IPlayerState
 {
-    private PlayerController player;
-    private PlayerStateMachine sm;
+    PlayerController player;
+    PlayerStateMachine sm;
 
     public GroundedState(PlayerController player, PlayerStateMachine sm)
     {
@@ -11,24 +11,28 @@ public class GroundedState : IPlayerState
         this.sm = sm;
     }
 
-    public void Enter() { }
+    public void Enter()
+    {
+        // ground’a basınca coyote reset
+        player.coyoteCounter = player.coyoteTime;
+    }
 
     public void Exit() { }
 
     public void Update()
     {
-        if (player.IsInputLocked())
-            return;
+        if (!player.canControl) return;
 
         player.ApplyMovement(1f);
 
+        // ---------------- DASH ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
         {
             sm.ChangeState(new DashState(player, sm));
             return;
         }
 
-        // ---------------- JUMP (FINAL FIX) ----------------
+        // ---------------- JUMP (TEK YER) ----------------
         if (player.jumpBufferCounter > 0f && player.coyoteCounter > 0f)
         {
             player.jumpBufferCounter = 0f;
