@@ -9,6 +9,10 @@ public class PlayerController : MonoBehaviour
     public LayerMask groundMask;
     public Transform modelPivot;
 
+    [Header("VFX")]
+    public GameObject dustPrefab;
+    public Transform footPoint;
+
     [Header("Camera Shake")]
     public CinemachineImpulseSource impulseSource;
 
@@ -69,6 +73,8 @@ public class PlayerController : MonoBehaviour
     bool wasGrounded;
 
     [System.Serializable]
+
+
     public class ImpactSettings
     {
         public float minDistance = 2f;
@@ -167,6 +173,7 @@ public class PlayerController : MonoBehaviour
     // ---------------- LANDING ----------------
     void OnLand()
     {
+        SpawnDust();
         float fallDistance = highestY - transform.position.y;
 
         if (impulseSource == null) return;
@@ -202,6 +209,18 @@ public class PlayerController : MonoBehaviour
             rb.linearVelocity.x + speedDiff * accel * Time.fixedDeltaTime * control,
             rb.linearVelocity.y
         );
+    }
+    // ---------------- DUST ----------------
+    public void SpawnDust()
+    {
+        if (dustPrefab == null) return;
+
+        Vector3 pos = footPoint != null ? footPoint.position : transform.position;
+
+        GameObject obj = Instantiate(dustPrefab, pos, Quaternion.identity);
+
+        // optional: scale tweak (feel)
+        obj.transform.localScale = Vector3.one;
     }
 
     // ---------------- GRAVITY ----------------
