@@ -1488,13 +1488,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   impactSettings:
-    minDistance: 5
-    lightDistance: 6
-    mediumDistance: 16
-    heavyDistance: 22
-    lightIntensity: 0.2
-    mediumIntensity: 0.4
+    lightThreshold: 1
+    mediumThreshold: 3
+    heavyThreshold: 5
+    lightIntensity: 0.05
+    mediumIntensity: 0.2
     heavyIntensity: 0.6
+    shakeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    maxFallDistance: 15
+    minDistance: 4
   rb: {fileID: 2122615044}
   col: {fileID: 2122615043}
   modelPivot: {fileID: 901546197}
@@ -1504,7 +1529,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 512
   attackPoint: {fileID: 1554155158}
-  audioPlayer: {fileID: 0}
+  audioPlayer: {fileID: 2122615051}
   dustPrefab: {fileID: 8723947070286554742, guid: a3a97ebe1e9c79d45b320fc00f3366a0, type: 3}
   footPoint: {fileID: 1942488874}
   playerSprite: {fileID: 901546199}
@@ -1518,6 +1543,7 @@ MonoBehaviour:
   deceleration: 7
   airControl: 0.6
   stepTimer: 0
+  jumpConsumed: 0
   jumpForce: 15
   jumpBufferTime: 0.15
   coyoteTime: 0.2

@@ -1,21 +1,29 @@
 ﻿using UnityEngine;
 using Unity.Cinemachine;
 
+
 public class PlayerController : MonoBehaviour
 {
     [System.Serializable]
     public class ImpactSettings
     {
-        public float minDistance = 2f;
-
-        public float lightDistance = 4f;
-        public float mediumDistance = 7f;
-        public float heavyDistance = 10f;
+        [Header("Height Thresholds")]
+        public float lightThreshold = 4f;
+        public float mediumThreshold = 7f;
+        public float heavyThreshold = 10f;
 
         [Header("Shake Intensity")]
         public float lightIntensity = 0.25f;
         public float mediumIntensity = 0.6f;
         public float heavyIntensity = 1.2f;
+
+        [Header("Shake Curve")]
+        public AnimationCurve shakeCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
+        public float maxFallDistance = 10f;
+
+        public float minDistance = 2f;
+    
     }
 
     public ImpactSettings impactSettings;
@@ -55,6 +63,7 @@ public class PlayerController : MonoBehaviour
 
     public bool canAttack => !isDashing && !isAttackLocked;
 
+
     // ---------------- MOVEMENT ----------------
     [Header("Movement")]
     public float moveSpeed = 7f;
@@ -65,6 +74,10 @@ public class PlayerController : MonoBehaviour
     public float stepTimer;
     float nextStepTime;
     bool wasRunning;
+    public bool jumpConsumed;
+    float airTime;
+    float maxAirHeight;
+    bool wasGrounded;
 
     // ---------------- JUMP ----------------
     [Header("Jump")]
@@ -114,7 +127,7 @@ public class PlayerController : MonoBehaviour
     // ---------------- LANDING ----------------
     float highestY;
     bool inAir;
-    bool wasGrounded;
+    
 
     void Awake()
     {
@@ -135,14 +148,14 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         HandleRunAudio();
-
+        HandleJump();
         HandleInput();
         HandleTimers();
         HandleFacing();
 
         stateMachine.Update();
     }
-    
+   
 
     void HandleRunAudio()
     {
@@ -166,13 +179,34 @@ public class PlayerController : MonoBehaviour
             stepTimer = Mathf.Lerp(0.45f, 0.15f, speedFactor);
         }
     }
+    void HandleJump()
+    {
+        if (!canControl) return;
+
+        if (jumpBufferCounter <= 0f) return;
+        if (coyoteCounter <= 0f) return;
+        if (jumpConsumed) return;
+
+        jumpBufferCounter = 0f;
+        coyoteCounter = 0f;
+        jumpConsumed = true;
+
+        stateMachine.ChangeState(new JumpState(this, stateMachine));
+    }
 
     void FixedUpdate()
     {
         GroundCheck();
 
-        ApplyBetterGravity();
+        if (!isGrounded)
+        {
+            airTime += Time.fixedDeltaTime;
 
+            if (transform.position.y > maxAirHeight)
+                maxAirHeight = transform.position.y;
+        }
+
+        ApplyBetterGravity();
         stateMachine.FixedUpdate();
     }
 
@@ -217,41 +251,26 @@ public class PlayerController : MonoBehaviour
 
     void GroundCheck()
     {
-        isGrounded = Physics2D.OverlapCircle(
+        bool groundedNow = Physics2D.OverlapCircle(
             groundCheck.position,
             groundCheckRadius,
             groundMask
         );
 
-        if (isGrounded)
+        if (groundedNow && !wasGrounded)
+        {
+            OnLand();
+            airTime = 0f;
+            maxAirHeight = transform.position.y;
+        }
+
+        if (!groundedNow && wasGrounded)
         {
             coyoteCounter = coyoteTime;
-
-            if (!wasGrounded)
-            {
-                SpawnDust();
-                OnLand();
-
-                inAir = false;
-            }
-        }
-        else
-        {
-            coyoteCounter -= Time.fixedDeltaTime;
-
-            if (!inAir)
-            {
-                inAir = true;
-                highestY = transform.position.y;
-            }
-
-            if (transform.position.y > highestY)
-            {
-                highestY = transform.position.y;
-            }
         }
 
-        wasGrounded = isGrounded;
+        wasGrounded = groundedNow;
+        isGrounded = groundedNow;
     }
 
     // =========================================================
@@ -336,25 +355,18 @@ public class PlayerController : MonoBehaviour
         if (!impulseSource)
             return;
 
-        float fallDistance = highestY - transform.position.y;
+        float fallDistance = maxAirHeight - transform.position.y;
+
+        // ❗ sadece gerçek düşüş varsa shake
+        if (airTime < 0.15f)
+            return;
 
         if (fallDistance < impactSettings.minDistance)
             return;
 
-        float intensity;
-
-        if (fallDistance < impactSettings.lightDistance)
-        {
-            intensity = impactSettings.lightIntensity;
-        }
-        else if (fallDistance < impactSettings.mediumDistance)
-        {
-            intensity = impactSettings.mediumIntensity;
-        }
-        else
-        {
-            intensity = impactSettings.heavyIntensity;
-        }
+        float intensity = impactSettings.shakeCurve.Evaluate(
+            Mathf.Clamp01(fallDistance / impactSettings.maxFallDistance)
+        );
 
         impulseSource.GenerateImpulse(intensity);
     }

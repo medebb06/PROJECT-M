@@ -13,10 +13,15 @@ public class GroundedState : IPlayerState
 
     public void Enter()
     {
+        // yere basınca coyote yenilenir
         player.coyoteCounter = player.coyoteTime;
+
+        // jump lock reset (çok önemli)
+        player.jumpConsumed = false;
 
         Vector2 vel = player.rb.linearVelocity;
 
+        // küçük zemin snap
         if (Mathf.Abs(vel.y) < 0.01f)
         {
             vel.y = 0f;
@@ -38,32 +43,32 @@ public class GroundedState : IPlayerState
             return;
         }
 
+        // ---------------- FALL ----------------
+        if (!player.IsGrounded())
+        {
+            sm.ChangeState(new AirState(player, sm));
+            return;
+        }
+
         // ---------------- JUMP ----------------
-        if (player.jumpBufferCounter > 0f &&
+        if (!player.jumpConsumed &&
+            player.jumpBufferCounter > 0f &&
             player.coyoteCounter > 0f)
         {
             player.jumpBufferCounter = 0f;
             player.coyoteCounter = 0f;
 
-            // 🎮 jump strength hesapla (şimdilik sabit ama ileride büyür)
+            player.jumpConsumed = true;
+
             float jumpStrength = Mathf.Clamp01(
                 Mathf.Abs(player.moveInput) * 0.5f + 0.5f
             );
 
-            // 🔥 AGGRESSIVE AUDIO
             if (player.audioPlayer != null)
-            {
                 player.audioPlayer.PlayJump(jumpStrength);
-            }
 
             sm.ChangeState(new JumpState(player, sm));
             return;
-        }
-
-        // ---------------- FALL ----------------
-        if (!player.IsGrounded())
-        {
-            sm.ChangeState(new AirState(player, sm));
         }
     }
 
