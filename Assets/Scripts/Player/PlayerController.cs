@@ -61,6 +61,10 @@ public class PlayerController : MonoBehaviour
     public float acceleration = 45f;
     public float deceleration = 60f;
     public float airControl = 0.6f;
+    [Header("Run Audio")]
+    public float stepTimer;
+    float nextStepTime;
+    bool wasRunning;
 
     // ---------------- JUMP ----------------
     [Header("Jump")]
@@ -130,11 +134,37 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        HandleRunAudio();
+
         HandleInput();
         HandleTimers();
         HandleFacing();
 
         stateMachine.Update();
+    }
+    
+
+    void HandleRunAudio()
+    {
+        bool isRunning = isGrounded && Mathf.Abs(moveInput) > 0.1f;
+
+        if (!isRunning)
+        {
+            audioPlayer.StopRun();
+            stepTimer = 0f;
+            return;
+        }
+
+        stepTimer -= Time.deltaTime;
+
+        float speed = Mathf.Abs(rb.linearVelocity.x);
+        float speedFactor = Mathf.InverseLerp(0f, moveSpeed, speed);
+
+        if (stepTimer <= 0f)
+        {
+            audioPlayer.StartRun(speedFactor);
+            stepTimer = Mathf.Lerp(0.45f, 0.15f, speedFactor);
+        }
     }
 
     void FixedUpdate()
