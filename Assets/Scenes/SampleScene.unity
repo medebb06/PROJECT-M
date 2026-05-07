@@ -1640,9 +1640,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxStretch: 0.25
-  maxSquash: 0.35
-  recoverySpeed: 14
+  maxStretch: 0.3
+  maxSquash: 0.3
+  recoverySpeed: 250
   impactDuration: 0.12
 --- !u!114 &2122615049
 MonoBehaviour:
