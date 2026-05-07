@@ -3,15 +3,15 @@ using System.Collections;
 
 public class DashState : IPlayerState
 {
-    PlayerController player;
-    PlayerStateMachine sm;
+    private PlayerController player;
+    private PlayerStateMachine sm;
 
-    float timer;
-    float dir;
-    float speed;
-    float fxTimer;
+    private float timer;
+    private float dir;
+    private float speed;
+    private float fxTimer;
 
-    int originalLayer;
+    private int originalLayer;
 
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
@@ -21,22 +21,33 @@ public class DashState : IPlayerState
 
     public void Enter()
     {
+        float speedFactor = Mathf.InverseLerp(0f, 20f, player.rb.linearVelocity.magnitude);
+        player.audioPlayer.PlayDash(speedFactor);
         player.isDashing = true;
         player.canControl = false;
         player.isInvincible = true;
         player.isAttackLocked = true;
 
         timer = player.dashTime;
+
         dir = player.GetDashDirection();
+
         speed = player.dashDistance / player.dashTime;
 
-        // 🔥 STORE LAYER
+        // collision layer save
         originalLayer = player.gameObject.layer;
 
-        // 🔥 DASH LAYER (Enemy ile etkileşmez)
+        // dash layer
         player.gameObject.layer = LayerMask.NameToLayer("Dash");
 
+        // dash başlangıcında vertical velocity temizle
+        Vector2 vel = player.rb.linearVelocity;
+        vel.y = 0f;
+
+        player.SetVelocity(vel);
+
         fxTimer = 0f;
+
         SpawnGhost();
     }
 
@@ -46,10 +57,17 @@ public class DashState : IPlayerState
         player.canControl = true;
         player.isInvincible = false;
 
-        // 🔥 RESTORE LAYER
+        // restore layer
         player.gameObject.layer = originalLayer;
 
         player.dashCooldownTimer = player.dashCooldown;
+
+        // dash çıkışında momentum koru
+        Vector2 vel = player.rb.linearVelocity;
+
+        vel.x = dir * player.moveSpeed * 0.9f;
+
+        player.SetVelocity(vel);
 
         player.StartCoroutine(UnlockAttack());
     }
@@ -57,6 +75,7 @@ public class DashState : IPlayerState
     IEnumerator UnlockAttack()
     {
         yield return null;
+
         player.isAttackLocked = false;
     }
 
@@ -64,32 +83,50 @@ public class DashState : IPlayerState
     {
         timer -= Time.deltaTime;
 
-        player.rb.linearVelocity = new Vector2(dir * speed, player.rb.linearVelocity.y);
-
-        HandleAfterImage();
-
         if (timer <= 0f)
         {
             if (player.isGrounded)
                 sm.ChangeState(new GroundedState(player, sm));
             else
                 sm.ChangeState(new AirState(player, sm));
+
+            return;
         }
+
+        HandleAfterImage();
     }
+
+    public void FixedUpdate()
+    {
+        // dash boyunca stabil velocity
+        Vector2 vel = player.rb.linearVelocity;
+
+        vel.x = dir * speed;
+        vel.y = 0f;
+
+        player.SetVelocity(vel);
+    }
+
+    // =========================================================
+    // AFTER IMAGE
+    // =========================================================
 
     void HandleAfterImage()
     {
         fxTimer -= Time.deltaTime;
 
-        if (fxTimer > 0f) return;
+        if (fxTimer > 0f)
+            return;
 
         fxTimer = player.afterImageSpacing;
+
         SpawnGhost();
     }
 
     void SpawnGhost()
     {
-        if (!player.afterImagePrefab || !player.playerSprite) return;
+        if (!player.afterImagePrefab || !player.playerSprite)
+            return;
 
         GameObject obj = Object.Instantiate(
             player.afterImagePrefab,
@@ -97,7 +134,7 @@ public class DashState : IPlayerState
             Quaternion.identity
         );
 
-        var ghost = obj.GetComponent<AfterImage>();
+        AfterImage ghost = obj.GetComponent<AfterImage>();
 
         if (ghost != null)
         {
@@ -108,6 +145,4 @@ public class DashState : IPlayerState
             );
         }
     }
-
-    public void FixedUpdate() { }
 }
