@@ -3,136 +3,93 @@ using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
 {
-    public Transform attackPoint;
+    public PlayerController player;
     public LayerMask enemyLayer;
 
-    PlayerController player;
-
-    [Header("Combo")]
-    public float comboResetTime = 0.8f;
     public float inputBufferTime = 0.2f;
+    public float comboResetTime = 0.8f;
 
-    [Header("Attack")]
-    public float attackRange = 0.9f;
-    public float attackHeight = 1.2f;
+    private float bufferTimer;
+    private float comboTimer;
+    private int comboStep;
 
-    public int[] damage = { 1, 1, 2, 3 };
+    [Header("Attack Range")]
+    public Vector2 hitBoxSize = new Vector2(1.5f, 1.2f);
 
-    public float[] moveDistance = { 0.3f, 0.5f, 0.7f, 1.0f };
+    [Header("Attack Move (Feel)")]
+    public float attackMoveDistance = 0.25f;
+    public float attackMoveSpeed = 6f;
+    public AnimationCurve attackMoveCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
-    public Vector2[] knockback =
-    {
-        new Vector2(3,1),
-        new Vector2(4,1),
-        new Vector2(5,1.2f),
-        new Vector2(6,1.5f)
-    };
+    [Header("Hit Stop")]
+    public float hitStopTimeScale = 0.05f;
+    public float hitStopDuration = 0.06f;
 
-    int comboStep;
-    float comboTimer;
-    float bufferTimer;
+    private ICombatState currentState;
 
-    bool isAttacking;
-    bool bufferedAttack;
-
-    void Awake()
-    {
-        player = GetComponent<PlayerController>();
-    }
+    Coroutine hitStopRoutine;
 
     void Update()
     {
-        comboTimer -= Time.deltaTime;
         bufferTimer -= Time.deltaTime;
+        comboTimer -= Time.deltaTime;
 
-        // 🔥 INPUT
         if (Input.GetMouseButtonDown(0))
-        {
             bufferTimer = inputBufferTime;
-        }
 
-        if (comboTimer <= 0f)
+        if (comboTimer <= 0)
             comboStep = 0;
 
-        // 🔥 buffered attack ALWAYS works (dash sonrası da)
-        if (bufferTimer > 0f && !isAttacking)
+        if (bufferTimer > 0 && currentState == null)
         {
-            bufferTimer = 0f;
-            Attack();
+            bufferTimer = 0;
+            StartAttack();
         }
+
+        currentState?.Tick();
     }
 
-    void Attack()
+    void StartAttack()
     {
-        if (!player.canAttack)
-            return;
+        Debug.Log("ATTACK START");
 
-        isAttacking = true;
-
-        comboStep++;
-        if (comboStep > 4) comboStep = 1;
-
+        comboStep = Mathf.Clamp(comboStep + 1, 1, 4);
         comboTimer = comboResetTime;
 
-        StartCoroutine(DoAttack(comboStep - 1));
-    }
-
-    IEnumerator DoAttack(int i)
-    {
-        isAttacking = true;
-
-        // 🔥 micro hit delay (feel)
-        yield return new WaitForSeconds(0.03f);
-
-        float t = 0f;
-        float duration = 0.18f;
-
-        Vector2 dir = player.facingDir > 0 ? Vector2.right : Vector2.left;
-
-        Vector2 start = player.rb.position;
-        Vector2 target = start + dir * moveDistance[i];
-
-        while (t < duration)
-        {
-            // ❌ DASH veya ATTACK LOCK olursa çık
-            if (!player.canAttack || player.isDashing)
-            {
-                isAttacking = false;
-                yield break;
-            }
-
-            t += Time.deltaTime;
-
-            float lerp = t / duration;
-
-            player.rb.MovePosition(Vector2.Lerp(start, target, lerp));
-
-            yield return null;
-        }
-
-        // 🔥 HIT CHECK
-        Vector2 boxCenter = player.rb.position + dir * 0.6f;
-
-        Collider2D[] hits = Physics2D.OverlapBoxAll(
-            boxCenter,
-            new Vector2(attackRange, attackHeight),
-            0f,
-            enemyLayer
+        currentState = new AttackState(
+            player,
+            enemyLayer,
+            comboStep,
+            OnAttackEnd,
+            hitStopTimeScale,
+            hitStopDuration,
+            attackMoveDistance,
+            attackMoveSpeed,
+            attackMoveCurve
         );
 
-        foreach (var h in hits)
-        {
-            var dmg = h.GetComponentInParent<IDamageable>();
-            if (dmg == null) continue;
+        currentState.Enter();
+    }
 
-            Vector2 kb = new Vector2(
-                dir.x * knockback[i].x,
-                knockback[i].y
-            );
+    void OnAttackEnd()
+    {
+        currentState = null;
+    }
 
-            dmg.TakeDamage(damage[i], kb);
-        }
+    public void DoHitStop(float duration, float timeScale)
+    {
+        if (hitStopRoutine != null)
+            StopCoroutine(hitStopRoutine);
 
-        isAttacking = false;
+        hitStopRoutine = StartCoroutine(HitStopCoroutine(duration, timeScale));
+    }
+
+    IEnumerator HitStopCoroutine(float duration, float scale)
+    {
+        Time.timeScale = scale;
+
+        yield return new WaitForSecondsRealtime(duration);
+
+        Time.timeScale = 1f;
     }
 }

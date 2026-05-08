@@ -1,103 +1,35 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class Enemy : MonoBehaviour, IDamageable
 {
-    public Rigidbody2D rb;
+    public int hp = 3;
 
-    [Header("Knockback")]
-    public float knockDuration = 0.12f;
-
-    bool isKnocked;
-    Coroutine knockRoutine;
-
-    PhysicsMaterial2D mat;
+    EnemyController controller;
+    bool isInvulnerable;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
-
-        var col = GetComponent<Collider2D>();
-
-        PhysicsMaterial2D mat = new PhysicsMaterial2D();
-        mat.friction = 0f;
-        mat.bounciness = 0f;
-
-        col.sharedMaterial = mat;
-
-        rb.freezeRotation = true;
-        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        controller = GetComponent<EnemyController>();
     }
 
-    // =========================
-    // DAMAGE ENTRY
-    // =========================
-    public void TakeDamage(int dmg, Vector2 kb)
+    public void TakeDamage(int damage, Vector2 knockback)
     {
-        Debug.Log($"🔥 DAMAGE RECEIVED | dmg:{dmg} kb:{kb}");
+        if (isInvulnerable) return;
 
-        if (knockRoutine != null)
-            StopCoroutine(knockRoutine);
+        hp -= damage;
 
-        knockRoutine = StartCoroutine(KnockbackRoutine(kb));
+        controller.ChangeState(new EnemyHitState(controller, knockback));
+
+        StartCoroutine(IFrame());
+
+        if (hp <= 0)
+            Destroy(gameObject);
     }
 
-    // =========================
-    // CLEAN KNOCKBACK SYSTEM
-    // =========================
-    IEnumerator KnockbackRoutine(Vector2 kb)
+    System.Collections.IEnumerator IFrame()
     {
-        isKnocked = true;
-
-        rb.linearVelocity = Vector2.zero;
-
-        Vector2 start = rb.position;
-        Vector2 target = start + kb;
-
-        float t = 0f;
-
-        Debug.Log("💥 KNOCKBACK START");
-
-        while (t < knockDuration)
-        {
-            t += Time.deltaTime;
-
-            float curve = t / knockDuration;
-
-            // 🔥 smooth + güçlü hissiyat
-            rb.MovePosition(Vector2.Lerp(start, target, curve));
-
-            yield return null;
-        }
-
-        rb.linearVelocity = Vector2.zero;
-
-        isKnocked = false;
-        knockRoutine = null;
-    }
-
-    // =========================
-    // NO PHYSICS PUSH RULE
-    // =========================
-    void OnCollisionStay2D(Collision2D col)
-    {
-        if (col.gameObject.CompareTag("Player"))
-        {
-            // ❌ fiziksel push engeli
-            rb.linearVelocity = Vector2.zero;
-        }
-    }
-
-    void FixedUpdate()
-    {
-        if (isKnocked)
-            return;
-
-        // AI burada çalışır
-    }
-
-    public bool CanBeHitDuringDash()
-    {
-        return true;
+        isInvulnerable = true;
+        yield return new WaitForSeconds(0.06f);
+        isInvulnerable = false;
     }
 }

@@ -154,9 +154,11 @@ public class PlayerController : MonoBehaviour
 
     void Awake()
     {
+        Debug.Log("START GRAVITY: " + rb.gravityScale);
         rb = GetComponent<Rigidbody2D>();
 
-        if (!audioPlayer)
+        Debug.Log("AWAKE GRAVITY: " + rb.gravityScale);
+    if (!audioPlayer)
             audioPlayer = GetComponent<PlayerAudio>();
 
         if (!impulseSource)
@@ -170,6 +172,10 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (rb.gravityScale != 3.5f)
+        {
+            Debug.LogWarning("GRAVITY OVERRIDDEN: " + rb.gravityScale);
+        }
 
         HandleRunAudio();
         HandleJump();
