@@ -171,7 +171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6add95a4cc062884982c8752454bc26a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  hp: 15
+  hp: 5
 --- !u!114 &8306325381340741459
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,5 +184,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  target: {fileID: 5951146257160834191}
-  chaseRange: 5
+  target: {fileID: 0}
+  chaseRange: 10
