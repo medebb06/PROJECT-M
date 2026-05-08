@@ -51,6 +51,9 @@ public class AttackState : ICombatState
 
         start = player.rb.position;
         target = start + dir * moveDistance;
+
+        // 🔥 küçük stabilizasyon (squash azaltır)
+        player.rb.linearVelocity = Vector2.zero;
     }
 
     public void Tick()
@@ -66,9 +69,13 @@ public class AttackState : ICombatState
         float n = Mathf.Clamp01(t * moveSpeed);
         float curve = moveCurve != null ? moveCurve.Evaluate(n) : n;
 
-        player.rb.MovePosition(Vector2.Lerp(start, target, curve));
+        // 🔥 MAIN FIX: Y ekseni sabit → squash yok
+        Vector2 nextPos = Vector2.Lerp(start, target, curve);
+        nextPos.y = player.rb.position.y;
 
-        // 🔥 HIT WINDOW (daha geniş)
+        player.rb.MovePosition(nextPos);
+
+        // 🔥 HIT WINDOW
         if (!hasHit && t >= 0.04f && t <= 0.14f)
         {
             Hit();
