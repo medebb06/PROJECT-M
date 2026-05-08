@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyChaseState : IEnemyState
 {
@@ -21,9 +21,18 @@ public class EnemyChaseState : IEnemyState
 
         float dist = Vector2.Distance(enemy.transform.position, enemy.target.position);
 
+        // ❌ çok uzaksa pes et
         if (dist > enemy.chaseRange * 1.5f)
         {
             enemy.ChangeState(new EnemyIdleState(enemy));
+            return;
+        }
+
+        // 🎯 attack mesafesine girdiyse DUR + attack state
+        if (dist <= enemy.attackRange)
+        {
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            enemy.ChangeState(new EnemyAttackState(enemy));
             return;
         }
 

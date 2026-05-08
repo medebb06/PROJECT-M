@@ -24,22 +24,23 @@ public class EnemyHitState : IEnemyState
         sr = enemy.GetComponent<SpriteRenderer>();
 
         originalColor = sr.color;
-
         timer = duration;
 
         // hit flash
         sr.color = Color.white;
 
-        // temiz impuls hit
+        // 🔥 kontrolü temizle + fizik çakışmasını önle
         rb.linearVelocity = Vector2.zero;
-        rb.AddForce(knockback, ForceMode2D.Impulse);
+
+        // AddForce yerine direkt velocity (senin sistemle uyumlu)
+        rb.linearVelocity = knockback;
     }
 
     public void Tick()
     {
         timer -= Time.deltaTime;
 
-        if (timer <= 0)
+        if (timer <= 0f)
         {
             enemy.ChangeState(new EnemyChaseState(enemy));
         }
@@ -47,7 +48,10 @@ public class EnemyHitState : IEnemyState
 
     public void Exit()
     {
-        rb.linearVelocity = Vector2.zero;
+        // güvenlik: state değişirken “white flash stuck” olmasın
         sr.color = originalColor;
+
+        // küçük stabilizasyon
+        rb.linearVelocity = Vector2.zero;
     }
 }

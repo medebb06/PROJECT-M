@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
+    public float attackRange = 1.2f;
+    
     public Transform target;
     public float chaseRange = 5f;
 
