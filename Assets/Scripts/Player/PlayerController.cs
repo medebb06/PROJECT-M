@@ -7,6 +7,16 @@ public class PlayerController : MonoBehaviour
     [System.Serializable]
     public class ImpactSettings
     {
+        [Header("Ground Slam")]
+        public float slamSpeed = 35f;
+        public float slamDamageRadius = 2f;
+        public int slamDamage = 25;
+
+        public LayerMask enemyLayer;
+        
+
+
+
         [Header("Height Thresholds")]
         public float lightThreshold = 4f;
         public float mediumThreshold = 7f;
@@ -25,6 +35,13 @@ public class PlayerController : MonoBehaviour
         public float minDistance = 2f;
     
     }
+
+    [HideInInspector] public bool slamGroundLock;
+    [HideInInspector] public float slamLockTimer;
+    public float slamLockDuration = 0.12f;
+
+    [Header("Hit Freeze")]
+    public float slamFreezeTime = 0.04f;
 
     public ImpactSettings impactSettings;
 
@@ -120,6 +137,9 @@ public class PlayerController : MonoBehaviour
     public bool jumpHeld;
     public bool isGrounded;
     public float facingDir = 1f;
+    [HideInInspector] public bool slamPressed;
+    public float verticalInput;
+
 
     // ---------------- STATE ----------------
     public PlayerStateMachine stateMachine;
@@ -127,7 +147,10 @@ public class PlayerController : MonoBehaviour
     // ---------------- LANDING ----------------
     float highestY;
     bool inAir;
-    
+
+    [HideInInspector] public bool inputLocked;
+    [HideInInspector] public float inputLockTimer;
+    public float inputLockDuration = 0.12f;
 
     void Awake()
     {
@@ -147,6 +170,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+
         HandleRunAudio();
         HandleJump();
         HandleInput();
@@ -154,6 +178,7 @@ public class PlayerController : MonoBehaviour
         HandleFacing();
 
         stateMachine.Update();
+       
     }
    
 
@@ -181,6 +206,7 @@ public class PlayerController : MonoBehaviour
     }
     void HandleJump()
     {
+
         if (!canControl) return;
 
         if (jumpBufferCounter <= 0f) return;
@@ -216,7 +242,16 @@ public class PlayerController : MonoBehaviour
 
     void HandleInput()
     {
+        if (inputLocked)
+        {
+            moveInput = 0f;
+            verticalInput = 0f;
+            jumpHeld = false;
+            dashPressed = false;
+            return;
+        }
         moveInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
 
         jumpHeld = Input.GetKey(KeyCode.Space);
 
@@ -240,10 +275,27 @@ public class PlayerController : MonoBehaviour
     void HandleTimers()
     {
         jumpBufferCounter -= Time.deltaTime;
-
         jumpBufferCounter = Mathf.Max(0f, jumpBufferCounter);
+
         coyoteCounter = Mathf.Max(0f, coyoteCounter);
+
+        // ---------------- SLAM LOCK ----------------
+        if (slamGroundLock)
+        {
+            slamLockTimer -= Time.deltaTime;
+
+            if (slamLockTimer <= 0f)
+                slamGroundLock = false;
+            if (inputLocked)
+            {
+                inputLockTimer -= Time.deltaTime;
+
+                if (inputLockTimer <= 0f)
+                    inputLocked = false;
+            }
+        }
     }
+
 
     // =========================================================
     // GROUND CHECK
@@ -251,6 +303,13 @@ public class PlayerController : MonoBehaviour
 
     void GroundCheck()
     {
+        // 🔥 slam sırasında physics flicker IGNORE
+        if (slamGroundLock)
+        {
+            isGrounded = true;
+            return;
+        }
+
         bool groundedNow = Physics2D.OverlapCircle(
             groundCheck.position,
             groundCheckRadius,
@@ -318,7 +377,10 @@ public class PlayerController : MonoBehaviour
 
     void ApplyBetterGravity()
     {
-        // düşüş hızlandır
+        // 🔥 slam sırasında gravity kapalı
+        if (slamGroundLock)
+            return;
+
         if (rb.linearVelocity.y < 0f)
         {
             rb.linearVelocity += Vector2.up *
@@ -326,8 +388,6 @@ public class PlayerController : MonoBehaviour
                 (fallMultiplier - 1f) *
                 Time.fixedDeltaTime;
         }
-
-        // variable jump
         else if (rb.linearVelocity.y > 0f && !jumpHeld)
         {
             rb.linearVelocity += Vector2.up *
@@ -336,7 +396,6 @@ public class PlayerController : MonoBehaviour
                 Time.fixedDeltaTime;
         }
 
-        // max fall speed
         if (rb.linearVelocity.y < -maxFallSpeed)
         {
             rb.linearVelocity = new Vector2(
@@ -352,12 +411,14 @@ public class PlayerController : MonoBehaviour
 
     void OnLand()
     {
+        if (slamGroundLock)
+            return;
+
         if (!impulseSource)
             return;
 
         float fallDistance = maxAirHeight - transform.position.y;
 
-        // ❗ sadece gerçek düşüş varsa shake
         if (airTime < 0.15f)
             return;
 
@@ -404,7 +465,14 @@ public class PlayerController : MonoBehaviour
 
         modelPivot.localScale = s;
     }
+    public System.Collections.IEnumerator FreezeFrame(float duration)
+    {
+        Time.timeScale = 0f;
 
+        yield return new WaitForSecondsRealtime(duration);
+
+        Time.timeScale = 1f;
+    }
     // =========================================================
     // HELPERS
     // =========================================================

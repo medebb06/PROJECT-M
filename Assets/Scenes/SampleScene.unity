@@ -135,7 +135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -1487,7 +1487,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab5e3666c438455479f43e31dae56b65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  slamGroundLock: 0
+  slamLockTimer: 0
+  slamLockDuration: 0.12
+  slamFreezeTime: 0.04
   impactSettings:
+    slamSpeed: 35
+    slamDamageRadius: 2
+    slamDamage: 25
+    enemyLayer:
+      serializedVersion: 2
+      m_Bits: 0
     lightThreshold: 1
     mediumThreshold: 3
     heavyThreshold: 5
@@ -1564,6 +1574,11 @@ MonoBehaviour:
   jumpHeld: 0
   isGrounded: 0
   facingDir: 1
+  slamPressed: 0
+  verticalInput: 0
+  inputLocked: 0
+  inputLockTimer: 0
+  inputLockDuration: 0.12
 --- !u!114 &2122615047
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1742,7 +1757,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAudio
   movementSource: {fileID: 0}
   sfxSource: {fileID: 0}
-  jumpClip: {fileID: 8300000, guid: 63c94a1fa09c3ca468991ef8317446de, type: 3}
+  jumpClip: {fileID: 8300000, guid: 150bd0ef5cf8592488f01336c4eb5821, type: 3}
   dashClip: {fileID: 8300000, guid: 3b81504dc5d5cc949b82f28234aefbfa, type: 3}
   runClip: {fileID: 8300000, guid: b1ba2e4918d96a54e8568978204a0d75, type: 3}
 --- !u!82 &2122615052

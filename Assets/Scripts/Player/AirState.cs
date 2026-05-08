@@ -12,12 +12,23 @@ public class AirState : IPlayerState
     }
 
     public void Enter() { }
+
     public void Exit() { }
 
     public void Update()
     {
         // ---------------- AIR CONTROL ----------------
         player.ApplyMovement(player.airControl);
+
+        // ---------------- GROUND SLAM ----------------
+        if (
+            player.verticalInput < -0.5f &&
+            Input.GetKeyDown(KeyCode.Space)
+        )
+        {
+            sm.ChangeState(new GroundSlamState(player, sm));
+            return;
+        }
 
         // ---------------- DASH ----------------
         if (player.dashPressed && player.dashCooldownTimer <= 0f)
@@ -26,11 +37,11 @@ public class AirState : IPlayerState
             return;
         }
 
-        // ---------------- GROUNDED TRANSITION (STABLE) ----------------
+        // ---------------- GROUNDED TRANSITION ----------------
         if (player.isGrounded && player.rb.linearVelocity.y <= 0.1f)
         {
             sm.ChangeState(new GroundedState(player, sm));
-            return; // 🔥 CRITICAL FIX (missing before)
+            return;
         }
     }
 
