@@ -2,12 +2,10 @@
 
 public class EnemyAttackState : IEnemyState
 {
-    EnemyController enemy;
+    private EnemyController enemy;
 
-    float attackTimer;
-    float attackDuration = 0.6f;
-
-    bool attackDone;
+    private float attackTimer;
+    private bool attackDone;
 
     public EnemyAttackState(EnemyController enemy)
     {
@@ -16,58 +14,100 @@ public class EnemyAttackState : IEnemyState
 
     public void Enter()
     {
-        attackTimer = attackDuration;
+        attackTimer = enemy.attackDuration;
         attackDone = false;
 
-        // burada hitbox açabilirsin
-        // enemy.EnableHitbox(true);
+        // Attack başladığında hareket durabilir.
+        Rigidbody2D rb = enemy.GetComponent<Rigidbody2D>();
+
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
+        }
     }
 
     public void Tick()
     {
+        // Enemy HitState'e geçtiyse bu state zaten
+        // çalışmayacaktır. Bu kontrol ekstra güvenliktir.
         if (enemy.target == null)
         {
-            enemy.ChangeState(new EnemyIdleState(enemy));
+            enemy.ChangeState(
+                new EnemyIdleState(enemy)
+            );
+
             return;
         }
 
         attackTimer -= Time.deltaTime;
 
-        // 🔥 saldırı anı (örnek: ortasında vur)
-        if (!attackDone && attackTimer <= attackDuration * 0.5f)
+        // --------------------------------
+        // ATTACK MOMENT
+        // --------------------------------
+
+        if (!attackDone &&
+            attackTimer <= enemy.attackDuration * 0.5f)
         {
             DoAttack();
+
             attackDone = true;
         }
 
+        // --------------------------------
+        // ATTACK END
+        // --------------------------------
+
         if (attackTimer <= 0f)
         {
-            enemy.ChangeState(new EnemyChaseState(enemy));
+            enemy.ChangeState(
+                new EnemyChaseState(enemy)
+            );
         }
     }
 
     public void Exit()
     {
-        // enemy.DisableHitbox();
+        // Eğer ileride hitbox kullanırsak
+        // burada kapatacağız.
     }
 
     private void DoAttack()
     {
-        float dist = Vector2.Distance(enemy.transform.position, enemy.target.position);
+        if (enemy.target == null)
+            return;
 
-        if (dist <= enemy.attackRange + 0.3f)
-        {
-            // buraya player damage sistemi gelecek
-            var player = enemy.target.GetComponent<PlayerController>();
+        float distance = Vector2.Distance(
+            enemy.transform.position,
+            enemy.target.position
+        );
 
-            if (player != null && !player.isInvincible)
-            {
-                Vector2 dir = (player.transform.position - enemy.transform.position).normalized;
+        if (distance > enemy.attackRange)
+            return;
 
-                player.stateMachine.ChangeState(
-                    new PlayerHurtState(player, player.stateMachine, dir, 8f)
-                );
-            }
-        }
+        PlayerController player =
+            enemy.target.GetComponent<PlayerController>();
+
+        if (player == null)
+            return;
+
+        // Player dash vb. sırasında dokunulmazsa hasar verme.
+        if (player.isInvincible)
+            return;
+
+        Vector2 hitDirection =
+            (player.transform.position - enemy.transform.position)
+            .normalized;
+
+        player.stateMachine.ChangeState(
+            new PlayerHurtState(
+                player,
+                player.stateMachine,
+                hitDirection,
+                8f
+            )
+        );
     }
 }

@@ -3,11 +3,10 @@
 public class Enemy : MonoBehaviour, IDamageable
 {
     [Header("Health")]
-    [SerializeField] int hp = 3;
+    [SerializeField] private int hp = 3;
 
-    EnemyController controller;
-
-    bool isInvulnerable;
+    private EnemyController controller;
+    private bool isInvulnerable;
 
     void Awake()
     {
@@ -21,7 +20,7 @@ public class Enemy : MonoBehaviour, IDamageable
 
         hp -= damage;
 
-        // Hit yönünü EnemyHitState'e gönderiyoruz.
+        // Enemy saldırıyı bırakıp HitState'e girer.
         controller.ChangeState(
             new EnemyHitState(controller, hitDirection)
         );
@@ -34,12 +33,12 @@ public class Enemy : MonoBehaviour, IDamageable
         }
     }
 
-    void Die()
+    private void Die()
     {
         Destroy(gameObject);
     }
 
-    System.Collections.IEnumerator IFrame()
+    private System.Collections.IEnumerator IFrame()
     {
         isInvulnerable = true;
 

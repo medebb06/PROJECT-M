@@ -30,9 +30,9 @@ public class EnemyHitState : IEnemyState
         timer = enemy.hitDuration;
         flashTimer = enemy.hitFlashDuration;
 
-        // -------------------------
+        // --------------------------------
         // HIT FLASH
-        // -------------------------
+        // --------------------------------
 
         if (sr != null)
         {
@@ -40,13 +40,12 @@ public class EnemyHitState : IEnemyState
             sr.color = enemy.hitFlashColor;
         }
 
-        // -------------------------
+        // --------------------------------
         // KNOCKBACK
-        // -------------------------
+        // --------------------------------
 
         float direction = Mathf.Sign(hitDirection.x);
 
-        // Eğer x yönü gelmediyse güvenli varsayılan.
         if (direction == 0f)
             direction = 1f;
 
@@ -63,18 +62,18 @@ public class EnemyHitState : IEnemyState
         timer -= Time.deltaTime;
         flashTimer -= Time.deltaTime;
 
-        // -------------------------
-        // FLASH END
-        // -------------------------
+        // --------------------------------
+        // FLASH
+        // --------------------------------
 
         if (flashTimer <= 0f && sr != null)
         {
             sr.color = originalColor;
         }
 
-        // -------------------------
+        // --------------------------------
         // KNOCKBACK DECELERATION
-        // -------------------------
+        // --------------------------------
 
         float newX = Mathf.MoveTowards(
             rb.linearVelocity.x,
@@ -87,9 +86,9 @@ public class EnemyHitState : IEnemyState
             rb.linearVelocity.y
         );
 
-        // -------------------------
+        // --------------------------------
         // HIT END
-        // -------------------------
+        // --------------------------------
 
         if (timer <= 0f)
         {
@@ -106,8 +105,7 @@ public class EnemyHitState : IEnemyState
             sr.color = originalColor;
         }
 
-        // Knockback state bittikten sonra
-        // yatay savrulmayı temizle.
+        // Hit state bittiğinde yatay savrulmayı temizle.
         rb.linearVelocity = new Vector2(
             0f,
             rb.linearVelocity.y
