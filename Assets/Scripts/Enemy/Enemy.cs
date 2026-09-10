@@ -2,9 +2,11 @@
 
 public class Enemy : MonoBehaviour, IDamageable
 {
-    public int hp = 3;
+    [Header("Health")]
+    [SerializeField] int hp = 3;
 
     EnemyController controller;
+
     bool isInvulnerable;
 
     void Awake()
@@ -12,24 +14,37 @@ public class Enemy : MonoBehaviour, IDamageable
         controller = GetComponent<EnemyController>();
     }
 
-    public void TakeDamage(int damage, Vector2 knockback)
+    public void TakeDamage(int damage, Vector2 hitDirection)
     {
-        if (isInvulnerable) return;
+        if (isInvulnerable)
+            return;
 
         hp -= damage;
 
-        controller.ChangeState(new EnemyHitState(controller, knockback));
+        // Hit yönünü EnemyHitState'e gönderiyoruz.
+        controller.ChangeState(
+            new EnemyHitState(controller, hitDirection)
+        );
 
         StartCoroutine(IFrame());
 
         if (hp <= 0)
-            Destroy(gameObject);
+        {
+            Die();
+        }
+    }
+
+    void Die()
+    {
+        Destroy(gameObject);
     }
 
     System.Collections.IEnumerator IFrame()
     {
         isInvulnerable = true;
+
         yield return new WaitForSeconds(0.06f);
+
         isInvulnerable = false;
     }
 }

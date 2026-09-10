@@ -185,6 +185,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
+  knockbackForceX: 10
+  knockbackForceY: 3
+  hitDuration: 0.3
+  knockbackDeceleration: 20
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.06
   attackRange: 1.2
   target: {fileID: 0}
   chaseRange: 10

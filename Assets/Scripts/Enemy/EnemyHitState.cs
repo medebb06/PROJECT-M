@@ -2,20 +2,24 @@
 
 public class EnemyHitState : IEnemyState
 {
-    EnemyController enemy;
-    Vector2 knockback;
+    private EnemyController enemy;
+    private Vector2 hitDirection;
 
-    float timer;
-    float duration = 0.12f;
+    private Rigidbody2D rb;
+    private SpriteRenderer sr;
 
-    Rigidbody2D rb;
-    SpriteRenderer sr;
-    Color originalColor;
+    private Color originalColor;
 
-    public EnemyHitState(EnemyController enemy, Vector2 knockback)
+    private float timer;
+    private float flashTimer;
+
+    public EnemyHitState(
+        EnemyController enemy,
+        Vector2 hitDirection
+    )
     {
         this.enemy = enemy;
-        this.knockback = knockback;
+        this.hitDirection = hitDirection;
     }
 
     public void Enter()
@@ -23,35 +27,90 @@ public class EnemyHitState : IEnemyState
         rb = enemy.GetComponent<Rigidbody2D>();
         sr = enemy.GetComponent<SpriteRenderer>();
 
-        originalColor = sr.color;
-        timer = duration;
+        timer = enemy.hitDuration;
+        flashTimer = enemy.hitFlashDuration;
 
-        // hit flash
-        sr.color = Color.white;
+        // -------------------------
+        // HIT FLASH
+        // -------------------------
 
-        // 🔥 kontrolü temizle + fizik çakışmasını önle
-        rb.linearVelocity = Vector2.zero;
+        if (sr != null)
+        {
+            originalColor = sr.color;
+            sr.color = enemy.hitFlashColor;
+        }
 
-        // AddForce yerine direkt velocity (senin sistemle uyumlu)
-        rb.linearVelocity = knockback;
+        // -------------------------
+        // KNOCKBACK
+        // -------------------------
+
+        float direction = Mathf.Sign(hitDirection.x);
+
+        // Eğer x yönü gelmediyse güvenli varsayılan.
+        if (direction == 0f)
+            direction = 1f;
+
+        Vector2 velocity = rb.linearVelocity;
+
+        velocity.x = direction * enemy.knockbackForceX;
+        velocity.y = enemy.knockbackForceY;
+
+        rb.linearVelocity = velocity;
     }
 
     public void Tick()
     {
         timer -= Time.deltaTime;
+        flashTimer -= Time.deltaTime;
+
+        // -------------------------
+        // FLASH END
+        // -------------------------
+
+        if (flashTimer <= 0f && sr != null)
+        {
+            sr.color = originalColor;
+        }
+
+        // -------------------------
+        // KNOCKBACK DECELERATION
+        // -------------------------
+
+        float newX = Mathf.MoveTowards(
+            rb.linearVelocity.x,
+            0f,
+            enemy.knockbackDeceleration * Time.deltaTime
+        );
+
+        rb.linearVelocity = new Vector2(
+            newX,
+            rb.linearVelocity.y
+        );
+
+        // -------------------------
+        // HIT END
+        // -------------------------
 
         if (timer <= 0f)
         {
-            enemy.ChangeState(new EnemyChaseState(enemy));
+            enemy.ChangeState(
+                new EnemyChaseState(enemy)
+            );
         }
     }
 
     public void Exit()
     {
-        // güvenlik: state değişirken “white flash stuck” olmasın
-        sr.color = originalColor;
+        if (sr != null)
+        {
+            sr.color = originalColor;
+        }
 
-        // küçük stabilizasyon
-        rb.linearVelocity = Vector2.zero;
+        // Knockback state bittikten sonra
+        // yatay savrulmayı temizle.
+        rb.linearVelocity = new Vector2(
+            0f,
+            rb.linearVelocity.y
+        );
     }
 }
