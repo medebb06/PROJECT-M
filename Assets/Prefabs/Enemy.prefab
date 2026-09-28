@@ -203,8 +203,8 @@ MonoBehaviour:
   attackKnockbackForce: 6
   attackKnockbackVerticalForce: 1
   attackKnockbackDuration: 0.12
-  blockKnockbackForce: 3
-  blockKnockbackVerticalForce: 3
+  blockKnockbackForce: 2
+  blockKnockbackVerticalForce: 2
   blockKnockbackDuration: 1
   blockRecoveryTime: 0.5
   target: {fileID: 0}
