@@ -13,8 +13,14 @@ public class PlayerController : MonoBehaviour
         public int slamDamage = 25;
 
         public LayerMask enemyLayer;
-        
 
+        [Header("Jump Feel")]
+        public float jumpBufferTime = 0.15f;
+        public float coyoteTime = 0.12f;
+        public float jumpCutMultiplier = 2f;
+        public float jumpCutVelocityMultiplier = 0.75f;
+        public float fallMultiplier = 2.5f;
+        public float maxFallSpeed = 20f;
 
 
         [Header("Height Thresholds")]
@@ -101,16 +107,12 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 12f;
 
     [Header("Jump Feel")]
+   
     public float jumpBufferTime = 0.15f;
     public float coyoteTime = 0.12f;
-
-    [Tooltip("Jump bırakılınca ne kadar hızlı kesilsin")]
     public float jumpCutMultiplier = 2f;
-
-    [Tooltip("Düşüş ne kadar ağırlaşsın")]
+    public float jumpCutVelocityMultiplier = 0.3f;
     public float fallMultiplier = 2.5f;
-
-    [Tooltip("Maksimum düşüş hızı")]
     public float maxFallSpeed = 20f;
 
     [HideInInspector] public float jumpBufferCounter;
@@ -396,10 +398,10 @@ public class PlayerController : MonoBehaviour
         }
         else if (rb.linearVelocity.y > 0f && !jumpHeld)
         {
-            rb.linearVelocity += Vector2.up *
-                Physics2D.gravity.y *
-                (jumpCutMultiplier - 1f) *
-                Time.fixedDeltaTime;
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                rb.linearVelocity.y * jumpCutVelocityMultiplier
+            );
         }
 
         if (rb.linearVelocity.y < -maxFallSpeed)

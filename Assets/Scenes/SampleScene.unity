@@ -1525,6 +1525,12 @@ MonoBehaviour:
     enemyLayer:
       serializedVersion: 2
       m_Bits: 1024
+    jumpBufferTime: 0.15
+    coyoteTime: 0.12
+    jumpCutMultiplier: 2
+    jumpCutVelocityMultiplier: 0.75
+    fallMultiplier: 2.5
+    maxFallSpeed: 20
     lightThreshold: 1
     mediumThreshold: 3
     heavyThreshold: 5
@@ -1585,6 +1591,7 @@ MonoBehaviour:
   jumpBufferTime: 0.15
   coyoteTime: 0.2
   jumpCutMultiplier: 2
+  jumpCutVelocityMultiplier: 0.8
   fallMultiplier: 2.5
   maxFallSpeed: 20
   jumpBufferCounter: 0
