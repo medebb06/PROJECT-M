@@ -202,14 +202,14 @@ MonoBehaviour:
   hitFlashDuration: 0.06
   attackKnockbackForce: 6
   attackKnockbackVerticalForce: 1
-  attackKnockbackDuration: 0.12
+  attackKnockbackDuration: 0.5
   blockKnockbackForce: 2
   blockKnockbackVerticalForce: 2
   blockKnockbackDuration: 1
   blockRecoveryTime: 0.5
   executeDamage: 10
-  executeDistance: 5
-  executeDuration: 0.3
+  executeDistance: 3
+  executeDuration: 0.2
   target: {fileID: 0}
   chaseRange: 10
 --- !u!114 &5855789144524007510
