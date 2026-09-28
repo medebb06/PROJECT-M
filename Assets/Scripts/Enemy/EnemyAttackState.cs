@@ -11,6 +11,8 @@ public class EnemyAttackState : IEnemyState
     private bool attackDone;
     private bool warningPlayed;
 
+    private int parryDamage = 1;
+
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -74,11 +76,25 @@ public class EnemyAttackState : IEnemyState
         if (!attackDone &&
             attackTimer <= 0f)
         {
-            DoAttack();
+            bool enemyStaggered = DoAttack();
 
             attackDone = true;
 
-            // Attack sonrası recovery.
+            // =================================================
+            // PARRY POSTURE BREAK
+            // =================================================
+
+            if (enemyStaggered)
+            {
+                // EnemyAttackState artık StaggerState'i
+                // ezmeyecek.
+                return;
+            }
+
+            // =================================================
+            // NORMAL ATTACK RECOVERY
+            // =================================================
+
             enemy.StartAttackRecovery();
 
             enemy.ChangeState(
@@ -107,10 +123,10 @@ public class EnemyAttackState : IEnemyState
     // ATTACK
     // =====================================================
 
-    private void DoAttack()
+    private bool DoAttack()
     {
         if (enemy.target == null)
-            return;
+            return false;
 
         float distance = Vector2.Distance(
             enemy.transform.position,
@@ -118,7 +134,7 @@ public class EnemyAttackState : IEnemyState
         );
 
         if (distance > enemy.attackRange)
-            return;
+            return false;
 
         PlayerController player =
             enemy.target.GetComponent<PlayerController>();
@@ -129,11 +145,20 @@ public class EnemyAttackState : IEnemyState
                 "EnemyAttackState: PlayerController bulunamadı!"
             );
 
-            return;
+            return false;
         }
 
         if (player.isInvincible)
-            return;
+            return false;
+
+        // =====================================================
+        // HIT DIRECTION
+        // =====================================================
+
+        Vector2 hitDirection =
+            (player.transform.position -
+             enemy.transform.position)
+            .normalized;
 
         // =====================================================
         // DEFENSE CHECK
@@ -152,7 +177,7 @@ public class EnemyAttackState : IEnemyState
             {
                 Debug.Log("PLAYER PARRY!");
 
-                return;
+                return HandleParry(hitDirection);
             }
 
             // -------------------------------------------------
@@ -163,18 +188,13 @@ public class EnemyAttackState : IEnemyState
             {
                 Debug.Log("PLAYER BLOCK!");
 
-                return;
+                return false;
             }
         }
 
         // =====================================================
-        // HIT DIRECTION
+        // PLAYER DAMAGE RECEIVER
         // =====================================================
-
-        Vector2 hitDirection =
-            (player.transform.position -
-             enemy.transform.position)
-            .normalized;
 
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<PlayerDamageReceiver>();
@@ -185,7 +205,7 @@ public class EnemyAttackState : IEnemyState
                 "EnemyAttackState: PlayerDamageReceiver Player üzerinde bulunamadı!"
             );
 
-            return;
+            return false;
         }
 
         Debug.Log("ENEMY HIT PLAYER");
@@ -209,5 +229,65 @@ public class EnemyAttackState : IEnemyState
             enemy.attackKnockbackVerticalForce,
             enemy.attackKnockbackDuration
         );
+
+        return false;
+    }
+
+    // =====================================================
+    // PARRY
+    // =====================================================
+
+    private bool HandleParry(Vector2 hitDirection)
+    {
+        Enemy enemyDamageReceiver =
+            enemy.GetComponent<Enemy>();
+
+        if (enemyDamageReceiver == null)
+        {
+            Debug.LogError(
+                "EnemyAttackState: Enemy component bulunamadı!"
+            );
+
+            return false;
+        }
+
+        EnemyPosture posture =
+            enemy.GetComponent<EnemyPosture>();
+
+        if (posture == null)
+        {
+            Debug.LogWarning(
+                "EnemyAttackState: EnemyPosture bulunamadı!"
+            );
+
+            return false;
+        }
+
+        // Posture kırılmadan önceki durum.
+        bool wasBrokenBefore =
+            posture.IsBroken;
+
+        Debug.Log("PARRY → ENEMY POSTURE DAMAGE");
+
+        enemyDamageReceiver.TakeDamage(
+            parryDamage,
+            hitDirection
+        );
+
+        // =====================================================
+        // POSTURE BU VURUŞTA KIRILDI MI?
+        // =====================================================
+
+        if (!wasBrokenBefore &&
+            posture.IsBroken)
+        {
+            Debug.Log(
+                "PARRY → ENEMY POSTURE BROKEN → STAGGER"
+            );
+
+            return true;
+        }
+
+        return false;
     }
 }

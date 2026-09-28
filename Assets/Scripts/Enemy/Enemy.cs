@@ -75,10 +75,10 @@ public class Enemy : MonoBehaviour, IDamageable
                 hitFeedback.PlayPostureHit(hitDirection);
             }
 
-            // Posture kırıldıysa burada sadece
-            // posture feedback oynar.
-            //
-            // Aynı vuruş HP'ye geçmez.
+            // --------------------------------
+            // POSTURE BREAK
+            // --------------------------------
+
             if (posture.IsBroken)
             {
                 if (hitFeedback != null)
@@ -87,8 +87,6 @@ public class Enemy : MonoBehaviour, IDamageable
                         hitDirection
                     );
                 }
-
-                EnterHitState(hitDirection);
             }
 
             StartCoroutine(IFrame());
@@ -100,7 +98,8 @@ public class Enemy : MonoBehaviour, IDamageable
         // HEALTH DAMAGE
         // --------------------------------
 
-        int healthBefore = health.CurrentHealth;
+        int healthBefore =
+            health.CurrentHealth;
 
         health.TakeDamage(damage);
 
@@ -110,17 +109,30 @@ public class Enemy : MonoBehaviour, IDamageable
 
         if (hitFeedback != null)
         {
-            hitFeedback.PlayHealthHit(hitDirection);
+            hitFeedback.PlayHealthHit(
+                hitDirection
+            );
         }
 
-        // Ölüm darbesiyse HitState'e girme.
+        // --------------------------------
+        // DEATH
+        // --------------------------------
+
         if (health.IsDead)
             return;
+
+        // --------------------------------
+        // NORMAL HIT
+        // --------------------------------
 
         EnterHitState(hitDirection);
 
         StartCoroutine(IFrame());
     }
+
+    // =====================================================
+    // HIT STATE
+    // =====================================================
 
     private void EnterHitState(Vector2 hitDirection)
     {
@@ -135,26 +147,38 @@ public class Enemy : MonoBehaviour, IDamageable
         );
     }
 
+    // =====================================================
+    // POSTURE BROKEN
+    // =====================================================
+
     private void HandlePostureBroken()
     {
         Debug.Log(
             gameObject.name + " POSTURE BROKEN!"
         );
 
-        // Şimdilik sadece log.
-        //
-        // Bir sonraki aşamada burada:
-        // - StaggerState
-        // - posture break animasyonu
-        // - finisher window
-        // - hit stop
-        // gibi sistemleri bağlayacağız.
+        if (controller == null)
+            return;
+
+        controller.ChangeState(
+            new EnemyStaggerState(
+                controller
+            )
+        );
     }
+
+    // =====================================================
+    // DEATH
+    // =====================================================
 
     private void Die()
     {
         Destroy(gameObject);
     }
+
+    // =====================================================
+    // I-FRAME
+    // =====================================================
 
     private IEnumerator IFrame()
     {

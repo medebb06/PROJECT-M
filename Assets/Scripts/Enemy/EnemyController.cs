@@ -4,6 +4,8 @@ public class EnemyController : MonoBehaviour
 {
     [Header("Attack")]
     public float attackRange = 1.5f;
+    [Header("Stagger")]
+    public float staggerDuration = 1.2f;
 
     // Enemy attack state'e girdiğinde
     // bu süre boyunca oyuncu saldırıyı bekler.
