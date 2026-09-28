@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using Unity.Cinemachine;
 
-
 public class PlayerController : MonoBehaviour
 {
     [System.Serializable]
@@ -22,7 +21,6 @@ public class PlayerController : MonoBehaviour
         public float fallMultiplier = 2.5f;
         public float maxFallSpeed = 20f;
 
-
         [Header("Height Thresholds")]
         public float lightThreshold = 4f;
         public float mediumThreshold = 7f;
@@ -34,12 +32,12 @@ public class PlayerController : MonoBehaviour
         public float heavyIntensity = 1.2f;
 
         [Header("Shake Curve")]
-        public AnimationCurve shakeCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        public AnimationCurve shakeCurve =
+            AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         public float maxFallDistance = 10f;
 
         public float minDistance = 2f;
-    
     }
 
     [HideInInspector] public bool slamGroundLock;
@@ -52,11 +50,15 @@ public class PlayerController : MonoBehaviour
     public ImpactSettings impactSettings;
 
     // ---------------- REFERENCES ----------------
+
     [Header("Refs")]
     public Rigidbody2D rb;
     public Collider2D col;
 
     public Transform modelPivot;
+
+    [Header("Defense")]
+    [SerializeField] private PlayerDefenseController defenseController;
 
     [Header("Ground Check")]
     public Transform groundCheck;
@@ -72,6 +74,7 @@ public class PlayerController : MonoBehaviour
     [Header("VFX")]
     public GameObject dustPrefab;
     public Transform footPoint;
+
     [Header("Visual")]
     public SpriteRenderer playerSprite;
 
@@ -79,6 +82,7 @@ public class PlayerController : MonoBehaviour
     public CinemachineImpulseSource impulseSource;
 
     // ---------------- CONTROL ----------------
+
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
     [HideInInspector] public bool isInvincible;
@@ -86,28 +90,31 @@ public class PlayerController : MonoBehaviour
 
     public bool canAttack => !isDashing && !isAttackLocked;
 
-
     // ---------------- MOVEMENT ----------------
+
     [Header("Movement")]
     public float moveSpeed = 7f;
     public float acceleration = 45f;
     public float deceleration = 60f;
     public float airControl = 0.6f;
+
     [Header("Run Audio")]
     public float stepTimer;
     float nextStepTime;
     bool wasRunning;
+
     public bool jumpConsumed;
+
     float airTime;
     float maxAirHeight;
     bool wasGrounded;
 
     // ---------------- JUMP ----------------
+
     [Header("Jump")]
     public float jumpForce = 12f;
 
     [Header("Jump Feel")]
-   
     public float jumpBufferTime = 0.15f;
     public float coyoteTime = 0.12f;
     public float jumpCutMultiplier = 2f;
@@ -119,6 +126,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float coyoteCounter;
 
     // ---------------- DASH ----------------
+
     [Header("Dash")]
     public float dashDistance = 10f;
     public float dashTime = 0.15f;
@@ -134,6 +142,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float afterImageTimer;
 
     // ---------------- INPUT ----------------
+
     [Header("Runtime")]
     public float moveInput;
     public bool jumpHeld;
@@ -142,11 +151,12 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public bool slamPressed;
     public float verticalInput;
 
-
     // ---------------- STATE ----------------
+
     public PlayerStateMachine stateMachine;
 
     // ---------------- LANDING ----------------
+
     float highestY;
     bool inAir;
 
@@ -157,26 +167,35 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         Debug.Log("START GRAVITY: " + rb.gravityScale);
+
         rb = GetComponent<Rigidbody2D>();
 
         Debug.Log("AWAKE GRAVITY: " + rb.gravityScale);
-    if (!audioPlayer)
+
+        if (!audioPlayer)
             audioPlayer = GetComponent<PlayerAudio>();
 
         if (!impulseSource)
             impulseSource = GetComponent<CinemachineImpulseSource>();
 
+        if (!defenseController)
+            defenseController = GetComponent<PlayerDefenseController>();
+
         rb.freezeRotation = true;
 
         stateMachine = new PlayerStateMachine();
-        stateMachine.Initialize(new GroundedState(this, stateMachine));
+        stateMachine.Initialize(
+            new GroundedState(this, stateMachine)
+        );
     }
 
     void Update()
     {
         if (rb.gravityScale != 3.5f)
         {
-            Debug.LogWarning("GRAVITY OVERRIDDEN: " + rb.gravityScale);
+            Debug.LogWarning(
+                "GRAVITY OVERRIDDEN: " + rb.gravityScale
+            );
         }
 
         HandleRunAudio();
@@ -186,13 +205,22 @@ public class PlayerController : MonoBehaviour
         HandleFacing();
 
         stateMachine.Update();
-       
     }
-   
+
+    // =========================================================
+    // RUN AUDIO
+    // =========================================================
 
     void HandleRunAudio()
     {
-        bool isRunning = isGrounded && Mathf.Abs(moveInput) > 0.1f;
+        bool isDefending =
+            defenseController != null &&
+            defenseController.IsDefending;
+
+        bool isRunning =
+            isGrounded &&
+            !isDefending &&
+            Mathf.Abs(moveInput) > 0.1f;
 
         if (!isRunning)
         {
@@ -204,29 +232,58 @@ public class PlayerController : MonoBehaviour
         stepTimer -= Time.deltaTime;
 
         float speed = Mathf.Abs(rb.linearVelocity.x);
-        float speedFactor = Mathf.InverseLerp(0f, moveSpeed, speed);
+        float speedFactor =
+            Mathf.InverseLerp(0f, moveSpeed, speed);
 
         if (stepTimer <= 0f)
         {
             audioPlayer.StartRun(speedFactor);
-            stepTimer = Mathf.Lerp(0.45f, 0.15f, speedFactor);
+
+            stepTimer =
+                Mathf.Lerp(
+                    0.45f,
+                    0.15f,
+                    speedFactor
+                );
         }
     }
+
+    // =========================================================
+    // JUMP
+    // =========================================================
+
     void HandleJump()
     {
+        if (!canControl)
+            return;
 
-        if (!canControl) return;
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            return;
+        }
 
-        if (jumpBufferCounter <= 0f) return;
-        if (coyoteCounter <= 0f) return;
-        if (jumpConsumed) return;
+        if (jumpBufferCounter <= 0f)
+            return;
+
+        if (coyoteCounter <= 0f)
+            return;
+
+        if (jumpConsumed)
+            return;
 
         jumpBufferCounter = 0f;
         coyoteCounter = 0f;
         jumpConsumed = true;
 
-        stateMachine.ChangeState(new JumpState(this, stateMachine));
+        stateMachine.ChangeState(
+            new JumpState(this, stateMachine)
+        );
     }
+
+    // =========================================================
+    // FIXED UPDATE
+    // =========================================================
 
     void FixedUpdate()
     {
@@ -241,6 +298,7 @@ public class PlayerController : MonoBehaviour
         }
 
         ApplyBetterGravity();
+
         stateMachine.FixedUpdate();
     }
 
@@ -258,6 +316,7 @@ public class PlayerController : MonoBehaviour
             dashPressed = false;
             return;
         }
+
         moveInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
@@ -283,17 +342,21 @@ public class PlayerController : MonoBehaviour
     void HandleTimers()
     {
         jumpBufferCounter -= Time.deltaTime;
-        jumpBufferCounter = Mathf.Max(0f, jumpBufferCounter);
+        jumpBufferCounter =
+            Mathf.Max(0f, jumpBufferCounter);
 
-        coyoteCounter = Mathf.Max(0f, coyoteCounter);
+        coyoteCounter =
+            Mathf.Max(0f, coyoteCounter);
 
         // ---------------- SLAM LOCK ----------------
+
         if (slamGroundLock)
         {
             slamLockTimer -= Time.deltaTime;
 
             if (slamLockTimer <= 0f)
                 slamGroundLock = false;
+
             if (inputLocked)
             {
                 inputLockTimer -= Time.deltaTime;
@@ -304,29 +367,30 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     // =========================================================
     // GROUND CHECK
     // =========================================================
 
     void GroundCheck()
     {
-        // 🔥 slam sırasında physics flicker IGNORE
+        // slam sırasında physics flicker IGNORE
         if (slamGroundLock)
         {
             isGrounded = true;
             return;
         }
 
-        bool groundedNow = Physics2D.OverlapCircle(
-            groundCheck.position,
-            groundCheckRadius,
-            groundMask
-        );
+        bool groundedNow =
+            Physics2D.OverlapCircle(
+                groundCheck.position,
+                groundCheckRadius,
+                groundMask
+            );
 
         if (groundedNow && !wasGrounded)
         {
             OnLand();
+
             airTime = 0f;
             maxAirHeight = transform.position.y;
         }
@@ -349,24 +413,48 @@ public class PlayerController : MonoBehaviour
         if (!canControl)
             return;
 
-        float targetSpeed = moveInput * moveSpeed;
+        // =====================================================
+        // DEFENSE LOCK
+        // =====================================================
 
-        float speedDiff = targetSpeed - rb.linearVelocity.x;
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            rb.linearVelocity = new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
+
+            return;
+        }
+
+        float targetSpeed =
+            moveInput * moveSpeed;
+
+        float speedDiff =
+            targetSpeed -
+            rb.linearVelocity.x;
 
         float accelRate;
 
         if (isGrounded)
         {
-            accelRate = Mathf.Abs(targetSpeed) > 0.01f
-                ? acceleration
-                : deceleration;
+            accelRate =
+                Mathf.Abs(targetSpeed) > 0.01f
+                    ? acceleration
+                    : deceleration;
         }
         else
         {
-            accelRate = acceleration * airControl;
+            accelRate =
+                acceleration * airControl;
         }
 
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime * control;
+        float movement =
+            speedDiff *
+            accelRate *
+            Time.fixedDeltaTime *
+            control;
 
         rb.linearVelocity = new Vector2(
             rb.linearVelocity.x + movement,
@@ -385,22 +473,25 @@ public class PlayerController : MonoBehaviour
 
     void ApplyBetterGravity()
     {
-        // 🔥 slam sırasında gravity kapalı
+        // slam sırasında gravity kapalı
         if (slamGroundLock)
             return;
 
         if (rb.linearVelocity.y < 0f)
         {
-            rb.linearVelocity += Vector2.up *
+            rb.linearVelocity +=
+                Vector2.up *
                 Physics2D.gravity.y *
                 (fallMultiplier - 1f) *
                 Time.fixedDeltaTime;
         }
-        else if (rb.linearVelocity.y > 0f && !jumpHeld)
+        else if (rb.linearVelocity.y > 0f &&
+                 !jumpHeld)
         {
             rb.linearVelocity = new Vector2(
                 rb.linearVelocity.x,
-                rb.linearVelocity.y * jumpCutVelocityMultiplier
+                rb.linearVelocity.y *
+                jumpCutVelocityMultiplier
             );
         }
 
@@ -425,19 +516,28 @@ public class PlayerController : MonoBehaviour
         if (!impulseSource)
             return;
 
-        float fallDistance = maxAirHeight - transform.position.y;
+        float fallDistance =
+            maxAirHeight -
+            transform.position.y;
 
         if (airTime < 0.15f)
             return;
 
-        if (fallDistance < impactSettings.minDistance)
+        if (fallDistance <
+            impactSettings.minDistance)
             return;
 
-        float intensity = impactSettings.shakeCurve.Evaluate(
-            Mathf.Clamp01(fallDistance / impactSettings.maxFallDistance)
-        );
+        float intensity =
+            impactSettings.shakeCurve.Evaluate(
+                Mathf.Clamp01(
+                    fallDistance /
+                    impactSettings.maxFallDistance
+                )
+            );
 
-        impulseSource.GenerateImpulse(intensity);
+        impulseSource.GenerateImpulse(
+            intensity
+        );
     }
 
     // =========================================================
@@ -449,11 +549,16 @@ public class PlayerController : MonoBehaviour
         if (!dustPrefab)
             return;
 
-        Vector3 pos = footPoint
-            ? footPoint.position
-            : transform.position;
+        Vector3 pos =
+            footPoint
+                ? footPoint.position
+                : transform.position;
 
-        Instantiate(dustPrefab, pos, Quaternion.identity);
+        Instantiate(
+            dustPrefab,
+            pos,
+            Quaternion.identity
+        );
     }
 
     // =========================================================
@@ -462,27 +567,53 @@ public class PlayerController : MonoBehaviour
 
     void HandleFacing()
     {
+        // Savunma sırasında yön değiştirme
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            return;
+        }
+
         if (moveInput == 0)
             return;
 
-        facingDir = Mathf.Sign(moveInput);
+        facingDir =
+            Mathf.Sign(moveInput);
 
-        Vector3 s = modelPivot.localScale;
+        Vector3 s =
+            modelPivot.localScale;
 
-        s.x = Mathf.Abs(s.x) * facingDir;
+        s.x =
+            Mathf.Abs(s.x) *
+            facingDir;
 
         modelPivot.localScale = s;
     }
-    public System.Collections.IEnumerator FreezeFrame(float duration)
+
+    // =========================================================
+    // FREEZE FRAME
+    // =========================================================
+
+    public System.Collections.IEnumerator FreezeFrame(
+        float duration
+    )
     {
         Time.timeScale = 0f;
 
-        yield return new WaitForSecondsRealtime(duration);
+        yield return new WaitForSecondsRealtime(
+            duration
+        );
 
         Time.timeScale = 1f;
     }
+
     // =========================================================
     // HELPERS
+    public bool IsDefending()
+    {
+        return defenseController != null &&
+               defenseController.IsDefending;
+    }
     // =========================================================
 
     public bool IsGrounded()
@@ -492,12 +623,16 @@ public class PlayerController : MonoBehaviour
 
     public float GetDashSpeedFactor()
     {
-        // dash ne kadar “sert” hissedilsin
-        return Mathf.Clamp01(Mathf.Abs(dashDistance) / 10f);
+        return Mathf.Clamp01(
+            Mathf.Abs(dashDistance) / 10f
+        );
     }
+
     public float GetDashDirection()
     {
-        return facingDir == 0 ? 1 : facingDir;
+        return facingDir == 0
+            ? 1
+            : facingDir;
     }
 
     // =========================================================

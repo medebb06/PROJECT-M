@@ -5,7 +5,10 @@ public class GroundedState : IPlayerState
     private PlayerController player;
     private PlayerStateMachine sm;
 
-    public GroundedState(PlayerController player, PlayerStateMachine sm)
+    public GroundedState(
+        PlayerController player,
+        PlayerStateMachine sm
+    )
     {
         this.player = player;
         this.sm = sm;
@@ -16,7 +19,7 @@ public class GroundedState : IPlayerState
         // yere basınca coyote yenilenir
         player.coyoteCounter = player.coyoteTime;
 
-        // jump lock reset (çok önemli)
+        // jump lock reset
         player.jumpConsumed = false;
 
         Vector2 vel = player.rb.linearVelocity;
@@ -36,21 +39,47 @@ public class GroundedState : IPlayerState
         if (!player.canControl)
             return;
 
-        // ---------------- DASH ----------------
-        if (player.dashPressed && player.dashCooldownTimer <= 0f)
+        // =====================================================
+        // DEFENSE
+        // =====================================================
+
+        if (player.IsDefending())
         {
-            sm.ChangeState(new DashState(player, sm));
+            player.SetVelocity(
+                new Vector2(
+                    0f,
+                    player.rb.linearVelocity.y
+                )
+            );
+
+            return;
+        }
+
+        // ---------------- DASH ----------------
+
+        if (player.dashPressed &&
+            player.dashCooldownTimer <= 0f)
+        {
+            sm.ChangeState(
+                new DashState(player, sm)
+            );
+
             return;
         }
 
         // ---------------- FALL ----------------
+
         if (!player.IsGrounded())
         {
-            sm.ChangeState(new AirState(player, sm));
+            sm.ChangeState(
+                new AirState(player, sm)
+            );
+
             return;
         }
 
         // ---------------- JUMP ----------------
+
         if (!player.jumpConsumed &&
             player.jumpBufferCounter > 0f &&
             player.coyoteCounter > 0f)
@@ -65,25 +94,55 @@ public class GroundedState : IPlayerState
             );
 
             if (player.audioPlayer != null)
-                player.audioPlayer.PlayJump(jumpStrength);
+                player.audioPlayer.PlayJump(
+                    jumpStrength
+                );
 
-            sm.ChangeState(new JumpState(player, sm));
+            sm.ChangeState(
+                new JumpState(player, sm)
+            );
+
             return;
         }
     }
 
     public void FixedUpdate()
     {
+        // =====================================================
+        // DEFENSE
+        // =====================================================
+
+        if (player.IsDefending())
+        {
+            player.SetVelocity(
+                new Vector2(
+                    0f,
+                    player.rb.linearVelocity.y
+                )
+            );
+
+            return;
+        }
+
         Vector2 vel = player.rb.linearVelocity;
 
-        float targetSpeed = player.moveInput * player.moveSpeed;
-        float speedDif = targetSpeed - vel.x;
+        float targetSpeed =
+            player.moveInput *
+            player.moveSpeed;
 
-        float accel = (Mathf.Abs(targetSpeed) > 0.01f)
-            ? player.acceleration
-            : player.deceleration;
+        float speedDif =
+            targetSpeed -
+            vel.x;
 
-        vel.x += speedDif * accel * Time.fixedDeltaTime;
+        float accel =
+            (Mathf.Abs(targetSpeed) > 0.01f)
+                ? player.acceleration
+                : player.deceleration;
+
+        vel.x +=
+            speedDif *
+            accel *
+            Time.fixedDeltaTime;
 
         player.SetVelocity(vel);
     }

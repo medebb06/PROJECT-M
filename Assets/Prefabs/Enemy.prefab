@@ -15,6 +15,9 @@ GameObject:
   - component: {fileID: 6774805625374124080}
   - component: {fileID: 8306325381340741459}
   - component: {fileID: 5855789144524007510}
+  - component: {fileID: 5588873479843571947}
+  - component: {fileID: 940674076928422292}
+  - component: {fileID: 6074817873334106079}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -188,12 +191,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 1.2
   attackDuration: 1
-  knockbackForceX: 7
+  attackWarningTime: 1
+  attackRecoveryTime: 1.5
+  knockbackForceX: 5
   knockbackForceY: 1
   hitDuration: 0.5
   knockbackDeceleration: 20
   hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitFlashDuration: 0.06
+  attackKnockbackForce: 6
+  attackKnockbackVerticalForce: 1
+  attackKnockbackDuration: 0.12
   target: {fileID: 0}
   chaseRange: 10
 --- !u!114 &5855789144524007510
@@ -209,3 +217,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 3
+  currentHealth: 0
+--- !u!114 &5588873479843571947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a861c1163677804eae950bfc8bbd237, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyPosture
+  maxPosture: 3
+  currentPosture: 0
+  canRecover: 1
+  recoveryDelay: 1.5
+  recoverySpeed: 20
+--- !u!114 &940674076928422292
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9629fd67b2f97a742bf776fbcf967f06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHitFeedback
+  audioSource: {fileID: 0}
+  postureHitSounds: []
+  postureHitVFX: {fileID: 0}
+  healthHitSounds: []
+  healthHitVFX: {fileID: 0}
+  postureBreakSound: {fileID: 0}
+  postureBreakVFX: {fileID: 0}
+--- !u!114 &6074817873334106079
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2911b8d0d369f9469f73da55c88c97c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackAudio
+  warningSound: {fileID: 8300000, guid: 957af5f412a0cb840bddac341c443e62, type: 3}
+  warningVolume: 1
+  audioSource: {fileID: 0}

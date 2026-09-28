@@ -13,32 +13,76 @@ public class EnemyChaseState : IEnemyState
         rb = enemy.GetComponent<Rigidbody2D>();
     }
 
-    public void Enter() { }
+    public void Enter()
+    {
+    }
 
     public void Tick()
     {
-        if (enemy.target == null) return;
+        if (enemy.target == null)
+            return;
 
-        float dist = Vector2.Distance(enemy.transform.position, enemy.target.position);
+        float dist = Vector2.Distance(
+            enemy.transform.position,
+            enemy.target.position
+        );
 
-        // ❌ çok uzaksa pes et
+        // =====================================================
+        // ÇOK UZAKSA PES ET
+        // =====================================================
+
         if (dist > enemy.chaseRange * 1.5f)
         {
-            enemy.ChangeState(new EnemyIdleState(enemy));
+            enemy.ChangeState(
+                new EnemyIdleState(enemy)
+            );
+
             return;
         }
 
-        // 🎯 attack mesafesine girdiyse DUR + attack state
+        // =====================================================
+        // ATTACK RANGE
+        // =====================================================
+
         if (dist <= enemy.attackRange)
         {
-            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-            enemy.ChangeState(new EnemyAttackState(enemy));
+            // Enemy attack cooldown'daysa
+            // oyuncunun dibinde olsa bile hemen saldırma.
+            if (!enemy.CanAttack)
+            {
+                rb.linearVelocity = new Vector2(
+                    0f,
+                    rb.linearVelocity.y
+                );
+
+                return;
+            }
+
+            // Attack'a girebilir.
+            rb.linearVelocity = new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
+
+            enemy.ChangeState(
+                new EnemyAttackState(enemy)
+            );
+
             return;
         }
 
-        Vector2 dir = (enemy.target.position - enemy.transform.position).normalized;
+        // =====================================================
+        // CHASE
+        // =====================================================
 
-        rb.linearVelocity = new Vector2(dir.x * speed, rb.linearVelocity.y);
+        Vector2 dir =
+            (enemy.target.position -
+             enemy.transform.position).normalized;
+
+        rb.linearVelocity = new Vector2(
+            dir.x * speed,
+            rb.linearVelocity.y
+        );
     }
 
     public void Exit()

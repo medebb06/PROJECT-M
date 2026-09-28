@@ -1,11 +1,12 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
 {
     public PlayerController player;
     public LayerMask enemyLayer;
+
+    [SerializeField] private PlayerDefenseController defenseController;
 
     public float inputBufferTime = 0.2f;
     public float comboResetTime = 0.8f;
@@ -20,7 +21,8 @@ public class PlayerCombatController : MonoBehaviour
     [Header("Attack Move (Feel)")]
     public float attackMoveDistance = 0.25f;
     public float attackMoveSpeed = 6f;
-    public AnimationCurve attackMoveCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+    public AnimationCurve attackMoveCurve =
+        AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     [Header("Hit Stop")]
     public float hitStopTimeScale = 0.05f;
@@ -30,10 +32,39 @@ public class PlayerCombatController : MonoBehaviour
 
     Coroutine hitStopRoutine;
 
+    void Awake()
+    {
+        if (player == null)
+            player = GetComponent<PlayerController>();
+
+        if (defenseController == null)
+            defenseController =
+                GetComponent<PlayerDefenseController>();
+    }
+
     void Update()
     {
         bufferTimer -= Time.deltaTime;
         comboTimer -= Time.deltaTime;
+
+        // =====================================================
+        // DEFENSE LOCK
+        // =====================================================
+
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            // Savunma sırasında bekleyen attack input'unu da temizle.
+            bufferTimer = 0f;
+
+            currentState?.Tick();
+
+            return;
+        }
+
+        // =====================================================
+        // ATTACK INPUT
+        // =====================================================
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -47,7 +78,8 @@ public class PlayerCombatController : MonoBehaviour
         if (comboTimer <= 0)
             comboStep = 0;
 
-        if (bufferTimer > 0 && currentState == null)
+        if (bufferTimer > 0 &&
+            currentState == null)
         {
             // Güvenlik kontrolü:
             // Input buffer doluyken havaya çıkılmış olabilir.
@@ -67,6 +99,13 @@ public class PlayerCombatController : MonoBehaviour
 
     void StartAttack()
     {
+        // Savunma sırasında hiçbir şekilde attack başlayamaz.
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            return;
+        }
+
         // Ekstra güvenlik.
         // Attack hiçbir şekilde havada başlayamaz.
         if (!player.IsGrounded())
@@ -74,7 +113,13 @@ public class PlayerCombatController : MonoBehaviour
 
         Debug.Log("ATTACK START");
 
-        comboStep = Mathf.Clamp(comboStep + 1, 1, 4);
+        comboStep =
+            Mathf.Clamp(
+                comboStep + 1,
+                1,
+                4
+            );
+
         comboTimer = comboResetTime;
 
         currentState = new AttackState(
@@ -97,21 +142,32 @@ public class PlayerCombatController : MonoBehaviour
         currentState = null;
     }
 
-    public void DoHitStop(float duration, float timeScale)
+    public void DoHitStop(
+        float duration,
+        float timeScale
+    )
     {
         if (hitStopRoutine != null)
             StopCoroutine(hitStopRoutine);
 
         hitStopRoutine = StartCoroutine(
-            HitStopCoroutine(duration, timeScale)
+            HitStopCoroutine(
+                duration,
+                timeScale
+            )
         );
     }
 
-    IEnumerator HitStopCoroutine(float duration, float scale)
+    IEnumerator HitStopCoroutine(
+        float duration,
+        float scale
+    )
     {
         Time.timeScale = scale;
 
-        yield return new WaitForSecondsRealtime(duration);
+        yield return new WaitForSecondsRealtime(
+            duration
+        );
 
         Time.timeScale = 1f;
     }

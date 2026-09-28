@@ -4,21 +4,46 @@ public class EnemyAttackState : IEnemyState
 {
     private EnemyController enemy;
 
+    private EnemyAttackAudio attackAudio;
+
     private float attackTimer;
+
     private bool attackDone;
+    private bool warningPlayed;
 
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
+
+        attackAudio =
+            enemy.GetComponent<EnemyAttackAudio>();
     }
 
     public void Enter()
     {
-        attackTimer = enemy.attackDuration;
-        attackDone = false;
+        // =====================================================
+        // ATTACK TIMER
+        // =====================================================
 
-        // Attack başladığında hareket durabilir.
-        Rigidbody2D rb = enemy.GetComponent<Rigidbody2D>();
+        attackTimer = enemy.attackDuration;
+
+        attackDone = false;
+        warningPlayed = false;
+
+        // =====================================================
+        // ATTACK WARNING
+        // =====================================================
+
+        PlayWarning();
+
+        warningPlayed = true;
+
+        // =====================================================
+        // STOP MOVEMENT
+        // =====================================================
+
+        Rigidbody2D rb =
+            enemy.GetComponent<Rigidbody2D>();
 
         if (rb != null)
         {
@@ -31,7 +56,6 @@ public class EnemyAttackState : IEnemyState
 
     public void Tick()
     {
-        // Enemy hedefi kaybettiyse Idle.
         if (enemy.target == null)
         {
             enemy.ChangeState(
@@ -43,24 +67,20 @@ public class EnemyAttackState : IEnemyState
 
         attackTimer -= Time.deltaTime;
 
-        // --------------------------------
-        // ATTACK MOMENT
-        // --------------------------------
+        // =====================================================
+        // ATTACK
+        // =====================================================
 
         if (!attackDone &&
-            attackTimer <= enemy.attackDuration * 0.5f)
+            attackTimer <= 0f)
         {
             DoAttack();
 
             attackDone = true;
-        }
 
-        // --------------------------------
-        // ATTACK END
-        // --------------------------------
+            // Attack sonrası recovery.
+            enemy.StartAttackRecovery();
 
-        if (attackTimer <= 0f)
-        {
             enemy.ChangeState(
                 new EnemyChaseState(enemy)
             );
@@ -70,6 +90,22 @@ public class EnemyAttackState : IEnemyState
     public void Exit()
     {
     }
+
+    // =====================================================
+    // WARNING
+    // =====================================================
+
+    private void PlayWarning()
+    {
+        if (attackAudio == null)
+            return;
+
+        attackAudio.PlayWarning();
+    }
+
+    // =====================================================
+    // ATTACK
+    // =====================================================
 
     private void DoAttack()
     {
@@ -84,28 +120,25 @@ public class EnemyAttackState : IEnemyState
         if (distance > enemy.attackRange)
             return;
 
-        // Player'ın controller'ını bul.
         PlayerController player =
             enemy.target.GetComponent<PlayerController>();
 
         if (player == null)
         {
-            Debug.LogWarning("EnemyAttackState: PlayerController bulunamadı!");
+            Debug.LogWarning(
+                "EnemyAttackState: PlayerController bulunamadı!"
+            );
+
             return;
         }
 
-        // Player zaten HurtState / başka invincible durumdaysa
-        // damage verme.
         if (player.isInvincible)
             return;
 
         Vector2 hitDirection =
-            (player.transform.position - enemy.transform.position)
+            (player.transform.position -
+             enemy.transform.position)
             .normalized;
-
-        // --------------------------------
-        // DAMAGE RECEIVER
-        // --------------------------------
 
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<PlayerDamageReceiver>();
@@ -121,9 +154,24 @@ public class EnemyAttackState : IEnemyState
 
         Debug.Log("ENEMY HIT PLAYER");
 
+        // =====================================================
+        // DAMAGE
+        // =====================================================
+
         damageReceiver.TakeDamage(
             1,
             hitDirection
+        );
+
+        // =====================================================
+        // KNOCKBACK
+        // =====================================================
+
+        damageReceiver.ApplyKnockback(
+            hitDirection,
+            enemy.attackKnockbackForce,
+            enemy.attackKnockbackVerticalForce,
+            enemy.attackKnockbackDuration
         );
     }
 }

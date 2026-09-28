@@ -5,9 +5,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [Header("References")]
     [SerializeField] private Health health;
     [SerializeField] private PlayerController player;
-
-    [Header("Hit Reaction")]
-    [SerializeField] private float knockbackForce = 8f;
+    [SerializeField] private PlayerKnockback knockback;
 
     void Awake()
     {
@@ -16,6 +14,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         if (player == null)
             player = GetComponent<PlayerController>();
+
+        if (knockback == null)
+            knockback = GetComponent<PlayerKnockback>();
     }
 
     public void TakeDamage(int damage, Vector2 hitDirection)
@@ -32,6 +33,10 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         if (health.IsDead)
             return;
+
+        // --------------------------------
+        // DAMAGE
+        // --------------------------------
 
         health.TakeDamage(damage);
 
@@ -59,9 +64,30 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             new PlayerHurtState(
                 player,
                 player.stateMachine,
-                hitDirection,
-                knockbackForce
+                hitDirection
             )
+        );
+    }
+
+    // --------------------------------------------------
+    // CUSTOM KNOCKBACK
+    // --------------------------------------------------
+
+    public void ApplyKnockback(
+        Vector2 hitDirection,
+        float force,
+        float verticalForce,
+        float duration
+    )
+    {
+        if (knockback == null)
+            return;
+
+        knockback.ApplyKnockback(
+            hitDirection,
+            force,
+            verticalForce,
+            duration
         );
     }
 }

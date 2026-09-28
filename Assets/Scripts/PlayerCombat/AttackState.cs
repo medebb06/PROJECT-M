@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -20,6 +19,9 @@ public class AttackState : ICombatState
     float duration = 0.18f;
 
     bool hasHit;
+
+    // Enemy'ye tamamen yapışmamak için küçük mesafe.
+    const float collisionSkin = 0.02f;
 
     public AttackState(
         PlayerController player,
@@ -54,10 +56,57 @@ public class AttackState : ICombatState
 
         start = player.rb.position;
 
+        // Normal hedef pozisyon.
         target = start + dir * moveDistance;
 
-        // SADECE yatay velocity'yi temizle.
-        // Düşüş / yükseliş velocity'sine dokunmuyoruz.
+        // =====================================================
+        // ENEMY COLLISION KONTROLÜ
+        // =====================================================
+        //
+        // Player attack sırasında Enemy'nin içine giremesin.
+        // Önündeki Enemy'yi bulup hedef pozisyonu sınırlandırıyoruz.
+        //
+
+        Collider2D playerCollider =
+            player.GetComponent<Collider2D>();
+
+        if (playerCollider != null && moveDistance > 0f)
+        {
+            RaycastHit2D[] hits = new RaycastHit2D[10];
+
+            ContactFilter2D filter = new ContactFilter2D();
+
+            filter.SetLayerMask(enemyLayer);
+            filter.useTriggers = false;
+
+            int hitCount = playerCollider.Cast(
+                dir,
+                filter,
+                hits,
+                moveDistance + collisionSkin
+            );
+
+            float allowedDistance = moveDistance;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                if (hits[i].collider == null)
+                    continue;
+
+                if (hits[i].distance < allowedDistance)
+                {
+                    allowedDistance = Mathf.Max(
+                        0f,
+                        hits[i].distance - collisionSkin
+                    );
+                }
+            }
+
+            target = start + dir * allowedDistance;
+        }
+
+        // Attack başladığında yatay momentum temizlenir.
+        // Y velocity korunur.
         player.rb.linearVelocity = new Vector2(
             0f,
             player.rb.linearVelocity.y
@@ -74,7 +123,10 @@ public class AttackState : ICombatState
 
         t += Time.deltaTime;
 
-        // Attack süresinin ilerlemesi
+        // =====================================================
+        // ATTACK MOVE
+        // =====================================================
+
         float n = Mathf.Clamp01(t / duration);
 
         float curve = moveCurve != null
@@ -87,17 +139,8 @@ public class AttackState : ICombatState
             curve
         );
 
-        // =====================================================
-        // SADECE X POZİSYONUNU DEĞİŞTİR
-        // =====================================================
-        //
-        // MovePosition Y'yi physics ile çakıştırabiliyordu.
-        // Velocity ise attack sonunda karakteri fırlatabiliyordu.
-        //
-        // Burada doğrudan sadece X'i değiştiriyoruz.
-        // Y tamamen gravity'ye bırakılıyor.
-        //
-
+        // Sadece X değişiyor.
+        // Y tamamen physics'e bırakılıyor.
         player.rb.position = new Vector2(
             desiredX,
             player.rb.position.y
@@ -125,8 +168,8 @@ public class AttackState : ICombatState
 
     public void Exit()
     {
-        // Attack'ın bıraktığı herhangi bir yatay momentum olmasın.
-        // Y velocity aynen korunur.
+        // Attack sonunda yatay momentum bırakma.
+        // Y velocity korunuyor.
         player.rb.linearVelocity = new Vector2(
             0f,
             player.rb.linearVelocity.y
@@ -143,7 +186,11 @@ public class AttackState : ICombatState
 
         Vector2 boxCenter = player.attackPoint.position;
 
-        var combat = player.GetComponent<PlayerCombatController>();
+        var combat =
+            player.GetComponent<PlayerCombatController>();
+
+        if (combat == null)
+            return;
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(
             boxCenter,
@@ -154,7 +201,8 @@ public class AttackState : ICombatState
 
         foreach (var h in hits)
         {
-            var dmg = h.GetComponentInParent<IDamageable>();
+            var dmg =
+                h.GetComponentInParent<IDamageable>();
 
             if (dmg != null)
             {
@@ -166,4 +214,3 @@ public class AttackState : ICombatState
         }
     }
 }
-
