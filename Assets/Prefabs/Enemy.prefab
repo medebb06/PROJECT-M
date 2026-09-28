@@ -208,7 +208,7 @@ MonoBehaviour:
   blockKnockbackDuration: 1
   blockRecoveryTime: 0.5
   executeDamage: 10
-  executeDistance: 3
+  executeDistance: 2
   executeDuration: 0.2
   target: {fileID: 0}
   chaseRange: 10
