@@ -190,6 +190,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 1.2
+  staggerDuration: 3
   attackDuration: 1
   attackWarningTime: 1
   attackRecoveryTime: 1.5
@@ -202,6 +203,10 @@ MonoBehaviour:
   attackKnockbackForce: 6
   attackKnockbackVerticalForce: 1
   attackKnockbackDuration: 0.12
+  blockKnockbackForce: 3
+  blockKnockbackVerticalForce: 3
+  blockKnockbackDuration: 1
+  blockRecoveryTime: 0.5
   target: {fileID: 0}
   chaseRange: 10
 --- !u!114 &5855789144524007510
@@ -230,7 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a861c1163677804eae950bfc8bbd237, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPosture
-  maxPosture: 3
+  maxPosture: 1
   currentPosture: 0
   canRecover: 1
   recoveryDelay: 1.5

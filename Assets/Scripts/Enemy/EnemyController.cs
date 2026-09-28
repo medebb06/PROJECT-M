@@ -1,18 +1,15 @@
+
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
     [Header("Attack")]
     public float attackRange = 1.5f;
+
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
 
-    // Enemy attack state'e girdiğinde
-    // bu süre boyunca oyuncu saldırıyı bekler.
     public float attackDuration = 1f;
-
-    // Saldırıdan önce warning sesi.
-    // Şimdilik 1 saniye olacak.
     public float attackWarningTime = 1f;
 
     [Header("Attack Recovery")]
@@ -35,12 +32,22 @@ public class EnemyController : MonoBehaviour
     public float attackKnockbackVerticalForce = 1f;
     public float attackKnockbackDuration = 0.12f;
 
+    [Header("Block Knockback")]
+    public float blockKnockbackForce = 2.5f;
+    public float blockKnockbackVerticalForce = 0.2f;
+    public float blockKnockbackDuration = 0.15f;
+    public float blockRecoveryTime = 0.25f;
+
     public Transform target;
     public float chaseRange = 5f;
 
     private float attackRecoveryTimer;
+    private float movementLockTimer;
 
     public bool CanAttack => attackRecoveryTimer <= 0f;
+
+    public bool IsMovementLocked =>
+        movementLockTimer > 0f;
 
     IEnemyState currentState;
 
@@ -52,6 +59,14 @@ public class EnemyController : MonoBehaviour
 
             if (attackRecoveryTimer < 0f)
                 attackRecoveryTimer = 0f;
+        }
+
+        if (movementLockTimer > 0f)
+        {
+            movementLockTimer -= Time.deltaTime;
+
+            if (movementLockTimer < 0f)
+                movementLockTimer = 0f;
         }
 
         currentState?.Tick();
@@ -77,11 +92,38 @@ public class EnemyController : MonoBehaviour
 
         currentState = newState;
 
-        currentState.Enter();
+        currentState?.Enter();
     }
 
     public void StartAttackRecovery()
     {
         attackRecoveryTimer = attackRecoveryTime;
     }
+
+    public void ApplyBlockKnockback(Vector2 hitDirection)
+    {
+        Rigidbody2D rb =
+            GetComponent<Rigidbody2D>();
+
+        if (rb == null)
+            return;
+
+        float direction =
+            Mathf.Sign(hitDirection.x);
+
+        if (direction == 0f)
+            direction = 1f;
+
+        float knockbackDirection =
+            -direction;
+
+        rb.linearVelocity = new Vector2(
+            knockbackDirection * blockKnockbackForce,
+            blockKnockbackVerticalForce
+        );
+
+        movementLockTimer =
+            blockKnockbackDuration;
+    }
 }
+

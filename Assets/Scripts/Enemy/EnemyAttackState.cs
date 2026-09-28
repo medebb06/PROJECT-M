@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 
 public class EnemyAttackState : IEnemyState
 {
@@ -23,26 +24,14 @@ public class EnemyAttackState : IEnemyState
 
     public void Enter()
     {
-        // =====================================================
-        // ATTACK TIMER
-        // =====================================================
-
         attackTimer = enemy.attackDuration;
 
         attackDone = false;
         warningPlayed = false;
 
-        // =====================================================
-        // ATTACK WARNING
-        // =====================================================
-
         PlayWarning();
 
         warningPlayed = true;
-
-        // =====================================================
-        // STOP MOVEMENT
-        // =====================================================
 
         Rigidbody2D rb =
             enemy.GetComponent<Rigidbody2D>();
@@ -69,10 +58,6 @@ public class EnemyAttackState : IEnemyState
 
         attackTimer -= Time.deltaTime;
 
-        // =====================================================
-        // ATTACK
-        // =====================================================
-
         if (!attackDone &&
             attackTimer <= 0f)
         {
@@ -80,20 +65,12 @@ public class EnemyAttackState : IEnemyState
 
             attackDone = true;
 
-            // =================================================
-            // PARRY POSTURE BREAK
-            // =================================================
-
             if (enemyStaggered)
             {
-                // EnemyAttackState artık StaggerState'i
-                // ezmeyecek.
+                // Posture kırıldı.
+                // Enemy zaten StaggerState'e geçti.
                 return;
             }
-
-            // =================================================
-            // NORMAL ATTACK RECOVERY
-            // =================================================
 
             enemy.StartAttackRecovery();
 
@@ -107,10 +84,6 @@ public class EnemyAttackState : IEnemyState
     {
     }
 
-    // =====================================================
-    // WARNING
-    // =====================================================
-
     private void PlayWarning()
     {
         if (attackAudio == null)
@@ -118,10 +91,6 @@ public class EnemyAttackState : IEnemyState
 
         attackAudio.PlayWarning();
     }
-
-    // =====================================================
-    // ATTACK
-    // =====================================================
 
     private bool DoAttack()
     {
@@ -151,50 +120,46 @@ public class EnemyAttackState : IEnemyState
         if (player.isInvincible)
             return false;
 
-        // =====================================================
-        // HIT DIRECTION
-        // =====================================================
-
         Vector2 hitDirection =
             (player.transform.position -
              enemy.transform.position)
             .normalized;
-
-        // =====================================================
-        // DEFENSE CHECK
-        // =====================================================
 
         PlayerDefenseController defense =
             enemy.target.GetComponent<PlayerDefenseController>();
 
         if (defense != null)
         {
-            // -------------------------------------------------
+            // =========================================
             // PARRY
-            // -------------------------------------------------
+            // =========================================
 
             if (defense.CanParry())
             {
                 Debug.Log("PLAYER PARRY!");
 
+                // PARRY'DE ENEMY KNOCKBACK YOK.
                 return HandleParry(hitDirection);
             }
 
-            // -------------------------------------------------
+            // =========================================
             // BLOCK
-            // -------------------------------------------------
+            // =========================================
 
             if (defense.CanBlock())
             {
                 Debug.Log("PLAYER BLOCK!");
 
+                // Block hasar almaz ama enemy geri itilir.
+                enemy.ApplyBlockKnockback(hitDirection);
+
                 return false;
             }
         }
 
-        // =====================================================
-        // PLAYER DAMAGE RECEIVER
-        // =====================================================
+        // =============================================
+        // NORMAL HIT
+        // =============================================
 
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<PlayerDamageReceiver>();
@@ -210,18 +175,10 @@ public class EnemyAttackState : IEnemyState
 
         Debug.Log("ENEMY HIT PLAYER");
 
-        // =====================================================
-        // DAMAGE
-        // =====================================================
-
         damageReceiver.TakeDamage(
             1,
             hitDirection
         );
-
-        // =====================================================
-        // KNOCKBACK
-        // =====================================================
 
         damageReceiver.ApplyKnockback(
             hitDirection,
@@ -232,10 +189,6 @@ public class EnemyAttackState : IEnemyState
 
         return false;
     }
-
-    // =====================================================
-    // PARRY
-    // =====================================================
 
     private bool HandleParry(Vector2 hitDirection)
     {
@@ -263,7 +216,6 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
-        // Posture kırılmadan önceki durum.
         bool wasBrokenBefore =
             posture.IsBroken;
 
@@ -274,9 +226,7 @@ public class EnemyAttackState : IEnemyState
             hitDirection
         );
 
-        // =====================================================
-        // POSTURE BU VURUŞTA KIRILDI MI?
-        // =====================================================
+        // PARRY'DE ENEMY KNOCKBACK YOK.
 
         if (!wasBrokenBefore &&
             posture.IsBroken)
@@ -291,3 +241,4 @@ public class EnemyAttackState : IEnemyState
         return false;
     }
 }
+
