@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -35,15 +36,30 @@ public class PlayerCombatController : MonoBehaviour
         comboTimer -= Time.deltaTime;
 
         if (Input.GetMouseButtonDown(0))
+        {
+            // Havada attack input'u kabul etme.
+            if (!player.IsGrounded())
+                return;
+
             bufferTimer = inputBufferTime;
+        }
 
         if (comboTimer <= 0)
             comboStep = 0;
 
         if (bufferTimer > 0 && currentState == null)
         {
-            bufferTimer = 0;
-            StartAttack();
+            // Güvenlik kontrolü:
+            // Input buffer doluyken havaya çıkılmış olabilir.
+            if (!player.IsGrounded())
+            {
+                bufferTimer = 0f;
+            }
+            else
+            {
+                bufferTimer = 0f;
+                StartAttack();
+            }
         }
 
         currentState?.Tick();
@@ -51,6 +67,11 @@ public class PlayerCombatController : MonoBehaviour
 
     void StartAttack()
     {
+        // Ekstra güvenlik.
+        // Attack hiçbir şekilde havada başlayamaz.
+        if (!player.IsGrounded())
+            return;
+
         Debug.Log("ATTACK START");
 
         comboStep = Mathf.Clamp(comboStep + 1, 1, 4);
@@ -81,7 +102,9 @@ public class PlayerCombatController : MonoBehaviour
         if (hitStopRoutine != null)
             StopCoroutine(hitStopRoutine);
 
-        hitStopRoutine = StartCoroutine(HitStopCoroutine(duration, timeScale));
+        hitStopRoutine = StartCoroutine(
+            HitStopCoroutine(duration, timeScale)
+        );
     }
 
     IEnumerator HitStopCoroutine(float duration, float scale)

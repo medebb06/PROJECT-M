@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -47,13 +48,20 @@ public class AttackState : ICombatState
         t = 0f;
         hasHit = false;
 
-        Vector2 dir = player.facingDir > 0 ? Vector2.right : Vector2.left;
+        Vector2 dir = player.facingDir > 0
+            ? Vector2.right
+            : Vector2.left;
 
         start = player.rb.position;
+
         target = start + dir * moveDistance;
 
-        // 🔥 küçük stabilizasyon (squash azaltır)
-        player.rb.linearVelocity = Vector2.zero;
+        // SADECE yatay velocity'yi temizle.
+        // Düşüş / yükseliş velocity'sine dokunmuyoruz.
+        player.rb.linearVelocity = new Vector2(
+            0f,
+            player.rb.linearVelocity.y
+        );
     }
 
     public void Tick()
@@ -66,34 +74,72 @@ public class AttackState : ICombatState
 
         t += Time.deltaTime;
 
-        float n = Mathf.Clamp01(t * moveSpeed);
-        float curve = moveCurve != null ? moveCurve.Evaluate(n) : n;
+        // Attack süresinin ilerlemesi
+        float n = Mathf.Clamp01(t / duration);
 
-        // 🔥 MAIN FIX: Y ekseni sabit → squash yok
-        Vector2 nextPos = Vector2.Lerp(start, target, curve);
-        nextPos.y = player.rb.position.y;
+        float curve = moveCurve != null
+            ? moveCurve.Evaluate(n)
+            : n;
 
-        player.rb.MovePosition(nextPos);
+        float desiredX = Mathf.Lerp(
+            start.x,
+            target.x,
+            curve
+        );
 
-        // 🔥 HIT WINDOW
+        // =====================================================
+        // SADECE X POZİSYONUNU DEĞİŞTİR
+        // =====================================================
+        //
+        // MovePosition Y'yi physics ile çakıştırabiliyordu.
+        // Velocity ise attack sonunda karakteri fırlatabiliyordu.
+        //
+        // Burada doğrudan sadece X'i değiştiriyoruz.
+        // Y tamamen gravity'ye bırakılıyor.
+        //
+
+        player.rb.position = new Vector2(
+            desiredX,
+            player.rb.position.y
+        );
+
+        // =====================================================
+        // HIT WINDOW
+        // =====================================================
+
         if (!hasHit && t >= 0.04f && t <= 0.14f)
         {
             Hit();
             hasHit = true;
         }
 
+        // =====================================================
+        // END
+        // =====================================================
+
         if (t >= duration)
+        {
             Exit();
+        }
     }
 
     public void Exit()
     {
+        // Attack'ın bıraktığı herhangi bir yatay momentum olmasın.
+        // Y velocity aynen korunur.
+        player.rb.linearVelocity = new Vector2(
+            0f,
+            player.rb.linearVelocity.y
+        );
+
         onEnd?.Invoke();
     }
 
     void Hit()
     {
-        Vector2 dir = player.facingDir > 0 ? Vector2.right : Vector2.left;
+        Vector2 dir = player.facingDir > 0
+            ? Vector2.right
+            : Vector2.left;
 
         Vector2 boxCenter = player.attackPoint.position;
 
@@ -112,8 +158,12 @@ public class AttackState : ICombatState
 
             if (dmg != null)
             {
-                dmg.TakeDamage(1, dir * 6f);
+                dmg.TakeDamage(
+                    1,
+                    dir * 6f
+                );
             }
         }
     }
 }
+
