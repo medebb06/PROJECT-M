@@ -135,6 +135,42 @@ public class EnemyAttackState : IEnemyState
         if (player.isInvincible)
             return;
 
+        // =====================================================
+        // DEFENSE CHECK
+        // =====================================================
+
+        PlayerDefenseController defense =
+            enemy.target.GetComponent<PlayerDefenseController>();
+
+        if (defense != null)
+        {
+            // -------------------------------------------------
+            // PARRY
+            // -------------------------------------------------
+
+            if (defense.CanParry())
+            {
+                Debug.Log("PLAYER PARRY!");
+
+                return;
+            }
+
+            // -------------------------------------------------
+            // BLOCK
+            // -------------------------------------------------
+
+            if (defense.CanBlock())
+            {
+                Debug.Log("PLAYER BLOCK!");
+
+                return;
+            }
+        }
+
+        // =====================================================
+        // HIT DIRECTION
+        // =====================================================
+
         Vector2 hitDirection =
             (player.transform.position -
              enemy.transform.position)
