@@ -15,15 +15,7 @@ public class EnemyStaggerState : IEnemyState
 
     public void Enter()
     {
-        // =====================================================
-        // STAGGER DURATION
-        // =====================================================
-
         staggerTimer = enemy.staggerDuration;
-
-        // =====================================================
-        // STOP MOVEMENT
-        // =====================================================
 
         Rigidbody2D rb =
             enemy.GetComponent<Rigidbody2D>();
@@ -41,11 +33,26 @@ public class EnemyStaggerState : IEnemyState
 
     public void Tick()
     {
-        staggerTimer -= Time.deltaTime;
+        // =====================================================
+        // EXECUTE
+        // =====================================================
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            Debug.Log("EXECUTE INPUT!");
+
+            enemy.ChangeState(
+                new EnemyExecuteState(enemy)
+            );
+
+            return;
+        }
 
         // =====================================================
-        // STAGGER END
+        // STAGGER TIMER
         // =====================================================
+
+        staggerTimer -= Time.deltaTime;
 
         if (staggerTimer <= 0f)
         {

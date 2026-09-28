@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -37,6 +36,11 @@ public class EnemyController : MonoBehaviour
     public float blockKnockbackVerticalForce = 0.2f;
     public float blockKnockbackDuration = 0.15f;
     public float blockRecoveryTime = 0.25f;
+
+    [Header("Execute")]
+    public int executeDamage = 10;
+    public float executeDistance = 1.2f;
+    public float executeDuration = 0.08f;
 
     public Transform target;
     public float chaseRange = 5f;
@@ -126,4 +130,3 @@ public class EnemyController : MonoBehaviour
             blockKnockbackDuration;
     }
 }
-

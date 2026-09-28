@@ -308,7 +308,7 @@ public class PlayerController : MonoBehaviour
 
     void HandleInput()
     {
-        if (inputLocked)
+        if (inputLocked || !canControl)
         {
             moveInput = 0f;
             verticalInput = 0f;
@@ -473,6 +473,9 @@ public class PlayerController : MonoBehaviour
 
     void ApplyBetterGravity()
     {
+        if (!canControl)
+            return;
+
         // slam sırasında gravity kapalı
         if (slamGroundLock)
             return;
