@@ -31,8 +31,7 @@ public class EnemyAttackState : IEnemyState
 
     public void Tick()
     {
-        // Enemy HitState'e geçtiyse bu state zaten
-        // çalışmayacaktır. Bu kontrol ekstra güvenliktir.
+        // Enemy hedefi kaybettiyse Idle.
         if (enemy.target == null)
         {
             enemy.ChangeState(
@@ -70,8 +69,6 @@ public class EnemyAttackState : IEnemyState
 
     public void Exit()
     {
-        // Eğer ileride hitbox kullanırsak
-        // burada kapatacağız.
     }
 
     private void DoAttack()
@@ -87,13 +84,18 @@ public class EnemyAttackState : IEnemyState
         if (distance > enemy.attackRange)
             return;
 
+        // Player'ın controller'ını bul.
         PlayerController player =
             enemy.target.GetComponent<PlayerController>();
 
         if (player == null)
+        {
+            Debug.LogWarning("EnemyAttackState: PlayerController bulunamadı!");
             return;
+        }
 
-        // Player dash vb. sırasında dokunulmazsa hasar verme.
+        // Player zaten HurtState / başka invincible durumdaysa
+        // damage verme.
         if (player.isInvincible)
             return;
 
@@ -101,13 +103,27 @@ public class EnemyAttackState : IEnemyState
             (player.transform.position - enemy.transform.position)
             .normalized;
 
-        player.stateMachine.ChangeState(
-            new PlayerHurtState(
-                player,
-                player.stateMachine,
-                hitDirection,
-                8f
-            )
+        // --------------------------------
+        // DAMAGE RECEIVER
+        // --------------------------------
+
+        PlayerDamageReceiver damageReceiver =
+            enemy.target.GetComponent<PlayerDamageReceiver>();
+
+        if (damageReceiver == null)
+        {
+            Debug.LogError(
+                "EnemyAttackState: PlayerDamageReceiver Player üzerinde bulunamadı!"
+            );
+
+            return;
+        }
+
+        Debug.Log("ENEMY HIT PLAYER");
+
+        damageReceiver.TakeDamage(
+            1,
+            hitDirection
         );
     }
 }

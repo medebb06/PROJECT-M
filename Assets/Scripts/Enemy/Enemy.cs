@@ -1,16 +1,36 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class Enemy : MonoBehaviour, IDamageable
 {
-    [Header("Health")]
-    [SerializeField] private int hp = 3;
+    [Header("Invulnerability")]
+    [SerializeField] private float invulnerabilityDuration = 0.06f;
 
     private EnemyController controller;
+    private Health health;
+
     private bool isInvulnerable;
 
     void Awake()
     {
         controller = GetComponent<EnemyController>();
+        health = GetComponent<Health>();
+    }
+
+    void OnEnable()
+    {
+        if (health != null)
+        {
+            health.OnDeath += Die;
+        }
+    }
+
+    void OnDisable()
+    {
+        if (health != null)
+        {
+            health.OnDeath -= Die;
+        }
     }
 
     public void TakeDamage(int damage, Vector2 hitDirection)
@@ -18,19 +38,36 @@ public class Enemy : MonoBehaviour, IDamageable
         if (isInvulnerable)
             return;
 
-        hp -= damage;
+        if (health == null)
+            return;
+
+        if (health.IsDead)
+            return;
+
+        int healthBefore = health.CurrentHealth;
+
+        health.TakeDamage(damage);
+
+        // Hasar gerçekten uygulandı mı?
+        if (health.CurrentHealth == healthBefore)
+            return;
+
+        // Ölüm darbesiyse HitState'e girme.
+        if (health.IsDead)
+            return;
 
         // Enemy saldırıyı bırakıp HitState'e girer.
-        controller.ChangeState(
-            new EnemyHitState(controller, hitDirection)
-        );
+        if (controller != null)
+        {
+            controller.ChangeState(
+                new EnemyHitState(
+                    controller,
+                    hitDirection
+                )
+            );
+        }
 
         StartCoroutine(IFrame());
-
-        if (hp <= 0)
-        {
-            Die();
-        }
     }
 
     private void Die()
@@ -38,11 +75,11 @@ public class Enemy : MonoBehaviour, IDamageable
         Destroy(gameObject);
     }
 
-    private System.Collections.IEnumerator IFrame()
+    private IEnumerator IFrame()
     {
         isInvulnerable = true;
 
-        yield return new WaitForSeconds(0.06f);
+        yield return new WaitForSeconds(invulnerabilityDuration);
 
         isInvulnerable = false;
     }
