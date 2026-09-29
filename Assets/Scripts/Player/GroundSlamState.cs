@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
+using System.Collections.Generic;
 
 public class GroundSlamState : IPlayerState
 {
@@ -22,11 +24,17 @@ public class GroundSlamState : IPlayerState
 
         player.canControl = false;
 
-        // slam başlarken horizontal momentum kes
+        // =====================================================
+        // SLAM BAŞLANGICI
+        // =====================================================
+
         Vector2 vel =
             player.rb.linearVelocity;
 
+        // Horizontal momentum kes
         vel.x = 0f;
+
+        // Aşağı doğru hızlı düş
         vel.y =
             -player.impactSettings.slamSpeed;
 
@@ -40,7 +48,9 @@ public class GroundSlamState : IPlayerState
 
     public void Update()
     {
-        // ---------------- DASH CANCEL ----------------
+        // =====================================================
+        // DASH CANCEL
+        // =====================================================
 
         if (
             player.dashPressed &&
@@ -54,7 +64,9 @@ public class GroundSlamState : IPlayerState
             return;
         }
 
-        // ---------------- IMPACT ----------------
+        // =====================================================
+        // IMPACT
+        // =====================================================
 
         if (
             player.isGrounded &&
@@ -73,11 +85,15 @@ public class GroundSlamState : IPlayerState
 
     public void FixedUpdate()
     {
-        // sürekli aşağı bastır
+        // =====================================================
+        // SLAM DEVAM
+        // =====================================================
+
         Vector2 vel =
             player.rb.linearVelocity;
 
         vel.x = 0f;
+
         vel.y =
             -player.impactSettings.slamSpeed;
 
@@ -90,10 +106,18 @@ public class GroundSlamState : IPlayerState
 
     void SlamImpact()
     {
+        // =====================================================
+        // INPUT LOCK
+        // =====================================================
+
         player.inputLocked = true;
 
         player.inputLockTimer =
             player.inputLockDuration;
+
+        // =====================================================
+        // GROUND LOCK
+        // =====================================================
 
         player.slamGroundLock = true;
 
@@ -112,7 +136,7 @@ public class GroundSlamState : IPlayerState
         );
 
         // =====================================================
-        // FREEZE
+        // FREEZE FRAME
         // =====================================================
 
         player.StartCoroutine(
@@ -149,6 +173,14 @@ public class GroundSlamState : IPlayerState
                 player.impactSettings.enemyLayer
             );
 
+        // Aynı enemy'de birden fazla collider varsa
+        // aynı Slam'in birden fazla kez vurmasını engeller.
+        HashSet<EnemyPosture> processedPostures =
+            new HashSet<EnemyPosture>();
+
+        HashSet<Health> processedHealth =
+            new HashSet<Health>();
+
         foreach (Collider2D hit in hits)
         {
             if (hit == null)
@@ -174,48 +206,62 @@ public class GroundSlamState : IPlayerState
 
             if (posture != null)
             {
-                // Posture henüz kırılmadıysa
-                // sadece posture'a vur.
+                // -------------------------------------------------
+                // POSTURE HENÜZ KIRILMADI
+                // -------------------------------------------------
+
                 if (!posture.IsBroken)
                 {
-                    posture.TakeDamage(
-                        player.impactSettings.slamDamage
-                    );
+                    if (processedPostures.Add(posture))
+                    {
+                        posture.TakeDamage(
+                            player.impactSettings.slamDamage
+                        );
 
-                    Debug.Log(
-                        "SLAM → POSTURE DAMAGE: " +
-                        hit.name
-                    );
+                        Debug.Log(
+                            "SLAM → POSTURE DAMAGE: " +
+                            posture.gameObject.name
+                        );
+                    }
                 }
-                // Posture zaten kırılmışsa
-                // health'a vur.
+
+                // -------------------------------------------------
+                // POSTURE ZATEN KIRIK
+                // -------------------------------------------------
+
                 else if (health != null)
+                {
+                    if (processedHealth.Add(health))
+                    {
+                        health.TakeDamage(
+                            player.impactSettings.slamDamage
+                        );
+
+                        Debug.Log(
+                            "SLAM → HEALTH DAMAGE: " +
+                            health.gameObject.name
+                        );
+                    }
+                }
+            }
+
+            // =================================================
+            // POSTURE YOKSA → DIRECT HEALTH
+            // =================================================
+
+            else if (health != null)
+            {
+                if (processedHealth.Add(health))
                 {
                     health.TakeDamage(
                         player.impactSettings.slamDamage
                     );
 
                     Debug.Log(
-                        "SLAM → HEALTH DAMAGE: " +
-                        hit.name
+                        "SLAM → DIRECT HEALTH DAMAGE: " +
+                        health.gameObject.name
                     );
                 }
-            }
-
-            // =================================================
-            // POSTURE COMPONENT YOKSA
-            // =================================================
-
-            else if (health != null)
-            {
-                health.TakeDamage(
-                    player.impactSettings.slamDamage
-                );
-
-                Debug.Log(
-                    "SLAM → DIRECT HEALTH DAMAGE: " +
-                    hit.name
-                );
             }
 
             // =================================================
@@ -234,8 +280,10 @@ public class GroundSlamState : IPlayerState
                     );
 
                 if (direction == 0f)
+                {
                     direction =
                         player.facingDir;
+                }
 
                 enemyRb.linearVelocity =
                     new Vector2(

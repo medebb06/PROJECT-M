@@ -1,8 +1,12 @@
-﻿using UnityEngine;
-using Unity.Cinemachine;
+﻿using Unity.Cinemachine;
+using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    // =========================================================
+    // IMPACT SETTINGS
+    // =========================================================
+
     [System.Serializable]
     public class ImpactSettings
     {
@@ -36,12 +40,16 @@ public class PlayerController : MonoBehaviour
             AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         public float maxFallDistance = 10f;
-
         public float minDistance = 2f;
     }
 
+    // =========================================================
+    // GROUND SLAM LOCK
+    // =========================================================
+
     [HideInInspector] public bool slamGroundLock;
     [HideInInspector] public float slamLockTimer;
+
     public float slamLockDuration = 0.12f;
 
     [Header("Hit Freeze")]
@@ -49,12 +57,13 @@ public class PlayerController : MonoBehaviour
 
     public ImpactSettings impactSettings;
 
-    // ---------------- REFERENCES ----------------
+    // =========================================================
+    // REFERENCES
+    // =========================================================
 
     [Header("Refs")]
     public Rigidbody2D rb;
     public Collider2D col;
-
     public Transform modelPivot;
 
     [Header("Defense")]
@@ -81,16 +90,22 @@ public class PlayerController : MonoBehaviour
     [Header("Camera Shake")]
     public CinemachineImpulseSource impulseSource;
 
-    // ---------------- CONTROL ----------------
+    // =========================================================
+    // CONTROL
+    // =========================================================
 
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
     [HideInInspector] public bool isInvincible;
     [HideInInspector] public bool isAttackLocked;
 
-    public bool canAttack => !isDashing && !isAttackLocked;
+    public bool canAttack =>
+        !isDashing &&
+        !isAttackLocked;
 
-    // ---------------- MOVEMENT ----------------
+    // =========================================================
+    // MOVEMENT
+    // =========================================================
 
     [Header("Movement")]
     public float moveSpeed = 7f;
@@ -100,6 +115,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Run Audio")]
     public float stepTimer;
+
     float nextStepTime;
     bool wasRunning;
 
@@ -109,7 +125,9 @@ public class PlayerController : MonoBehaviour
     float maxAirHeight;
     bool wasGrounded;
 
-    // ---------------- JUMP ----------------
+    // =========================================================
+    // JUMP
+    // =========================================================
 
     [Header("Jump")]
     public float jumpForce = 12f;
@@ -125,7 +143,9 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float jumpBufferCounter;
     [HideInInspector] public float coyoteCounter;
 
-    // ---------------- DASH ----------------
+    // =========================================================
+    // DASH
+    // =========================================================
 
     [Header("Dash")]
     public float dashDistance = 10f;
@@ -141,60 +161,143 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public float afterImageTimer;
 
-    // ---------------- INPUT ----------------
+    // =========================================================
+    // INPUT
+    // =========================================================
 
     [Header("Runtime")]
     public float moveInput;
     public bool jumpHeld;
     public bool isGrounded;
     public float facingDir = 1f;
+
     [HideInInspector] public bool slamPressed;
+
     public float verticalInput;
 
-    // ---------------- STATE ----------------
+    // =========================================================
+    // STATE MACHINE
+    // =========================================================
 
     public PlayerStateMachine stateMachine;
 
-    // ---------------- LANDING ----------------
+    // =========================================================
+    // LANDING
+    // =========================================================
 
     float highestY;
     bool inAir;
 
+    // =========================================================
+    // WALL
+    // =========================================================
+
+    [Header("Wall")]
+    public Transform wallCheck;
+    public float wallCheckDistance = 0.3f;
+    public LayerMask wallMask;
+
+    [Header("Wall Slide")]
+    public float wallSlideSpeed = 2f;
+
+    [Header("Wall Jump")]
+    public float wallJumpForceX = 9f;
+    public float wallJumpForceY = 12f;
+    public float wallJumpControlLock = 0.12f;
+
+    [HideInInspector] public int wallDirection;
+    [HideInInspector] public bool isWallSliding;
+
+    // 0 = wall jump kilidi yok
+    // 1 = sağdaki duvardan son wall jump yapıldı
+    // -1 = soldaki duvardan son wall jump yapıldı
+    [HideInInspector] public int wallJumpBlockedDirection;
+
+    // =========================================================
+    // INPUT LOCK
+    // =========================================================
+
     [HideInInspector] public bool inputLocked;
     [HideInInspector] public float inputLockTimer;
+
     public float inputLockDuration = 0.12f;
+
+    // =========================================================
+    // AWAKE
+    // =========================================================
 
     void Awake()
     {
-        Debug.Log("START GRAVITY: " + rb.gravityScale);
-
         rb = GetComponent<Rigidbody2D>();
+        col = GetComponent<Collider2D>();
 
-        Debug.Log("AWAKE GRAVITY: " + rb.gravityScale);
+        if (rb == null)
+        {
+            Debug.LogError(
+                "PLAYER CONTROLLER: Rigidbody2D bulunamadı!"
+            );
+        }
+
+        if (col == null)
+        {
+            Debug.LogError(
+                "PLAYER CONTROLLER: Collider2D bulunamadı!"
+            );
+        }
+
+        if (rb != null)
+        {
+            Debug.Log(
+                "START GRAVITY: " +
+                rb.gravityScale
+            );
+
+            rb.freezeRotation = true;
+        }
 
         if (!audioPlayer)
-            audioPlayer = GetComponent<PlayerAudio>();
+        {
+            audioPlayer =
+                GetComponent<PlayerAudio>();
+        }
 
         if (!impulseSource)
-            impulseSource = GetComponent<CinemachineImpulseSource>();
+        {
+            impulseSource =
+                GetComponent<CinemachineImpulseSource>();
+        }
 
         if (!defenseController)
-            defenseController = GetComponent<PlayerDefenseController>();
+        {
+            defenseController =
+                GetComponent<PlayerDefenseController>();
+        }
 
-        rb.freezeRotation = true;
+        stateMachine =
+            new PlayerStateMachine();
 
-        stateMachine = new PlayerStateMachine();
         stateMachine.Initialize(
-            new GroundedState(this, stateMachine)
+            new GroundedState(
+                this,
+                stateMachine
+            )
         );
     }
 
+    // =========================================================
+    // UPDATE
+    // =========================================================
+
     void Update()
     {
-        if (rb.gravityScale != 3.5f)
+        if (
+            rb != null &&
+            rb.gravityScale != 3.5f
+        )
         {
             Debug.LogWarning(
-                "GRAVITY OVERRIDDEN: " + rb.gravityScale
+                "GRAVITY OVERRIDDEN: " +
+                rb.gravityScale
             );
         }
 
@@ -224,20 +327,36 @@ public class PlayerController : MonoBehaviour
 
         if (!isRunning)
         {
-            audioPlayer.StopRun();
+            if (audioPlayer != null)
+            {
+                audioPlayer.StopRun();
+            }
+
             stepTimer = 0f;
+
             return;
         }
 
         stepTimer -= Time.deltaTime;
 
-        float speed = Mathf.Abs(rb.linearVelocity.x);
+        float speed =
+            Mathf.Abs(rb.linearVelocity.x);
+
         float speedFactor =
-            Mathf.InverseLerp(0f, moveSpeed, speed);
+            Mathf.InverseLerp(
+                0f,
+                moveSpeed,
+                speed
+            );
 
         if (stepTimer <= 0f)
         {
-            audioPlayer.StartRun(speedFactor);
+            if (audioPlayer != null)
+            {
+                audioPlayer.StartRun(
+                    speedFactor
+                );
+            }
 
             stepTimer =
                 Mathf.Lerp(
@@ -257,11 +376,29 @@ public class PlayerController : MonoBehaviour
         if (!canControl)
             return;
 
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        if (
+            defenseController != null &&
+            defenseController.IsDefending
+        )
         {
             return;
         }
+
+        // =====================================================
+        // WALL DURUMUNDA NORMAL JUMP YAPMA
+        // =====================================================
+
+        if (isWallSliding)
+            return;
+
+        // Duvara temas ediyorsak ve havadaysak
+        // normal JumpState'e girme.
+        if (!isGrounded && IsTouchingWall())
+            return;
+
+        // =====================================================
+        // NORMAL JUMP
+        // =====================================================
 
         if (jumpBufferCounter <= 0f)
             return;
@@ -277,7 +414,10 @@ public class PlayerController : MonoBehaviour
         jumpConsumed = true;
 
         stateMachine.ChangeState(
-            new JumpState(this, stateMachine)
+            new JumpState(
+                this,
+                stateMachine
+            )
         );
     }
 
@@ -291,10 +431,17 @@ public class PlayerController : MonoBehaviour
 
         if (!isGrounded)
         {
-            airTime += Time.fixedDeltaTime;
+            airTime +=
+                Time.fixedDeltaTime;
 
-            if (transform.position.y > maxAirHeight)
-                maxAirHeight = transform.position.y;
+            if (
+                transform.position.y >
+                maxAirHeight
+            )
+            {
+                maxAirHeight =
+                    transform.position.y;
+            }
         }
 
         ApplyBetterGravity();
@@ -303,35 +450,161 @@ public class PlayerController : MonoBehaviour
     }
 
     // =========================================================
+    // MOVEMENT
+    // =========================================================
+
+    public void ApplyMovement(float control)
+    {
+        if (!canControl)
+            return;
+
+        if (inputLocked)
+            return;
+
+        float targetSpeed =
+            moveInput * moveSpeed;
+
+        float accelerationRate;
+
+        if (Mathf.Abs(moveInput) > 0.01f)
+        {
+            accelerationRate =
+                acceleration;
+        }
+        else
+        {
+            accelerationRate =
+                deceleration;
+        }
+
+        accelerationRate *= control;
+
+        float newVelocityX =
+            Mathf.MoveTowards(
+                rb.linearVelocity.x,
+                targetSpeed,
+                accelerationRate *
+                Time.fixedDeltaTime
+            );
+
+        rb.linearVelocity =
+            new Vector2(
+                newVelocityX,
+                rb.linearVelocity.y
+            );
+    }
+
+    // =========================================================
+    // SET VELOCITY
+    // =========================================================
+
+    public void SetVelocity(Vector2 velocity)
+    {
+        if (rb == null)
+            return;
+
+        rb.linearVelocity = velocity;
+    }
+
+    // =========================================================
+    // BETTER GRAVITY
+    // =========================================================
+
+    void ApplyBetterGravity()
+    {
+        if (!canControl)
+            return;
+
+        if (slamGroundLock)
+            return;
+
+        if (rb.linearVelocity.y < 0f)
+        {
+            rb.linearVelocity +=
+                Vector2.up *
+                Physics2D.gravity.y *
+                (fallMultiplier - 1f) *
+                Time.fixedDeltaTime;
+        }
+        else if (
+            rb.linearVelocity.y > 0f &&
+            !jumpHeld
+        )
+        {
+            rb.linearVelocity =
+                new Vector2(
+                    rb.linearVelocity.x,
+                    rb.linearVelocity.y *
+                    jumpCutVelocityMultiplier
+                );
+        }
+
+        if (
+            rb.linearVelocity.y <
+            -maxFallSpeed
+        )
+        {
+            rb.linearVelocity =
+                new Vector2(
+                    rb.linearVelocity.x,
+                    -maxFallSpeed
+                );
+        }
+    }
+
+    // =========================================================
     // INPUT
     // =========================================================
 
     void HandleInput()
     {
-        if (inputLocked || !canControl)
+        if (
+            inputLocked ||
+            !canControl
+        )
         {
             moveInput = 0f;
             verticalInput = 0f;
             jumpHeld = false;
             dashPressed = false;
+
             return;
         }
 
-        moveInput = Input.GetAxisRaw("Horizontal");
-        verticalInput = Input.GetAxisRaw("Vertical");
+        moveInput =
+            Input.GetAxisRaw(
+                "Horizontal"
+            );
 
-        jumpHeld = Input.GetKey(KeyCode.Space);
+        verticalInput =
+            Input.GetAxisRaw(
+                "Vertical"
+            );
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        jumpHeld =
+            Input.GetKey(
+                KeyCode.Space
+            );
+
+        if (
+            Input.GetKeyDown(
+                KeyCode.Space
+            )
+        )
         {
-            jumpBufferCounter = jumpBufferTime;
+            jumpBufferCounter =
+                jumpBufferTime;
         }
 
-        dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
+        dashPressed =
+            Input.GetKeyDown(
+                KeyCode.LeftShift
+            );
 
         if (dashCooldownTimer > 0f)
         {
-            dashCooldownTimer -= Time.deltaTime;
+            dashCooldownTimer -=
+                Time.deltaTime;
         }
     }
 
@@ -341,28 +614,44 @@ public class PlayerController : MonoBehaviour
 
     void HandleTimers()
     {
-        jumpBufferCounter -= Time.deltaTime;
+        jumpBufferCounter -=
+            Time.deltaTime;
+
         jumpBufferCounter =
-            Mathf.Max(0f, jumpBufferCounter);
+            Mathf.Max(
+                0f,
+                jumpBufferCounter
+            );
 
         coyoteCounter =
-            Mathf.Max(0f, coyoteCounter);
+            Mathf.Max(
+                0f,
+                coyoteCounter
+            );
 
-        // ---------------- SLAM LOCK ----------------
+        // =====================================================
+        // SLAM LOCK
+        // =====================================================
 
         if (slamGroundLock)
         {
-            slamLockTimer -= Time.deltaTime;
+            slamLockTimer -=
+                Time.deltaTime;
 
             if (slamLockTimer <= 0f)
+            {
                 slamGroundLock = false;
+            }
 
             if (inputLocked)
             {
-                inputLockTimer -= Time.deltaTime;
+                inputLockTimer -=
+                    Time.deltaTime;
 
                 if (inputLockTimer <= 0f)
+                {
                     inputLocked = false;
+                }
             }
         }
     }
@@ -373,7 +662,6 @@ public class PlayerController : MonoBehaviour
 
     void GroundCheck()
     {
-        // slam sırasında physics flicker IGNORE
         if (slamGroundLock)
         {
             isGrounded = true;
@@ -387,124 +675,77 @@ public class PlayerController : MonoBehaviour
                 groundMask
             );
 
-        if (groundedNow && !wasGrounded)
+        if (
+            groundedNow &&
+            !wasGrounded
+        )
         {
             OnLand();
 
             airTime = 0f;
-            maxAirHeight = transform.position.y;
+
+            maxAirHeight =
+                transform.position.y;
         }
 
-        if (!groundedNow && wasGrounded)
+        if (
+            !groundedNow &&
+            wasGrounded
+        )
         {
-            coyoteCounter = coyoteTime;
+            coyoteCounter =
+                coyoteTime;
         }
 
-        wasGrounded = groundedNow;
-        isGrounded = groundedNow;
+        wasGrounded =
+            groundedNow;
+
+        isGrounded =
+            groundedNow;
     }
 
     // =========================================================
-    // MOVEMENT
+    // WALL CHECK
     // =========================================================
 
-    public void ApplyMovement(float control)
+    public bool IsTouchingWall()
     {
-        if (!canControl)
-            return;
-
-        // =====================================================
-        // DEFENSE LOCK
-        // =====================================================
-
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        if (wallCheck == null)
         {
-            rb.linearVelocity = new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
-
-            return;
+            wallDirection = 0;
+            return false;
         }
 
-        float targetSpeed =
-            moveInput * moveSpeed;
+        Vector2 origin = wallCheck.position;
 
-        float speedDiff =
-            targetSpeed -
-            rb.linearVelocity.x;
-
-        float accelRate;
-
-        if (isGrounded)
-        {
-            accelRate =
-                Mathf.Abs(targetSpeed) > 0.01f
-                    ? acceleration
-                    : deceleration;
-        }
-        else
-        {
-            accelRate =
-                acceleration * airControl;
-        }
-
-        float movement =
-            speedDiff *
-            accelRate *
-            Time.fixedDeltaTime *
-            control;
-
-        rb.linearVelocity = new Vector2(
-            rb.linearVelocity.x + movement,
-            rb.linearVelocity.y
+        RaycastHit2D rightHit = Physics2D.Raycast(
+            origin,
+            Vector2.right,
+            wallCheckDistance,
+            wallMask
         );
-    }
 
-    public void SetVelocity(Vector2 vel)
-    {
-        rb.linearVelocity = vel;
-    }
+        RaycastHit2D leftHit = Physics2D.Raycast(
+            origin,
+            Vector2.left,
+            wallCheckDistance,
+            wallMask
+        );
 
-    // =========================================================
-    // BETTER GRAVITY
-    // =========================================================
-
-    void ApplyBetterGravity()
-    {
-        if (!canControl)
-            return;
-
-        // slam sırasında gravity kapalı
-        if (slamGroundLock)
-            return;
-
-        if (rb.linearVelocity.y < 0f)
+        if (rightHit.collider != null)
         {
-            rb.linearVelocity +=
-                Vector2.up *
-                Physics2D.gravity.y *
-                (fallMultiplier - 1f) *
-                Time.fixedDeltaTime;
-        }
-        else if (rb.linearVelocity.y > 0f &&
-                 !jumpHeld)
-        {
-            rb.linearVelocity = new Vector2(
-                rb.linearVelocity.x,
-                rb.linearVelocity.y *
-                jumpCutVelocityMultiplier
-            );
+            wallDirection = 1;
+            return true;
         }
 
-        if (rb.linearVelocity.y < -maxFallSpeed)
+        if (leftHit.collider != null)
         {
-            rb.linearVelocity = new Vector2(
-                rb.linearVelocity.x,
-                -maxFallSpeed
-            );
+            wallDirection = -1;
+            return true;
         }
+
+        wallDirection = 0;
+        return false;
     }
 
     // =========================================================
@@ -513,38 +754,125 @@ public class PlayerController : MonoBehaviour
 
     void OnLand()
     {
-        if (slamGroundLock)
-            return;
+        jumpConsumed = false;
 
-        if (!impulseSource)
-            return;
+        wallJumpBlockedDirection = 0;
+
+        // =========================================
+        // FALL DISTANCE
+        // =========================================
 
         float fallDistance =
-            maxAirHeight -
-            transform.position.y;
+            maxAirHeight - transform.position.y;
 
-        if (airTime < 0.15f)
-            return;
+        // Küçük düşüşlerde shake yok
+        if (fallDistance >= impactSettings.minDistance)
+        {
+            TriggerLandingShake(fallDistance);
+        }
 
-        if (fallDistance <
-            impactSettings.minDistance)
-            return;
+        void TriggerLandingShake(float fallDistance)
+        {
+            if (impulseSource == null)
+                return;
 
-        float intensity =
-            impactSettings.shakeCurve.Evaluate(
-                Mathf.Clamp01(
-                    fallDistance /
-                    impactSettings.maxFallDistance
-                )
+            if (impactSettings == null)
+                return;
+
+            // =========================================
+            // NORMALIZE FALL DISTANCE
+            // =========================================
+
+            float normalizedDistance =
+                Mathf.InverseLerp(
+                    impactSettings.minDistance,
+                    impactSettings.maxFallDistance,
+                    fallDistance
+                );
+
+            normalizedDistance =
+                Mathf.Clamp01(normalizedDistance);
+
+            // =========================================
+            // SHAKE CURVE
+            // =========================================
+
+            float curveValue =
+                impactSettings.shakeCurve.Evaluate(
+                    normalizedDistance
+                );
+
+            // =========================================
+            // INTENSITY
+            // =========================================
+
+            float intensity;
+
+            if (fallDistance < impactSettings.lightThreshold)
+            {
+                intensity = impactSettings.lightIntensity;
+            }
+            else if (fallDistance < impactSettings.mediumThreshold)
+            {
+                float t = Mathf.InverseLerp(
+                    impactSettings.lightThreshold,
+                    impactSettings.mediumThreshold,
+                    fallDistance
+                );
+
+                intensity = Mathf.Lerp(
+                    impactSettings.lightIntensity,
+                    impactSettings.mediumIntensity,
+                    t
+                );
+            }
+            else if (fallDistance < impactSettings.heavyThreshold)
+            {
+                float t = Mathf.InverseLerp(
+                    impactSettings.mediumThreshold,
+                    impactSettings.heavyThreshold,
+                    fallDistance
+                );
+
+                intensity = Mathf.Lerp(
+                    impactSettings.mediumIntensity,
+                    impactSettings.heavyIntensity,
+                    t
+                );
+            }
+            else
+            {
+                intensity = impactSettings.heavyIntensity;
+            }
+
+            // Curve'ü uyguluyoruz
+            intensity *= curveValue;
+
+            // Son güvenlik
+            intensity =
+                Mathf.Clamp(
+                    intensity,
+                    0f,
+                    impactSettings.heavyIntensity
+                );
+
+            // =========================================
+            // CINEMACHINE IMPULSE
+            // =========================================
+
+            impulseSource.GenerateImpulse(
+                intensity
             );
+        }
 
-        impulseSource.GenerateImpulse(
-            intensity
-        );
+        SpawnDust();
+
+        // Yeni düşüş için başlangıç yüksekliğini sıfırla
+        maxAirHeight = transform.position.y;
     }
 
     // =========================================================
-    // VFX
+    // DUST
     // =========================================================
 
     public void SpawnDust()
@@ -570,9 +898,10 @@ public class PlayerController : MonoBehaviour
 
     void HandleFacing()
     {
-        // Savunma sırasında yön değiştirme
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        if (
+            defenseController != null &&
+            defenseController.IsDefending
+        )
         {
             return;
         }
@@ -612,12 +941,14 @@ public class PlayerController : MonoBehaviour
 
     // =========================================================
     // HELPERS
+    // =========================================================
+
     public bool IsDefending()
     {
-        return defenseController != null &&
-               defenseController.IsDefending;
+        return
+            defenseController != null &&
+            defenseController.IsDefending;
     }
-    // =========================================================
 
     public bool IsGrounded()
     {
@@ -627,31 +958,60 @@ public class PlayerController : MonoBehaviour
     public float GetDashSpeedFactor()
     {
         return Mathf.Clamp01(
-            Mathf.Abs(dashDistance) / 10f
+            Mathf.Abs(dashDistance) /
+            10f
         );
     }
 
     public float GetDashDirection()
     {
         return facingDir == 0
-            ? 1
+            ? 1f
             : facingDir;
     }
 
     // =========================================================
-    // DEBUG
+    // DEBUG GIZMOS
     // =========================================================
 
     void OnDrawGizmosSelected()
     {
-        if (!groundCheck)
-            return;
+        // Ground check
+        if (groundCheck)
+        {
+            Gizmos.color =
+                Color.green;
 
-        Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(
+                groundCheck.position,
+                groundCheckRadius
+            );
+        }
 
-        Gizmos.DrawWireSphere(
-            groundCheck.position,
-            groundCheckRadius
-        );
+        // Wall check
+        if (wallCheck)
+        {
+            Gizmos.color =
+                Color.yellow;
+
+            Gizmos.DrawWireSphere(
+                wallCheck.position,
+                0.05f
+            );
+
+            Gizmos.DrawLine(
+                wallCheck.position,
+                wallCheck.position +
+                Vector3.right *
+                wallCheckDistance
+            );
+
+            Gizmos.DrawLine(
+                wallCheck.position,
+                wallCheck.position +
+                Vector3.left *
+                wallCheckDistance
+            );
+        }
     }
 }
