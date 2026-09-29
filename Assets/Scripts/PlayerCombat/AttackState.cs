@@ -20,7 +20,6 @@ public class AttackState : ICombatState
 
     bool hasHit;
 
-    // Enemy'ye tamamen yapışmamak için küçük mesafe.
     const float collisionSkin = 0.02f;
 
     public AttackState(
@@ -50,72 +49,91 @@ public class AttackState : ICombatState
         t = 0f;
         hasHit = false;
 
-        Vector2 dir = player.facingDir > 0
-            ? Vector2.right
-            : Vector2.left;
+        Vector2 dir =
+            player.facingDir > 0
+                ? Vector2.right
+                : Vector2.left;
 
         start = player.rb.position;
 
-        // Normal hedef pozisyon.
-        target = start + dir * moveDistance;
+        // =====================================================
+        // ATTACK HAREKETİ
+        // =====================================================
+        //
+        // Attack başladığı andaki yönü kullanır.
+        // Sonradan sağ/sol basmak attack'ın hareketini
+        // değiştirmez.
+        //
+
+        target =
+            start +
+            dir * moveDistance;
 
         // =====================================================
-        // ENEMY COLLISION KONTROLÜ
+        // ENEMY COLLISION
         // =====================================================
-        //
-        // Player attack sırasında Enemy'nin içine giremesin.
-        // Önündeki Enemy'yi bulup hedef pozisyonu sınırlandırıyoruz.
-        //
 
         Collider2D playerCollider =
             player.GetComponent<Collider2D>();
 
-        if (playerCollider != null && moveDistance > 0f)
+        if (playerCollider != null &&
+            moveDistance > 0f)
         {
-            RaycastHit2D[] hits = new RaycastHit2D[10];
+            RaycastHit2D[] hits =
+                new RaycastHit2D[10];
 
-            ContactFilter2D filter = new ContactFilter2D();
+            ContactFilter2D filter =
+                new ContactFilter2D();
 
             filter.SetLayerMask(enemyLayer);
             filter.useTriggers = false;
 
-            int hitCount = playerCollider.Cast(
-                dir,
-                filter,
-                hits,
-                moveDistance + collisionSkin
-            );
+            int hitCount =
+                playerCollider.Cast(
+                    dir,
+                    filter,
+                    hits,
+                    moveDistance + collisionSkin
+                );
 
-            float allowedDistance = moveDistance;
+            float allowedDistance =
+                moveDistance;
 
             for (int i = 0; i < hitCount; i++)
             {
                 if (hits[i].collider == null)
                     continue;
 
-                if (hits[i].distance < allowedDistance)
+                if (hits[i].distance <
+                    allowedDistance)
                 {
-                    allowedDistance = Mathf.Max(
-                        0f,
-                        hits[i].distance - collisionSkin
-                    );
+                    allowedDistance =
+                        Mathf.Max(
+                            0f,
+                            hits[i].distance -
+                            collisionSkin
+                        );
                 }
             }
 
-            target = start + dir * allowedDistance;
+            target =
+                start +
+                dir * allowedDistance;
         }
 
-        // Attack başladığında yatay momentum temizlenir.
-        // Y velocity korunur.
-        player.rb.linearVelocity = new Vector2(
-            0f,
-            player.rb.linearVelocity.y
-        );
+        // Attack başlangıcında yatay momentum temizlenir.
+        // Y korunur.
+        player.rb.linearVelocity =
+            new Vector2(
+                0f,
+                player.rb.linearVelocity.y
+            );
     }
 
     public void Tick()
     {
-        if (!player.canAttack || player.isDashing)
+        if (!player.canAttack ||
+            player.isDashing)
         {
             Exit();
             return;
@@ -124,35 +142,55 @@ public class AttackState : ICombatState
         t += Time.deltaTime;
 
         // =====================================================
+        // SADECE YÖNÜ GÜNCELLE
+        // =====================================================
+        //
+        // Burada movement YOK.
+        //
+        // Sağ/sol inputu sadece karakterin yüzünü değiştirir.
+        //
+
+        UpdateFacing();
+
+        // =====================================================
         // ATTACK MOVE
         // =====================================================
 
-        float n = Mathf.Clamp01(t / duration);
+        float n =
+            Mathf.Clamp01(
+                t / duration
+            );
 
-        float curve = moveCurve != null
-            ? moveCurve.Evaluate(n)
-            : n;
+        float curve =
+            moveCurve != null
+                ? moveCurve.Evaluate(n)
+                : n;
 
-        float desiredX = Mathf.Lerp(
-            start.x,
-            target.x,
-            curve
-        );
+        float desiredX =
+            Mathf.Lerp(
+                start.x,
+                target.x,
+                curve
+            );
 
-        // Sadece X değişiyor.
-        // Y tamamen physics'e bırakılıyor.
-        player.rb.position = new Vector2(
-            desiredX,
-            player.rb.position.y
-        );
+        // Sadece attack'ın kendi hareketi.
+        // Input bunu değiştiremez.
+        player.rb.position =
+            new Vector2(
+                desiredX,
+                player.rb.position.y
+            );
 
         // =====================================================
         // HIT WINDOW
         // =====================================================
 
-        if (!hasHit && t >= 0.04f && t <= 0.14f)
+        if (!hasHit &&
+            t >= 0.04f &&
+            t <= 0.14f)
         {
             Hit();
+
             hasHit = true;
         }
 
@@ -166,43 +204,82 @@ public class AttackState : ICombatState
         }
     }
 
+    void UpdateFacing()
+    {
+        // Hareket inputu yoksa yön değiştirme.
+        if (Mathf.Abs(player.moveInput) < 0.01f)
+            return;
+
+        float newDirection =
+            Mathf.Sign(player.moveInput);
+
+        // Zaten o yöne bakıyorsa hiçbir şey yapma.
+        if (player.facingDir == newDirection)
+            return;
+
+        // =====================================================
+        // FACING
+        // =====================================================
+
+        player.facingDir =
+            newDirection;
+
+        Vector3 scale =
+            player.modelPivot.localScale;
+
+        scale.x =
+            Mathf.Abs(scale.x) *
+            player.facingDir;
+
+        player.modelPivot.localScale =
+            scale;
+    }
+
     public void Exit()
     {
         // Attack sonunda yatay momentum bırakma.
-        // Y velocity korunuyor.
-        player.rb.linearVelocity = new Vector2(
-            0f,
-            player.rb.linearVelocity.y
-        );
+        // Y velocity korunur.
+        player.rb.linearVelocity =
+            new Vector2(
+                0f,
+                player.rb.linearVelocity.y
+            );
 
         onEnd?.Invoke();
     }
 
     void Hit()
     {
-        Vector2 dir = player.facingDir > 0
-            ? Vector2.right
-            : Vector2.left;
+        Vector2 dir =
+            player.facingDir > 0
+                ? Vector2.right
+                : Vector2.left;
 
-        Vector2 boxCenter = player.attackPoint.position;
+        Vector2 boxCenter =
+            player.attackPoint.position;
 
         var combat =
-            player.GetComponent<PlayerCombatController>();
+            player.GetComponent<
+                PlayerCombatController
+            >();
 
         if (combat == null)
             return;
 
-        Collider2D[] hits = Physics2D.OverlapBoxAll(
-            boxCenter,
-            combat.hitBoxSize,
-            0f,
-            enemyLayer
-        );
+        Collider2D[] hits =
+            Physics2D.OverlapBoxAll(
+                boxCenter,
+                combat.hitBoxSize,
+                0f,
+                enemyLayer
+            );
 
         foreach (var h in hits)
         {
             var dmg =
-                h.GetComponentInParent<IDamageable>();
+                h.GetComponentInParent<
+                    IDamageable
+                >();
 
             if (dmg != null)
             {
