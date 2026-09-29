@@ -157,8 +157,18 @@ public class PlayerController : MonoBehaviour
     [Header("Wall Jump")]
     public float wallJumpForceX = 9f;
     public float wallJumpForceY = 12f;
+
+    // İlk anda yatay momentumun tamamen korunacağı süre.
     public float wallJumpControlLock = 0.08f;
+
+    // Space'e biraz erken basıldığında input'un tutulacağı süre.
     public float wallJumpBufferTime = 0.12f;
+
+    // Lock bittikten sonra air control'ün yumuşak şekilde geri gelme süresi.
+    public float wallJumpControlBlendTime = 0.18f;
+
+    // Control geri gelirken hareketin ne kadar güçlü olacağı.
+    public float wallJumpControlAccelerationMultiplier = 1f;
 
     [HideInInspector] public float wallJumpBufferCounter;
 
@@ -671,6 +681,7 @@ public class PlayerController : MonoBehaviour
         if (groundCheck)
         {
             Gizmos.color = Color.green;
+
             Gizmos.DrawWireSphere(
                 groundCheck.position,
                 groundCheckRadius
