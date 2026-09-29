@@ -8,7 +8,7 @@ public class Enemy : MonoBehaviour, IDamageable
 
     private EnemyController controller;
     private Health health;
-    private EnemyPosture posture;
+    private EnemyBalance balance;
     private EnemyHitFeedback hitFeedback;
 
     private bool isInvulnerable;
@@ -17,7 +17,7 @@ public class Enemy : MonoBehaviour, IDamageable
     {
         controller = GetComponent<EnemyController>();
         health = GetComponent<Health>();
-        posture = GetComponent<EnemyPosture>();
+        balance = GetComponent<EnemyBalance>();
         hitFeedback = GetComponent<EnemyHitFeedback>();
     }
 
@@ -28,9 +28,9 @@ public class Enemy : MonoBehaviour, IDamageable
             health.OnDeath += Die;
         }
 
-        if (posture != null)
+        if (balance != null)
         {
-            posture.OnPostureBroken += HandlePostureBroken;
+            balance.OnBalanceBroken += HandleBalanceBroken;
         }
     }
 
@@ -41,13 +41,16 @@ public class Enemy : MonoBehaviour, IDamageable
             health.OnDeath -= Die;
         }
 
-        if (posture != null)
+        if (balance != null)
         {
-            posture.OnPostureBroken -= HandlePostureBroken;
+            balance.OnBalanceBroken -= HandleBalanceBroken;
         }
     }
 
-    public void TakeDamage(int damage, Vector2 hitDirection)
+    public void TakeDamage(
+        int damage,
+        Vector2 hitDirection
+    )
     {
         if (isInvulnerable)
             return;
@@ -58,54 +61,83 @@ public class Enemy : MonoBehaviour, IDamageable
         if (health.IsDead)
             return;
 
-        // --------------------------------
-        // POSTURE DAMAGE
-        // --------------------------------
+        if (damage <= 0)
+            return;
 
-        if (posture != null && !posture.IsBroken)
+        // ==================================================
+        // STAGGER DURUMU
+        // ==================================================
+
+        if (controller != null &&
+            controller.IsStaggered)
         {
-            bool postureDamaged =
-                posture.TakeDamage(damage);
-
-            if (!postureDamaged)
-                return;
-
-            if (hitFeedback != null)
-            {
-                hitFeedback.PlayPostureHit(hitDirection);
-            }
-
-            // --------------------------------
-            // POSTURE BREAK
-            // --------------------------------
-
-            if (posture.IsBroken)
-            {
-                if (hitFeedback != null)
-                {
-                    hitFeedback.PlayPostureBreak(
-                        hitDirection
-                    );
-                }
-            }
-
-            StartCoroutine(IFrame());
+            DealHealthDamage(
+                damage,
+                hitDirection
+            );
 
             return;
         }
 
-        // --------------------------------
-        // HEALTH DAMAGE
-        // --------------------------------
+        // ==================================================
+        // NORMAL DURUM
+        // SADECE BALANCE DAMAGE
+        // ==================================================
 
+        if (balance == null)
+            return;
+
+        bool balanceChanged =
+            balance.AddBalanceDamage(damage);
+
+        if (!balanceChanged)
+            return;
+
+        Debug.Log(
+            "ENEMY BALANCE: " +
+            balance.CurrentBalance +
+            "/" +
+            balance.MaxBalance
+        );
+
+        // Balance kırıldıysa
+        // EnemyBalance event'i üzerinden
+        // EnemyStaggerState zaten başlatıldı.
+        if (balance.IsBroken)
+            return;
+
+        // Balance hit feedback
+        if (hitFeedback != null)
+        {
+            hitFeedback.PlayBalanceHit(
+                hitDirection
+            );
+        }
+
+        // Balance'a vurulduğunda enemy'nin
+        // normal hit tepkisi devam etsin.
+        EnterHitState(hitDirection);
+
+        StartCoroutine(IFrame());
+    }
+
+    private void DealHealthDamage(
+        int damage,
+        Vector2 hitDirection
+    )
+    {
         int healthBefore =
             health.CurrentHealth;
 
         health.TakeDamage(damage);
 
-        // Hasar gerçekten uygulandı mı?
         if (health.CurrentHealth == healthBefore)
             return;
+
+        Debug.Log(
+            "STAGGER → ENEMY HEALTH DAMAGE: " +
+            damage
+        );
 
         if (hitFeedback != null)
         {
@@ -114,27 +146,15 @@ public class Enemy : MonoBehaviour, IDamageable
             );
         }
 
-        // --------------------------------
-        // DEATH
-        // --------------------------------
-
         if (health.IsDead)
             return;
-
-        // --------------------------------
-        // NORMAL HIT
-        // --------------------------------
-
-        EnterHitState(hitDirection);
 
         StartCoroutine(IFrame());
     }
 
-    // =====================================================
-    // HIT STATE
-    // =====================================================
-
-    private void EnterHitState(Vector2 hitDirection)
+    private void EnterHitState(
+        Vector2 hitDirection
+    )
     {
         if (controller == null)
             return;
@@ -147,15 +167,19 @@ public class Enemy : MonoBehaviour, IDamageable
         );
     }
 
-    // =====================================================
-    // POSTURE BROKEN
-    // =====================================================
-
-    private void HandlePostureBroken()
+    private void HandleBalanceBroken()
     {
         Debug.Log(
-            gameObject.name + " POSTURE BROKEN!"
+            gameObject.name +
+            " BALANCE BROKEN!"
         );
+
+        if (hitFeedback != null)
+        {
+            hitFeedback.PlayBalanceBreak(
+                Vector2.zero
+            );
+        }
 
         if (controller == null)
             return;
@@ -167,18 +191,10 @@ public class Enemy : MonoBehaviour, IDamageable
         );
     }
 
-    // =====================================================
-    // DEATH
-    // =====================================================
-
     private void Die()
     {
         Destroy(gameObject);
     }
-
-    // =====================================================
-    // I-FRAME
-    // =====================================================
 
     private IEnumerator IFrame()
     {

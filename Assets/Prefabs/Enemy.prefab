@@ -15,9 +15,9 @@ GameObject:
   - component: {fileID: 6774805625374124080}
   - component: {fileID: 8306325381340741459}
   - component: {fileID: 5855789144524007510}
-  - component: {fileID: 5588873479843571947}
   - component: {fileID: 940674076928422292}
   - component: {fileID: 6074817873334106079}
+  - component: {fileID: 8410307713417043197}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -207,9 +207,11 @@ MonoBehaviour:
   blockKnockbackVerticalForce: 2
   blockKnockbackDuration: 1
   blockRecoveryTime: 0.5
+  blockBalanceDamage: 1
+  parryBalanceDamage: 2
   executeDamage: 10
   executeDistance: 2
-  executeDuration: 0.2
+  executeDuration: 0.15
   target: {fileID: 0}
   chaseRange: 10
 --- !u!114 &5855789144524007510
@@ -224,25 +226,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7ca65978ec59c48a384579cde03103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 3
+  maxHealth: 5
   currentHealth: 0
---- !u!114 &5588873479843571947
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4745338656465375485}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a861c1163677804eae950bfc8bbd237, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyPosture
-  maxPosture: 1
-  currentPosture: 0
-  canRecover: 1
-  recoveryDelay: 1.5
-  recoverySpeed: 20
+  fadeOnDeath: 1
+  fadeDuration: 1
 --- !u!114 &940674076928422292
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -256,12 +243,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHitFeedback
   audioSource: {fileID: 0}
-  postureHitSounds: []
-  postureHitVFX: {fileID: 0}
+  balanceHitSounds: []
+  balanceHitVFX: {fileID: 0}
   healthHitSounds: []
   healthHitVFX: {fileID: 0}
-  postureBreakSound: {fileID: 0}
-  postureBreakVFX: {fileID: 0}
+  balanceBreakSound: {fileID: 0}
+  balanceBreakVFX: {fileID: 0}
 --- !u!114 &6074817873334106079
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -277,3 +264,20 @@ MonoBehaviour:
   warningSound: {fileID: 8300000, guid: 957af5f412a0cb840bddac341c443e62, type: 3}
   warningVolume: 1
   audioSource: {fileID: 0}
+--- !u!114 &8410307713417043197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83671b96497f18541a7582c9068c0553, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBalance
+  maxBalance: 3
+  currentBalance: 0
+  canRecover: 1
+  recoveryDelay: 3
+  recoverySpeed: 1

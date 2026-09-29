@@ -3,12 +3,9 @@ using UnityEngine;
 public class EnemyStaggerState : IEnemyState
 {
     private EnemyController enemy;
-
     private float staggerTimer;
 
-    public EnemyStaggerState(
-        EnemyController enemy
-    )
+    public EnemyStaggerState(EnemyController enemy)
     {
         this.enemy = enemy;
     }
@@ -33,10 +30,6 @@ public class EnemyStaggerState : IEnemyState
 
     public void Tick()
     {
-        // =====================================================
-        // EXECUTE
-        // =====================================================
-
         if (Input.GetKeyDown(KeyCode.E))
         {
             Debug.Log("EXECUTE INPUT!");
@@ -48,14 +41,12 @@ public class EnemyStaggerState : IEnemyState
             return;
         }
 
-        // =====================================================
-        // STAGGER TIMER
-        // =====================================================
-
         staggerTimer -= Time.deltaTime;
 
         if (staggerTimer <= 0f)
         {
+            RecoverBalance();
+
             enemy.ChangeState(
                 new EnemyChaseState(enemy)
             );
@@ -64,5 +55,18 @@ public class EnemyStaggerState : IEnemyState
 
     public void Exit()
     {
+    }
+
+    private void RecoverBalance()
+    {
+        EnemyBalance balance =
+            enemy.GetComponent<EnemyBalance>();
+
+        if (balance == null)
+            return;
+
+        balance.RecoverBalance();
+
+        Debug.Log("ENEMY BALANCE RECOVERED!");
     }
 }

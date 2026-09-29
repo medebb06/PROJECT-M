@@ -5,17 +5,17 @@ public class EnemyHitFeedback : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
 
-    [Header("Posture Hit")]
-    [SerializeField] private AudioClip[] postureHitSounds;
-    [SerializeField] private GameObject postureHitVFX;
+    [Header("Balance Hit")]
+    [SerializeField] private AudioClip[] balanceHitSounds;
+    [SerializeField] private GameObject balanceHitVFX;
 
     [Header("Health Hit")]
     [SerializeField] private AudioClip[] healthHitSounds;
     [SerializeField] private GameObject healthHitVFX;
 
-    [Header("Posture Break")]
-    [SerializeField] private AudioClip postureBreakSound;
-    [SerializeField] private GameObject postureBreakVFX;
+    [Header("Balance Break")]
+    [SerializeField] private AudioClip balanceBreakSound;
+    [SerializeField] private GameObject balanceBreakVFX;
 
     private void Awake()
     {
@@ -25,10 +25,10 @@ public class EnemyHitFeedback : MonoBehaviour
         }
     }
 
-    public void PlayPostureHit(Vector2 hitDirection)
+    public void PlayBalanceHit(Vector2 hitDirection)
     {
-        PlayRandomSound(postureHitSounds);
-        SpawnVFX(postureHitVFX, hitDirection);
+        PlayRandomSound(balanceHitSounds);
+        SpawnVFX(balanceHitVFX, hitDirection);
     }
 
     public void PlayHealthHit(Vector2 hitDirection)
@@ -37,10 +37,10 @@ public class EnemyHitFeedback : MonoBehaviour
         SpawnVFX(healthHitVFX, hitDirection);
     }
 
-    public void PlayPostureBreak(Vector2 hitDirection)
+    public void PlayBalanceBreak(Vector2 hitDirection)
     {
-        PlaySound(postureBreakSound);
-        SpawnVFX(postureBreakVFX, hitDirection);
+        PlaySound(balanceBreakSound);
+        SpawnVFX(balanceBreakVFX, hitDirection);
     }
 
     private void PlayRandomSound(AudioClip[] clips)
@@ -80,7 +80,8 @@ public class EnemyHitFeedback : MonoBehaviour
         if (vfxPrefab == null)
             return;
 
-        Vector3 spawnPosition = transform.position;
+        Vector3 spawnPosition =
+            transform.position;
 
         GameObject vfx = Instantiate(
             vfxPrefab,
@@ -88,8 +89,6 @@ public class EnemyHitFeedback : MonoBehaviour
             Quaternion.identity
         );
 
-        // VFX'in yönünü vuruş yönüne çevirmek istersen
-        // prefabın forward eksenini buna göre kullanabiliriz.
         if (hitDirection.sqrMagnitude > 0.01f)
         {
             float angle = Mathf.Atan2(
@@ -98,7 +97,11 @@ public class EnemyHitFeedback : MonoBehaviour
             ) * Mathf.Rad2Deg;
 
             vfx.transform.rotation =
-                Quaternion.Euler(0f, 0f, angle);
+                Quaternion.Euler(
+                    0f,
+                    0f,
+                    angle
+                );
         }
     }
 }
