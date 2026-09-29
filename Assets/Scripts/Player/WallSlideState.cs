@@ -18,21 +18,14 @@ public class WallSlideState : IPlayerState
     {
         player.isWallSliding = true;
 
-        Vector2 velocity =
-            player.rb.linearVelocity;
+        Vector2 velocity = player.rb.linearVelocity;
 
-        if (
-            velocity.y <
-            -player.wallSlideSpeed
-        )
+        if (velocity.y < -player.wallSlideSpeed)
         {
-            velocity.y =
-                -player.wallSlideSpeed;
+            velocity.y = -player.wallSlideSpeed;
         }
 
-        player.SetVelocity(
-            velocity
-        );
+        player.SetVelocity(velocity);
     }
 
     public void Exit()
@@ -42,111 +35,58 @@ public class WallSlideState : IPlayerState
 
     public void Update()
     {
-        // =====================================================
-        // GROUND
-        // =====================================================
-
         if (player.IsGrounded())
         {
             player.wallJumpBlockedDirection = 0;
 
             sm.ChangeState(
-                new GroundedState(
-                    player,
-                    sm
-                )
+                new GroundedState(player, sm)
             );
 
             return;
         }
 
-        // =====================================================
-        // WALL CHECK
-        // =====================================================
-
-        bool touchingWall =
-            player.IsTouchingWall();
+        bool touchingWall = player.IsTouchingWall();
 
         if (!touchingWall)
         {
             sm.ChangeState(
-                new AirState(
-                    player,
-                    sm
-                )
+                new AirState(player, sm)
             );
 
             return;
         }
 
-        // =====================================================
-        // WALL JUMP
-        // =====================================================
-        //
-        // jumpBufferCounter kullanıyoruz.
-        //
-        // Böylece Space'e:
-        //
-        // "duvara gelirken"
-        //
-        // basılmış olsa bile wall jump
-        // inputu kaybolmuyor.
-        //
-        // =====================================================
-
-        if (player.jumpBufferCounter > 0f)
+        if (player.wallJumpBufferCounter > 0f)
         {
-            // Aynı duvardan arka arkaya
-            // wall jump yapma.
-
             if (
                 player.wallJumpBlockedDirection !=
                 player.wallDirection
             )
             {
-                player.jumpBufferCounter = 0f;
+                player.wallJumpBufferCounter = 0f;
 
                 sm.ChangeState(
-                    new WallJumpState(
-                        player,
-                        sm
-                    )
+                    new WallJumpState(player, sm)
                 );
 
                 return;
             }
         }
 
-        // =====================================================
-        // DUVARA UZAKLAŞ
-        // =====================================================
-
         bool pressingAwayFromWall =
-            (
-                player.wallDirection == 1 &&
-                player.moveInput < -0.1f
-            )
+            (player.wallDirection == 1 && player.moveInput < -0.1f)
             ||
-            (
-                player.wallDirection == -1 &&
-                player.moveInput > 0.1f
-            );
+            (player.wallDirection == -1 && player.moveInput > 0.1f);
 
         if (pressingAwayFromWall)
         {
             sm.ChangeState(
-                new AirState(
-                    player,
-                    sm
-                )
+                new AirState(player, sm)
             );
 
             return;
         }
-
-        // =====================================================
-        // DASH
-        // =====================================================
 
         if (
             player.dashPressed &&
@@ -154,10 +94,7 @@ public class WallSlideState : IPlayerState
         )
         {
             sm.ChangeState(
-                new DashState(
-                    player,
-                    sm
-                )
+                new DashState(player, sm)
             );
 
             return;
@@ -166,23 +103,13 @@ public class WallSlideState : IPlayerState
 
     public void FixedUpdate()
     {
-        Vector2 velocity =
-            player.rb.linearVelocity;
+        Vector2 velocity = player.rb.linearVelocity;
 
-        if (
-            velocity.y <
-            -player.wallSlideSpeed
-        )
+        if (velocity.y < -player.wallSlideSpeed)
         {
-            velocity.y =
-                -player.wallSlideSpeed;
+            velocity.y = -player.wallSlideSpeed;
         }
 
-        // X'e dokunmuyoruz.
-        // Oyuncu duvardan ayrılabilsin.
-
-        player.SetVelocity(
-            velocity
-        );
+        player.SetVelocity(velocity);
     }
 }

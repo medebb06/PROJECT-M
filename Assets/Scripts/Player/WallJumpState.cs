@@ -23,20 +23,11 @@ public class WallJumpState : IPlayerState
     {
         timer = 0f;
 
-        // =====================================================
-        // HANGİ DUVARA TUTUNUYORDUK?
-        // =====================================================
-
         jumpedFromWallDirection =
             player.wallDirection;
 
-        // Bu duvarı geçici olarak kilitle.
         player.wallJumpBlockedDirection =
             jumpedFromWallDirection;
-
-        // =====================================================
-        // TERS YÖNE FIRLA
-        // =====================================================
 
         jumpDirection =
             -jumpedFromWallDirection;
@@ -50,12 +41,7 @@ public class WallJumpState : IPlayerState
             )
         );
 
-        // =====================================================
-        // FACE
-        // =====================================================
-
-        player.facingDir =
-            jumpDirection;
+        player.facingDir = jumpDirection;
 
         Vector3 scale =
             player.modelPivot.localScale;
@@ -64,14 +50,10 @@ public class WallJumpState : IPlayerState
             Mathf.Abs(scale.x) *
             player.facingDir;
 
-        player.modelPivot.localScale =
-            scale;
-
-        // =====================================================
-        // NORMAL JUMP SİSTEMİNİ TEMİZLE
-        // =====================================================
+        player.modelPivot.localScale = scale;
 
         player.jumpBufferCounter = 0f;
+        player.wallJumpBufferCounter = 0f;
         player.coyoteCounter = 0f;
         player.jumpConsumed = true;
     }
@@ -84,27 +66,16 @@ public class WallJumpState : IPlayerState
     {
         timer += Time.deltaTime;
 
-        // =====================================================
-        // GROUND
-        // =====================================================
-
         if (player.IsGrounded())
         {
             player.wallJumpBlockedDirection = 0;
 
             sm.ChangeState(
-                new GroundedState(
-                    player,
-                    sm
-                )
+                new GroundedState(player, sm)
             );
 
             return;
         }
-
-        // =====================================================
-        // DASH
-        // =====================================================
 
         if (
             player.dashPressed &&
@@ -112,18 +83,11 @@ public class WallJumpState : IPlayerState
         )
         {
             sm.ChangeState(
-                new DashState(
-                    player,
-                    sm
-                )
+                new DashState(player, sm)
             );
 
             return;
         }
-
-        // =====================================================
-        // CONTROL LOCK BITTI
-        // =====================================================
 
         if (
             timer >=
@@ -131,10 +95,7 @@ public class WallJumpState : IPlayerState
         )
         {
             sm.ChangeState(
-                new AirState(
-                    player,
-                    sm
-                )
+                new AirState(player, sm)
             );
 
             return;
@@ -143,9 +104,6 @@ public class WallJumpState : IPlayerState
 
     public void FixedUpdate()
     {
-        // Wall jump'ın ilk kısmında
-        // yatay fırlatmayı koru.
-
         if (
             timer <
             player.wallJumpControlLock
@@ -158,9 +116,7 @@ public class WallJumpState : IPlayerState
                 jumpDirection *
                 player.wallJumpForceX;
 
-            player.SetVelocity(
-                velocity
-            );
+            player.SetVelocity(velocity);
         }
     }
 }

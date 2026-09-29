@@ -3,10 +3,6 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    // =========================================================
-    // IMPACT SETTINGS
-    // =========================================================
-
     [System.Serializable]
     public class ImpactSettings
     {
@@ -43,23 +39,14 @@ public class PlayerController : MonoBehaviour
         public float minDistance = 2f;
     }
 
-    // =========================================================
-    // GROUND SLAM LOCK
-    // =========================================================
-
     [HideInInspector] public bool slamGroundLock;
     [HideInInspector] public float slamLockTimer;
-
     public float slamLockDuration = 0.12f;
 
     [Header("Hit Freeze")]
     public float slamFreezeTime = 0.04f;
 
     public ImpactSettings impactSettings;
-
-    // =========================================================
-    // REFERENCES
-    // =========================================================
 
     [Header("Refs")]
     public Rigidbody2D rb;
@@ -90,10 +77,6 @@ public class PlayerController : MonoBehaviour
     [Header("Camera Shake")]
     public CinemachineImpulseSource impulseSource;
 
-    // =========================================================
-    // CONTROL
-    // =========================================================
-
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
     [HideInInspector] public bool isInvincible;
@@ -102,10 +85,6 @@ public class PlayerController : MonoBehaviour
     public bool canAttack =>
         !isDashing &&
         !isAttackLocked;
-
-    // =========================================================
-    // MOVEMENT
-    // =========================================================
 
     [Header("Movement")]
     public float moveSpeed = 7f;
@@ -125,10 +104,6 @@ public class PlayerController : MonoBehaviour
     float maxAirHeight;
     bool wasGrounded;
 
-    // =========================================================
-    // JUMP
-    // =========================================================
-
     [Header("Jump")]
     public float jumpForce = 12f;
 
@@ -142,10 +117,6 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public float jumpBufferCounter;
     [HideInInspector] public float coyoteCounter;
-
-    // =========================================================
-    // DASH
-    // =========================================================
 
     [Header("Dash")]
     public float dashDistance = 10f;
@@ -161,10 +132,6 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public float afterImageTimer;
 
-    // =========================================================
-    // INPUT
-    // =========================================================
-
     [Header("Runtime")]
     public float moveInput;
     public bool jumpHeld;
@@ -172,25 +139,12 @@ public class PlayerController : MonoBehaviour
     public float facingDir = 1f;
 
     [HideInInspector] public bool slamPressed;
-
     public float verticalInput;
-
-    // =========================================================
-    // STATE MACHINE
-    // =========================================================
 
     public PlayerStateMachine stateMachine;
 
-    // =========================================================
-    // LANDING
-    // =========================================================
-
     float highestY;
     bool inAir;
-
-    // =========================================================
-    // WALL
-    // =========================================================
 
     [Header("Wall")]
     public Transform wallCheck;
@@ -203,7 +157,10 @@ public class PlayerController : MonoBehaviour
     [Header("Wall Jump")]
     public float wallJumpForceX = 9f;
     public float wallJumpForceY = 12f;
-    public float wallJumpControlLock = 0.12f;
+    public float wallJumpControlLock = 0.08f;
+    public float wallJumpBufferTime = 0.12f;
+
+    [HideInInspector] public float wallJumpBufferCounter;
 
     [HideInInspector] public int wallDirection;
     [HideInInspector] public bool isWallSliding;
@@ -213,18 +170,9 @@ public class PlayerController : MonoBehaviour
     // -1 = soldaki duvardan son wall jump yapıldı
     [HideInInspector] public int wallJumpBlockedDirection;
 
-    // =========================================================
-    // INPUT LOCK
-    // =========================================================
-
     [HideInInspector] public bool inputLocked;
     [HideInInspector] public float inputLockTimer;
-
     public float inputLockDuration = 0.12f;
-
-    // =========================================================
-    // AWAKE
-    // =========================================================
 
     void Awake()
     {
@@ -233,72 +181,41 @@ public class PlayerController : MonoBehaviour
 
         if (rb == null)
         {
-            Debug.LogError(
-                "PLAYER CONTROLLER: Rigidbody2D bulunamadı!"
-            );
+            Debug.LogError("PLAYER CONTROLLER: Rigidbody2D bulunamadı!");
         }
 
         if (col == null)
         {
-            Debug.LogError(
-                "PLAYER CONTROLLER: Collider2D bulunamadı!"
-            );
+            Debug.LogError("PLAYER CONTROLLER: Collider2D bulunamadı!");
         }
 
         if (rb != null)
         {
-            Debug.Log(
-                "START GRAVITY: " +
-                rb.gravityScale
-            );
-
+            Debug.Log("START GRAVITY: " + rb.gravityScale);
             rb.freezeRotation = true;
         }
 
         if (!audioPlayer)
-        {
-            audioPlayer =
-                GetComponent<PlayerAudio>();
-        }
+            audioPlayer = GetComponent<PlayerAudio>();
 
         if (!impulseSource)
-        {
-            impulseSource =
-                GetComponent<CinemachineImpulseSource>();
-        }
+            impulseSource = GetComponent<CinemachineImpulseSource>();
 
         if (!defenseController)
-        {
-            defenseController =
-                GetComponent<PlayerDefenseController>();
-        }
+            defenseController = GetComponent<PlayerDefenseController>();
 
-        stateMachine =
-            new PlayerStateMachine();
+        stateMachine = new PlayerStateMachine();
 
         stateMachine.Initialize(
-            new GroundedState(
-                this,
-                stateMachine
-            )
+            new GroundedState(this, stateMachine)
         );
     }
 
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
     void Update()
     {
-        if (
-            rb != null &&
-            rb.gravityScale != 3.5f
-        )
+        if (rb != null && rb.gravityScale != 3.5f)
         {
-            Debug.LogWarning(
-                "GRAVITY OVERRIDDEN: " +
-                rb.gravityScale
-            );
+            Debug.LogWarning("GRAVITY OVERRIDDEN: " + rb.gravityScale);
         }
 
         HandleRunAudio();
@@ -309,10 +226,6 @@ public class PlayerController : MonoBehaviour
 
         stateMachine.Update();
     }
-
-    // =========================================================
-    // RUN AUDIO
-    // =========================================================
 
     void HandleRunAudio()
     {
@@ -328,77 +241,51 @@ public class PlayerController : MonoBehaviour
         if (!isRunning)
         {
             if (audioPlayer != null)
-            {
                 audioPlayer.StopRun();
-            }
 
             stepTimer = 0f;
-
             return;
         }
 
         stepTimer -= Time.deltaTime;
 
-        float speed =
-            Mathf.Abs(rb.linearVelocity.x);
+        float speed = Mathf.Abs(rb.linearVelocity.x);
 
-        float speedFactor =
-            Mathf.InverseLerp(
-                0f,
-                moveSpeed,
-                speed
-            );
+        float speedFactor = Mathf.InverseLerp(
+            0f,
+            moveSpeed,
+            speed
+        );
 
         if (stepTimer <= 0f)
         {
             if (audioPlayer != null)
-            {
-                audioPlayer.StartRun(
-                    speedFactor
-                );
-            }
+                audioPlayer.StartRun(speedFactor);
 
-            stepTimer =
-                Mathf.Lerp(
-                    0.45f,
-                    0.15f,
-                    speedFactor
-                );
+            stepTimer = Mathf.Lerp(
+                0.45f,
+                0.15f,
+                speedFactor
+            );
         }
     }
-
-    // =========================================================
-    // JUMP
-    // =========================================================
 
     void HandleJump()
     {
         if (!canControl)
             return;
 
-        if (
-            defenseController != null &&
-            defenseController.IsDefending
-        )
+        if (defenseController != null &&
+            defenseController.IsDefending)
         {
             return;
         }
 
-        // =====================================================
-        // WALL DURUMUNDA NORMAL JUMP YAPMA
-        // =====================================================
-
         if (isWallSliding)
             return;
 
-        // Duvara temas ediyorsak ve havadaysak
-        // normal JumpState'e girme.
         if (!isGrounded && IsTouchingWall())
             return;
-
-        // =====================================================
-        // NORMAL JUMP
-        // =====================================================
 
         if (jumpBufferCounter <= 0f)
             return;
@@ -414,16 +301,9 @@ public class PlayerController : MonoBehaviour
         jumpConsumed = true;
 
         stateMachine.ChangeState(
-            new JumpState(
-                this,
-                stateMachine
-            )
+            new JumpState(this, stateMachine)
         );
     }
-
-    // =========================================================
-    // FIXED UPDATE
-    // =========================================================
 
     void FixedUpdate()
     {
@@ -431,27 +311,16 @@ public class PlayerController : MonoBehaviour
 
         if (!isGrounded)
         {
-            airTime +=
-                Time.fixedDeltaTime;
+            airTime += Time.fixedDeltaTime;
 
-            if (
-                transform.position.y >
-                maxAirHeight
-            )
-            {
-                maxAirHeight =
-                    transform.position.y;
-            }
+            if (transform.position.y > maxAirHeight)
+                maxAirHeight = transform.position.y;
         }
 
         ApplyBetterGravity();
 
         stateMachine.FixedUpdate();
     }
-
-    // =========================================================
-    // MOVEMENT
-    // =========================================================
 
     public void ApplyMovement(float control)
     {
@@ -461,42 +330,28 @@ public class PlayerController : MonoBehaviour
         if (inputLocked)
             return;
 
-        float targetSpeed =
-            moveInput * moveSpeed;
+        float targetSpeed = moveInput * moveSpeed;
 
         float accelerationRate;
 
         if (Mathf.Abs(moveInput) > 0.01f)
-        {
-            accelerationRate =
-                acceleration;
-        }
+            accelerationRate = acceleration;
         else
-        {
-            accelerationRate =
-                deceleration;
-        }
+            accelerationRate = deceleration;
 
         accelerationRate *= control;
 
-        float newVelocityX =
-            Mathf.MoveTowards(
-                rb.linearVelocity.x,
-                targetSpeed,
-                accelerationRate *
-                Time.fixedDeltaTime
-            );
+        float newVelocityX = Mathf.MoveTowards(
+            rb.linearVelocity.x,
+            targetSpeed,
+            accelerationRate * Time.fixedDeltaTime
+        );
 
-        rb.linearVelocity =
-            new Vector2(
-                newVelocityX,
-                rb.linearVelocity.y
-            );
+        rb.linearVelocity = new Vector2(
+            newVelocityX,
+            rb.linearVelocity.y
+        );
     }
-
-    // =========================================================
-    // SET VELOCITY
-    // =========================================================
 
     public void SetVelocity(Vector2 velocity)
     {
@@ -505,10 +360,6 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = velocity;
     }
-
-    // =========================================================
-    // BETTER GRAVITY
-    // =========================================================
 
     void ApplyBetterGravity()
     {
@@ -531,134 +382,91 @@ public class PlayerController : MonoBehaviour
             !jumpHeld
         )
         {
-            rb.linearVelocity =
-                new Vector2(
-                    rb.linearVelocity.x,
-                    rb.linearVelocity.y *
-                    jumpCutVelocityMultiplier
-                );
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                rb.linearVelocity.y *
+                jumpCutVelocityMultiplier
+            );
         }
 
-        if (
-            rb.linearVelocity.y <
-            -maxFallSpeed
-        )
+        if (rb.linearVelocity.y < -maxFallSpeed)
         {
-            rb.linearVelocity =
-                new Vector2(
-                    rb.linearVelocity.x,
-                    -maxFallSpeed
-                );
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                -maxFallSpeed
+            );
         }
     }
 
-    // =========================================================
-    // INPUT
-    // =========================================================
-
     void HandleInput()
     {
-        if (
-            inputLocked ||
-            !canControl
-        )
+        if (inputLocked || !canControl)
         {
             moveInput = 0f;
             verticalInput = 0f;
             jumpHeld = false;
             dashPressed = false;
-
             return;
         }
 
-        moveInput =
-            Input.GetAxisRaw(
-                "Horizontal"
-            );
+        moveInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
 
-        verticalInput =
-            Input.GetAxisRaw(
-                "Vertical"
-            );
+        jumpHeld = Input.GetKey(KeyCode.Space);
 
-        jumpHeld =
-            Input.GetKey(
-                KeyCode.Space
-            );
-
-        if (
-            Input.GetKeyDown(
-                KeyCode.Space
-            )
-        )
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            jumpBufferCounter =
-                jumpBufferTime;
+            jumpBufferCounter = jumpBufferTime;
         }
 
-        dashPressed =
-            Input.GetKeyDown(
-                KeyCode.LeftShift
-            );
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            wallJumpBufferCounter = wallJumpBufferTime;
+        }
+
+        dashPressed = Input.GetKeyDown(KeyCode.LeftShift);
 
         if (dashCooldownTimer > 0f)
-        {
-            dashCooldownTimer -=
-                Time.deltaTime;
-        }
+            dashCooldownTimer -= Time.deltaTime;
     }
-
-    // =========================================================
-    // TIMERS
-    // =========================================================
 
     void HandleTimers()
     {
-        jumpBufferCounter -=
-            Time.deltaTime;
+        jumpBufferCounter -= Time.deltaTime;
 
-        jumpBufferCounter =
-            Mathf.Max(
-                0f,
-                jumpBufferCounter
-            );
+        jumpBufferCounter = Mathf.Max(
+            0f,
+            jumpBufferCounter
+        );
 
-        coyoteCounter =
-            Mathf.Max(
-                0f,
-                coyoteCounter
-            );
+        wallJumpBufferCounter -= Time.deltaTime;
 
-        // =====================================================
-        // SLAM LOCK
-        // =====================================================
+        wallJumpBufferCounter = Mathf.Max(
+            0f,
+            wallJumpBufferCounter
+        );
+
+        coyoteCounter = Mathf.Max(
+            0f,
+            coyoteCounter
+        );
 
         if (slamGroundLock)
         {
-            slamLockTimer -=
-                Time.deltaTime;
+            slamLockTimer -= Time.deltaTime;
 
             if (slamLockTimer <= 0f)
-            {
                 slamGroundLock = false;
-            }
 
             if (inputLocked)
             {
-                inputLockTimer -=
-                    Time.deltaTime;
+                inputLockTimer -= Time.deltaTime;
 
                 if (inputLockTimer <= 0f)
-                {
                     inputLocked = false;
-                }
             }
         }
     }
-
-    // =========================================================
-    // GROUND CHECK
-    // =========================================================
 
     void GroundCheck()
     {
@@ -675,38 +483,22 @@ public class PlayerController : MonoBehaviour
                 groundMask
             );
 
-        if (
-            groundedNow &&
-            !wasGrounded
-        )
+        if (groundedNow && !wasGrounded)
         {
             OnLand();
 
             airTime = 0f;
-
-            maxAirHeight =
-                transform.position.y;
+            maxAirHeight = transform.position.y;
         }
 
-        if (
-            !groundedNow &&
-            wasGrounded
-        )
+        if (!groundedNow && wasGrounded)
         {
-            coyoteCounter =
-                coyoteTime;
+            coyoteCounter = coyoteTime;
         }
 
-        wasGrounded =
-            groundedNow;
-
-        isGrounded =
-            groundedNow;
+        wasGrounded = groundedNow;
+        isGrounded = groundedNow;
     }
-
-    // =========================================================
-    // WALL CHECK
-    // =========================================================
 
     public bool IsTouchingWall()
     {
@@ -748,132 +540,64 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
-    // =========================================================
-    // LANDING
-    // =========================================================
-
     void OnLand()
     {
         jumpConsumed = false;
-
         wallJumpBlockedDirection = 0;
-
-        // =========================================
-        // FALL DISTANCE
-        // =========================================
 
         float fallDistance =
             maxAirHeight - transform.position.y;
 
-        // Küçük düşüşlerde shake yok
         if (fallDistance >= impactSettings.minDistance)
         {
             TriggerLandingShake(fallDistance);
         }
 
-        void TriggerLandingShake(float fallDistance)
+        void TriggerLandingShake(float distance)
         {
             if (impulseSource == null)
                 return;
 
-            if (impactSettings == null)
-                return;
+            float intensity = 0f;
 
-            // =========================================
-            // NORMALIZE FALL DISTANCE
-            // =========================================
+            if (distance >= impactSettings.heavyThreshold)
+            {
+                intensity = impactSettings.heavyIntensity;
+            }
+            else if (distance >= impactSettings.mediumThreshold)
+            {
+                intensity = impactSettings.mediumIntensity;
+            }
+            else if (distance >= impactSettings.lightThreshold)
+            {
+                intensity = impactSettings.lightIntensity;
+            }
+            else
+            {
+                return;
+            }
 
             float normalizedDistance =
                 Mathf.InverseLerp(
                     impactSettings.minDistance,
                     impactSettings.maxFallDistance,
-                    fallDistance
+                    distance
                 );
-
-            normalizedDistance =
-                Mathf.Clamp01(normalizedDistance);
-
-            // =========================================
-            // SHAKE CURVE
-            // =========================================
 
             float curveValue =
                 impactSettings.shakeCurve.Evaluate(
                     normalizedDistance
                 );
 
-            // =========================================
-            // INTENSITY
-            // =========================================
-
-            float intensity;
-
-            if (fallDistance < impactSettings.lightThreshold)
-            {
-                intensity = impactSettings.lightIntensity;
-            }
-            else if (fallDistance < impactSettings.mediumThreshold)
-            {
-                float t = Mathf.InverseLerp(
-                    impactSettings.lightThreshold,
-                    impactSettings.mediumThreshold,
-                    fallDistance
-                );
-
-                intensity = Mathf.Lerp(
-                    impactSettings.lightIntensity,
-                    impactSettings.mediumIntensity,
-                    t
-                );
-            }
-            else if (fallDistance < impactSettings.heavyThreshold)
-            {
-                float t = Mathf.InverseLerp(
-                    impactSettings.mediumThreshold,
-                    impactSettings.heavyThreshold,
-                    fallDistance
-                );
-
-                intensity = Mathf.Lerp(
-                    impactSettings.mediumIntensity,
-                    impactSettings.heavyIntensity,
-                    t
-                );
-            }
-            else
-            {
-                intensity = impactSettings.heavyIntensity;
-            }
-
-            // Curve'ü uyguluyoruz
             intensity *= curveValue;
 
-            // Son güvenlik
-            intensity =
-                Mathf.Clamp(
-                    intensity,
-                    0f,
-                    impactSettings.heavyIntensity
-                );
-
-            // =========================================
-            // CINEMACHINE IMPULSE
-            // =========================================
-
-            impulseSource.GenerateImpulse(
-                intensity
-            );
+            impulseSource.GenerateImpulse(intensity);
         }
 
         SpawnDust();
 
-        // Yeni düşüş için başlangıç yüksekliğini sıfırla
         maxAirHeight = transform.position.y;
     }
-
-    // =========================================================
-    // DUST
-    // =========================================================
 
     public void SpawnDust()
     {
@@ -892,16 +616,10 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-    // =========================================================
-    // FACE DIRECTION
-    // =========================================================
-
     void HandleFacing()
     {
-        if (
-            defenseController != null &&
-            defenseController.IsDefending
-        )
+        if (defenseController != null &&
+            defenseController.IsDefending)
         {
             return;
         }
@@ -909,45 +627,26 @@ public class PlayerController : MonoBehaviour
         if (moveInput == 0)
             return;
 
-        facingDir =
-            Mathf.Sign(moveInput);
+        facingDir = Mathf.Sign(moveInput);
 
-        Vector3 s =
-            modelPivot.localScale;
-
-        s.x =
-            Mathf.Abs(s.x) *
-            facingDir;
-
+        Vector3 s = modelPivot.localScale;
+        s.x = Mathf.Abs(s.x) * facingDir;
         modelPivot.localScale = s;
     }
 
-    // =========================================================
-    // FREEZE FRAME
-    // =========================================================
-
-    public System.Collections.IEnumerator FreezeFrame(
-        float duration
-    )
+    public System.Collections.IEnumerator FreezeFrame(float duration)
     {
         Time.timeScale = 0f;
 
-        yield return new WaitForSecondsRealtime(
-            duration
-        );
+        yield return new WaitForSecondsRealtime(duration);
 
         Time.timeScale = 1f;
     }
 
-    // =========================================================
-    // HELPERS
-    // =========================================================
-
     public bool IsDefending()
     {
-        return
-            defenseController != null &&
-            defenseController.IsDefending;
+        return defenseController != null &&
+               defenseController.IsDefending;
     }
 
     public bool IsGrounded()
@@ -958,41 +657,29 @@ public class PlayerController : MonoBehaviour
     public float GetDashSpeedFactor()
     {
         return Mathf.Clamp01(
-            Mathf.Abs(dashDistance) /
-            10f
+            Mathf.Abs(dashDistance) / 10f
         );
     }
 
     public float GetDashDirection()
     {
-        return facingDir == 0
-            ? 1f
-            : facingDir;
+        return facingDir == 0 ? 1f : facingDir;
     }
-
-    // =========================================================
-    // DEBUG GIZMOS
-    // =========================================================
 
     void OnDrawGizmosSelected()
     {
-        // Ground check
         if (groundCheck)
         {
-            Gizmos.color =
-                Color.green;
-
+            Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(
                 groundCheck.position,
                 groundCheckRadius
             );
         }
 
-        // Wall check
         if (wallCheck)
         {
-            Gizmos.color =
-                Color.yellow;
+            Gizmos.color = Color.yellow;
 
             Gizmos.DrawWireSphere(
                 wallCheck.position,
@@ -1002,15 +689,13 @@ public class PlayerController : MonoBehaviour
             Gizmos.DrawLine(
                 wallCheck.position,
                 wallCheck.position +
-                Vector3.right *
-                wallCheckDistance
+                Vector3.right * wallCheckDistance
             );
 
             Gizmos.DrawLine(
                 wallCheck.position,
                 wallCheck.position +
-                Vector3.left *
-                wallCheckDistance
+                Vector3.left * wallCheckDistance
             );
         }
     }
