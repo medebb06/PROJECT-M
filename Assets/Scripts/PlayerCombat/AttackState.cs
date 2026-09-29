@@ -70,8 +70,15 @@ public class AttackState : ICombatState
             dir * moveDistance;
 
         // =====================================================
-        // ENEMY COLLISION
+        // COLLISION
         // =====================================================
+        //
+        // Attack movement sırasında hem enemy'leri
+        // hem de duvarları kontrol ediyoruz.
+        //
+        // Önceden sadece enemyLayer kullanılıyordu.
+        // Bu yüzden duvarlar tamamen yok sayılıyordu.
+        //
 
         Collider2D playerCollider =
             player.GetComponent<Collider2D>();
@@ -85,7 +92,15 @@ public class AttackState : ICombatState
             ContactFilter2D filter =
                 new ContactFilter2D();
 
-            filter.SetLayerMask(enemyLayer);
+            // Enemy + Wall
+            LayerMask movementCollisionMask =
+                enemyLayer |
+                player.wallMask;
+
+            filter.SetLayerMask(
+                movementCollisionMask
+            );
+
             filter.useTriggers = false;
 
             int hitCount =
