@@ -5,6 +5,7 @@ public class PlayerDefenseController : MonoBehaviour
     [Header("References")]
     [SerializeField] private PlayerController player;
     [SerializeField] private GameObject defenseVisual;
+    [SerializeField] private CombatImpactFeedback combatFeedback;
 
     [Header("Parry")]
     [SerializeField] private float parryWindow = 0.12f;
@@ -33,6 +34,10 @@ public class PlayerDefenseController : MonoBehaviour
     {
         if (player == null)
             player = GetComponent<PlayerController>();
+
+        if (combatFeedback == null)
+            combatFeedback =
+                GetComponent<CombatImpactFeedback>();
 
         if (defenseVisual != null)
             defenseVisual.SetActive(false);
@@ -131,5 +136,17 @@ public class PlayerDefenseController : MonoBehaviour
     public bool CanBlock()
     {
         return IsBlocking;
+    }
+
+    // =========================================================
+    // PARRY FEEDBACK
+    // =========================================================
+
+    public void PlayParryFeedback()
+    {
+        if (combatFeedback == null)
+            return;
+
+        combatFeedback.PlayParryImpact();
     }
 }

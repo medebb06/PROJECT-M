@@ -2629,6 +2629,7 @@ GameObject:
   - component: {fileID: 2122615042}
   - component: {fileID: 2122615057}
   - component: {fileID: 2122615054}
+  - component: {fileID: 2122615060}
   - component: {fileID: 2122615046}
   - component: {fileID: 2122615050}
   - component: {fileID: 2122615044}
@@ -3227,6 +3228,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDefenseController
   player: {fileID: 2122615046}
   defenseVisual: {fileID: 1386884931}
+  combatFeedback: {fileID: 2122615060}
   parryWindow: 0.2
   parryVisual: {fileID: 502569093}
 --- !u!114 &2122615059
@@ -3245,6 +3247,22 @@ MonoBehaviour:
   currentPosture: 0
   recoveryDelay: 1
   recoverySpeed: 25
+--- !u!114 &2122615060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbef40e88fbe9f042a7dbacf01abd127, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatImpactFeedback
+  impulseSource: {fileID: 0}
+  parryHitStopTimeScale: 0.01
+  parryHitStopDuration: 0.08
+  parryShakeForce: 0.3
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0

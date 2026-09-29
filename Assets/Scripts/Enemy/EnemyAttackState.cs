@@ -126,6 +126,8 @@ public class EnemyAttackState : IEnemyState
         {
             Debug.Log("PLAYER PARRY!");
 
+            defense.PlayParryFeedback();
+
             return HandleParry(hitDirection);
         }
 
@@ -180,25 +182,8 @@ public class EnemyAttackState : IEnemyState
     {
         enemy.ApplyBlockKnockback(hitDirection);
 
-        EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
-
-        if (balance == null)
-        {
-            Debug.LogWarning(
-                "EnemyAttackState: EnemyBalance bulunamadı!"
-            );
-
-            return;
-        }
-
         Debug.Log(
-            "BLOCK → ENEMY BALANCE +" +
-            enemy.blockBalanceDamage
-        );
-
-        balance.AddBalanceDamage(
-            enemy.blockBalanceDamage
+            "PLAYER BLOCK → NO ENEMY BALANCE DAMAGE"
         );
     }
 

@@ -5,34 +5,42 @@ public class EnemyStaggerState : IEnemyState
     private EnemyController enemy;
     private float staggerTimer;
 
-    public EnemyStaggerState(EnemyController enemy)
+    public EnemyStaggerState(
+        EnemyController enemy
+    )
     {
         this.enemy = enemy;
     }
 
     public void Enter()
     {
-        staggerTimer = enemy.staggerDuration;
+        staggerTimer =
+            enemy.staggerDuration;
 
         Rigidbody2D rb =
             enemy.GetComponent<Rigidbody2D>();
 
         if (rb != null)
         {
-            rb.linearVelocity = new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
+            rb.linearVelocity = Vector2.zero;
         }
 
-        Debug.Log("ENEMY STAGGER!");
+        Debug.Log(
+            "ENEMY STAGGER STARTED"
+        );
     }
 
     public void Tick()
     {
+        // --------------------------------
+        // EXECUTE
+        // --------------------------------
+
         if (Input.GetKeyDown(KeyCode.E))
         {
-            Debug.Log("EXECUTE INPUT!");
+            Debug.Log(
+                "EXECUTE INPUT!"
+            );
 
             enemy.ChangeState(
                 new EnemyExecuteState(enemy)
@@ -41,32 +49,41 @@ public class EnemyStaggerState : IEnemyState
             return;
         }
 
-        staggerTimer -= Time.deltaTime;
+        // --------------------------------
+        // STAGGER TIMER
+        // --------------------------------
 
-        if (staggerTimer <= 0f)
+        staggerTimer -=
+            Time.deltaTime;
+
+        if (staggerTimer > 0f)
+            return;
+
+        // --------------------------------
+        // STAGGER END
+        // --------------------------------
+
+        EnemyBalance balance =
+            enemy.GetComponent<EnemyBalance>();
+
+        if (balance != null)
         {
-            RecoverBalance();
+            balance.RecoverBalance();
 
-            enemy.ChangeState(
-                new EnemyChaseState(enemy)
+            Debug.Log(
+                "ENEMY BALANCE RECOVERED!"
             );
         }
+
+        enemy.ChangeState(
+            new EnemyChaseState(enemy)
+        );
     }
 
     public void Exit()
     {
-    }
-
-    private void RecoverBalance()
-    {
-        EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
-
-        if (balance == null)
-            return;
-
-        balance.RecoverBalance();
-
-        Debug.Log("ENEMY BALANCE RECOVERED!");
+        Debug.Log(
+            "ENEMY STAGGER END"
+        );
     }
 }

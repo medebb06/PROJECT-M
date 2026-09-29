@@ -8,7 +8,6 @@ public class EnemyController : MonoBehaviour
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
 
-
     public float attackDuration = 1f;
     public float attackWarningTime = 1f;
 
@@ -37,9 +36,8 @@ public class EnemyController : MonoBehaviour
     public float blockKnockbackVerticalForce = 0.2f;
     public float blockKnockbackDuration = 0.15f;
     public float blockRecoveryTime = 0.25f;
-    
+
     [Header("Defense Balance")]
-    public int blockBalanceDamage = 1;
     public int parryBalanceDamage = 2;
 
     [Header("Execute")]
@@ -58,9 +56,13 @@ public class EnemyController : MonoBehaviour
     public bool IsMovementLocked =>
         movementLockTimer > 0f;
 
-    IEnemyState currentState;
+    private IEnemyState currentState;
+
     public bool IsStaggered =>
-    currentState is EnemyStaggerState;
+        currentState is EnemyStaggerState;
+
+    public IEnemyState CurrentState =>
+        currentState;
 
     void Update()
     {
@@ -94,16 +96,31 @@ public class EnemyController : MonoBehaviour
                 target = playerObj.transform;
         }
 
-        ChangeState(new EnemyIdleState(this));
+        ChangeState(
+            new EnemyIdleState(this)
+        );
     }
 
     public void ChangeState(IEnemyState newState)
     {
+        if (newState == null)
+            return;
+
         currentState?.Exit();
 
         currentState = newState;
 
-        currentState?.Enter();
+        currentState.Enter();
+    }
+
+    public void ForceStagger()
+    {
+        if (IsStaggered)
+            return;
+
+        ChangeState(
+            new EnemyStaggerState(this)
+        );
     }
 
     public void StartAttackRecovery()

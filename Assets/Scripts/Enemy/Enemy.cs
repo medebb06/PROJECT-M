@@ -24,27 +24,19 @@ public class Enemy : MonoBehaviour, IDamageable
     void OnEnable()
     {
         if (health != null)
-        {
             health.OnDeath += Die;
-        }
 
         if (balance != null)
-        {
             balance.OnBalanceBroken += HandleBalanceBroken;
-        }
     }
 
     void OnDisable()
     {
         if (health != null)
-        {
             health.OnDeath -= Die;
-        }
 
         if (balance != null)
-        {
             balance.OnBalanceBroken -= HandleBalanceBroken;
-        }
     }
 
     public void TakeDamage(
@@ -65,7 +57,7 @@ public class Enemy : MonoBehaviour, IDamageable
             return;
 
         // ==================================================
-        // STAGGER DURUMU
+        // STAGGER
         // ==================================================
 
         if (controller != null &&
@@ -80,8 +72,8 @@ public class Enemy : MonoBehaviour, IDamageable
         }
 
         // ==================================================
-        // NORMAL DURUM
-        // SADECE BALANCE DAMAGE
+        // NORMAL
+        // BALANCE DAMAGE ONLY
         // ==================================================
 
         if (balance == null)
@@ -101,12 +93,11 @@ public class Enemy : MonoBehaviour, IDamageable
         );
 
         // Balance kırıldıysa
-        // EnemyBalance event'i üzerinden
-        // EnemyStaggerState zaten başlatıldı.
+        // EnemyBalance event'i zaten
+        // ForceStagger() çağırdı.
         if (balance.IsBroken)
             return;
 
-        // Balance hit feedback
         if (hitFeedback != null)
         {
             hitFeedback.PlayBalanceHit(
@@ -114,8 +105,6 @@ public class Enemy : MonoBehaviour, IDamageable
             );
         }
 
-        // Balance'a vurulduğunda enemy'nin
-        // normal hit tepkisi devam etsin.
         EnterHitState(hitDirection);
 
         StartCoroutine(IFrame());
@@ -159,6 +148,9 @@ public class Enemy : MonoBehaviour, IDamageable
         if (controller == null)
             return;
 
+        if (controller.IsStaggered)
+            return;
+
         controller.ChangeState(
             new EnemyHitState(
                 controller,
@@ -184,11 +176,7 @@ public class Enemy : MonoBehaviour, IDamageable
         if (controller == null)
             return;
 
-        controller.ChangeState(
-            new EnemyStaggerState(
-                controller
-            )
-        );
+        controller.ForceStagger();
     }
 
     private void Die()
