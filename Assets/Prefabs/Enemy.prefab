@@ -207,8 +207,7 @@ MonoBehaviour:
   blockKnockbackVerticalForce: 2
   blockKnockbackDuration: 1
   blockRecoveryTime: 0.5
-  blockBalanceDamage: 1
-  parryBalanceDamage: 2
+  parryBalanceDamage: 3
   executeDamage: 10
   executeDistance: 2
   executeDuration: 0.15

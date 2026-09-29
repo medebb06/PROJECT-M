@@ -6,7 +6,7 @@ public class EnemyChaseState : IEnemyState
     EnemyController enemy;
     Rigidbody2D rb;
 
-    float speed = 2.5f;
+    float speed = 4f;
 
     public EnemyChaseState(EnemyController enemy)
     {
