@@ -3061,6 +3061,10 @@ MonoBehaviour:
   jumpClip: {fileID: 8300000, guid: 150bd0ef5cf8592488f01336c4eb5821, type: 3}
   dashClip: {fileID: 8300000, guid: 3b81504dc5d5cc949b82f28234aefbfa, type: 3}
   runClip: {fileID: 8300000, guid: b1ba2e4918d96a54e8568978204a0d75, type: 3}
+  attack1WooshClip: {fileID: 8300000, guid: 55a1faac2a1b0c247b60d2f969174b80, type: 3}
+  attack2WooshClip: {fileID: 8300000, guid: 4dc10c4297e75764d8cd7bbe92e768e3, type: 3}
+  attack3WooshClip: {fileID: 8300000, guid: 9a2fe58ebf6ee6643aeeb7a8e2890d2d, type: 3}
+  attack4WooshClip: {fileID: 8300000, guid: a401205cd3a90374a9ae67a35af95cac, type: 3}
 --- !u!82 &2122615052
 AudioSource:
   m_ObjectHideFlags: 0
