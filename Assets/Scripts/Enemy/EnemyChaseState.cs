@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyChaseState : IEnemyState
 {
@@ -27,8 +26,6 @@ public class EnemyChaseState : IEnemyState
         // BLOCK KNOCKBACK / MOVEMENT LOCK
         // -----------------------------------------
 
-        // Enemy block sonrası geri savruluyorsa
-        // Chase hareketi knockback'i ezmesin.
         if (enemy.IsMovementLocked)
         {
             return;
@@ -53,32 +50,36 @@ public class EnemyChaseState : IEnemyState
         }
 
         // -----------------------------------------
-        // ATTACK RANGE
+        // STOP DISTANCE
         // -----------------------------------------
 
-        if (dist <= enemy.attackRange)
+        if (dist <= enemy.chaseStopDistance)
         {
-            // Saldırı cooldown'daysa burada bekle.
-            // Enemy hemen tekrar saldırmasın.
-            if (!enemy.CanAttack)
-            {
-                rb.linearVelocity = new Vector2(
-                    0f,
-                    rb.linearVelocity.y
-                );
-
-                return;
-            }
-
-            // Saldırıya girmeden önce yatay hareketi durdur.
+            // Enemy oyuncuya yeterince yaklaştı.
+            // Artık chase hareketi yapma.
             rb.linearVelocity = new Vector2(
                 0f,
                 rb.linearVelocity.y
             );
 
-            enemy.ChangeState(
-                new EnemyAttackState(enemy)
-            );
+            // -----------------------------------------
+            // ATTACK RANGE
+            // -----------------------------------------
+
+            if (dist <= enemy.attackRange)
+            {
+                // Saldırı cooldown'daysa bekle.
+                if (!enemy.CanAttack)
+                {
+                    return;
+                }
+
+                enemy.ChangeState(
+                    new EnemyAttackState(enemy)
+                );
+
+                return;
+            }
 
             return;
         }
@@ -103,4 +104,3 @@ public class EnemyChaseState : IEnemyState
         rb.linearVelocity = Vector2.zero;
     }
 }
-

@@ -5,8 +5,12 @@ public class EnemyController : MonoBehaviour
     [Header("Attack")]
     public float attackRange = 1.5f;
 
+    [Header("Chase")]
+    public float chaseStopDistance = 1.8f;
+
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
+
 
 
     public float attackDuration = 1f;
