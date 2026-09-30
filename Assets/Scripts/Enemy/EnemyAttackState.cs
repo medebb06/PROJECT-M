@@ -117,37 +117,71 @@ public class EnemyAttackState : IEnemyState
         PlayerDefenseController defense =
             enemy.target.GetComponent<PlayerDefenseController>();
 
-        // =========================
+        // =====================================================
         // PARRY
-        // =========================
+        // =====================================================
 
         if (defense != null &&
             defense.CanParry())
         {
             Debug.Log("PLAYER PARRY!");
 
+            // Parry hitstop + shake
             defense.PlayParryFeedback();
 
+            // Parry sesi
+            EnemyHitFeedback hitFeedback =
+                enemy.GetComponent<EnemyHitFeedback>();
+
+            if (hitFeedback != null)
+            {
+                hitFeedback.PlayParry(hitDirection);
+            }
+
+            // Parry → Balance
+            // Balance kırılırsa Enemy.cs ayrıca
+            // Balance Break feedback'ini çalıştırır.
             return HandleParry(hitDirection);
         }
 
-        // =========================
+        // =====================================================
         // BLOCK
-        // =========================
+        // =====================================================
 
         if (defense != null &&
             defense.CanBlock())
         {
             Debug.Log("PLAYER BLOCK!");
 
+            // Block sesi
+            EnemyHitFeedback hitFeedback =
+                enemy.GetComponent<EnemyHitFeedback>();
+
+            if (hitFeedback != null)
+            {
+                hitFeedback.PlayBlock(hitDirection);
+            }
+
+            // Block hitstop + küçük shake
+            CombatImpactFeedback combatFeedback =
+                enemy.target.GetComponent<CombatImpactFeedback>();
+
+            if (combatFeedback != null)
+            {
+                combatFeedback.PlayBlockImpact();
+            }
+
+            // Block knockback
             HandleBlock(hitDirection);
 
+            // IMPORTANT:
+            // Block enemy Balance doldurmaz.
             return false;
         }
 
-        // =========================
+        // =====================================================
         // NORMAL HIT
-        // =========================
+        // =====================================================
 
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<PlayerDamageReceiver>();
@@ -210,8 +244,6 @@ public class EnemyAttackState : IEnemyState
             enemy.parryBalanceDamage
         );
 
-        // Balance kırıldıysa EnemyBalance zaten
-        // EnemyStaggerState'a geçişi başlattı.
         if (balance.IsBroken)
         {
             Debug.Log(

@@ -3009,7 +3009,7 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 1024
-  defenseController: {fileID: 0}
+  defenseController: {fileID: 2122615058}
   inputBufferTime: 0.2
   comboResetTime: 0.8
   hitBoxSize: {x: 1.8, y: 1.2}
@@ -3185,7 +3185,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDamageReceiver
   health: {fileID: 2122615054}
   player: {fileID: 2122615046}
-  knockback: {fileID: 0}
+  knockback: {fileID: 2122615057}
 --- !u!114 &2122615056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3259,10 +3259,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbef40e88fbe9f042a7dbacf01abd127, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactFeedback
-  impulseSource: {fileID: 0}
+  impulseSource: {fileID: 2122615049}
   parryHitStopTimeScale: 0.01
   parryHitStopDuration: 0.08
   parryShakeForce: 0.3
+  blockHitStopTimeScale: 0.035
+  blockHitStopDuration: 0.035
+  blockShakeForce: 0.25
+  balanceBreakHitStopTimeScale: 0.01
+  balanceBreakHitStopDuration: 0.12
+  balanceBreakShakeForce: 0.3
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0

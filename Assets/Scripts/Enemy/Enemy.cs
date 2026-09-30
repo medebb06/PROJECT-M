@@ -94,7 +94,7 @@ public class Enemy : MonoBehaviour, IDamageable
 
         // Balance kırıldıysa
         // EnemyBalance event'i zaten
-        // ForceStagger() çağırdı.
+        // HandleBalanceBroken() çağırdı.
         if (balance.IsBroken)
             return;
 
@@ -166,12 +166,48 @@ public class Enemy : MonoBehaviour, IDamageable
             " BALANCE BROKEN!"
         );
 
+        // ==================================================
+        // BALANCE BREAK IMPACT
+        // ==================================================
+
+        if (controller != null &&
+            controller.target != null)
+        {
+            CombatImpactFeedback combatFeedback =
+                controller.target.GetComponent<
+                    CombatImpactFeedback
+                >();
+
+            if (combatFeedback != null)
+            {
+                combatFeedback.PlayBalanceBreakImpact();
+
+                Debug.Log(
+                    "BALANCE BREAK IMPACT PLAYED!"
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    "CombatImpactFeedback Player üzerinde bulunamadı!"
+                );
+            }
+        }
+
+        // ==================================================
+        // ENEMY BALANCE BREAK FEEDBACK
+        // ==================================================
+
         if (hitFeedback != null)
         {
             hitFeedback.PlayBalanceBreak(
                 Vector2.zero
             );
         }
+
+        // ==================================================
+        // STAGGER
+        // ==================================================
 
         if (controller == null)
             return;

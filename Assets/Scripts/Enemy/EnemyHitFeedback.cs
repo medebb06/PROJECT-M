@@ -17,11 +17,41 @@ public class EnemyHitFeedback : MonoBehaviour
     [SerializeField] private AudioClip balanceBreakSound;
     [SerializeField] private GameObject balanceBreakVFX;
 
+    [Header("Balance Break Audio")]
+    [SerializeField] private AudioSource balanceBreakAudioSource;
+
+    [Header("Parry")]
+    [SerializeField] private AudioClip parrySound;
+    [SerializeField] private GameObject parryVFX;
+
+    [Header("Block")]
+    [SerializeField] private AudioClip blockSound;
+    [SerializeField] private GameObject blockVFX;
+
     private void Awake()
     {
         if (audioSource == null)
-        {
             audioSource = GetComponent<AudioSource>();
+
+        if (balanceBreakAudioSource == null)
+        {
+            balanceBreakAudioSource =
+                gameObject.AddComponent<AudioSource>();
+
+            balanceBreakAudioSource.playOnAwake = false;
+            balanceBreakAudioSource.loop = false;
+
+            if (audioSource != null)
+            {
+                balanceBreakAudioSource.outputAudioMixerGroup =
+                    audioSource.outputAudioMixerGroup;
+
+                balanceBreakAudioSource.volume =
+                    audioSource.volume;
+
+                balanceBreakAudioSource.pitch =
+                    audioSource.pitch;
+            }
         }
     }
 
@@ -39,8 +69,47 @@ public class EnemyHitFeedback : MonoBehaviour
 
     public void PlayBalanceBreak(Vector2 hitDirection)
     {
-        PlaySound(balanceBreakSound);
-        SpawnVFX(balanceBreakVFX, hitDirection);
+        Debug.Log("BALANCE BREAK FEEDBACK!");
+
+        if (balanceBreakSound == null)
+        {
+            Debug.LogWarning(
+                "Balance Break Sound atanmadı!"
+            );
+        }
+        else if (balanceBreakAudioSource == null)
+        {
+            Debug.LogWarning(
+                "Balance Break AudioSource bulunamadı!"
+            );
+        }
+        else
+        {
+            balanceBreakAudioSource.PlayOneShot(
+                balanceBreakSound
+            );
+
+            Debug.Log(
+                "BALANCE BREAK SOUND PLAYED!"
+            );
+        }
+
+        SpawnVFX(
+            balanceBreakVFX,
+            hitDirection
+        );
+    }
+
+    public void PlayParry(Vector2 hitDirection)
+    {
+        PlaySound(parrySound);
+        SpawnVFX(parryVFX, hitDirection);
+    }
+
+    public void PlayBlock(Vector2 hitDirection)
+    {
+        PlaySound(blockSound);
+        SpawnVFX(blockVFX, hitDirection);
     }
 
     private void PlayRandomSound(AudioClip[] clips)
@@ -51,9 +120,8 @@ public class EnemyHitFeedback : MonoBehaviour
         if (clips == null || clips.Length == 0)
             return;
 
-        AudioClip clip = clips[
-            Random.Range(0, clips.Length)
-        ];
+        AudioClip clip =
+            clips[Random.Range(0, clips.Length)];
 
         if (clip == null)
             return;
@@ -91,10 +159,11 @@ public class EnemyHitFeedback : MonoBehaviour
 
         if (hitDirection.sqrMagnitude > 0.01f)
         {
-            float angle = Mathf.Atan2(
-                hitDirection.y,
-                hitDirection.x
-            ) * Mathf.Rad2Deg;
+            float angle =
+                Mathf.Atan2(
+                    hitDirection.y,
+                    hitDirection.x
+                ) * Mathf.Rad2Deg;
 
             vfx.transform.rotation =
                 Quaternion.Euler(

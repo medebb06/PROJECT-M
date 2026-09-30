@@ -12,6 +12,16 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float parryHitStopDuration = 0.08f;
     [SerializeField] private float parryShakeForce = 0.35f;
 
+    [Header("Block Impact")]
+    [SerializeField] private float blockHitStopTimeScale = 0.05f;
+    [SerializeField] private float blockHitStopDuration = 0.025f;
+    [SerializeField] private float blockShakeForce = 0.15f;
+
+    [Header("Balance Break Impact")]
+    [SerializeField] private float balanceBreakHitStopTimeScale = 0.01f;
+    [SerializeField] private float balanceBreakHitStopDuration = 0.12f;
+    [SerializeField] private float balanceBreakShakeForce = 0.8f;
+
     private Coroutine hitStopRoutine;
 
     private void Awake()
@@ -22,6 +32,10 @@ public class CombatImpactFeedback : MonoBehaviour
                 GetComponent<CinemachineImpulseSource>();
         }
     }
+
+    // =========================================================
+    // PARRY
+    // =========================================================
 
     public void PlayParryImpact()
     {
@@ -35,6 +49,42 @@ public class CombatImpactFeedback : MonoBehaviour
         );
     }
 
+    // =========================================================
+    // BLOCK
+    // =========================================================
+
+    public void PlayBlockImpact()
+    {
+        PlayHitStop(
+            blockHitStopDuration,
+            blockHitStopTimeScale
+        );
+
+        PlayScreenShake(
+            blockShakeForce
+        );
+    }
+
+    // =========================================================
+    // BALANCE BREAK
+    // =========================================================
+
+    public void PlayBalanceBreakImpact()
+    {
+        PlayHitStop(
+            balanceBreakHitStopDuration,
+            balanceBreakHitStopTimeScale
+        );
+
+        PlayScreenShake(
+            balanceBreakShakeForce
+        );
+    }
+
+    // =========================================================
+    // HIT STOP
+    // =========================================================
+
     private void PlayHitStop(
         float duration,
         float timeScale
@@ -43,6 +93,8 @@ public class CombatImpactFeedback : MonoBehaviour
         if (hitStopRoutine != null)
         {
             StopCoroutine(hitStopRoutine);
+
+            Time.timeScale = 1f;
         }
 
         hitStopRoutine =
@@ -69,6 +121,10 @@ public class CombatImpactFeedback : MonoBehaviour
 
         hitStopRoutine = null;
     }
+
+    // =========================================================
+    // SCREEN SHAKE
+    // =========================================================
 
     private void PlayScreenShake(
         float force
