@@ -138,10 +138,21 @@ public class DashState : IPlayerState
 
         if (ghost != null)
         {
+            bool flipX =
+                player.modelPivot.localScale.x < 0f;
+
+            Vector3 ghostScale =
+                player.modelPivot.localScale;
+
+            // Yön bilgisini flipX'e bırak.
+            // Scale'i her zaman pozitif tut.
+            ghostScale.x =
+                Mathf.Abs(ghostScale.x);
+
             ghost.Init(
                 player.playerSprite.sprite,
-                player.modelPivot.localScale,
-                player.facingDir < 0
+                ghostScale,
+                flipX
             );
         }
     }

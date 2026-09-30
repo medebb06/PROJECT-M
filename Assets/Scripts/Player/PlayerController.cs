@@ -296,6 +296,16 @@ public class PlayerController : MonoBehaviour
                 ? rb.linearVelocity.y
                 : 0f
         );
+
+        animator.SetBool(
+            "IsDashing",
+            isDashing
+        );
+
+        Debug.Log(
+            "ANIMATOR → Dash: " +
+            isDashing
+        );
     }
 
     void HandleRunAudio()
