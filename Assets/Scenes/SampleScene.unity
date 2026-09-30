@@ -135,7 +135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -539,7 +539,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 10
+  orthographic size: 8
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1170,7 +1170,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 34
-    OrthographicSize: 10
+    OrthographicSize: 8
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -2782,6 +2782,7 @@ MonoBehaviour:
   rb: {fileID: 2122615044}
   col: {fileID: 0}
   modelPivot: {fileID: 901546197}
+  animator: {fileID: 901546200}
   defenseController: {fileID: 2122615058}
   groundCheck: {fileID: 1942488874}
   groundCheckRadius: 0.1
@@ -2800,7 +2801,7 @@ MonoBehaviour:
   isAttackLocked: 0
   moveSpeed: 10
   acceleration: 30
-  deceleration: 7
+  deceleration: 30
   airControl: 0.8
   stepTimer: 0
   jumpConsumed: 0
@@ -3257,8 +3258,8 @@ MonoBehaviour:
   balanceBreakHitStopTimeScale: 0.01
   balanceBreakHitStopDuration: 0.12
   balanceBreakShakeForce: 0.3
---- !u!61 &2122615061
-BoxCollider2D:
+--- !u!70 &2122615061
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -3291,18 +3292,9 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.029069632, y: 0.964583}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 0.94186074, y: 1.7663811}
-  m_EdgeRadius: 0
+  m_Offset: {x: -0.05633998, y: 0.9690485}
+  m_Size: {x: 0.86808825, y: 1.8112965}
+  m_Direction: 0
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0
