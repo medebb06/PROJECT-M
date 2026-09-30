@@ -9,8 +9,7 @@ public class PlayerCombatController : MonoBehaviour
     [SerializeField] private PlayerDefenseController defenseController;
 
     public float inputBufferTime = 0.2f;
-    public float comboResetTime = 0.8f;
-
+    public float comboResetTime = 0.45f;
     private float bufferTimer;
     private float comboTimer;
     private int comboStep;
@@ -23,6 +22,12 @@ public class PlayerCombatController : MonoBehaviour
     public float attackMoveSpeed = 6f;
     public AnimationCurve attackMoveCurve =
         AnimationCurve.EaseInOut(0, 0, 1, 1);
+
+    [Header("Attack Timing")]
+    public float attack1Duration = 0.33f;
+    public float attack2Duration = 0.33f;
+    public float attack3Duration = 0.33f;
+    public float attack4Duration = 0.33f;
 
     [Header("Hit Stop")]
     public float hitStopTimeScale = 0.05f;
@@ -54,7 +59,6 @@ public class PlayerCombatController : MonoBehaviour
         if (defenseController != null &&
             defenseController.IsDefending)
         {
-            // Savunma sırasında bekleyen attack input'unu da temizle.
             bufferTimer = 0f;
 
             currentState?.Tick();
@@ -68,21 +72,18 @@ public class PlayerCombatController : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            // Havada attack input'u kabul etme.
             if (!player.IsGrounded())
                 return;
 
             bufferTimer = inputBufferTime;
         }
 
-        if (comboTimer <= 0)
+        if (comboTimer <= 0f)
             comboStep = 0;
 
-        if (bufferTimer > 0 &&
+        if (bufferTimer > 0f &&
             currentState == null)
         {
-            // Güvenlik kontrolü:
-            // Input buffer doluyken havaya çıkılmış olabilir.
             if (!player.IsGrounded())
             {
                 bufferTimer = 0f;
@@ -99,19 +100,20 @@ public class PlayerCombatController : MonoBehaviour
 
     void StartAttack()
     {
-        // Savunma sırasında hiçbir şekilde attack başlayamaz.
         if (defenseController != null &&
             defenseController.IsDefending)
         {
             return;
         }
 
-        // Ekstra güvenlik.
-        // Attack hiçbir şekilde havada başlayamaz.
         if (!player.IsGrounded())
             return;
 
         Debug.Log("ATTACK START");
+
+        // =====================================================
+        // COMBO STEP
+        // =====================================================
 
         comboStep =
             Mathf.Clamp(
@@ -122,6 +124,35 @@ public class PlayerCombatController : MonoBehaviour
 
         comboTimer = comboResetTime;
 
+        // =====================================================
+        // ATTACK DURATION
+        // =====================================================
+
+        float attackDuration;
+
+        switch (comboStep)
+        {
+            case 1:
+                attackDuration = attack1Duration;
+                break;
+
+            case 2:
+                attackDuration = attack2Duration;
+                break;
+
+            case 3:
+                attackDuration = attack3Duration;
+                break;
+
+            default:
+                attackDuration = attack4Duration;
+                break;
+        }
+
+        // =====================================================
+        // CREATE ATTACK STATE
+        // =====================================================
+
         currentState = new AttackState(
             player,
             enemyLayer,
@@ -131,7 +162,8 @@ public class PlayerCombatController : MonoBehaviour
             hitStopDuration,
             attackMoveDistance,
             attackMoveSpeed,
-            attackMoveCurve
+            attackMoveCurve,
+            attackDuration
         );
 
         currentState.Enter();
@@ -140,6 +172,14 @@ public class PlayerCombatController : MonoBehaviour
     void OnAttackEnd()
     {
         currentState = null;
+
+        // Attack4 tamamlandıysa combo kapanır.
+        // Bir sonraki saldırı yeniden Attack1 olur.
+        if (comboStep >= 4)
+        {
+            comboStep = 0;
+            comboTimer = 0f;
+        }
     }
 
     public void DoHitStop(

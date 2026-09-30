@@ -819,6 +819,43 @@ public class PlayerController : MonoBehaviour
             : facingDir;
     }
 
+    public void PlayAttackAnimation(int attackStep)
+    {
+        if (animator == null)
+            return;
+
+        string stateName;
+
+        switch (attackStep)
+        {
+            case 1:
+                stateName = "Attack1";
+                break;
+
+            case 2:
+                stateName = "Attack2";
+                break;
+
+            case 3:
+                stateName = "Attack3";
+                break;
+
+            case 4:
+                stateName = "Attack4";
+                break;
+
+            default:
+                return;
+        }
+
+        animator.CrossFadeInFixedTime(
+            stateName,
+            0.035f,
+            0,
+            0f
+        );
+    }
+
     void OnDrawGizmosSelected()
     {
         if (groundCheck)

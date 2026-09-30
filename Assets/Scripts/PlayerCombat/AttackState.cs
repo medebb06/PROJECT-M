@@ -15,11 +15,12 @@ public class AttackState : ICombatState
     float hitStopScale;
     float hitStopDuration;
 
+    float duration;
+
     Vector2 start;
     Vector2 target;
 
     float t;
-    float duration = 0.18f;
 
     bool hasHit;
 
@@ -34,7 +35,8 @@ public class AttackState : ICombatState
         float hitStopDuration,
         float moveDistance,
         float moveSpeed,
-        AnimationCurve moveCurve
+        AnimationCurve moveCurve,
+        float attackDuration
     )
     {
         this.player = player;
@@ -48,12 +50,20 @@ public class AttackState : ICombatState
         this.moveDistance = moveDistance;
         this.moveSpeed = moveSpeed;
         this.moveCurve = moveCurve;
+
+        this.duration = attackDuration;
     }
 
     public void Enter()
     {
         t = 0f;
         hasHit = false;
+
+        // =====================================================
+        // ATTACK ANIMATION
+        // =====================================================
+
+        player.PlayAttackAnimation(step);
 
         Vector2 dir =
             player.facingDir > 0
@@ -63,25 +73,16 @@ public class AttackState : ICombatState
         start = player.rb.position;
 
         // =====================================================
-        // ATTACK HAREKETİ
+        // ATTACK TARGET
         // =====================================================
-        //
-        // Attack başladığı andaki yönü kullanır.
-        // Sonradan sağ/sol basmak attack'ın hareketini
-        // değiştirmez.
-        //
 
         target =
             start +
             dir * moveDistance;
 
         // =====================================================
-        // COLLISION
+        // COLLISION CHECK
         // =====================================================
-        //
-        // Attack movement sırasında hem enemy'leri
-        // hem de duvarları kontrol ediyoruz.
-        //
 
         Collider2D playerCollider =
             player.GetComponent<Collider2D>();
@@ -95,7 +96,6 @@ public class AttackState : ICombatState
             ContactFilter2D filter =
                 new ContactFilter2D();
 
-            // Enemy + Wall
             LayerMask movementCollisionMask =
                 enemyLayer |
                 player.wallMask;
@@ -139,8 +139,10 @@ public class AttackState : ICombatState
                 dir * allowedDistance;
         }
 
-        // Attack başlangıcında yatay momentum temizlenir.
-        // Y korunur.
+        // =====================================================
+        // CLEAR HORIZONTAL MOMENTUM
+        // =====================================================
+
         player.rb.linearVelocity =
             new Vector2(
                 0f,
@@ -159,30 +161,46 @@ public class AttackState : ICombatState
 
         t += Time.deltaTime;
 
-        // =====================================================
-        // SADECE YÖNÜ GÜNCELLE
-        // =====================================================
-        //
-        // Burada movement YOK.
-        //
-        // Sağ/sol inputu sadece karakterin yüzünü değiştirir.
-        //
-
         UpdateFacing();
 
         // =====================================================
-        // ATTACK MOVE
+        // NORMALIZED ATTACK TIME
         // =====================================================
 
         float n =
+            duration > 0f
+                ? Mathf.Clamp01(t / duration)
+                : 1f;
+
+        // =====================================================
+        // ATTACK MOVEMENT
+        // =====================================================
+        //
+        // Movement:
+        //
+        // 0% - 15%   : preparation
+        // 15% - 70%  : main attack movement
+        // 70% - 100% : recovery
+        //
+
+        float movementT =
+            Mathf.InverseLerp(
+                0.15f,
+                0.70f,
+                n
+            );
+
+        movementT =
             Mathf.Clamp01(
-                t / duration
+                movementT
             );
 
         float curve =
             moveCurve != null
-                ? moveCurve.Evaluate(n)
-                : n;
+                ? moveCurve.Evaluate(
+                    movementT
+                )
+                : movementT;
 
         float desiredX =
             Mathf.Lerp(
@@ -191,8 +209,6 @@ public class AttackState : ICombatState
                 curve
             );
 
-        // Sadece attack'ın kendi hareketi.
-        // Input bunu değiştiremez.
         player.rb.position =
             new Vector2(
                 desiredX,
@@ -202,10 +218,12 @@ public class AttackState : ICombatState
         // =====================================================
         // HIT WINDOW
         // =====================================================
+        //
+        // İlk test için saldırının yaklaşık %35'inde vuruyor.
+        //
 
         if (!hasHit &&
-            t >= 0.04f &&
-            t <= 0.14f)
+            n >= 0.35f)
         {
             Hit();
 
@@ -216,7 +234,7 @@ public class AttackState : ICombatState
         // END
         // =====================================================
 
-        if (t >= duration)
+        if (n >= 1f)
         {
             Exit();
         }
@@ -224,20 +242,14 @@ public class AttackState : ICombatState
 
     void UpdateFacing()
     {
-        // Hareket inputu yoksa yön değiştirme.
         if (Mathf.Abs(player.moveInput) < 0.01f)
             return;
 
         float newDirection =
             Mathf.Sign(player.moveInput);
 
-        // Zaten o yöne bakıyorsa hiçbir şey yapma.
         if (player.facingDir == newDirection)
             return;
-
-        // =====================================================
-        // FACING
-        // =====================================================
 
         player.facingDir =
             newDirection;
@@ -255,8 +267,6 @@ public class AttackState : ICombatState
 
     public void Exit()
     {
-        // Attack sonunda yatay momentum bırakma.
-        // Y velocity korunur.
         player.rb.linearVelocity =
             new Vector2(
                 0f,
@@ -315,11 +325,6 @@ public class AttackState : ICombatState
         // =====================================================
         // NORMAL ATTACK HIT STOP
         // =====================================================
-        //
-        // Sadece gerçekten bir enemy'ye vurduysak çalışır.
-        // Aynı saldırıda birden fazla enemy olsa bile
-        // sadece bir kere tetiklenir.
-        //
 
         if (hitSomething)
         {

@@ -1,0 +1,326 @@
+fileFormatVersion: 2
+guid: f5e473f748ce9804ca0a88e3a3d3ff30
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 4661208832251774292
+    second: Player Sword Stab 96x48_0
+  - first:
+      213: 4645292053894225418
+    second: Player Sword Stab 96x48_1
+  - first:
+      213: -3002138240834869839
+    second: Player Sword Stab 96x48_2
+  - first:
+      213: -8128441958396685932
+    second: Player Sword Stab 96x48_3
+  - first:
+      213: -1847232795752203903
+    second: Player Sword Stab 96x48_4
+  - first:
+      213: -5732418113725227913
+    second: Player Sword Stab 96x48_5
+  - first:
+      213: 8925545257664592915
+    second: Player Sword Stab 96x48_6
+  - first:
+      213: 6343909700024957237
+    second: Player Sword Stab 96x48_7
+  - first:
+      213: -3900824501343763322
+    second: Player Sword Stab 96x48_8
+  - first:
+      213: 54281275661510042
+    second: Player Sword Stab 96x48_9
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 16
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_0
+      rect:
+        serializedVersion: 2
+        x: 38
+        y: 8
+        width: 20
+        height: 29
+      alignment: 6
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 455c74e9cb0ffa040800000000000000
+      internalID: 4661208832251774292
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_2
+      rect:
+        serializedVersion: 2
+        x: 131
+        y: 8
+        width: 20
+        height: 27
+      alignment: 9
+      pivot: {x: 0.14974442, y: 0.0019124349}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b5eb6c0d234656d0800000000000000
+      internalID: -3002138240834869839
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_4
+      rect:
+        serializedVersion: 2
+        x: 226
+        y: 8
+        width: 21
+        height: 25
+      alignment: 9
+      pivot: {x: 0.20556568, y: 0.00274086}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 189fcbf2f8f4d56e0800000000000000
+      internalID: -1847232795752203903
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_5
+      rect:
+        serializedVersion: 2
+        x: 322
+        y: 8
+        width: 21
+        height: 25
+      alignment: 9
+      pivot: {x: 0.21209136, y: -0.00274086}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 77c9463e81c5270b0800000000000000
+      internalID: -5732418113725227913
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_6
+      rect:
+        serializedVersion: 2
+        x: 421
+        y: 8
+        width: 52
+        height: 21
+      alignment: 9
+      pivot: {x: 0.035897475, y: -0.0052288375}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 31c35cd4f18eddb70800000000000000
+      internalID: 8925545257664592915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_7
+      rect:
+        serializedVersion: 2
+        x: 517
+        y: 8
+        width: 52
+        height: 21
+      alignment: 6
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 539742db2481a0850800000000000000
+      internalID: 6343909700024957237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player Sword Stab 96x48_9
+      rect:
+        serializedVersion: 2
+        x: 614
+        y: 8
+        width: 37
+        height: 26
+      alignment: 6
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9562c95888d0c000800000000000000
+      internalID: 54281275661510042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: b4d9a9773a3bdd447bd86a661cc363bf
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.0,"y":0.0},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":1,"spriteAlignment":6,"pivotUnitMode":1,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      Player Sword Stab 96x48_0: 4661208832251774292
+      Player Sword Stab 96x48_1: 4645292053894225418
+      Player Sword Stab 96x48_2: -3002138240834869839
+      Player Sword Stab 96x48_3: -8128441958396685932
+      Player Sword Stab 96x48_4: -1847232795752203903
+      Player Sword Stab 96x48_5: -5732418113725227913
+      Player Sword Stab 96x48_6: 8925545257664592915
+      Player Sword Stab 96x48_7: 6343909700024957237
+      Player Sword Stab 96x48_8: -3900824501343763322
+      Player Sword Stab 96x48_9: 54281275661510042
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
