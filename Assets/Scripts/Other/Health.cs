@@ -9,6 +9,11 @@ public class Health : MonoBehaviour
     [SerializeField] private int maxHealth = 3;
     [SerializeField] private int currentHealth;
 
+    [Header("Health Recovery")]
+    [SerializeField] private bool enableRecovery = false;
+    [SerializeField] private float recoveryDelay = 2f;
+    [SerializeField] private float recoverySpeed = 0.25f;
+
     [Header("Death Fade")]
     [SerializeField] private bool fadeOnDeath = true;
     [SerializeField] private float fadeDuration = 0.35f;
@@ -23,12 +28,73 @@ public class Health : MonoBehaviour
     private SpriteRenderer[] sprites;
     private bool fading;
 
+    private float recoveryTimer;
+    private float recoveryAccumulator;
+
     void Awake()
     {
         currentHealth = maxHealth;
         IsDead = false;
 
         sprites = GetComponentsInChildren<SpriteRenderer>();
+
+        recoveryTimer = 0f;
+        recoveryAccumulator = 0f;
+    }
+
+    void Update()
+    {
+        HandleRecovery();
+    }
+
+    private void HandleRecovery()
+    {
+        if (!enableRecovery)
+            return;
+
+        if (IsDead)
+            return;
+
+        if (currentHealth >= maxHealth)
+            return;
+
+        recoveryTimer -= Time.deltaTime;
+
+        if (recoveryTimer > 0f)
+            return;
+
+        recoveryAccumulator +=
+            recoverySpeed * Time.deltaTime;
+
+        int recoveryAmount =
+            Mathf.FloorToInt(
+                recoveryAccumulator
+            );
+
+        if (recoveryAmount <= 0)
+            return;
+
+        recoveryAccumulator -= recoveryAmount;
+
+        int previousHealth =
+            currentHealth;
+
+        currentHealth += recoveryAmount;
+
+        currentHealth =
+            Mathf.Clamp(
+                currentHealth,
+                0,
+                maxHealth
+            );
+
+        if (currentHealth != previousHealth)
+        {
+            OnHealthChanged?.Invoke(
+                currentHealth,
+                maxHealth
+            );
+        }
     }
 
     public void Revive()
@@ -36,6 +102,9 @@ public class Health : MonoBehaviour
         currentHealth = maxHealth;
         IsDead = false;
         fading = false;
+
+        recoveryTimer = 0f;
+        recoveryAccumulator = 0f;
 
         RestoreVisuals();
 
@@ -54,7 +123,16 @@ public class Health : MonoBehaviour
             return;
 
         currentHealth -= damage;
-        currentHealth = Mathf.Max(currentHealth, 0);
+
+        currentHealth =
+            Mathf.Max(
+                currentHealth,
+                0
+            );
+
+        // Hasar alınca recovery yeniden beklemeye başlar.
+        recoveryTimer = recoveryDelay;
+        recoveryAccumulator = 0f;
 
         OnHealthChanged?.Invoke(
             currentHealth,
@@ -76,10 +154,12 @@ public class Health : MonoBehaviour
             return;
 
         currentHealth += amount;
-        currentHealth = Mathf.Min(
-            currentHealth,
-            maxHealth
-        );
+
+        currentHealth =
+            Mathf.Min(
+                currentHealth,
+                maxHealth
+            );
 
         OnHealthChanged?.Invoke(
             currentHealth,
@@ -92,11 +172,17 @@ public class Health : MonoBehaviour
         if (IsDead)
             return;
 
-        currentHealth = Mathf.Clamp(
-            amount,
-            0,
-            maxHealth
-        );
+        currentHealth =
+            Mathf.Clamp(
+                amount,
+                0,
+                maxHealth
+            );
+
+        // SetHealth dışarıdan hasar gibi kullanılırsa
+        // recovery timer'ı da sıfırlanır.
+        recoveryTimer = recoveryDelay;
+        recoveryAccumulator = 0f;
 
         OnHealthChanged?.Invoke(
             currentHealth,
@@ -116,10 +202,8 @@ public class Health : MonoBehaviour
 
         IsDead = true;
 
-        // Fizik ve collider hemen devre dışı.
         DisablePhysics();
 
-        // Fade başlasın.
         if (fadeOnDeath)
         {
             StartCoroutine(FadeOut());
@@ -142,10 +226,16 @@ public class Health : MonoBehaviour
             elapsed += Time.deltaTime;
 
             float progress =
-                Mathf.Clamp01(elapsed / fadeDuration);
+                Mathf.Clamp01(
+                    elapsed / fadeDuration
+                );
 
             float alpha =
-                Mathf.Lerp(1f, 0f, progress);
+                Mathf.Lerp(
+                    1f,
+                    0f,
+                    progress
+                );
 
             SetAlpha(alpha);
 
@@ -154,7 +244,6 @@ public class Health : MonoBehaviour
 
         SetAlpha(0f);
 
-        // Fade bittikten sonra ölüm event'i.
         OnDeath?.Invoke();
 
         Destroy(gameObject);
@@ -167,7 +256,9 @@ public class Health : MonoBehaviour
 
         if (rb != null)
         {
-            rb.linearVelocity = Vector2.zero;
+            rb.linearVelocity =
+                Vector2.zero;
+
             rb.simulated = false;
         }
 
@@ -190,8 +281,11 @@ public class Health : MonoBehaviour
             if (sprite == null)
                 continue;
 
-            Color color = sprite.color;
+            Color color =
+                sprite.color;
+
             color.a = alpha;
+
             sprite.color = color;
         }
     }
@@ -217,4 +311,3 @@ public class Health : MonoBehaviour
         }
     }
 }
-
