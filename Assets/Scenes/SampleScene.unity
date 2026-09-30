@@ -135,7 +135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -924,14 +924,14 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 20
   m_MaskInteraction: 0
   m_Sprite: {fileID: 2997866243313136591, guid: 02e93dbbde8ba264e8f253c5f34e3c81, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 2}
+  m_Size: {x: 3.375, y: 2.25}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -2998,7 +2998,7 @@ MonoBehaviour:
     m_Bits: 1024
   defenseController: {fileID: 2122615058}
   inputBufferTime: 0.2
-  comboResetTime: 0.8
+  comboResetTime: 0.4
   hitBoxSize: {x: 1.8, y: 1.2}
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
@@ -3026,10 +3026,22 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  attack1Duration: 0.3
-  attack2Duration: 0.3
-  attack3Duration: 0.3
-  attack4Duration: 0.35
+  attack1Duration: 0.25
+  attack2Duration: 0.25
+  attack3Duration: 0.25
+  attack4Duration: 0.3
+  attack1MoveStart: 0.07
+  attack1MoveEnd: 0.15
+  attack1HitTime: 0.4
+  attack2MoveStart: 0.12
+  attack2MoveEnd: 0.16
+  attack2HitTime: 0.35
+  attack3MoveStart: 0.065
+  attack3MoveEnd: 0.18
+  attack3HitTime: 0.35
+  attack4MoveStart: 0.2
+  attack4MoveEnd: 0.282
+  attack4HitTime: 0.2
   hitStopTimeScale: 1
   hitStopDuration: 1
 --- !u!114 &2122615051

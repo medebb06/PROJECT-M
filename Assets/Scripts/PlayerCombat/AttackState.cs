@@ -17,6 +17,14 @@ public class AttackState : ICombatState
 
     float duration;
 
+    // =====================================================
+    // CUSTOM ATTACK TIMING
+    // =====================================================
+
+    float moveStart;
+    float moveEnd;
+    float hitTime;
+
     Vector2 start;
     Vector2 target;
 
@@ -36,7 +44,10 @@ public class AttackState : ICombatState
         float moveDistance,
         float moveSpeed,
         AnimationCurve moveCurve,
-        float attackDuration
+        float attackDuration,
+        float moveStart,
+        float moveEnd,
+        float hitTime
     )
     {
         this.player = player;
@@ -52,6 +63,10 @@ public class AttackState : ICombatState
         this.moveCurve = moveCurve;
 
         this.duration = attackDuration;
+
+        this.moveStart = moveStart;
+        this.moveEnd = moveEnd;
+        this.hitTime = hitTime;
     }
 
     public void Enter()
@@ -176,17 +191,20 @@ public class AttackState : ICombatState
         // ATTACK MOVEMENT
         // =====================================================
         //
-        // Movement:
+        // Örneğin:
         //
-        // 0% - 15%   : preparation
-        // 15% - 70%  : main attack movement
-        // 70% - 100% : recovery
+        // moveStart = 0.15
+        // moveEnd   = 0.70
+        //
+        // %0 - %15   : hareket yok
+        // %15 - %70  : ileri hareket
+        // %70 - %100 : hareket yok
         //
 
         float movementT =
             Mathf.InverseLerp(
-                0.15f,
-                0.70f,
+                moveStart,
+                moveEnd,
                 n
             );
 
@@ -219,11 +237,17 @@ public class AttackState : ICombatState
         // HIT WINDOW
         // =====================================================
         //
-        // İlk test için saldırının yaklaşık %35'inde vuruyor.
+        // Inspector'dan tamamen ayarlanabilir.
+        //
+        // Örneğin:
+        //
+        // 0.35 = saldırının %35'i
+        // 0.50 = saldırının %50'si
+        // 0.70 = saldırının %70'i
         //
 
         if (!hasHit &&
-            n >= 0.35f)
+            n >= hitTime)
         {
             Hit();
 

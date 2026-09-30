@@ -518,8 +518,8 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
-  m_Size: {x: 1, y: 2}
+  m_Offset: {x: -0.018845439, y: 0}
+  m_Size: {x: 1.5402367, y: 2}
   m_Direction: 0
 --- !u!50 &5344479987188543217
 Rigidbody2D:
@@ -573,7 +573,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  attackRange: 1.5
+  attackRange: 2
   staggerDuration: 3
   attackDuration: 0.8
   attackWarningTime: 1
@@ -613,6 +613,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 5
   currentHealth: 0
+  enableRecovery: 0
+  recoveryDelay: 2
+  recoverySpeed: 0.25
   fadeOnDeath: 1
   fadeDuration: 1
 --- !u!114 &940674076928422292

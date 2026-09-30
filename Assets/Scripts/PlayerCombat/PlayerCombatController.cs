@@ -10,6 +10,7 @@ public class PlayerCombatController : MonoBehaviour
 
     public float inputBufferTime = 0.2f;
     public float comboResetTime = 0.45f;
+
     private float bufferTimer;
     private float comboTimer;
     private int comboStep;
@@ -28,6 +29,46 @@ public class PlayerCombatController : MonoBehaviour
     public float attack2Duration = 0.33f;
     public float attack3Duration = 0.33f;
     public float attack4Duration = 0.33f;
+
+    [Header("Attack 1")]
+    [Range(0f, 1f)]
+    public float attack1MoveStart = 0.15f;
+
+    [Range(0f, 1f)]
+    public float attack1MoveEnd = 0.70f;
+
+    [Range(0f, 1f)]
+    public float attack1HitTime = 0.35f;
+
+    [Header("Attack 2")]
+    [Range(0f, 1f)]
+    public float attack2MoveStart = 0.15f;
+
+    [Range(0f, 1f)]
+    public float attack2MoveEnd = 0.70f;
+
+    [Range(0f, 1f)]
+    public float attack2HitTime = 0.35f;
+
+    [Header("Attack 3")]
+    [Range(0f, 1f)]
+    public float attack3MoveStart = 0.15f;
+
+    [Range(0f, 1f)]
+    public float attack3MoveEnd = 0.70f;
+
+    [Range(0f, 1f)]
+    public float attack3HitTime = 0.35f;
+
+    [Header("Attack 4")]
+    [Range(0f, 1f)]
+    public float attack4MoveStart = 0.10f;
+
+    [Range(0f, 1f)]
+    public float attack4MoveEnd = 0.75f;
+
+    [Range(0f, 1f)]
+    public float attack4HitTime = 0.50f;
 
     [Header("Hit Stop")]
     public float hitStopTimeScale = 0.05f;
@@ -150,6 +191,41 @@ public class PlayerCombatController : MonoBehaviour
         }
 
         // =====================================================
+        // ATTACK MOVEMENT TIMING
+        // =====================================================
+
+        float moveStart;
+        float moveEnd;
+        float hitTime;
+
+        switch (comboStep)
+        {
+            case 1:
+                moveStart = attack1MoveStart;
+                moveEnd = attack1MoveEnd;
+                hitTime = attack1HitTime;
+                break;
+
+            case 2:
+                moveStart = attack2MoveStart;
+                moveEnd = attack2MoveEnd;
+                hitTime = attack2HitTime;
+                break;
+
+            case 3:
+                moveStart = attack3MoveStart;
+                moveEnd = attack3MoveEnd;
+                hitTime = attack3HitTime;
+                break;
+
+            default:
+                moveStart = attack4MoveStart;
+                moveEnd = attack4MoveEnd;
+                hitTime = attack4HitTime;
+                break;
+        }
+
+        // =====================================================
         // CREATE ATTACK STATE
         // =====================================================
 
@@ -163,7 +239,10 @@ public class PlayerCombatController : MonoBehaviour
             attackMoveDistance,
             attackMoveSpeed,
             attackMoveCurve,
-            attackDuration
+            attackDuration,
+            moveStart,
+            moveEnd,
+            hitTime
         );
 
         currentState.Enter();
