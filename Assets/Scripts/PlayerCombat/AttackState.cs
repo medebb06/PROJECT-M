@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -190,16 +191,6 @@ public class AttackState : ICombatState
         // =====================================================
         // ATTACK MOVEMENT
         // =====================================================
-        //
-        // Örneğin:
-        //
-        // moveStart = 0.15
-        // moveEnd   = 0.70
-        //
-        // %0 - %15   : hareket yok
-        // %15 - %70  : ileri hareket
-        // %70 - %100 : hareket yok
-        //
 
         float movementT =
             Mathf.InverseLerp(
@@ -236,15 +227,6 @@ public class AttackState : ICombatState
         // =====================================================
         // HIT WINDOW
         // =====================================================
-        //
-        // Inspector'dan tamamen ayarlanabilir.
-        //
-        // Örneğin:
-        //
-        // 0.35 = saldırının %35'i
-        // 0.50 = saldırının %50'si
-        // 0.70 = saldırının %70'i
-        //
 
         if (!hasHit &&
             n >= hitTime)
@@ -347,11 +329,14 @@ public class AttackState : ICombatState
         }
 
         // =====================================================
-        // NORMAL ATTACK HIT STOP
+        // ATTACK FEEDBACK
         // =====================================================
 
         if (hitSomething)
         {
+            // Enemy'e vurduk.
+            // Woosh çalmaz, mevcut hit stop çalışır.
+
             CombatImpactFeedback combatFeedback =
                 player.GetComponent<
                     CombatImpactFeedback
@@ -362,5 +347,18 @@ public class AttackState : ICombatState
                 combatFeedback.PlayAttackImpact();
             }
         }
+        else
+        {
+            // Enemy'e vuramadık.
+            // Attack 1-4'e göre farklı pitch ile Woosh çal.
+
+            if (player.audioPlayer != null)
+            {
+                player.audioPlayer.PlayAttackWoosh(
+                    step
+                );
+            }
+        }
     }
 }
+
