@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+
     [System.Serializable]
     public class ImpactSettings
     {
@@ -10,6 +11,8 @@ public class PlayerController : MonoBehaviour
         public float slamSpeed = 35f;
         public float slamDamageRadius = 2f;
         public int slamDamage = 25;
+
+        
 
         public LayerMask enemyLayer;
 
@@ -38,6 +41,7 @@ public class PlayerController : MonoBehaviour
         public float maxFallDistance = 10f;
         public float minDistance = 2f;
     }
+    bool wasAirborne;
 
     [HideInInspector] public bool slamGroundLock;
     [HideInInspector] public float slamLockTimer;
@@ -388,6 +392,19 @@ public class PlayerController : MonoBehaviour
         coyoteCounter = 0f;
         jumpConsumed = true;
 
+        // Eğer Land trigger'ı bekliyorsa temizle.
+        if (animator != null)
+        {
+            animator.ResetTrigger("Land");
+
+            animator.CrossFadeInFixedTime(
+                "Jump",
+                0.03f,
+                0,
+                0f
+            );
+        }
+
         stateMachine.ChangeState(
             new JumpState(
                 this,
@@ -402,6 +419,8 @@ public class PlayerController : MonoBehaviour
 
         if (!isGrounded)
         {
+            wasAirborne = true;
+
             airTime += Time.fixedDeltaTime;
 
             if (transform.position.y > maxAirHeight)
@@ -600,19 +619,28 @@ public class PlayerController : MonoBehaviour
                 groundMask
             );
 
+        // Havadan yere gerçekten geçtik.
         if (groundedNow && !wasGrounded)
         {
-            OnLand();
+            if (wasAirborne)
+            {
+                OnLand();
+                wasAirborne = false;
+            }
 
             airTime = 0f;
+
             maxAirHeight =
                 transform.position.y;
         }
 
+        // Yerden havaya çıktık.
         if (!groundedNow && wasGrounded)
         {
             coyoteCounter =
                 coyoteTime;
+
+            wasAirborne = true;
         }
 
         wasGrounded = groundedNow;
@@ -664,8 +692,15 @@ public class PlayerController : MonoBehaviour
 
     void OnLand()
     {
+        
+
         jumpConsumed = false;
         wallJumpBlockedDirection = 0;
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Land");
+        }
 
         float fallDistance =
             maxAirHeight -
