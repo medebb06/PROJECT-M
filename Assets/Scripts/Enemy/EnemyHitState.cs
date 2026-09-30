@@ -6,12 +6,8 @@ public class EnemyHitState : IEnemyState
     private Vector2 hitDirection;
 
     private Rigidbody2D rb;
-    private SpriteRenderer sr;
-
-    private Color originalColor;
 
     private float timer;
-    private float flashTimer;
 
     public EnemyHitState(
         EnemyController enemy,
@@ -25,14 +21,8 @@ public class EnemyHitState : IEnemyState
     public void Enter()
     {
         rb = enemy.GetComponent<Rigidbody2D>();
-        sr = enemy.GetComponent<SpriteRenderer>();
 
         timer = enemy.hitDuration;
-        flashTimer = enemy.hitFlashDuration;
-
-        // --------------------------------
-        // STOP HORIZONTAL MOVEMENT
-        // --------------------------------
 
         if (rb != null)
         {
@@ -41,35 +31,11 @@ public class EnemyHitState : IEnemyState
                 rb.linearVelocity.y
             );
         }
-
-        // --------------------------------
-        // HIT FLASH
-        // --------------------------------
-
-        if (sr != null)
-        {
-            originalColor = sr.color;
-            sr.color = enemy.hitFlashColor;
-        }
     }
 
     public void Tick()
     {
         timer -= Time.deltaTime;
-        flashTimer -= Time.deltaTime;
-
-        // --------------------------------
-        // FLASH
-        // --------------------------------
-
-        if (flashTimer <= 0f && sr != null)
-        {
-            sr.color = originalColor;
-        }
-
-        // --------------------------------
-        // HIT END
-        // --------------------------------
 
         if (timer <= 0f)
         {
@@ -81,11 +47,6 @@ public class EnemyHitState : IEnemyState
 
     public void Exit()
     {
-        if (sr != null)
-        {
-            sr.color = originalColor;
-        }
-
         if (rb != null)
         {
             rb.linearVelocity = new Vector2(

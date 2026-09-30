@@ -24,7 +24,7 @@ public class EnemyStaggerState : IEnemyState
             enemy.staggerDuration;
 
         flashTimer =
-            enemy.hitFlashDuration;
+     enemy.staggerFlashDuration;
 
         spriteRenderer =
             enemy.GetComponent<SpriteRenderer>();
@@ -35,7 +35,7 @@ public class EnemyStaggerState : IEnemyState
                 spriteRenderer.color;
 
             spriteRenderer.color =
-                enemy.hitFlashColor;
+    enemy.staggerFlashColor;
         }
 
         Rigidbody2D rb =

@@ -8,6 +8,7 @@ public class EnemyController : MonoBehaviour
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
 
+
     public float attackDuration = 1f;
     public float attackWarningTime = 1f;
 
@@ -25,6 +26,10 @@ public class EnemyController : MonoBehaviour
     [Header("Hit Flash")]
     public Color hitFlashColor = Color.white;
     public float hitFlashDuration = 0.06f;
+
+    [Header("Stagger Flash")]
+    public Color staggerFlashColor = Color.yellow;
+    public float staggerFlashDuration = 0.15f;
 
     [Header("Attack Knockback")]
     public float attackKnockbackForce = 6f;
