@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 6074817873334106079}
   - component: {fileID: 8410307713417043197}
   - component: {fileID: 7337914096097080713}
+  - component: {fileID: 3277053383293481984}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -91,7 +92,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 0.30373338, g: 0.6132076, b: 0, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -192,7 +193,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 1.2
   staggerDuration: 3
-  attackDuration: 1
+  attackDuration: 0.8
   attackWarningTime: 1
   attackRecoveryTime: 1.5
   knockbackForceX: 5
@@ -383,3 +384,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &3277053383293481984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19adad6feefb58c4bac5e7153e5fd19a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackTelegraph
+  spriteRenderer: {fileID: 0}
+  warningColor: {r: 1, g: 0, b: 0, a: 1}
+  flashSpeed: 30

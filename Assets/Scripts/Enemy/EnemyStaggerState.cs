@@ -3,7 +3,13 @@ using UnityEngine;
 public class EnemyStaggerState : IEnemyState
 {
     private EnemyController enemy;
+
     private float staggerTimer;
+
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor;
+
+    private float flashTimer;
 
     public EnemyStaggerState(
         EnemyController enemy
@@ -17,24 +23,57 @@ public class EnemyStaggerState : IEnemyState
         staggerTimer =
             enemy.staggerDuration;
 
+        flashTimer =
+            enemy.hitFlashDuration;
+
+        spriteRenderer =
+            enemy.GetComponent<SpriteRenderer>();
+
+        if (spriteRenderer != null)
+        {
+            originalColor =
+                spriteRenderer.color;
+
+            spriteRenderer.color =
+                enemy.hitFlashColor;
+        }
+
         Rigidbody2D rb =
             enemy.GetComponent<Rigidbody2D>();
 
         if (rb != null)
         {
-            rb.linearVelocity = Vector2.zero;
+            rb.linearVelocity =
+                new Vector2(
+                    0f,
+                    rb.linearVelocity.y
+                );
         }
 
         Debug.Log(
-            "ENEMY STAGGER STARTED"
+            "ENEMY STAGGER!"
         );
     }
 
     public void Tick()
     {
-        // --------------------------------
+        // ==========================================
+        // STAGGER FLASH
+        // ==========================================
+
+        if (flashTimer > 0f)
+        {
+            flashTimer -= Time.deltaTime;
+
+            if (flashTimer <= 0f)
+            {
+                RestoreColor();
+            }
+        }
+
+        // ==========================================
         // EXECUTE
-        // --------------------------------
+        // ==========================================
 
         if (Input.GetKeyDown(KeyCode.E))
         {
@@ -49,41 +88,48 @@ public class EnemyStaggerState : IEnemyState
             return;
         }
 
-        // --------------------------------
+        // ==========================================
         // STAGGER TIMER
-        // --------------------------------
+        // ==========================================
 
-        staggerTimer -=
-            Time.deltaTime;
+        staggerTimer -= Time.deltaTime;
 
-        if (staggerTimer > 0f)
-            return;
-
-        // --------------------------------
-        // STAGGER END
-        // --------------------------------
-
-        EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
-
-        if (balance != null)
+        if (staggerTimer <= 0f)
         {
-            balance.RecoverBalance();
+            RecoverBalance();
 
-            Debug.Log(
-                "ENEMY BALANCE RECOVERED!"
+            enemy.ChangeState(
+                new EnemyChaseState(enemy)
             );
         }
-
-        enemy.ChangeState(
-            new EnemyChaseState(enemy)
-        );
     }
 
     public void Exit()
     {
+        RestoreColor();
+    }
+
+    private void RestoreColor()
+    {
+        if (spriteRenderer == null)
+            return;
+
+        spriteRenderer.color =
+            originalColor;
+    }
+
+    private void RecoverBalance()
+    {
+        EnemyBalance balance =
+            enemy.GetComponent<EnemyBalance>();
+
+        if (balance == null)
+            return;
+
+        balance.RecoverBalance();
+
         Debug.Log(
-            "ENEMY STAGGER END"
+            "ENEMY BALANCE RECOVERED!"
         );
     }
 }

@@ -4,36 +4,41 @@ public class EnemyAttackState : IEnemyState
 {
     private EnemyController enemy;
     private EnemyAttackAudio attackAudio;
+    private EnemyAttackTelegraph telegraph;
 
-    private float attackTimer;
+    private float warningTimer;
+    private float recoveryTimer;
+
     private bool attackDone;
-    private bool warningPlayed;
+    private bool isRecovering;
 
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
-        attackAudio = enemy.GetComponent<EnemyAttackAudio>();
+
+        attackAudio =
+            enemy.GetComponent<EnemyAttackAudio>();
+
+        telegraph =
+            enemy.GetComponent<EnemyAttackTelegraph>();
     }
 
     public void Enter()
     {
-        attackTimer = enemy.attackDuration;
+        warningTimer =
+            enemy.attackWarningTime;
+
+        recoveryTimer = 0f;
+
         attackDone = false;
-        warningPlayed = false;
+        isRecovering = false;
+
+        StopMovement();
 
         PlayWarning();
-        warningPlayed = true;
 
-        Rigidbody2D rb =
-            enemy.GetComponent<Rigidbody2D>();
-
-        if (rb != null)
-        {
-            rb.linearVelocity = new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
-        }
+        if (telegraph != null)
+            telegraph.StartWarning();
     }
 
     public void Tick()
@@ -47,12 +52,28 @@ public class EnemyAttackState : IEnemyState
             return;
         }
 
-        attackTimer -= Time.deltaTime;
+        // ==========================================
+        // ATTACK WARNING
+        // ==========================================
 
-        if (!attackDone &&
-            attackTimer <= 0f)
+        if (!attackDone)
         {
-            bool enemyStaggered = DoAttack();
+            StopMovement();
+
+            warningTimer -= Time.deltaTime;
+
+            if (warningTimer > 0f)
+                return;
+
+            // ======================================
+            // WARNING BİTTİ → SALDIRI
+            // ======================================
+
+            if (telegraph != null)
+                telegraph.StopWarning();
+
+            bool enemyStaggered =
+                DoAttack();
 
             attackDone = true;
 
@@ -61,15 +82,68 @@ public class EnemyAttackState : IEnemyState
 
             enemy.StartAttackRecovery();
 
+            recoveryTimer =
+                enemy.attackRecoveryTime;
+
+            isRecovering = true;
+
+            StopMovement();
+
+            return;
+        }
+
+        // ==========================================
+        // ATTACK RECOVERY
+        // ==========================================
+
+        if (isRecovering)
+        {
+            StopMovement();
+
+            recoveryTimer -= Time.deltaTime;
+
+            if (recoveryTimer > 0f)
+                return;
+
+            isRecovering = false;
+
             enemy.ChangeState(
                 new EnemyChaseState(enemy)
             );
+
+            return;
         }
     }
 
     public void Exit()
     {
+        if (telegraph != null)
+            telegraph.StopWarning();
+
+        StopMovement();
     }
+
+    // ==============================================
+    // MOVEMENT
+    // ==============================================
+
+    private void StopMovement()
+    {
+        Rigidbody2D rb =
+            enemy.GetComponent<Rigidbody2D>();
+
+        if (rb == null)
+            return;
+
+        rb.linearVelocity = new Vector2(
+            0f,
+            rb.linearVelocity.y
+        );
+    }
+
+    // ==============================================
+    // WARNING AUDIO
+    // ==============================================
 
     private void PlayWarning()
     {
@@ -79,18 +153,13 @@ public class EnemyAttackState : IEnemyState
         attackAudio.PlayWarning();
     }
 
+    // ==============================================
+    // ATTACK
+    // ==============================================
+
     private bool DoAttack()
     {
         if (enemy.target == null)
-            return false;
-
-        float distance =
-            Vector2.Distance(
-                enemy.transform.position,
-                enemy.target.position
-            );
-
-        if (distance > enemy.attackRange)
             return false;
 
         PlayerController player =
@@ -106,7 +175,32 @@ public class EnemyAttackState : IEnemyState
         }
 
         if (player.isInvincible)
+        {
+            Debug.Log(
+                "ENEMY ATTACK CANCELLED → PLAYER INVINCIBLE"
+            );
+
             return false;
+        }
+
+        // ==========================================
+        // MENZİL KONTROLÜ
+        // ==========================================
+
+        float distance =
+            Vector2.Distance(
+                enemy.transform.position,
+                enemy.target.position
+            );
+
+        if (distance > enemy.attackRange)
+        {
+            Debug.Log(
+                "ENEMY ATTACK MISSED!"
+            );
+
+            return false;
+        }
 
         Vector2 hitDirection =
             (
@@ -115,87 +209,103 @@ public class EnemyAttackState : IEnemyState
             ).normalized;
 
         PlayerDefenseController defense =
-            enemy.target.GetComponent<PlayerDefenseController>();
+            enemy.target.GetComponent<
+                PlayerDefenseController
+            >();
 
-        // =====================================================
+        // ==========================================
         // PARRY
-        // =====================================================
+        // ==========================================
 
         if (defense != null &&
             defense.CanParry())
         {
-            Debug.Log("PLAYER PARRY!");
+            Debug.Log(
+                "PLAYER PARRY!"
+            );
 
-            // Parry hitstop + shake
             defense.PlayParryFeedback();
 
-            // Parry sesi
             EnemyHitFeedback hitFeedback =
-                enemy.GetComponent<EnemyHitFeedback>();
+                enemy.GetComponent<
+                    EnemyHitFeedback
+                >();
 
             if (hitFeedback != null)
             {
-                hitFeedback.PlayParry(hitDirection);
+                hitFeedback.PlayParry(
+                    hitDirection
+                );
             }
 
-            // Parry → Balance
-            // Balance kırılırsa Enemy.cs ayrıca
-            // Balance Break feedback'ini çalıştırır.
-            return HandleParry(hitDirection);
+            return HandleParry(
+                hitDirection
+            );
         }
 
-        // =====================================================
+        // ==========================================
         // BLOCK
-        // =====================================================
+        // ==========================================
 
         if (defense != null &&
             defense.CanBlock())
         {
-            Debug.Log("PLAYER BLOCK!");
+            Debug.Log(
+                "PLAYER BLOCK!"
+            );
 
-            // Block sesi
             EnemyHitFeedback hitFeedback =
-                enemy.GetComponent<EnemyHitFeedback>();
+                enemy.GetComponent<
+                    EnemyHitFeedback
+                >();
 
             if (hitFeedback != null)
             {
-                hitFeedback.PlayBlock(hitDirection);
+                hitFeedback.PlayBlock(
+                    hitDirection
+                );
             }
 
-            // Block hitstop + küçük shake
             CombatImpactFeedback combatFeedback =
-                enemy.target.GetComponent<CombatImpactFeedback>();
+                enemy.target.GetComponent<
+                    CombatImpactFeedback
+                >();
 
             if (combatFeedback != null)
             {
                 combatFeedback.PlayBlockImpact();
             }
 
-            // Block knockback
-            HandleBlock(hitDirection);
-
-            // IMPORTANT:
-            // Block enemy Balance doldurmaz.
-            return false;
-        }
-
-        // =====================================================
-        // NORMAL HIT
-        // =====================================================
-
-        PlayerDamageReceiver damageReceiver =
-            enemy.target.GetComponent<PlayerDamageReceiver>();
-
-        if (damageReceiver == null)
-        {
-            Debug.LogError(
-                "EnemyAttackState: PlayerDamageReceiver Player üzerinde bulunamadı!"
+            HandleBlock(
+                hitDirection
             );
 
             return false;
         }
 
-        Debug.Log("ENEMY HIT PLAYER");
+        // ==========================================
+        // NORMAL HIT
+        // ==========================================
+
+        PlayerDamageReceiver damageReceiver =
+            enemy.target.GetComponent<
+                PlayerDamageReceiver
+            >();
+
+        if (damageReceiver == null)
+        {
+            Debug.LogError(
+                "EnemyAttackState: " +
+                "PlayerDamageReceiver " +
+                "Player üzerinde bulunamadı!"
+            );
+
+            return false;
+        }
+
+        Debug.Log(
+            "ENEMY HIT PLAYER"
+        );
 
         damageReceiver.TakeDamage(
             1,
@@ -212,24 +322,42 @@ public class EnemyAttackState : IEnemyState
         return false;
     }
 
-    private void HandleBlock(Vector2 hitDirection)
+    // ==============================================
+    // BLOCK
+    // ==============================================
+
+    private void HandleBlock(
+        Vector2 hitDirection
+    )
     {
-        enemy.ApplyBlockKnockback(hitDirection);
+        enemy.ApplyBlockKnockback(
+            hitDirection
+        );
 
         Debug.Log(
-            "PLAYER BLOCK → NO ENEMY BALANCE DAMAGE"
+            "PLAYER BLOCK → " +
+            "NO ENEMY BALANCE DAMAGE"
         );
     }
 
-    private bool HandleParry(Vector2 hitDirection)
+    // ==============================================
+    // PARRY
+    // ==============================================
+
+    private bool HandleParry(
+        Vector2 hitDirection
+    )
     {
         EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
+            enemy.GetComponent<
+                EnemyBalance
+            >();
 
         if (balance == null)
         {
             Debug.LogWarning(
-                "EnemyAttackState: EnemyBalance bulunamadı!"
+                "EnemyAttackState: " +
+                "EnemyBalance bulunamadı!"
             );
 
             return false;
@@ -247,7 +375,8 @@ public class EnemyAttackState : IEnemyState
         if (balance.IsBroken)
         {
             Debug.Log(
-                "PARRY → ENEMY BALANCE BROKEN → STAGGER"
+                "PARRY → ENEMY BALANCE " +
+                "BROKEN → STAGGER"
             );
 
             return true;

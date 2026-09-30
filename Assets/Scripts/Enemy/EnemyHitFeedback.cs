@@ -58,18 +58,30 @@ public class EnemyHitFeedback : MonoBehaviour
     public void PlayBalanceHit(Vector2 hitDirection)
     {
         PlayRandomSound(balanceHitSounds);
-        SpawnVFX(balanceHitVFX, hitDirection);
+
+        SpawnVFX(
+            balanceHitVFX,
+            hitDirection
+        );
     }
 
     public void PlayHealthHit(Vector2 hitDirection)
     {
         PlayRandomSound(healthHitSounds);
-        SpawnVFX(healthHitVFX, hitDirection);
+
+        SpawnVFX(
+            healthHitVFX,
+            hitDirection
+        );
     }
 
-    public void PlayBalanceBreak(Vector2 hitDirection)
+    public void PlayBalanceBreak(
+        Vector2 hitDirection
+    )
     {
-        Debug.Log("BALANCE BREAK FEEDBACK!");
+        Debug.Log(
+            "BALANCE BREAK FEEDBACK!"
+        );
 
         if (balanceBreakSound == null)
         {
@@ -100,36 +112,64 @@ public class EnemyHitFeedback : MonoBehaviour
         );
     }
 
-    public void PlayParry(Vector2 hitDirection)
+    public void PlayParry(
+        Vector2 hitDirection
+    )
     {
-        PlaySound(parrySound);
-        SpawnVFX(parryVFX, hitDirection);
+        PlaySound(
+            parrySound
+        );
+
+        SpawnVFX(
+            parryVFX,
+            hitDirection
+        );
     }
 
-    public void PlayBlock(Vector2 hitDirection)
+    public void PlayBlock(
+        Vector2 hitDirection
+    )
     {
-        PlaySound(blockSound);
-        SpawnVFX(blockVFX, hitDirection);
+        PlaySound(
+            blockSound
+        );
+
+        SpawnVFX(
+            blockVFX,
+            hitDirection
+        );
     }
 
-    private void PlayRandomSound(AudioClip[] clips)
+    private void PlayRandomSound(
+        AudioClip[] clips
+    )
     {
         if (audioSource == null)
             return;
 
-        if (clips == null || clips.Length == 0)
+        if (clips == null ||
+            clips.Length == 0)
             return;
 
         AudioClip clip =
-            clips[Random.Range(0, clips.Length)];
+            clips[
+                Random.Range(
+                    0,
+                    clips.Length
+                )
+            ];
 
         if (clip == null)
             return;
 
-        audioSource.PlayOneShot(clip);
+        audioSource.PlayOneShot(
+            clip
+        );
     }
 
-    private void PlaySound(AudioClip clip)
+    private void PlaySound(
+        AudioClip clip
+    )
     {
         if (audioSource == null)
             return;
@@ -137,7 +177,9 @@ public class EnemyHitFeedback : MonoBehaviour
         if (clip == null)
             return;
 
-        audioSource.PlayOneShot(clip);
+        audioSource.PlayOneShot(
+            clip
+        );
     }
 
     private void SpawnVFX(
@@ -151,11 +193,12 @@ public class EnemyHitFeedback : MonoBehaviour
         Vector3 spawnPosition =
             transform.position;
 
-        GameObject vfx = Instantiate(
-            vfxPrefab,
-            spawnPosition,
-            Quaternion.identity
-        );
+        GameObject vfx =
+            Instantiate(
+                vfxPrefab,
+                spawnPosition,
+                Quaternion.identity
+            );
 
         if (hitDirection.sqrMagnitude > 0.01f)
         {
