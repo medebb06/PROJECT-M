@@ -191,6 +191,53 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float inputLockTimer;
     public float inputLockDuration = 0.12f;
 
+    public void PlayParryAnimation()
+    {
+        if (animator == null)
+            return;
+
+        animator.ResetTrigger("Land");
+
+        animator.CrossFadeInFixedTime(
+            "Parry",
+            0.03f,
+            0,
+            0f
+        );
+    }
+   
+public void PlayBlockAnimation()
+    {
+        if (animator == null)
+            return;
+
+        animator.ResetTrigger("Land");
+
+        animator.CrossFadeInFixedTime(
+            "Block",
+            0.03f,
+            0,
+            0f
+        );
+    }
+
+    public void SetBlockingAnimation(bool blocking)
+    {
+        if (animator == null)
+            return;
+
+        animator.SetBool(
+            "Blocking",
+            blocking
+        );
+
+        if (blocking)
+        {
+            PlayBlockAnimation();
+        }
+    }
+
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -414,6 +461,8 @@ public class PlayerController : MonoBehaviour
         );
     }
     public void PlayDeathAnimation() { if (animator == null) return; animator.ResetTrigger("Land"); animator.CrossFadeInFixedTime("Death", 0.03f, 0, 0f); }
+
+
     void FixedUpdate()
     {
         GroundCheck();

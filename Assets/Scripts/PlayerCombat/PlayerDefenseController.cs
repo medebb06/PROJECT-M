@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class PlayerDefenseController : MonoBehaviour
@@ -126,6 +127,9 @@ public class PlayerDefenseController : MonoBehaviour
 
         if (defenseVisual != null)
             defenseVisual.SetActive(value);
+
+        if (player != null)
+            player.SetBlockingAnimation(value);
     }
 
     public bool CanParry()
@@ -144,9 +148,11 @@ public class PlayerDefenseController : MonoBehaviour
 
     public void PlayParryFeedback()
     {
-        if (combatFeedback == null)
-            return;
+        if (player != null)
+            player.PlayParryAnimation();
 
-        combatFeedback.PlayParryImpact();
+        if (combatFeedback != null)
+            combatFeedback.PlayParryImpact();
     }
 }
+

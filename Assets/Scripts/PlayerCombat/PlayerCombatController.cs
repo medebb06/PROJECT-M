@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -291,3 +292,4 @@ public class PlayerCombatController : MonoBehaviour
         Time.timeScale = 1f;
     }
 }
+
