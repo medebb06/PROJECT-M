@@ -392,6 +392,7 @@ public class PlayerController : MonoBehaviour
         coyoteCounter = 0f;
         jumpConsumed = true;
 
+
         // Eğer Land trigger'ı bekliyorsa temizle.
         if (animator != null)
         {
@@ -412,7 +413,7 @@ public class PlayerController : MonoBehaviour
             )
         );
     }
-
+    public void PlayDeathAnimation() { if (animator == null) return; animator.ResetTrigger("Land"); animator.CrossFadeInFixedTime("Death", 0.03f, 0, 0f); }
     void FixedUpdate()
     {
         GroundCheck();

@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class PlayerDeathState : IPlayerState
@@ -78,6 +79,12 @@ public class PlayerDeathState : IPlayerState
             // Enemy fiziksel olarak Player'ı itemesin.
             player.rb.simulated = false;
         }
+
+        // ========================================
+        // DEATH ANIMATION
+        // ========================================
+
+        player.PlayDeathAnimation();
 
         // ========================================
         // PLAYER GÖRSELLERİ
