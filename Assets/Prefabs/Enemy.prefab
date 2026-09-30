@@ -578,7 +578,7 @@ MonoBehaviour:
   staggerDuration: 3
   attackDuration: 0.8
   attackWarningTime: 1
-  attackRecoveryTime: 1.5
+  attackRecoveryTime: 0.5
   knockbackForceX: 5
   knockbackForceY: 1
   hitDuration: 0.5
