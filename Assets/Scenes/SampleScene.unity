@@ -3260,6 +3260,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactFeedback
   impulseSource: {fileID: 2122615049}
+  attackHitStopTimeScale: 0.03
+  attackHitStopDuration: 0.06
   parryHitStopTimeScale: 0.01
   parryHitStopDuration: 0.08
   parryShakeForce: 0.3
@@ -3325,12 +3327,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 7081814595587568943, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 0
+    - target: {fileID: 6598023628717411186, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_Color.b
+      value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 7081814595587568943, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
-      propertyPath: m_AnchoredPosition.x
+    - target: {fileID: 6598023628717411186, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_Color.g
+      value: 0.4122125
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598023628717411186, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_Color.r
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8306325381340741459, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}

@@ -12,6 +12,9 @@ public class AttackState : ICombatState
     float moveSpeed;
     AnimationCurve moveCurve;
 
+    float hitStopScale;
+    float hitStopDuration;
+
     Vector2 start;
     Vector2 target;
 
@@ -38,6 +41,9 @@ public class AttackState : ICombatState
         this.enemyLayer = enemyLayer;
         this.step = step;
         this.onEnd = onEnd;
+
+        this.hitStopScale = hitStopScale;
+        this.hitStopDuration = hitStopDuration;
 
         this.moveDistance = moveDistance;
         this.moveSpeed = moveSpeed;
@@ -75,9 +81,6 @@ public class AttackState : ICombatState
         //
         // Attack movement sırasında hem enemy'leri
         // hem de duvarları kontrol ediyoruz.
-        //
-        // Önceden sadece enemyLayer kullanılıyordu.
-        // Bu yüzden duvarlar tamamen yok sayılıyordu.
         //
 
         Collider2D playerCollider =
@@ -289,6 +292,8 @@ public class AttackState : ICombatState
                 enemyLayer
             );
 
+        bool hitSomething = false;
+
         foreach (var h in hits)
         {
             var dmg =
@@ -296,12 +301,36 @@ public class AttackState : ICombatState
                     IDamageable
                 >();
 
-            if (dmg != null)
+            if (dmg == null)
+                continue;
+
+            dmg.TakeDamage(
+                1,
+                dir * 6f
+            );
+
+            hitSomething = true;
+        }
+
+        // =====================================================
+        // NORMAL ATTACK HIT STOP
+        // =====================================================
+        //
+        // Sadece gerçekten bir enemy'ye vurduysak çalışır.
+        // Aynı saldırıda birden fazla enemy olsa bile
+        // sadece bir kere tetiklenir.
+        //
+
+        if (hitSomething)
+        {
+            CombatImpactFeedback combatFeedback =
+                player.GetComponent<
+                    CombatImpactFeedback
+                >();
+
+            if (combatFeedback != null)
             {
-                dmg.TakeDamage(
-                    1,
-                    dir * 6f
-                );
+                combatFeedback.PlayAttackImpact();
             }
         }
     }
