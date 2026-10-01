@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 
 public class EnemyAttackState : IEnemyState
 {
@@ -208,9 +209,25 @@ public class EnemyAttackState : IEnemyState
                 );
             }
 
-            return HandleParry(
-                hitDirection
-            );
+            // -------------------------------------------------
+            // PARRY SONRASI NORMAL DAMAGE KODUNA ASLA ULAŞMA
+            // -------------------------------------------------
+
+            bool enemyStaggered =
+                HandleParry(
+                    hitDirection
+                );
+
+            if (enemyStaggered)
+            {
+                Debug.Log(
+                    "PARRY → ENEMY BALANCE BROKEN → STAGGER"
+                );
+            }
+
+            // Parry her durumda saldırıyı tamamen tüketir.
+            // Oyuncu bu saldırıdan damage alamaz.
+            return true;
         }
 
         // =====================================================
@@ -364,3 +381,4 @@ public class EnemyAttackState : IEnemyState
         return false;
     }
 }
+

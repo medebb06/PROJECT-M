@@ -510,8 +510,8 @@ Transform:
   m_GameObject: {fileID: 4745338656465375485}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.41, y: -3.35, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 22.21, y: -3.13, z: 0}
+  m_LocalScale: {x: 1.5481873, y: 1.5481873, z: 1.5481873}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3275897390120323119}
@@ -667,8 +667,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  attackRange: 2
-  chaseStopDistance: 2
+  attackRange: 3
+  chaseStopDistance: 3
   staggerDuration: 3
   attackDuration: 0.8
   attackWarningTime: 1
@@ -708,8 +708,6 @@ MonoBehaviour:
   executeDamage: 50
   executeDistance: 2
   executeDuration: 0.15
-  finisherTargetIndicator: {fileID: 3211413500277736742}
-  finisherTargetHighlight: {fileID: 0}
   hitAudioSource: {fileID: 0}
   healthHitClip: {fileID: 8300000, guid: 800e01649ad724e459bcbd732c3a81cb, type: 3}
   postureHitClip: {fileID: 8300000, guid: a7babd95fd937b84d8c70b880b830a63, type: 3}

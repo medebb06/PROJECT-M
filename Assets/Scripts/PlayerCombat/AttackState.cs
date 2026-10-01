@@ -1,6 +1,7 @@
 ﻿
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class AttackState : ICombatState
 {
@@ -41,6 +42,13 @@ public class AttackState : ICombatState
 
     const float collisionSkin = 0.02f;
 
+    // =====================================================
+    // PREVENT MULTIPLE COLLIDERS
+    // =====================================================
+
+    private readonly HashSet<EnemyController> processedEnemies =
+        new HashSet<EnemyController>();
+
     public AttackState(
         PlayerController player,
         LayerMask enemyLayer,
@@ -80,6 +88,8 @@ public class AttackState : ICombatState
     {
         t = 0f;
         hasHit = false;
+
+        processedEnemies.Clear();
 
         // =====================================================
         // LOCK PLAYER FACING
@@ -367,6 +377,15 @@ public class AttackState : ICombatState
             if (enemy == null)
                 continue;
 
+            // =================================================
+            // SAME ENEMY CAN HAVE MULTIPLE COLLIDERS
+            // =================================================
+
+            if (processedEnemies.Contains(enemy))
+                continue;
+
+            processedEnemies.Add(enemy);
+
             hitSomething = true;
 
             Vector2 hitPosition =
@@ -418,24 +437,49 @@ public class AttackState : ICombatState
 
                 enemy.PlayPostureHitSound();
 
+                // =================================================
+                // BALANCE DID NOT BREAK
+                // =================================================
+
                 if (!balance.IsBroken)
                 {
                     enemy.ApplyBalanceHit(dir);
                 }
+
+                // =================================================
+                // BALANCE BROKE ON THIS HIT
+                // =================================================
+
                 else
                 {
+                    Debug.Log(
+                        "ATTACK → BALANCE BROKEN → NO HEALTH DAMAGE"
+                    );
+
                     enemy.ApplyAttackHit(
                         dir,
                         false
                     );
                 }
+
+                // =================================================
+                // IMPORTANT
+                // =================================================
+                //
+                // Bu attack'ın geri kalanında bu enemy için
+                // health damage uygulanmayacak.
+                //
+                // Bu yüzden burada continue ediyoruz.
+                // =================================================
+
+                continue;
             }
 
             // =================================================
             // BALANCE ALREADY BROKEN → HEALTH
             // =================================================
 
-            else if (
+            if (
                 balance != null &&
                 balance.IsBroken
             )
@@ -456,13 +500,15 @@ public class AttackState : ICombatState
                         true
                     );
                 }
+
+                continue;
             }
 
             // =================================================
             // NO BALANCE → HEALTH
             // =================================================
 
-            else if (
+            if (
                 balance == null &&
                 health != null
             )
@@ -508,3 +554,4 @@ public class AttackState : ICombatState
         }
     }
 }
+
