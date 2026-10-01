@@ -39,7 +39,39 @@ public class EnemyHitState : IEnemyState
 
     public void Tick()
     {
+        if (rb == null)
+            return;
+
         timer -= Time.deltaTime;
+
+        // =====================================================
+        // SMOOTH KNOCKBACK DECELERATION
+        // =====================================================
+        // Düşman bir anda durmak yerine,
+        // aldığı darbeyle hızlıca geri gider ve
+        // giderek yavaşlar.
+        // =====================================================
+
+        float currentX =
+            rb.linearVelocity.x;
+
+        float newX =
+            Mathf.MoveTowards(
+                currentX,
+                0f,
+                deceleration *
+                Time.deltaTime
+            );
+
+        rb.linearVelocity =
+            new Vector2(
+                newX,
+                rb.linearVelocity.y
+            );
+
+        // =====================================================
+        // END
+        // =====================================================
 
         if (timer <= 0f)
         {

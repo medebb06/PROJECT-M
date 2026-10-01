@@ -593,13 +593,17 @@ MonoBehaviour:
   balanceHitKnockbackForce: 2
   balanceHitKnockbackVerticalForce: 2
   balanceHitKnockbackDuration: 0.2
-  balanceHitKnockbackDeceleration: 555
-  postureKnockbackForce: 3
+  balanceHitKnockbackDeceleration: 1
+  postureKnockbackForce: 1
   postureKnockbackVerticalForce: 4
   postureKnockbackDuration: 0
   healthKnockbackForce: 3
   healthKnockbackVerticalForce: 2
   healthKnockbackDuration: 0.01
+  attack1KnockbackForce: 4
+  attack2KnockbackForce: 5.5
+  attack3KnockbackForce: 7
+  attack4KnockbackForce: 9
   blockKnockbackForce: 5
   blockKnockbackVerticalForce: 5
   blockKnockbackDuration: 1
@@ -607,7 +611,7 @@ MonoBehaviour:
   blockRecoveryTime: 0.5
   blockBalanceDamage: 1
   parryBalanceDamage: 3
-  executeDamage: 10
+  executeDamage: 50
   executeDistance: 2
   executeDuration: 0.15
   hitAudioSource: {fileID: 0}
@@ -628,14 +632,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7ca65978ec59c48a384579cde03103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 5
+  maxHealth: 15
   currentHealth: 0
   destroyOnDeath: 1
   enableRecovery: 0
   recoveryDelay: 2
   recoverySpeed: 0.25
   fadeOnDeath: 1
-  fadeDuration: 0.5
+  fadeDuration: 0.2
 --- !u!114 &940674076928422292
 MonoBehaviour:
   m_ObjectHideFlags: 0

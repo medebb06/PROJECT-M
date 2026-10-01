@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -53,6 +52,12 @@ public class EnemyController : MonoBehaviour
     public float healthKnockbackForce = 8f;
     public float healthKnockbackVerticalForce = 1.5f;
     public float healthKnockbackDuration = 0.12f;
+
+    [Header("Combo Knockback")]
+    public float attack1KnockbackForce = 4f;
+    public float attack2KnockbackForce = 5.5f;
+    public float attack3KnockbackForce = 7f;
+    public float attack4KnockbackForce = 9f;
 
     [Header("Block Knockback")]
     public float blockKnockbackForce = 2.5f;
@@ -130,7 +135,6 @@ public class EnemyController : MonoBehaviour
                 HandleBalanceBroken;
         }
 
-        // Tüm child SpriteRenderer'ları alıyoruz.
         spriteRenderers =
             GetComponentsInChildren<SpriteRenderer>(true);
 
@@ -241,7 +245,6 @@ public class EnemyController : MonoBehaviour
         Vector2 hitDirection
     )
     {
-        // Balance hit flash
         PlayFlash(
             hitFlashColor,
             hitFlashDuration
@@ -280,16 +283,12 @@ public class EnemyController : MonoBehaviour
             );
         }
 
-        // ÖNEMLİ:
-        // ChangeState'ten SONRA velocity veriyoruz.
-        // Çünkü eski state'in Exit() metodu velocity'yi sıfırlayabilir.
-
         rb.linearVelocity =
             knockback;
     }
 
     // =========================================================
-    // ATTACK HIT
+    // ATTACK HIT - OLD COMPATIBILITY METHOD
     // =========================================================
 
     public void ApplyAttackHit(
@@ -297,7 +296,23 @@ public class EnemyController : MonoBehaviour
         bool healthHit
     )
     {
-        // Health / posture hit flash
+        ApplyAttackHit(
+            hitDirection,
+            healthHit,
+            1
+        );
+    }
+
+    // =========================================================
+    // ATTACK HIT - COMBO VERSION
+    // =========================================================
+
+    public void ApplyAttackHit(
+        Vector2 hitDirection,
+        bool healthHit,
+        int attackStep
+    )
+    {
         PlayFlash(
             hitFlashColor,
             hitFlashDuration
@@ -315,10 +330,26 @@ public class EnemyController : MonoBehaviour
         if (direction == 0f)
             direction = 1f;
 
-        float knockbackForce =
-            healthHit
-                ? healthKnockbackForce
-                : postureKnockbackForce;
+        // =====================================================
+        // KNOCKBACK FORCE
+        // =====================================================
+
+        float knockbackForce;
+
+        if (healthHit)
+        {
+            // Health hit kullanıldığında combo kuvvetini kullan.
+            knockbackForce =
+                GetComboKnockbackForce(
+                    attackStep
+                );
+        }
+        else
+        {
+            // Posture / balance break için mevcut kuvvet.
+            knockbackForce =
+                postureKnockbackForce;
+        }
 
         float knockbackVerticalForce =
             healthHit
@@ -350,11 +381,38 @@ public class EnemyController : MonoBehaviour
             );
         }
 
-        // ChangeState SONRASI velocity.
+        // ChangeState sonrasında velocity.
         rb.linearVelocity =
             knockback;
 
         PlayKnockbackSound();
+    }
+
+    // =========================================================
+    // COMBO KNOCKBACK FORCE
+    // =========================================================
+
+    private float GetComboKnockbackForce(
+        int attackStep
+    )
+    {
+        switch (attackStep)
+        {
+            case 1:
+                return attack1KnockbackForce;
+
+            case 2:
+                return attack2KnockbackForce;
+
+            case 3:
+                return attack3KnockbackForce;
+
+            case 4:
+                return attack4KnockbackForce;
+
+            default:
+                return attack1KnockbackForce;
+        }
     }
 
     // =========================================================
@@ -545,4 +603,3 @@ public class EnemyController : MonoBehaviour
         ForceStagger();
     }
 }
-
