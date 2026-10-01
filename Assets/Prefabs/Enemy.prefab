@@ -258,7 +258,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 2, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5951146257160834191}
@@ -313,7 +313,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 3625043607559282579, guid: 19fb86013d8c24d6cb8410c0aadf30fa, type: 3}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 1, g: 0.09760031, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -493,6 +493,7 @@ GameObject:
   - component: {fileID: 8410307713417043197}
   - component: {fileID: 7337914096097080713}
   - component: {fileID: 3277053383293481984}
+  - component: {fileID: 5363998208822575816}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -708,6 +709,7 @@ MonoBehaviour:
   executeDistance: 2
   executeDuration: 0.15
   finisherTargetIndicator: {fileID: 3211413500277736742}
+  finisherTargetHighlight: {fileID: 0}
   hitAudioSource: {fileID: 0}
   healthHitClip: {fileID: 8300000, guid: 800e01649ad724e459bcbd732c3a81cb, type: 3}
   postureHitClip: {fileID: 8300000, guid: a7babd95fd937b84d8c70b880b830a63, type: 3}
@@ -902,6 +904,21 @@ MonoBehaviour:
   spriteRenderer: {fileID: 0}
   warningColor: {r: 1, g: 0, b: 0, a: 1}
   flashSpeed: 30
+--- !u!114 &5363998208822575816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d1bdd621bb81b64b8ae4e7746ea6b26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FinisherTargetHighlight
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineSize: 0.08
+  sortingOrderOffset: -1
 --- !u!1 &6601302652787602694
 GameObject:
   m_ObjectHideFlags: 0

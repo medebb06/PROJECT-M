@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -77,6 +78,7 @@ public class EnemyController : MonoBehaviour
 
     [Header("Finisher Target")]
     [SerializeField] private GameObject finisherTargetIndicator;
+    [SerializeField] private FinisherTargetHighlight finisherTargetHighlight;
 
     [Header("Hit Sounds")]
     public AudioSource hitAudioSource;
@@ -137,6 +139,25 @@ public class EnemyController : MonoBehaviour
             enemyBalance.OnBalanceBroken +=
                 HandleBalanceBroken;
         }
+
+        // -----------------------------------------------------
+        // FINISHER HIGHLIGHT
+        // -----------------------------------------------------
+
+        if (finisherTargetHighlight == null)
+        {
+            finisherTargetHighlight =
+                GetComponent<FinisherTargetHighlight>();
+        }
+
+        if (finisherTargetHighlight != null)
+        {
+            finisherTargetHighlight.SetHighlighted(false);
+        }
+
+        // -----------------------------------------------------
+        // HIT FLASH
+        // -----------------------------------------------------
 
         spriteRenderers =
             GetComponentsInChildren<SpriteRenderer>(true);
@@ -333,15 +354,10 @@ public class EnemyController : MonoBehaviour
         if (direction == 0f)
             direction = 1f;
 
-        // =====================================================
-        // KNOCKBACK FORCE
-        // =====================================================
-
         float knockbackForce;
 
         if (healthHit)
         {
-            // Health hit kullanıldığında combo kuvvetini kullan.
             knockbackForce =
                 GetComboKnockbackForce(
                     attackStep
@@ -349,7 +365,6 @@ public class EnemyController : MonoBehaviour
         }
         else
         {
-            // Posture / balance break için mevcut kuvvet.
             knockbackForce =
                 postureKnockbackForce;
         }
@@ -384,7 +399,6 @@ public class EnemyController : MonoBehaviour
             );
         }
 
-        // ChangeState sonrasında velocity.
         rb.linearVelocity =
             knockback;
 
@@ -598,15 +612,27 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // BALANCE BROKEN
+    // FINISHER TARGET
     // =========================================================
+
     public void SetFinisherTarget(bool active)
     {
-        if (finisherTargetIndicator == null)
-            return;
+        // Eski indicator sistemini koruyoruz.
+        if (finisherTargetIndicator != null)
+        {
+            finisherTargetIndicator.SetActive(active);
+        }
 
-        finisherTargetIndicator.SetActive(active);
+        // Yeni beyaz outline.
+        if (finisherTargetHighlight != null)
+        {
+            finisherTargetHighlight.SetHighlighted(active);
+        }
     }
+
+    // =========================================================
+    // EXECUTE
+    // =========================================================
 
     public void Execute()
     {
@@ -624,8 +650,14 @@ public class EnemyController : MonoBehaviour
             new EnemyExecuteState(this)
         );
     }
+
+    // =========================================================
+    // BALANCE BROKEN
+    // =========================================================
+
     private void HandleBalanceBroken()
     {
         ForceStagger();
     }
 }
+

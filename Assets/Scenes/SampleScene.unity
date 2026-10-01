@@ -2461,7 +2461,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66f4fe4b4403b694cb71993c7e6c2c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatVFXManager
-  healthHitVFX: {fileID: 5545173171955001552, guid: 7ac879c2caac1ca41b6c438e77d8b25d, type: 3}
+  healthHitVFX: {fileID: 856368647163548680, guid: 724d151229932ba47931fcc83c083470, type: 3}
   balanceHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
   parryVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
   blockVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
@@ -2526,6 +2526,7 @@ GameObject:
   - component: {fileID: 2122615044}
   - component: {fileID: 2122615052}
   - component: {fileID: 2122615061}
+  - component: {fileID: 2122615064}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -3172,6 +3173,21 @@ MonoBehaviour:
   wallDirection: 0
   isWallSliding: 0
   wallJumpBlockedDirection: 0
+--- !u!114 &2122615064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76c95fe863fa6bc4b974960ffeb07587, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFinisherTarget
+  finisherRange: 2.5
+  forwardPriority: 1.5
+  executeKey: 101
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0
