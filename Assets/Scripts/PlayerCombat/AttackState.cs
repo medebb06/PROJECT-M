@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -386,6 +387,23 @@ public class AttackState : ICombatState
                 if (!balanceDamaged)
                     continue;
 
+                // =================================================
+                // BALANCE HIT FEEDBACK
+                // =================================================
+
+                EnemyHitFeedback hitFeedback =
+                    enemy.GetComponentInParent<
+                        EnemyHitFeedback
+                    >();
+
+                if (hitFeedback != null)
+                {
+                    hitFeedback.PlayBalanceHit(
+                        dir
+                    );
+                }
+
+                // Mevcut posture hit sesi
                 enemy.PlayPostureHitSound();
 
                 // Balance kırılmadı:
@@ -478,3 +496,4 @@ public class AttackState : ICombatState
         }
     }
 }
+

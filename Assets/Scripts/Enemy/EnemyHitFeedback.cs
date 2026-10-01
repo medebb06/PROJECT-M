@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class EnemyHitFeedback : MonoBehaviour
@@ -59,20 +60,26 @@ public class EnemyHitFeedback : MonoBehaviour
     {
         PlayRandomSound(balanceHitSounds);
 
-        SpawnVFX(
-            balanceHitVFX,
-            hitDirection
-        );
+        if (CombatVFXManager.Instance != null)
+        {
+            CombatVFXManager.Instance.PlayBalanceHit(
+                transform.position,
+                hitDirection
+            );
+        }
     }
 
     public void PlayHealthHit(Vector2 hitDirection)
     {
         PlayRandomSound(healthHitSounds);
 
-        SpawnVFX(
-            healthHitVFX,
-            hitDirection
-        );
+        if (CombatVFXManager.Instance != null)
+        {
+            CombatVFXManager.Instance.PlayHealthHit(
+                transform.position,
+                hitDirection
+            );
+        }
     }
 
     public void PlayBalanceBreak(
@@ -106,10 +113,13 @@ public class EnemyHitFeedback : MonoBehaviour
             );
         }
 
-        SpawnVFX(
-            balanceBreakVFX,
-            hitDirection
-        );
+        if (CombatVFXManager.Instance != null)
+        {
+            CombatVFXManager.Instance.PlayBalanceBreak(
+                transform.position,
+                hitDirection
+            );
+        }
     }
 
     public void PlayParry(
@@ -120,10 +130,13 @@ public class EnemyHitFeedback : MonoBehaviour
             parrySound
         );
 
-        SpawnVFX(
-            parryVFX,
-            hitDirection
-        );
+        if (CombatVFXManager.Instance != null)
+        {
+            CombatVFXManager.Instance.PlayParry(
+                transform.position,
+                hitDirection
+            );
+        }
     }
 
     public void PlayBlock(
@@ -134,10 +147,13 @@ public class EnemyHitFeedback : MonoBehaviour
             blockSound
         );
 
-        SpawnVFX(
-            blockVFX,
-            hitDirection
-        );
+        if (CombatVFXManager.Instance != null)
+        {
+            CombatVFXManager.Instance.PlayBlock(
+                transform.position,
+                hitDirection
+            );
+        }
     }
 
     private void PlayRandomSound(
@@ -181,39 +197,5 @@ public class EnemyHitFeedback : MonoBehaviour
             clip
         );
     }
-
-    private void SpawnVFX(
-        GameObject vfxPrefab,
-        Vector2 hitDirection
-    )
-    {
-        if (vfxPrefab == null)
-            return;
-
-        Vector3 spawnPosition =
-            transform.position;
-
-        GameObject vfx =
-            Instantiate(
-                vfxPrefab,
-                spawnPosition,
-                Quaternion.identity
-            );
-
-        if (hitDirection.sqrMagnitude > 0.01f)
-        {
-            float angle =
-                Mathf.Atan2(
-                    hitDirection.y,
-                    hitDirection.x
-                ) * Mathf.Rad2Deg;
-
-            vfx.transform.rotation =
-                Quaternion.Euler(
-                    0f,
-                    0f,
-                    angle
-                );
-        }
-    }
 }
+

@@ -630,6 +630,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 5
   currentHealth: 0
+  destroyOnDeath: 1
   enableRecovery: 0
   recoveryDelay: 2
   recoverySpeed: 0.25
