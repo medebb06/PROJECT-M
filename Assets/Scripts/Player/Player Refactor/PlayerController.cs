@@ -118,10 +118,6 @@ public class PlayerController : MonoBehaviour
     private PlayerAnimationController animationController;
     private PlayerFeedback feedback;
 
-    // ---------------------------------------------------------
-    // MOVEMENT ACCESS
-    // ---------------------------------------------------------
-
     public PlayerMovement Movement => movement;
 
     public float MoveSpeed => movement != null
@@ -155,10 +151,6 @@ public class PlayerController : MonoBehaviour
         movement != null
             ? movement.wallJumpControlAccelerationMultiplier
             : 1f;
-
-    // ---------------------------------------------------------
-    // AWAKE
-    // ---------------------------------------------------------
 
     void Awake()
     {
@@ -235,10 +227,6 @@ public class PlayerController : MonoBehaviour
         feedback.Initialize(this);
     }
 
-    // ---------------------------------------------------------
-    // UPDATE
-    // ---------------------------------------------------------
-
     void Update()
     {
         inputHandler.ReadInput();
@@ -258,10 +246,6 @@ public class PlayerController : MonoBehaviour
         movement.FixedUpdateMovement();
         stateMachine.FixedUpdate();
     }
-
-    // ---------------------------------------------------------
-    // TIMERS
-    // ---------------------------------------------------------
 
     private void HandleTimers()
     {
@@ -289,10 +273,6 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-
-    // ---------------------------------------------------------
-    // JUMP
-    // ---------------------------------------------------------
 
     private void HandleJump()
     {
@@ -341,10 +321,6 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-    // ---------------------------------------------------------
-    // MOVEMENT
-    // ---------------------------------------------------------
-
     public void ApplyMovement(float control)
     {
         movement.ApplyMovement(control);
@@ -364,10 +340,6 @@ public class PlayerController : MonoBehaviour
     {
         return isGrounded;
     }
-
-    // ---------------------------------------------------------
-    // FACING
-    // ---------------------------------------------------------
 
     private void HandleFacing()
     {
@@ -391,10 +363,6 @@ public class PlayerController : MonoBehaviour
 
         modelPivot.localScale = scale;
     }
-
-    // ---------------------------------------------------------
-    // RUN AUDIO
-    // ---------------------------------------------------------
 
     private void HandleRunAudio()
     {
@@ -425,9 +393,6 @@ public class PlayerController : MonoBehaviour
         audioPlayer.StartRun(speedFactor);
     }
 
-    // ---------------------------------------------------------
-    // LANDING
-    // ---------------------------------------------------------
 
     public void OnPlayerLand()
     {
@@ -459,9 +424,6 @@ public class PlayerController : MonoBehaviour
         feedback.SpawnDust();
     }
 
-    // ---------------------------------------------------------
-    // DASH
-    // ---------------------------------------------------------
 
     public float GetDashSpeedFactor()
     {
@@ -476,10 +438,6 @@ public class PlayerController : MonoBehaviour
             ? 1f
             : facingDir;
     }
-
-    // ---------------------------------------------------------
-    // POSTURE BREAK
-    // ---------------------------------------------------------
 
     public void ApplyPostureBreak(Vector2 hitDirection)
     {
@@ -510,10 +468,6 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-    // ---------------------------------------------------------
-    // ANIMATION API
-    // ---------------------------------------------------------
-
     public void PlayAttackAnimation(int attackStep)
     {
         animationController.PlayAttackAnimation(attackStep);
@@ -539,19 +493,11 @@ public class PlayerController : MonoBehaviour
         animationController.SetBlockingAnimation(blocking);
     }
 
-    // ---------------------------------------------------------
-    // DEFENSE
-    // ---------------------------------------------------------
-
     public bool IsDefending()
     {
         return defenseController != null &&
                defenseController.IsDefending;
     }
-
-    // ---------------------------------------------------------
-    // FREEZE FRAME
-    // ---------------------------------------------------------
 
     public System.Collections.IEnumerator FreezeFrame(
         float duration)
@@ -562,10 +508,6 @@ public class PlayerController : MonoBehaviour
 
         Time.timeScale = 1f;
     }
-
-    // ---------------------------------------------------------
-    // GIZMOS
-    // ---------------------------------------------------------
 
     void OnDrawGizmosSelected()
     {

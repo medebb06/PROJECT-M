@@ -2479,6 +2479,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2122615042}
+  - component: {fileID: 2122615063}
   - component: {fileID: 2122615062}
   - component: {fileID: 2122615057}
   - component: {fileID: 2122615054}
@@ -2494,7 +2495,6 @@ GameObject:
   - component: {fileID: 2122615044}
   - component: {fileID: 2122615052}
   - component: {fileID: 2122615061}
-  - component: {fileID: 2122615063}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -3015,10 +3015,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eed69005b6683504c9560504a610b6b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerPosture
-  maxPosture: 5
+  maxPosture: 3
   currentPosture: 0
-  recoveryDelay: 1
-  recoverySpeed: 25
+  recoveryDelay: 2
+  recoverySpeed: 1
 --- !u!114 &2122615060
 MonoBehaviour:
   m_ObjectHideFlags: 0
