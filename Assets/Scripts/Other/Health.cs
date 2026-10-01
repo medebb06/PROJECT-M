@@ -9,6 +9,9 @@ public class Health : MonoBehaviour
     [SerializeField] private int maxHealth = 3;
     [SerializeField] private int currentHealth;
 
+    [Header("Death")]
+    [SerializeField] private bool destroyOnDeath = true;
+
     [Header("Health Recovery")]
     [SerializeField] private bool enableRecovery = false;
     [SerializeField] private float recoveryDelay = 2f;
@@ -31,18 +34,26 @@ public class Health : MonoBehaviour
     private float recoveryTimer;
     private float recoveryAccumulator;
 
-    void Awake()
+    private bool isPlayer;
+
+    private void Awake()
     {
         currentHealth = maxHealth;
         IsDead = false;
 
-        sprites = GetComponentsInChildren<SpriteRenderer>();
+        sprites =
+            GetComponentsInChildren<
+                SpriteRenderer
+            >();
 
         recoveryTimer = 0f;
         recoveryAccumulator = 0f;
+
+        // Player hiçbir zaman Health tarafından Destroy edilmez.
+        isPlayer = GetComponent<PlayerController>() != null;
     }
 
-    void Update()
+    private void Update()
     {
         HandleRecovery();
     }
@@ -74,12 +85,14 @@ public class Health : MonoBehaviour
         if (recoveryAmount <= 0)
             return;
 
-        recoveryAccumulator -= recoveryAmount;
+        recoveryAccumulator -=
+            recoveryAmount;
 
         int previousHealth =
             currentHealth;
 
-        currentHealth += recoveryAmount;
+        currentHealth +=
+            recoveryAmount;
 
         currentHealth =
             Mathf.Clamp(
@@ -99,7 +112,11 @@ public class Health : MonoBehaviour
 
     public void Revive()
     {
-        currentHealth = maxHealth;
+        StopAllCoroutines();
+
+        currentHealth =
+            maxHealth;
+
         IsDead = false;
         fading = false;
 
@@ -130,8 +147,9 @@ public class Health : MonoBehaviour
                 0
             );
 
-        // Hasar alınca recovery yeniden beklemeye başlar.
-        recoveryTimer = recoveryDelay;
+        recoveryTimer =
+            recoveryDelay;
+
         recoveryAccumulator = 0f;
 
         OnHealthChanged?.Invoke(
@@ -153,7 +171,8 @@ public class Health : MonoBehaviour
         if (amount <= 0)
             return;
 
-        currentHealth += amount;
+        currentHealth +=
+            amount;
 
         currentHealth =
             Mathf.Min(
@@ -179,9 +198,9 @@ public class Health : MonoBehaviour
                 maxHealth
             );
 
-        // SetHealth dışarıdan hasar gibi kullanılırsa
-        // recovery timer'ı da sıfırlanır.
-        recoveryTimer = recoveryDelay;
+        recoveryTimer =
+            recoveryDelay;
+
         recoveryAccumulator = 0f;
 
         OnHealthChanged?.Invoke(
@@ -204,13 +223,37 @@ public class Health : MonoBehaviour
 
         DisablePhysics();
 
+        // =====================================================
+        // PLAYER
+        // =====================================================
+
+        // Player hiçbir koşulda burada Destroy edilmez.
+        if (isPlayer)
+        {
+            OnDeath?.Invoke();
+            return;
+        }
+
+        // =====================================================
+        // ENEMY / NORMAL OBJECT
+        // =====================================================
+
+        if (!destroyOnDeath)
+        {
+            OnDeath?.Invoke();
+            return;
+        }
+
         if (fadeOnDeath)
         {
-            StartCoroutine(FadeOut());
+            StartCoroutine(
+                FadeOut()
+            );
         }
         else
         {
             OnDeath?.Invoke();
+
             Destroy(gameObject);
         }
     }
@@ -221,13 +264,18 @@ public class Health : MonoBehaviour
 
         float elapsed = 0f;
 
-        while (elapsed < fadeDuration)
+        while (
+            elapsed <
+            fadeDuration
+        )
         {
-            elapsed += Time.deltaTime;
+            elapsed +=
+                Time.deltaTime;
 
             float progress =
                 Mathf.Clamp01(
-                    elapsed / fadeDuration
+                    elapsed /
+                    fadeDuration
                 );
 
             float alpha =
@@ -263,9 +311,14 @@ public class Health : MonoBehaviour
         }
 
         Collider2D[] colliders =
-            GetComponentsInChildren<Collider2D>();
+            GetComponentsInChildren<
+                Collider2D
+            >();
 
-        foreach (Collider2D col in colliders)
+        foreach (
+            Collider2D col in
+            colliders
+        )
         {
             col.enabled = false;
         }
@@ -276,7 +329,10 @@ public class Health : MonoBehaviour
         if (sprites == null)
             return;
 
-        foreach (SpriteRenderer sprite in sprites)
+        foreach (
+            SpriteRenderer sprite in
+            sprites
+        )
         {
             if (sprite == null)
                 continue;
@@ -286,7 +342,8 @@ public class Health : MonoBehaviour
 
             color.a = alpha;
 
-            sprite.color = color;
+            sprite.color =
+                color;
         }
     }
 
@@ -303,11 +360,17 @@ public class Health : MonoBehaviour
         }
 
         Collider2D[] colliders =
-            GetComponentsInChildren<Collider2D>();
+            GetComponentsInChildren<
+                Collider2D
+            >();
 
-        foreach (Collider2D col in colliders)
+        foreach (
+            Collider2D col in
+            colliders
+        )
         {
             col.enabled = true;
         }
     }
 }
+

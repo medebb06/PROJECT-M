@@ -82,7 +82,9 @@ public class PlayerDeathState : IPlayerState
             player.rb.linearVelocity =
                 Vector2.zero;
 
-            // Enemy fiziksel olarak Player'ı itemesin.
+            player.rb.angularVelocity =
+                0f;
+
             player.rb.simulated = false;
         }
 
@@ -175,6 +177,10 @@ public class PlayerDeathState : IPlayerState
 
     public void Exit()
     {
+        // ========================================
+        // PHYSICS
+        // ========================================
+
         if (player.rb != null)
         {
             player.rb.simulated = true;
@@ -182,7 +188,55 @@ public class PlayerDeathState : IPlayerState
             player.rb.linearVelocity =
                 Vector2.zero;
 
+            player.rb.angularVelocity =
+                0f;
+
             player.rb.WakeUp();
         }
+
+        // ========================================
+        // INPUT
+        // ========================================
+
+        player.canControl = true;
+        player.inputLocked = false;
+        player.inputLockTimer = 0f;
+
+        player.moveInput = 0f;
+        player.verticalInput = 0f;
+
+        player.jumpHeld = false;
+        player.dashPressed = false;
+        player.slamPressed = false;
+
+        // ========================================
+        // COMBAT
+        // ========================================
+
+        player.isAttackLocked = false;
+        player.isInvincible = false;
+
+        if (combatController != null)
+        {
+            combatController.enabled = true;
+        }
+
+        // ========================================
+        // MOVEMENT RESET
+        // ========================================
+
+        PlayerMovement movement =
+            player.Movement;
+
+        if (movement != null)
+        {
+            movement.jumpBufferCounter = 0f;
+            movement.coyoteCounter = 0f;
+            movement.wallJumpBufferCounter = 0f;
+            movement.ResetAirData();
+        }
+
+        fadeComplete = false;
+        fadeTimer = 0f;
     }
 }
