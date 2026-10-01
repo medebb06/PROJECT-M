@@ -611,8 +611,8 @@ MonoBehaviour:
   executeDistance: 2
   executeDuration: 0.15
   hitAudioSource: {fileID: 0}
-  healthHitClip: {fileID: 0}
-  postureHitClip: {fileID: 8300000, guid: 5e619d0ca54d33246a187596450f2ebb, type: 3}
+  healthHitClip: {fileID: 8300000, guid: 800e01649ad724e459bcbd732c3a81cb, type: 3}
+  postureHitClip: {fileID: 8300000, guid: a7babd95fd937b84d8c70b880b830a63, type: 3}
   knockbackClip: {fileID: 0}
   target: {fileID: 0}
   chaseRange: 10
