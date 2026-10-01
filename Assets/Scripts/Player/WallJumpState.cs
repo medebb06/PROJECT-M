@@ -23,28 +23,34 @@ public class WallJumpState : IPlayerState
     {
         timer = 0f;
 
-        jumpedFromWallDirection =
-            player.wallDirection;
+        PlayerMovement movement =
+            player.Movement;
 
-        player.wallJumpBlockedDirection =
+        jumpedFromWallDirection =
+            movement.wallDirection;
+
+        movement.wallJumpBlockedDirection =
             jumpedFromWallDirection;
 
         jumpDirection =
             -jumpedFromWallDirection;
 
-        // İlk launch.
-        // X ve Y doğrudan güçlü şekilde veriliyor.
+        // --------------------------------------------------
+        // INITIAL WALL JUMP LAUNCH
+        // --------------------------------------------------
+
         player.SetVelocity(
             new Vector2(
                 jumpDirection *
-                player.wallJumpForceX,
+                movement.wallJumpForceX,
 
-                player.wallJumpForceY
+                movement.wallJumpForceY
             )
         );
 
         // Oyuncunun yönünü launch yönüne çevir.
-        player.facingDir = jumpDirection;
+        player.facingDir =
+            jumpDirection;
 
         Vector3 scale =
             player.modelPivot.localScale;
@@ -53,11 +59,13 @@ public class WallJumpState : IPlayerState
             Mathf.Abs(scale.x) *
             player.facingDir;
 
-        player.modelPivot.localScale = scale;
+        player.modelPivot.localScale =
+            scale;
 
-        player.jumpBufferCounter = 0f;
-        player.wallJumpBufferCounter = 0f;
-        player.coyoteCounter = 0f;
+        movement.jumpBufferCounter = 0f;
+        movement.wallJumpBufferCounter = 0f;
+        movement.coyoteCounter = 0f;
+
         player.jumpConsumed = true;
     }
 
@@ -69,16 +77,30 @@ public class WallJumpState : IPlayerState
     {
         timer += Time.deltaTime;
 
+        PlayerMovement movement =
+            player.Movement;
+
+        // --------------------------------------------------
+        // GROUND
+        // --------------------------------------------------
+
         if (player.IsGrounded())
         {
-            player.wallJumpBlockedDirection = 0;
+            movement.wallJumpBlockedDirection = 0;
 
             sm.ChangeState(
-                new GroundedState(player, sm)
+                new GroundedState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
+
+        // --------------------------------------------------
+        // DASH
+        // --------------------------------------------------
 
         if (
             player.dashPressed &&
@@ -86,22 +108,30 @@ public class WallJumpState : IPlayerState
         )
         {
             sm.ChangeState(
-                new DashState(player, sm)
+                new DashState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
 
-        // Launch lock + control blend bittikten sonra
-        // normal AirState'e geçiyoruz.
+        // --------------------------------------------------
+        // WALL JUMP CONTROL TIME
+        // --------------------------------------------------
+
         float totalWallJumpTime =
-            player.wallJumpControlLock +
-            player.wallJumpControlBlendTime;
+            movement.wallJumpControlLock +
+            movement.wallJumpControlBlendTime;
 
         if (timer >= totalWallJumpTime)
         {
             sm.ChangeState(
-                new AirState(player, sm)
+                new AirState(
+                    player,
+                    sm
+                )
             );
 
             return;
@@ -110,41 +140,46 @@ public class WallJumpState : IPlayerState
 
     public void FixedUpdate()
     {
+        PlayerMovement movement =
+            player.Movement;
+
         Vector2 velocity =
             player.rb.linearVelocity;
 
         // --------------------------------------------------
-        // 1. FAZ
-        // İlk birkaç frame tamamen güçlü launch.
+        // 1. PHASE
+        // INITIAL LAUNCH LOCK
         // --------------------------------------------------
 
         if (
             timer <
-            player.wallJumpControlLock
+            movement.wallJumpControlLock
         )
         {
             velocity.x =
                 jumpDirection *
-                player.wallJumpForceX;
+                movement.wallJumpForceX;
 
-            player.SetVelocity(velocity);
+            player.SetVelocity(
+                velocity
+            );
 
             return;
         }
 
         // --------------------------------------------------
-        // 2. FAZ
-        // Air control yavaşça geri geliyor.
+        // 2. PHASE
+        // CONTROL BLEND
         // --------------------------------------------------
 
         float blendTimer =
             timer -
-            player.wallJumpControlLock;
+            movement.wallJumpControlLock;
 
         float blendDuration =
             Mathf.Max(
                 0.001f,
-                player.wallJumpControlBlendTime
+                movement.wallJumpControlBlendTime
             );
 
         float blend =
@@ -153,41 +188,53 @@ public class WallJumpState : IPlayerState
                 blendDuration
             );
 
-        // SmoothStep sayesinde control
+        // SmoothStep:
         // başlangıçta yumuşak,
-        // sonunda daha doğal şekilde geliyor.
+        // sonunda daha doğal control.
         float smoothBlend =
-            blend * blend *
+            blend *
+            blend *
             (3f - 2f * blend);
 
         float control =
             Mathf.Lerp(
                 0f,
-                player.airControl,
+                movement.airControl,
                 smoothBlend
             );
 
-        // Oyuncunun input'una göre hedef hız.
+        // --------------------------------------------------
+        // TARGET SPEED
+        // --------------------------------------------------
+
         float targetSpeed =
             player.moveInput *
-            player.moveSpeed;
+            movement.moveSpeed;
 
         float accelerationRate;
 
-        if (Mathf.Abs(player.moveInput) > 0.01f)
+        if (
+            Mathf.Abs(
+                player.moveInput
+            ) > 0.01f
+        )
         {
             accelerationRate =
-                player.acceleration;
+                movement.acceleration;
         }
         else
         {
             accelerationRate =
-                player.deceleration;
+                movement.deceleration;
         }
 
         accelerationRate *=
             control *
-            player.wallJumpControlAccelerationMultiplier;
+            movement.wallJumpControlAccelerationMultiplier;
+
+        // --------------------------------------------------
+        // APPLY HORIZONTAL CONTROL
+        // --------------------------------------------------
 
         float newVelocityX =
             Mathf.MoveTowards(
@@ -200,6 +247,8 @@ public class WallJumpState : IPlayerState
         velocity.x =
             newVelocityX;
 
-        player.SetVelocity(velocity);
+        player.SetVelocity(
+            velocity
+        );
     }
 }

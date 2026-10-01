@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class PlayerDefenseController : MonoBehaviour
@@ -12,6 +11,12 @@ public class PlayerDefenseController : MonoBehaviour
     [SerializeField] private float parryWindow = 0.12f;
     [SerializeField] private GameObject parryVisual;
 
+    private IPlayerDefenseState currentState;
+    private float blockInputTimer;
+
+    public bool IsBlocking { get; private set; }
+    public bool IsParrying { get; private set; }
+
     public bool IsDefending
     {
         get
@@ -21,13 +26,6 @@ public class PlayerDefenseController : MonoBehaviour
                    Input.GetMouseButton(1);
         }
     }
-
-    private IPlayerDefenseState currentState;
-
-    private float blockInputTimer;
-
-    public bool IsBlocking { get; private set; }
-    public bool IsParrying { get; private set; }
 
     public float ParryWindow => parryWindow;
 
@@ -50,21 +48,16 @@ public class PlayerDefenseController : MonoBehaviour
     void Update()
     {
         HandleInput();
-
         currentState?.Tick();
     }
 
     private void HandleInput()
     {
         if (Input.GetMouseButtonDown(1))
-        {
             StartDefense();
-        }
 
         if (Input.GetMouseButtonUp(1))
-        {
             StopDefense();
-        }
     }
 
     private void StartDefense()
@@ -72,10 +65,12 @@ public class PlayerDefenseController : MonoBehaviour
         if (player == null)
             return;
 
+        if (player.inputLocked)
+            return;
+
         if (!player.IsGrounded())
             return;
 
-        // Savunmaya girerken mevcut yatay hareketi kes.
         if (player.rb != null)
         {
             player.rb.linearVelocity =
@@ -142,10 +137,6 @@ public class PlayerDefenseController : MonoBehaviour
         return IsBlocking;
     }
 
-    // =========================================================
-    // PARRY FEEDBACK
-    // =========================================================
-
     public void PlayParryFeedback()
     {
         if (player != null)
@@ -154,5 +145,56 @@ public class PlayerDefenseController : MonoBehaviour
         if (combatFeedback != null)
             combatFeedback.PlayParryImpact();
     }
-}
 
+    // =========================================================
+    // BLOCK / POSTURE
+    // =========================================================
+
+    public void HandleBlockHit(
+        Vector2 hitDirection,
+        int postureDamage
+    )
+    {
+        PlayerPosture posture =
+            GetComponent<PlayerPosture>();
+
+        if (posture == null)
+        {
+            Debug.LogWarning(
+                "PlayerDefenseController: " +
+                "PlayerPosture bulunamadı!"
+            );
+
+            return;
+        }
+
+        posture.TakePostureDamage(
+            postureDamage
+        );
+
+        Debug.Log(
+            "PLAYER BLOCK → POSTURE -" +
+            postureDamage +
+            " | CURRENT: " +
+            posture.CurrentPosture +
+            "/" +
+            posture.MaxPosture
+        );
+
+        if (posture.IsBroken)
+        {
+            Debug.Log(
+                "PLAYER POSTURE BROKEN!"
+            );
+
+            ChangeState(null);
+
+            if (player != null)
+            {
+                player.ApplyPostureBreak(
+                    hitDirection
+                );
+            }
+        }
+    }
+}

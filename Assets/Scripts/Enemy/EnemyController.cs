@@ -47,6 +47,7 @@ public class EnemyController : MonoBehaviour
     public float blockRecoveryTime = 0.25f;
 
     [Header("Defense Balance")]
+    public int blockBalanceDamage = 1;
     public int parryBalanceDamage = 2;
 
     [Header("Execute")]

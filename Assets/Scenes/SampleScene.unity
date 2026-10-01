@@ -2383,6 +2383,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1942622294}
   - component: {fileID: 1942622293}
+  - component: {fileID: 1942622295}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -2419,6 +2420,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1942622295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ccdd8f6987f9dd4781c0a872eafc814, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TeleportToMouse
+  cam: {fileID: 519420031}
+  rb: {fileID: 2122615044}
 --- !u!1 &2024794329
 GameObject:
   m_ObjectHideFlags: 0
@@ -2464,22 +2479,22 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2122615042}
+  - component: {fileID: 2122615062}
   - component: {fileID: 2122615057}
   - component: {fileID: 2122615054}
   - component: {fileID: 2122615060}
   - component: {fileID: 2122615046}
   - component: {fileID: 2122615050}
-  - component: {fileID: 2122615044}
-  - component: {fileID: 2122615047}
   - component: {fileID: 2122615048}
   - component: {fileID: 2122615049}
-  - component: {fileID: 2122615052}
   - component: {fileID: 2122615051}
   - component: {fileID: 2122615055}
-  - component: {fileID: 2122615056}
   - component: {fileID: 2122615058}
   - component: {fileID: 2122615059}
+  - component: {fileID: 2122615044}
+  - component: {fileID: 2122615052}
   - component: {fileID: 2122615061}
+  - component: {fileID: 2122615063}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -2544,43 +2559,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab5e3666c438455479f43e31dae56b65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  slamGroundLock: 0
-  slamLockTimer: 0
-  slamLockDuration: 0.12
-  slamFreezeTime: 0.04
+  rb: {fileID: 0}
+  col: {fileID: 0}
+  modelPivot: {fileID: 0}
+  attackPoint: {fileID: 0}
+  audioPlayer: {fileID: 0}
+  dustPrefab: {fileID: 0}
+  footPoint: {fileID: 0}
+  playerSprite: {fileID: 0}
+  impulseSource: {fileID: 0}
+  defenseController: {fileID: 0}
   impactSettings:
     slamSpeed: 35
     slamDamageRadius: 2
     slamDamage: 25
     enemyLayer:
-      serializedVersion: 2
-      m_Bits: 1024
+      m_Bits: 0
     jumpBufferTime: 0.15
     coyoteTime: 0.12
     jumpCutMultiplier: 2
     jumpCutVelocityMultiplier: 0.75
     fallMultiplier: 2.5
     maxFallSpeed: 20
-    lightThreshold: 1
-    mediumThreshold: 3
-    heavyThreshold: 5
-    lightIntensity: 0.05
-    mediumIntensity: 0.2
-    heavyIntensity: 0.6
+    lightThreshold: 4
+    mediumThreshold: 7
+    heavyThreshold: 10
+    lightIntensity: 0.25
+    mediumIntensity: 0.6
+    heavyIntensity: 1.2
     shakeCurve:
-      serializedVersion: 2
       m_Curve:
-      - serializedVersion: 3
-        time: 0
+      - time: 0
         value: 0
-        inSlope: 2
-        outSlope: 2
+        inSlope: 0
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
-      - serializedVersion: 3
-        time: 1
+      - time: 1
         value: 1
         inSlope: 0
         outSlope: 0
@@ -2591,90 +2608,34 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    maxFallDistance: 15
-    minDistance: 4
-  rb: {fileID: 2122615044}
-  col: {fileID: 0}
-  modelPivot: {fileID: 901546197}
-  animator: {fileID: 901546200}
-  defenseController: {fileID: 2122615058}
-  groundCheck: {fileID: 1942488874}
-  groundCheckRadius: 0.1
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 512
-  attackPoint: {fileID: 1554155158}
-  audioPlayer: {fileID: 2122615051}
-  dustPrefab: {fileID: 8723947070286554742, guid: a3a97ebe1e9c79d45b320fc00f3366a0, type: 3}
-  footPoint: {fileID: 1942488874}
-  playerSprite: {fileID: 901546199}
-  impulseSource: {fileID: 2122615049}
+    maxFallDistance: 10
+    minDistance: 2
+  dashDistance: 10
+  dashTime: 0.15
+  dashCooldown: 0.4
+  afterImagePrefab: {fileID: 0}
+  afterImageSpacing: 0.05
+  stepTimer: 0
+  inputLockDuration: 0.12
+  slamLockDuration: 0.12
+  slamFreezeTime: 0.04
   canControl: 1
   isDashing: 0
   isInvincible: 0
   isAttackLocked: 0
-  moveSpeed: 10
-  acceleration: 30
-  deceleration: 30
-  airControl: 0.8
-  stepTimer: 0
-  jumpConsumed: 0
-  jumpForce: 15
-  jumpBufferTime: 0.15
-  coyoteTime: 0.2
-  jumpCutMultiplier: 2
-  jumpCutVelocityMultiplier: 0.8
-  fallMultiplier: 2.5
-  maxFallSpeed: 20
-  jumpBufferCounter: 0
-  coyoteCounter: 0
-  dashDistance: 4
-  dashTime: 0.2
-  dashCooldown: 0.5
+  slamGroundLock: 0
+  slamLockTimer: 0
   dashCooldownTimer: 0
   dashPressed: 0
-  afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
-  afterImageSpacing: 0.05
-  afterImageTimer: 0
+  jumpConsumed: 0
+  inputLocked: 0
+  inputLockTimer: 0
   moveInput: 0
   jumpHeld: 0
   isGrounded: 0
   facingDir: 1
   slamPressed: 0
   verticalInput: 0
-  wallCheck: {fileID: 649369741}
-  wallCheckDistance: 0.61
-  wallMask:
-    serializedVersion: 2
-    m_Bits: 512
-  wallSlideSpeed: 2
-  wallJumpForceX: 9
-  wallJumpForceY: 12
-  wallJumpControlLock: 0.12
-  wallJumpBufferTime: 0.12
-  wallJumpControlBlendTime: 0.18
-  wallJumpControlAccelerationMultiplier: 1
-  wallJumpBufferCounter: 0
-  wallDirection: 0
-  isWallSliding: 0
-  wallJumpBlockedDirection: 0
-  inputLocked: 0
-  inputLockTimer: 0
-  inputLockDuration: 0.12
---- !u!114 &2122615047
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2122615041}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0ccdd8f6987f9dd4781c0a872eafc814, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TeleportToMouse
-  cam: {fileID: 519420031}
-  rb: {fileID: 2122615044}
 --- !u!114 &2122615048
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2870,7 +2831,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3c1066e17feb094ea5bc839198f242e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAudio
-  movementSource: {fileID: 0}
+  movementSource: {fileID: 2122615052}
   sfxSource: {fileID: 0}
   jumpClip: {fileID: 8300000, guid: 150bd0ef5cf8592488f01336c4eb5821, type: 3}
   dashClip: {fileID: 8300000, guid: 3b81504dc5d5cc949b82f28234aefbfa, type: 3}
@@ -3010,19 +2971,6 @@ MonoBehaviour:
   health: {fileID: 2122615054}
   player: {fileID: 2122615046}
   knockback: {fileID: 2122615057}
---- !u!114 &2122615056
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2122615041}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2df1cf28d38d2ac4587c26803ef21240, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerRespawnTest
-  respawnKey: 114
 --- !u!114 &2122615057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3050,7 +2998,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4069714b4a1de2f45961aed2185231a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDefenseController
-  player: {fileID: 2122615046}
+  player: {fileID: 2122615062}
   defenseVisual: {fileID: 0}
   combatFeedback: {fileID: 2122615060}
   parryWindow: 0.2
@@ -3132,6 +3080,145 @@ CapsuleCollider2D:
   m_Offset: {x: -0.05633998, y: 0.9690485}
   m_Size: {x: 0.86808825, y: 1.8112965}
   m_Direction: 0
+--- !u!114 &2122615062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 716cf96fdc0bab44ebe80c78212a4183, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  rb: {fileID: 2122615044}
+  col: {fileID: 2122615061}
+  modelPivot: {fileID: 901546197}
+  attackPoint: {fileID: 1554155158}
+  audioPlayer: {fileID: 2122615051}
+  dustPrefab: {fileID: 8723947070286554742, guid: a3a97ebe1e9c79d45b320fc00f3366a0, type: 3}
+  footPoint: {fileID: 1942488874}
+  playerSprite: {fileID: 901546199}
+  impulseSource: {fileID: 2122615049}
+  defenseController: {fileID: 2122615058}
+  impactSettings:
+    slamSpeed: 35
+    slamDamageRadius: 2
+    slamDamage: 25
+    enemyLayer:
+      serializedVersion: 2
+      m_Bits: 1024
+    jumpBufferTime: 0.15
+    coyoteTime: 0.12
+    jumpCutMultiplier: 2
+    jumpCutVelocityMultiplier: 0.75
+    fallMultiplier: 2.5
+    maxFallSpeed: 20
+    lightThreshold: 4
+    mediumThreshold: 7
+    heavyThreshold: 10
+    lightIntensity: 0.25
+    mediumIntensity: 0.6
+    heavyIntensity: 1.2
+    shakeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    maxFallDistance: 10
+    minDistance: 2
+  dashDistance: 5
+  dashTime: 0.15
+  dashCooldown: 0.4
+  afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
+  afterImageSpacing: 0.05
+  stepTimer: 0
+  inputLockDuration: 0.12
+  slamLockDuration: 0.12
+  slamFreezeTime: 0.04
+  canControl: 1
+  isDashing: 0
+  isInvincible: 0
+  isAttackLocked: 0
+  slamGroundLock: 0
+  slamLockTimer: 0
+  dashCooldownTimer: 0
+  dashPressed: 0
+  jumpConsumed: 0
+  inputLocked: 0
+  inputLockTimer: 0
+  moveInput: 0
+  jumpHeld: 0
+  isGrounded: 0
+  facingDir: 1
+  slamPressed: 0
+  verticalInput: 0
+--- !u!114 &2122615063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a673210bcc844b94e857b36088d1ef2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
+  moveSpeed: 10
+  acceleration: 100
+  deceleration: 60
+  airControl: 0.8
+  jumpForce: 15
+  jumpBufferTime: 0.15
+  coyoteTime: 0.12
+  jumpCutMultiplier: 2
+  jumpCutVelocityMultiplier: 0.3
+  fallMultiplier: 2.5
+  maxFallSpeed: 20
+  wallCheck: {fileID: 649369741}
+  wallCheckDistance: 0.3
+  wallMask:
+    serializedVersion: 2
+    m_Bits: 512
+  wallSlideSpeed: 2
+  wallJumpForceX: 9
+  wallJumpForceY: 12
+  wallJumpControlLock: 0.08
+  wallJumpBufferTime: 0.12
+  wallJumpControlBlendTime: 0.18
+  wallJumpControlAccelerationMultiplier: 1
+  groundCheck: {fileID: 1942488874}
+  groundCheckRadius: 0.15
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 512
+  jumpBufferCounter: 0
+  coyoteCounter: 0
+  wallJumpBufferCounter: 0
+  wallDirection: 0
+  isWallSliding: 0
+  wallJumpBlockedDirection: 0
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3140,6 +3227,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2095959211141379141, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2938970184769658100, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

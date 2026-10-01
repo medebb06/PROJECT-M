@@ -16,13 +16,18 @@ public class WallSlideState : IPlayerState
 
     public void Enter()
     {
-        player.isWallSliding = true;
+        PlayerMovement movement =
+            player.Movement;
 
-        Vector2 velocity = player.rb.linearVelocity;
+        movement.isWallSliding = true;
 
-        if (velocity.y < -player.wallSlideSpeed)
+        Vector2 velocity =
+            player.rb.linearVelocity;
+
+        if (velocity.y < -movement.wallSlideSpeed)
         {
-            velocity.y = -player.wallSlideSpeed;
+            velocity.y =
+                -movement.wallSlideSpeed;
         }
 
         player.SetVelocity(velocity);
@@ -30,44 +35,57 @@ public class WallSlideState : IPlayerState
 
     public void Exit()
     {
-        player.isWallSliding = false;
+        player.Movement.isWallSliding = false;
     }
 
     public void Update()
     {
+        PlayerMovement movement =
+            player.Movement;
+
         if (player.IsGrounded())
         {
-            player.wallJumpBlockedDirection = 0;
+            movement.wallJumpBlockedDirection = 0;
 
             sm.ChangeState(
-                new GroundedState(player, sm)
+                new GroundedState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
 
-        bool touchingWall = player.IsTouchingWall();
+        bool touchingWall =
+            player.IsTouchingWall();
 
         if (!touchingWall)
         {
             sm.ChangeState(
-                new AirState(player, sm)
+                new AirState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
 
-        if (player.wallJumpBufferCounter > 0f)
+        if (movement.wallJumpBufferCounter > 0f)
         {
             if (
-                player.wallJumpBlockedDirection !=
-                player.wallDirection
+                movement.wallJumpBlockedDirection !=
+                movement.wallDirection
             )
             {
-                player.wallJumpBufferCounter = 0f;
+                movement.wallJumpBufferCounter = 0f;
 
                 sm.ChangeState(
-                    new WallJumpState(player, sm)
+                    new WallJumpState(
+                        player,
+                        sm
+                    )
                 );
 
                 return;
@@ -75,14 +93,23 @@ public class WallSlideState : IPlayerState
         }
 
         bool pressingAwayFromWall =
-            (player.wallDirection == 1 && player.moveInput < -0.1f)
+            (
+                movement.wallDirection == 1 &&
+                player.moveInput < -0.1f
+            )
             ||
-            (player.wallDirection == -1 && player.moveInput > 0.1f);
+            (
+                movement.wallDirection == -1 &&
+                player.moveInput > 0.1f
+            );
 
         if (pressingAwayFromWall)
         {
             sm.ChangeState(
-                new AirState(player, sm)
+                new AirState(
+                    player,
+                    sm
+                )
             );
 
             return;
@@ -94,7 +121,10 @@ public class WallSlideState : IPlayerState
         )
         {
             sm.ChangeState(
-                new DashState(player, sm)
+                new DashState(
+                    player,
+                    sm
+                )
             );
 
             return;
@@ -103,11 +133,16 @@ public class WallSlideState : IPlayerState
 
     public void FixedUpdate()
     {
-        Vector2 velocity = player.rb.linearVelocity;
+        PlayerMovement movement =
+            player.Movement;
 
-        if (velocity.y < -player.wallSlideSpeed)
+        Vector2 velocity =
+            player.rb.linearVelocity;
+
+        if (velocity.y < -movement.wallSlideSpeed)
         {
-            velocity.y = -player.wallSlideSpeed;
+            velocity.y =
+                -movement.wallSlideSpeed;
         }
 
         player.SetVelocity(velocity);

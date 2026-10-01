@@ -21,12 +21,14 @@ public class PlayerPosture : MonoBehaviour
     public event Action OnPostureRecovered;
 
     private float recoveryTimer;
+    private float recoveryAccumulator;
     private bool wasBroken;
 
     void Awake()
     {
         currentPosture = maxPosture;
         recoveryTimer = 0f;
+        recoveryAccumulator = 0f;
         wasBroken = false;
 
         OnPostureChanged?.Invoke(
@@ -37,7 +39,7 @@ public class PlayerPosture : MonoBehaviour
 
     void Update()
     {
-        if (IsBroken)
+        if (currentPosture >= maxPosture)
             return;
 
         if (recoveryTimer > 0f)
@@ -50,31 +52,53 @@ public class PlayerPosture : MonoBehaviour
             return;
         }
 
-        if (currentPosture < maxPosture)
-        {
-            float oldPosture = currentPosture;
+        recoveryAccumulator +=
+            recoverySpeed * Time.deltaTime;
 
-            currentPosture = Mathf.Min(
-                maxPosture,
-                currentPosture +
-                Mathf.RoundToInt(
-                    recoverySpeed *
-                    Time.deltaTime
-                )
+        int recoveryAmount =
+            Mathf.FloorToInt(
+                recoveryAccumulator
             );
 
-            if (currentPosture != oldPosture)
-            {
-                OnPostureChanged?.Invoke(
-                    currentPosture,
-                    maxPosture
-                );
-            }
+        if (recoveryAmount <= 0)
+            return;
 
-            if (currentPosture >= maxPosture)
-            {
-                OnPostureRecovered?.Invoke();
-            }
+        recoveryAccumulator -= recoveryAmount;
+
+        int oldPosture = currentPosture;
+
+        currentPosture =
+            Mathf.Min(
+                maxPosture,
+                currentPosture + recoveryAmount
+            );
+
+        if (currentPosture != oldPosture)
+        {
+            OnPostureChanged?.Invoke(
+                currentPosture,
+                maxPosture
+            );
+        }
+
+        if (wasBroken &&
+            currentPosture > 0)
+        {
+            wasBroken = false;
+        }
+
+        if (currentPosture >= maxPosture)
+        {
+            currentPosture = maxPosture;
+
+            recoveryAccumulator = 0f;
+
+            OnPostureRecovered?.Invoke();
+
+            OnPostureChanged?.Invoke(
+                currentPosture,
+                maxPosture
+            );
         }
     }
 
@@ -95,6 +119,7 @@ public class PlayerPosture : MonoBehaviour
             );
 
         recoveryTimer = recoveryDelay;
+        recoveryAccumulator = 0f;
 
         OnPostureChanged?.Invoke(
             currentPosture,
@@ -112,7 +137,7 @@ public class PlayerPosture : MonoBehaviour
         if (amount <= 0)
             return;
 
-        if (IsBroken)
+        if (currentPosture >= maxPosture)
             return;
 
         currentPosture =
@@ -122,11 +147,23 @@ public class PlayerPosture : MonoBehaviour
             );
 
         recoveryTimer = recoveryDelay;
+        recoveryAccumulator = 0f;
+
+        if (wasBroken &&
+            currentPosture > 0)
+        {
+            wasBroken = false;
+        }
 
         OnPostureChanged?.Invoke(
             currentPosture,
             maxPosture
         );
+
+        if (currentPosture >= maxPosture)
+        {
+            OnPostureRecovered?.Invoke();
+        }
     }
 
     public void ResetPosture()
@@ -134,6 +171,7 @@ public class PlayerPosture : MonoBehaviour
         currentPosture = maxPosture;
 
         recoveryTimer = 0f;
+        recoveryAccumulator = 0f;
         wasBroken = false;
 
         OnPostureChanged?.Invoke(
@@ -148,6 +186,9 @@ public class PlayerPosture : MonoBehaviour
             return;
 
         wasBroken = true;
+
+        recoveryTimer = recoveryDelay;
+        recoveryAccumulator = 0f;
 
         OnPostureBroken?.Invoke();
     }

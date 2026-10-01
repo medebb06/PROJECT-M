@@ -16,28 +16,39 @@ public class GroundedState : IPlayerState
 
     public void Enter()
     {
-        // yere basınca coyote yenilenir
-        player.coyoteCounter = player.coyoteTime;
+        PlayerMovement movement =
+            player.Movement;
 
-        // jump lock reset
+        // Yere basınca coyote yenilenir.
+        movement.coyoteCounter =
+            movement.coyoteTime;
+
+        // Jump lock reset.
         player.jumpConsumed = false;
 
-        Vector2 vel = player.rb.linearVelocity;
+        Vector2 vel =
+            player.rb.linearVelocity;
 
-        // küçük zemin snap
+        // Küçük zemin snap.
         if (Mathf.Abs(vel.y) < 0.01f)
         {
             vel.y = 0f;
+
             player.SetVelocity(vel);
         }
     }
 
-    public void Exit() { }
+    public void Exit()
+    {
+    }
 
     public void Update()
     {
         if (!player.canControl)
             return;
+
+        PlayerMovement movement =
+            player.Movement;
 
         // =====================================================
         // DEFENSE
@@ -55,51 +66,75 @@ public class GroundedState : IPlayerState
             return;
         }
 
-        // ---------------- DASH ----------------
+        // =====================================================
+        // DASH
+        // =====================================================
 
-        if (player.dashPressed &&
-            player.dashCooldownTimer <= 0f)
+        if (
+            player.dashPressed &&
+            player.dashCooldownTimer <= 0f
+        )
         {
             sm.ChangeState(
-                new DashState(player, sm)
+                new DashState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
 
-        // ---------------- FALL ----------------
+        // =====================================================
+        // FALL
+        // =====================================================
 
         if (!player.IsGrounded())
         {
             sm.ChangeState(
-                new AirState(player, sm)
+                new AirState(
+                    player,
+                    sm
+                )
             );
 
             return;
         }
 
-        // ---------------- JUMP ----------------
+        // =====================================================
+        // JUMP
+        // =====================================================
 
-        if (!player.jumpConsumed &&
-            player.jumpBufferCounter > 0f &&
-            player.coyoteCounter > 0f)
+        if (
+            !player.jumpConsumed &&
+            movement.jumpBufferCounter > 0f &&
+            movement.coyoteCounter > 0f
+        )
         {
-            player.jumpBufferCounter = 0f;
-            player.coyoteCounter = 0f;
+            movement.jumpBufferCounter = 0f;
+            movement.coyoteCounter = 0f;
 
             player.jumpConsumed = true;
 
-            float jumpStrength = Mathf.Clamp01(
-                Mathf.Abs(player.moveInput) * 0.5f + 0.5f
-            );
+            float jumpStrength =
+                Mathf.Clamp01(
+                    Mathf.Abs(
+                        player.moveInput
+                    ) * 0.5f + 0.5f
+                );
 
             if (player.audioPlayer != null)
+            {
                 player.audioPlayer.PlayJump(
                     jumpStrength
                 );
+            }
 
             sm.ChangeState(
-                new JumpState(player, sm)
+                new JumpState(
+                    player,
+                    sm
+                )
             );
 
             return;
@@ -124,26 +159,10 @@ public class GroundedState : IPlayerState
             return;
         }
 
-        Vector2 vel = player.rb.linearVelocity;
+        // =====================================================
+        // NORMAL GROUND MOVEMENT
+        // =====================================================
 
-        float targetSpeed =
-            player.moveInput *
-            player.moveSpeed;
-
-        float speedDif =
-            targetSpeed -
-            vel.x;
-
-        float accel =
-            (Mathf.Abs(targetSpeed) > 0.01f)
-                ? player.acceleration
-                : player.deceleration;
-
-        vel.x +=
-            speedDif *
-            accel *
-            Time.fixedDeltaTime;
-
-        player.SetVelocity(vel);
+        player.Movement.ApplyMovement(1f);
     }
 }

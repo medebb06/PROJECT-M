@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class PlayerDeathState : IPlayerState
@@ -26,6 +25,9 @@ public class PlayerDeathState : IPlayerState
 
     public void Enter()
     {
+        PlayerMovement movement =
+            player.Movement;
+
         fadeTimer = 0f;
         fadeComplete = false;
 
@@ -43,8 +45,9 @@ public class PlayerDeathState : IPlayerState
         player.dashPressed = false;
         player.slamPressed = false;
 
-        player.jumpBufferCounter = 0f;
-        player.coyoteCounter = 0f;
+        movement.jumpBufferCounter = 0f;
+        movement.coyoteCounter = 0f;
+        movement.wallJumpBufferCounter = 0f;
 
         player.inputLockTimer = 0f;
 
@@ -61,7 +64,9 @@ public class PlayerDeathState : IPlayerState
         player.isAttackLocked = true;
 
         combatController =
-            player.GetComponent<PlayerCombatController>();
+            player.GetComponent<
+                PlayerCombatController
+            >();
 
         if (combatController != null)
         {
@@ -74,7 +79,8 @@ public class PlayerDeathState : IPlayerState
 
         if (player.rb != null)
         {
-            player.rb.linearVelocity = Vector2.zero;
+            player.rb.linearVelocity =
+                Vector2.zero;
 
             // Enemy fiziksel olarak Player'ı itemesin.
             player.rb.simulated = false;
@@ -91,11 +97,20 @@ public class PlayerDeathState : IPlayerState
         // ========================================
 
         renderers =
-            player.GetComponentsInChildren<SpriteRenderer>(true);
+            player.GetComponentsInChildren<
+                SpriteRenderer
+            >(true);
 
-        originalAlphas = new float[renderers.Length];
+        originalAlphas =
+            new float[
+                renderers.Length
+            ];
 
-        for (int i = 0; i < renderers.Length; i++)
+        for (
+            int i = 0;
+            i < renderers.Length;
+            i++
+        )
         {
             if (renderers[i] == null)
                 continue;
@@ -110,29 +125,40 @@ public class PlayerDeathState : IPlayerState
         if (fadeComplete)
             return;
 
-        fadeTimer += Time.deltaTime;
+        fadeTimer +=
+            Time.deltaTime;
 
-        float t = Mathf.Clamp01(
-            fadeTimer / fadeDuration
-        );
+        float t =
+            Mathf.Clamp01(
+                fadeTimer /
+                fadeDuration
+            );
 
-        float alpha = Mathf.Lerp(
-            1f,
-            0f,
-            t
-        );
+        float alpha =
+            Mathf.Lerp(
+                1f,
+                0f,
+                t
+            );
 
-        for (int i = 0; i < renderers.Length; i++)
+        for (
+            int i = 0;
+            i < renderers.Length;
+            i++
+        )
         {
             if (renderers[i] == null)
                 continue;
 
-            Color color = renderers[i].color;
+            Color color =
+                renderers[i].color;
 
             color.a =
-                originalAlphas[i] * alpha;
+                originalAlphas[i] *
+                alpha;
 
-            renderers[i].color = color;
+            renderers[i].color =
+                color;
         }
 
         if (t >= 1f)
@@ -152,7 +178,10 @@ public class PlayerDeathState : IPlayerState
         if (player.rb != null)
         {
             player.rb.simulated = true;
-            player.rb.linearVelocity = Vector2.zero;
+
+            player.rb.linearVelocity =
+                Vector2.zero;
+
             player.rb.WakeUp();
         }
     }

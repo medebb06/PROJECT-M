@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -86,7 +85,8 @@ public class AttackState : ICombatState
                 ? Vector2.right
                 : Vector2.left;
 
-        start = player.rb.position;
+        start =
+            player.rb.position;
 
         // =====================================================
         // ATTACK TARGET
@@ -103,8 +103,10 @@ public class AttackState : ICombatState
         Collider2D playerCollider =
             player.GetComponent<Collider2D>();
 
-        if (playerCollider != null &&
-            moveDistance > 0f)
+        if (
+            playerCollider != null &&
+            moveDistance > 0f
+        )
         {
             RaycastHit2D[] hits =
                 new RaycastHit2D[10];
@@ -114,7 +116,7 @@ public class AttackState : ICombatState
 
             LayerMask movementCollisionMask =
                 enemyLayer |
-                player.wallMask;
+                player.Movement.wallMask;
 
             filter.SetLayerMask(
                 movementCollisionMask
@@ -127,7 +129,8 @@ public class AttackState : ICombatState
                     dir,
                     filter,
                     hits,
-                    moveDistance + collisionSkin
+                    moveDistance +
+                    collisionSkin
                 );
 
             float allowedDistance =
@@ -138,8 +141,10 @@ public class AttackState : ICombatState
                 if (hits[i].collider == null)
                     continue;
 
-                if (hits[i].distance <
-                    allowedDistance)
+                if (
+                    hits[i].distance <
+                    allowedDistance
+                )
                 {
                     allowedDistance =
                         Mathf.Max(
@@ -168,8 +173,10 @@ public class AttackState : ICombatState
 
     public void Tick()
     {
-        if (!player.canAttack ||
-            player.isDashing)
+        if (
+            !player.canAttack ||
+            player.isDashing
+        )
         {
             Exit();
             return;
@@ -185,7 +192,9 @@ public class AttackState : ICombatState
 
         float n =
             duration > 0f
-                ? Mathf.Clamp01(t / duration)
+                ? Mathf.Clamp01(
+                    t / duration
+                )
                 : 1f;
 
         // =====================================================
@@ -228,8 +237,10 @@ public class AttackState : ICombatState
         // HIT WINDOW
         // =====================================================
 
-        if (!hasHit &&
-            n >= hitTime)
+        if (
+            !hasHit &&
+            n >= hitTime
+        )
         {
             Hit();
 
@@ -248,13 +259,22 @@ public class AttackState : ICombatState
 
     void UpdateFacing()
     {
-        if (Mathf.Abs(player.moveInput) < 0.01f)
+        if (
+            Mathf.Abs(
+                player.moveInput
+            ) < 0.01f
+        )
             return;
 
         float newDirection =
-            Mathf.Sign(player.moveInput);
+            Mathf.Sign(
+                player.moveInput
+            );
 
-        if (player.facingDir == newDirection)
+        if (
+            player.facingDir ==
+            newDirection
+        )
             return;
 
         player.facingDir =
@@ -334,9 +354,6 @@ public class AttackState : ICombatState
 
         if (hitSomething)
         {
-            // Enemy'e vurduk.
-            // Woosh çalmaz, mevcut hit stop çalışır.
-
             CombatImpactFeedback combatFeedback =
                 player.GetComponent<
                     CombatImpactFeedback
@@ -349,9 +366,6 @@ public class AttackState : ICombatState
         }
         else
         {
-            // Enemy'e vuramadık.
-            // Attack 1-4'e göre farklı pitch ile Woosh çal.
-
             if (player.audioPlayer != null)
             {
                 player.audioPlayer.PlayAttackWoosh(
@@ -361,4 +375,3 @@ public class AttackState : ICombatState
         }
     }
 }
-

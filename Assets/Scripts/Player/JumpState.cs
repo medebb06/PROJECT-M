@@ -5,7 +5,10 @@ public class JumpState : IPlayerState
     private PlayerController player;
     private PlayerStateMachine sm;
 
-    public JumpState(PlayerController player, PlayerStateMachine sm)
+    public JumpState(
+        PlayerController player,
+        PlayerStateMachine sm
+    )
     {
         this.player = player;
         this.sm = sm;
@@ -13,52 +16,153 @@ public class JumpState : IPlayerState
 
     public void Enter()
     {
-        // 🔥 HARD GUARD
-        if (player.slamGroundLock || player.inputLocked)
+        PlayerMovement movement =
+            player.Movement;
+
+        // =====================================================
+        // HARD GUARD
+        // =====================================================
+
+        if (
+            player.slamGroundLock ||
+            player.inputLocked
+        )
         {
-            sm.ChangeState(new GroundedState(player, sm));
+            sm.ChangeState(
+                new GroundedState(
+                    player,
+                    sm
+                )
+            );
+
             return;
         }
+
+        // =====================================================
+        // JUMP FX
+        // =====================================================
 
         player.SpawnDust();
 
-        Vector2 v = player.rb.linearVelocity;
-        if (v.y < 0) v.y = 0;
-        player.rb.linearVelocity = v;
+        // =====================================================
+        // CLEAR DOWNWARD VELOCITY
+        // =====================================================
 
-        player.rb.AddForce(Vector2.up * player.jumpForce, ForceMode2D.Impulse);
+        Vector2 velocity =
+            player.rb.linearVelocity;
+
+        if (velocity.y < 0f)
+            velocity.y = 0f;
+
+        player.SetVelocity(velocity);
+
+        // =====================================================
+        // JUMP IMPULSE
+        // =====================================================
+
+        player.rb.AddForce(
+            Vector2.up *
+            movement.jumpForce,
+            ForceMode2D.Impulse
+        );
     }
 
-    public void Exit() { }
+    public void Exit()
+    {
+    }
 
     public void Update()
     {
-        if (player.slamGroundLock || player.inputLocked)
+        PlayerMovement movement =
+            player.Movement;
+
+        // =====================================================
+        // HARD GUARD
+        // =====================================================
+
+        if (
+            player.slamGroundLock ||
+            player.inputLocked
+        )
         {
-            sm.ChangeState(new GroundedState(player, sm));
+            sm.ChangeState(
+                new GroundedState(
+                    player,
+                    sm
+                )
+            );
+
             return;
         }
 
-        player.ApplyMovement(player.airControl);
+        // =====================================================
+        // AIR MOVEMENT
+        // =====================================================
 
-        if (player.dashPressed && player.dashCooldownTimer <= 0f)
+        movement.ApplyMovement(
+            movement.airControl
+        );
+
+        // =====================================================
+        // DASH
+        // =====================================================
+
+        if (
+            player.dashPressed &&
+            player.dashCooldownTimer <= 0f
+        )
         {
-            sm.ChangeState(new DashState(player, sm));
+            sm.ChangeState(
+                new DashState(
+                    player,
+                    sm
+                )
+            );
+
             return;
         }
 
-        if (player.rb.linearVelocity.y < -0.1f)
+        // =====================================================
+        // FALL
+        // =====================================================
+
+        if (
+            player.rb.linearVelocity.y <
+            -0.1f
+        )
         {
-            sm.ChangeState(new AirState(player, sm));
+            sm.ChangeState(
+                new AirState(
+                    player,
+                    sm
+                )
+            );
+
             return;
         }
 
-        if (player.isGrounded && player.rb.linearVelocity.y <= 0.01f)
+        // =====================================================
+        // LAND
+        // =====================================================
+
+        if (
+            player.isGrounded &&
+            player.rb.linearVelocity.y <=
+            0.01f
+        )
         {
-            sm.ChangeState(new GroundedState(player, sm));
+            sm.ChangeState(
+                new GroundedState(
+                    player,
+                    sm
+                )
+            );
+
             return;
         }
     }
 
-    public void FixedUpdate() { }
+    public void FixedUpdate()
+    {
+    }
 }

@@ -52,10 +52,6 @@ public class EnemyAttackState : IEnemyState
             return;
         }
 
-        // ==========================================
-        // ATTACK WARNING
-        // ==========================================
-
         if (!attackDone)
         {
             StopMovement();
@@ -64,10 +60,6 @@ public class EnemyAttackState : IEnemyState
 
             if (warningTimer > 0f)
                 return;
-
-            // ======================================
-            // WARNING BİTTİ → SALDIRI
-            // ======================================
 
             if (telegraph != null)
                 telegraph.StopWarning();
@@ -91,10 +83,6 @@ public class EnemyAttackState : IEnemyState
 
             return;
         }
-
-        // ==========================================
-        // ATTACK RECOVERY
-        // ==========================================
 
         if (isRecovering)
         {
@@ -123,10 +111,6 @@ public class EnemyAttackState : IEnemyState
         StopMovement();
     }
 
-    // ==============================================
-    // MOVEMENT
-    // ==============================================
-
     private void StopMovement()
     {
         Rigidbody2D rb =
@@ -141,10 +125,6 @@ public class EnemyAttackState : IEnemyState
         );
     }
 
-    // ==============================================
-    // WARNING AUDIO
-    // ==============================================
-
     private void PlayWarning()
     {
         if (attackAudio == null)
@@ -152,10 +132,6 @@ public class EnemyAttackState : IEnemyState
 
         attackAudio.PlayWarning();
     }
-
-    // ==============================================
-    // ATTACK
-    // ==============================================
 
     private bool DoAttack()
     {
@@ -183,10 +159,6 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
-        // ==========================================
-        // MENZİL KONTROLÜ
-        // ==========================================
-
         float distance =
             Vector2.Distance(
                 enemy.transform.position,
@@ -213,16 +185,14 @@ public class EnemyAttackState : IEnemyState
                 PlayerDefenseController
             >();
 
-        // ==========================================
+        // =====================================================
         // PARRY
-        // ==========================================
+        // =====================================================
 
         if (defense != null &&
             defense.CanParry())
         {
-            Debug.Log(
-                "PLAYER PARRY!"
-            );
+            Debug.Log("PLAYER PARRY!");
 
             defense.PlayParryFeedback();
 
@@ -243,16 +213,14 @@ public class EnemyAttackState : IEnemyState
             );
         }
 
-        // ==========================================
+        // =====================================================
         // BLOCK
-        // ==========================================
+        // =====================================================
 
         if (defense != null &&
             defense.CanBlock())
         {
-            Debug.Log(
-                "PLAYER BLOCK!"
-            );
+            Debug.Log("PLAYER BLOCK!");
 
             EnemyHitFeedback hitFeedback =
                 enemy.GetComponent<
@@ -283,9 +251,9 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
-        // ==========================================
+        // =====================================================
         // NORMAL HIT
-        // ==========================================
+        // =====================================================
 
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<
@@ -303,9 +271,7 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
-        Debug.Log(
-            "ENEMY HIT PLAYER"
-        );
+        Debug.Log("ENEMY HIT PLAYER");
 
         damageReceiver.TakeDamage(
             1,
@@ -322,9 +288,9 @@ public class EnemyAttackState : IEnemyState
         return false;
     }
 
-    // ==============================================
+    // =========================================================
     // BLOCK
-    // ==============================================
+    // =========================================================
 
     private void HandleBlock(
         Vector2 hitDirection
@@ -334,15 +300,28 @@ public class EnemyAttackState : IEnemyState
             hitDirection
         );
 
+        PlayerDefenseController defense =
+            enemy.target.GetComponent<
+                PlayerDefenseController
+            >();
+
+        if (defense != null)
+        {
+            defense.HandleBlockHit(
+                hitDirection,
+                enemy.blockBalanceDamage
+            );
+        }
+
         Debug.Log(
             "PLAYER BLOCK → " +
             "NO ENEMY BALANCE DAMAGE"
         );
     }
 
-    // ==============================================
+    // =========================================================
     // PARRY
-    // ==============================================
+    // =========================================================
 
     private bool HandleParry(
         Vector2 hitDirection

@@ -24,9 +24,20 @@ public class AirState : IPlayerState
 
     public void Update()
     {
-        player.ApplyMovement(
-            player.airControl
+        PlayerMovement movement =
+            player.Movement;
+
+        // =====================================================
+        // AIR MOVEMENT
+        // =====================================================
+
+        movement.ApplyMovement(
+            movement.airControl
         );
+
+        // =====================================================
+        // GROUND SLAM
+        // =====================================================
 
         if (
             player.verticalInput < -0.5f &&
@@ -43,6 +54,10 @@ public class AirState : IPlayerState
             return;
         }
 
+        // =====================================================
+        // DASH
+        // =====================================================
+
         if (
             player.dashPressed &&
             player.dashCooldownTimer <= 0f
@@ -58,6 +73,10 @@ public class AirState : IPlayerState
             return;
         }
 
+        // =====================================================
+        // LAND
+        // =====================================================
+
         if (
             player.isGrounded &&
             player.rb.linearVelocity.y <= 0.1f
@@ -72,6 +91,10 @@ public class AirState : IPlayerState
 
             return;
         }
+
+        // =====================================================
+        // WALL SLIDE
+        // =====================================================
 
         bool touchingWall =
             player.IsTouchingWall();
