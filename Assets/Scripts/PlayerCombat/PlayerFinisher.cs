@@ -1,54 +1,75 @@
-
 using UnityEngine;
 
-public class PlayerFinisherTarget : MonoBehaviour
+public class PlayerFinisher : MonoBehaviour
 {
-    [Header("Finisher Target")]
+    [Header("Finisher")]
     [SerializeField] private float finisherRange = 2.5f;
-
     [SerializeField] private float forwardPriority = 1.5f;
 
     [Header("Input")]
     [SerializeField] private KeyCode executeKey = KeyCode.E;
 
     private PlayerController player;
-    private EnemyController currentTarget;
-
-    public EnemyController CurrentTarget => currentTarget;
 
     private void Awake()
     {
-        player = GetComponent<PlayerController>();
+        player =
+            GetComponent<PlayerController>();
+
+        if (player == null)
+        {
+            Debug.LogError(
+                "FINISHER: PlayerController bulunamadı!"
+            );
+        }
     }
 
     private void Update()
     {
-        UpdateTarget();
-
-        if (Input.GetKeyDown(executeKey))
-        {
-            TryExecute();
-        }
-    }
-
-    private void UpdateTarget()
-    {
-        EnemyController bestTarget = FindBestTarget();
-
-        if (bestTarget == currentTarget)
+        if (!Input.GetKeyDown(executeKey))
             return;
 
-        if (currentTarget != null)
+        TryExecute();
+    }
+
+    private void TryExecute()
+    {
+        EnemyController target =
+            FindBestTarget();
+
+        if (target == null)
         {
-            currentTarget.SetFinisherTarget(false);
+            Debug.Log(
+                "FINISHER: NO TARGET"
+            );
+
+            return;
         }
 
-        currentTarget = bestTarget;
-
-        if (currentTarget != null)
+        if (!target.IsStaggered)
         {
-            currentTarget.SetFinisherTarget(true);
+            Debug.Log(
+                "FINISHER: TARGET NO LONGER STAGGERED"
+            );
+
+            return;
         }
+
+        Debug.Log(
+            "FINISHER TARGET: " +
+            target.name
+        );
+
+        // =====================================================
+        // EXECUTE
+        // EnemyExecuteState zaten:
+        // - Player'ı buluyor
+        // - PlayerExecuteState'e geçiriyor
+        // - Enemy'yi durduruyor
+        // - Damage veriyor
+        // =====================================================
+
+        target.Execute();
     }
 
     private EnemyController FindBestTarget()
@@ -58,10 +79,12 @@ public class PlayerFinisherTarget : MonoBehaviour
 
         EnemyController bestTarget = null;
 
-        float bestScore = float.MinValue;
+        float bestScore =
+            float.MinValue;
 
         float facing =
-            player != null && player.facingDir < 0f
+            player != null &&
+            player.facingDir < 0f
                 ? -1f
                 : 1f;
 
@@ -73,6 +96,7 @@ public class PlayerFinisherTarget : MonoBehaviour
             if (enemy == null)
                 continue;
 
+            // Sadece staggered enemy
             if (!enemy.IsStaggered)
                 continue;
 
@@ -80,11 +104,13 @@ public class PlayerFinisherTarget : MonoBehaviour
                 enemy.transform.position;
 
             Vector2 offset =
-                enemyPosition - playerPosition;
+                enemyPosition -
+                playerPosition;
 
             float distance =
                 offset.magnitude;
 
+            // Finisher menzili dışında
             if (distance > finisherRange)
                 continue;
 
@@ -97,11 +123,15 @@ public class PlayerFinisherTarget : MonoBehaviour
             bool isInFront =
                 directionToEnemy == facing;
 
+            // Yakın enemy daha yüksek puan
             float distanceScore =
-                1f - Mathf.Clamp01(
-                    distance / finisherRange
+                1f -
+                Mathf.Clamp01(
+                    distance /
+                    finisherRange
                 );
 
+            // Ön taraftaki enemy'ye öncelik
             float directionScore =
                 isInFront
                     ? forwardPriority
@@ -121,42 +151,9 @@ public class PlayerFinisherTarget : MonoBehaviour
         return bestTarget;
     }
 
-    private void TryExecute()
-    {
-        if (currentTarget == null)
-        {
-            Debug.Log("FINISHER: NO TARGET");
-            return;
-        }
-
-        if (!currentTarget.IsStaggered)
-        {
-            currentTarget = null;
-            return;
-        }
-
-        Debug.Log(
-            "FINISHER TARGET: " +
-            currentTarget.name
-        );
-
-        EnemyController target =
-            currentTarget;
-
-        currentTarget = null;
-
-        target.SetFinisherTarget(false);
-
-        target.Execute();
-    }
-
     private void OnDisable()
     {
-        if (currentTarget != null)
-        {
-            currentTarget.SetFinisherTarget(false);
-            currentTarget = null;
-        }
+        // Artık target tutulmadığı için
+        // temizlenecek bir şey yok.
     }
 }
-

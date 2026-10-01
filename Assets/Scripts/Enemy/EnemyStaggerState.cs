@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class EnemyStaggerState : IEnemyState
@@ -81,8 +80,6 @@ public class EnemyStaggerState : IEnemyState
     public void Exit()
     {
         RestoreColor();
-
-        enemy.SetFinisherTarget(false);
     }
 
     private void RestoreColor()
@@ -109,4 +106,3 @@ public class EnemyStaggerState : IEnemyState
         );
     }
 }
-

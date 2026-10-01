@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -76,10 +75,6 @@ public class EnemyController : MonoBehaviour
     public float executeDistance = 1.2f;
     public float executeDuration = 0.08f;
 
-    [Header("Finisher Target")]
-    [SerializeField] private GameObject finisherTargetIndicator;
-    [SerializeField] private FinisherTargetHighlight finisherTargetHighlight;
-
     [Header("Hit Sounds")]
     public AudioSource hitAudioSource;
     public AudioClip healthHitClip;
@@ -138,21 +133,6 @@ public class EnemyController : MonoBehaviour
         {
             enemyBalance.OnBalanceBroken +=
                 HandleBalanceBroken;
-        }
-
-        // -----------------------------------------------------
-        // FINISHER HIGHLIGHT
-        // -----------------------------------------------------
-
-        if (finisherTargetHighlight == null)
-        {
-            finisherTargetHighlight =
-                GetComponent<FinisherTargetHighlight>();
-        }
-
-        if (finisherTargetHighlight != null)
-        {
-            finisherTargetHighlight.SetHighlighted(false);
         }
 
         // -----------------------------------------------------
@@ -612,25 +592,6 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // FINISHER TARGET
-    // =========================================================
-
-    public void SetFinisherTarget(bool active)
-    {
-        // Eski indicator sistemini koruyoruz.
-        if (finisherTargetIndicator != null)
-        {
-            finisherTargetIndicator.SetActive(active);
-        }
-
-        // Yeni beyaz outline.
-        if (finisherTargetHighlight != null)
-        {
-            finisherTargetHighlight.SetHighlighted(active);
-        }
-    }
-
-    // =========================================================
     // EXECUTE
     // =========================================================
 
@@ -643,8 +604,6 @@ public class EnemyController : MonoBehaviour
             "EXECUTE TARGET: " +
             gameObject.name
         );
-
-        SetFinisherTarget(false);
 
         ChangeState(
             new EnemyExecuteState(this)
@@ -660,4 +619,3 @@ public class EnemyController : MonoBehaviour
         ForceStagger();
     }
 }
-

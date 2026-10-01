@@ -28,40 +28,46 @@ public class PlayerExecuteState : IPlayerState
 
     public void Enter()
     {
-        startPosition = player.rb.position;
+        startPosition =
+            player.rb.position;
 
         timer = 0f;
 
         originalGravityScale =
             player.rb.gravityScale;
 
-        // Execute sırasında normal fizik hareketi
-        // devreye girmesin.
         player.rb.gravityScale = 0f;
 
         player.canControl = false;
         player.isInvincible = true;
         player.isDashing = true;
 
-        player.SetVelocity(Vector2.zero);
+        player.SetVelocity(
+            Vector2.zero
+        );
     }
 
     public void Update()
     {
-        // Input tamamen görmezden geliniyor.
+        // Execute sırasında input yok.
     }
 
     public void FixedUpdate()
     {
-        timer += Time.fixedDeltaTime;
+        timer +=
+            Time.fixedDeltaTime;
 
         float t =
-            Mathf.Clamp01(timer / duration);
+            Mathf.Clamp01(
+                timer / duration
+            );
 
-        // SmoothStep:
-        // yavaş başla -> hızlı git -> yumuşak bitir
         float smoothT =
-            Mathf.SmoothStep(0f, 1f, t);
+            Mathf.SmoothStep(
+                0f,
+                1f,
+                t
+            );
 
         Vector2 nextPosition =
             Vector2.Lerp(
@@ -70,7 +76,9 @@ public class PlayerExecuteState : IPlayerState
                 smoothT
             );
 
-        player.rb.MovePosition(nextPosition);
+        player.rb.MovePosition(
+            nextPosition
+        );
 
         if (t >= 1f)
         {
@@ -87,28 +95,32 @@ public class PlayerExecuteState : IPlayerState
         player.isInvincible = false;
         player.canControl = true;
 
-        player.SetVelocity(Vector2.zero);
+        player.SetVelocity(
+            Vector2.zero
+        );
 
-        // Execute sonrası doğru state'e dön.
         if (player.IsGrounded())
         {
             sm.ChangeState(
-                new GroundedState(player, sm)
+                new GroundedState(
+                    player,
+                    sm
+                )
             );
         }
         else
         {
             sm.ChangeState(
-                new AirState(player, sm)
+                new AirState(
+                    player,
+                    sm
+                )
             );
         }
     }
 
     public void Exit()
     {
-        // Güvenlik:
-        // state başka bir nedenle değiştirilirse
-        // player kilitli kalmasın.
         player.rb.gravityScale =
             originalGravityScale;
 
