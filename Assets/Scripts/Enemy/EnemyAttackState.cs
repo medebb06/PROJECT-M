@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyAttackState : IEnemyState
 {
@@ -53,6 +52,10 @@ public class EnemyAttackState : IEnemyState
             return;
         }
 
+        // =====================================================
+        // ATTACK
+        // =====================================================
+
         if (!attackDone)
         {
             StopMovement();
@@ -70,9 +73,19 @@ public class EnemyAttackState : IEnemyState
 
             attackDone = true;
 
+            // Parry sonucu BALANCE KIRILDIYSA
+            // EnemyController zaten stagger state'e geçti.
             if (enemyStaggered)
-                return;
+            {
+                Debug.Log(
+                    "ENEMY ATTACK → PARRY BROKE BALANCE → STAGGER"
+                );
 
+                return;
+            }
+
+            // Normal attack / block / normal parry
+            // sonrası recovery başlat.
             enemy.StartAttackRecovery();
 
             recoveryTimer =
@@ -85,6 +98,10 @@ public class EnemyAttackState : IEnemyState
             return;
         }
 
+        // =====================================================
+        // RECOVERY
+        // =====================================================
+
         if (isRecovering)
         {
             StopMovement();
@@ -95,6 +112,10 @@ public class EnemyAttackState : IEnemyState
                 return;
 
             isRecovering = false;
+
+            Debug.Log(
+                "ENEMY ATTACK RECOVERY FINISHED → CHASE"
+            );
 
             enemy.ChangeState(
                 new EnemyChaseState(enemy)
@@ -112,6 +133,10 @@ public class EnemyAttackState : IEnemyState
         StopMovement();
     }
 
+    // =========================================================
+    // MOVEMENT
+    // =========================================================
+
     private void StopMovement()
     {
         Rigidbody2D rb =
@@ -120,11 +145,16 @@ public class EnemyAttackState : IEnemyState
         if (rb == null)
             return;
 
-        rb.linearVelocity = new Vector2(
-            0f,
-            rb.linearVelocity.y
-        );
+        rb.linearVelocity =
+            new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
     }
+
+    // =========================================================
+    // WARNING
+    // =========================================================
 
     private void PlayWarning()
     {
@@ -133,6 +163,10 @@ public class EnemyAttackState : IEnemyState
 
         attackAudio.PlayWarning();
     }
+
+    // =========================================================
+    // ATTACK
+    // =========================================================
 
     private bool DoAttack()
     {
@@ -151,6 +185,10 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
+        // -----------------------------------------------------
+        // PLAYER INVINCIBLE
+        // -----------------------------------------------------
+
         if (player.isInvincible)
         {
             Debug.Log(
@@ -159,6 +197,10 @@ public class EnemyAttackState : IEnemyState
 
             return false;
         }
+
+        // -----------------------------------------------------
+        // RANGE
+        // -----------------------------------------------------
 
         float distance =
             Vector2.Distance(
@@ -190,8 +232,10 @@ public class EnemyAttackState : IEnemyState
         // PARRY
         // =====================================================
 
-        if (defense != null &&
-            defense.CanParry())
+        if (
+            defense != null &&
+            defense.CanParry()
+        )
         {
             Debug.Log("PLAYER PARRY!");
 
@@ -209,10 +253,6 @@ public class EnemyAttackState : IEnemyState
                 );
             }
 
-            // -------------------------------------------------
-            // PARRY SONRASI NORMAL DAMAGE KODUNA ASLA ULAŞMA
-            // -------------------------------------------------
-
             bool enemyStaggered =
                 HandleParry(
                     hitDirection
@@ -224,18 +264,24 @@ public class EnemyAttackState : IEnemyState
                     "PARRY → ENEMY BALANCE BROKEN → STAGGER"
                 );
             }
+            else
+            {
+                Debug.Log(
+                    "PARRY → ENEMY BALANCE DAMAGED → RECOVERY"
+                );
+            }
 
-            // Parry her durumda saldırıyı tamamen tüketir.
-            // Oyuncu bu saldırıdan damage alamaz.
-            return true;
+            return enemyStaggered;
         }
 
         // =====================================================
         // BLOCK
         // =====================================================
 
-        if (defense != null &&
-            defense.CanBlock())
+        if (
+            defense != null &&
+            defense.CanBlock()
+        )
         {
             Debug.Log("PLAYER BLOCK!");
 
@@ -288,7 +334,9 @@ public class EnemyAttackState : IEnemyState
             return false;
         }
 
-        Debug.Log("ENEMY HIT PLAYER");
+        Debug.Log(
+            "ENEMY HIT PLAYER"
+        );
 
         damageReceiver.TakeDamage(
             1,
@@ -368,17 +416,20 @@ public class EnemyAttackState : IEnemyState
             enemy.parryBalanceDamage
         );
 
+        // Balance kırıldıysa EnemyBalance.OnBalanceBroken
+        // üzerinden EnemyController.HandleBalanceBroken()
+        // zaten ForceStagger() çağırıyor.
         if (balance.IsBroken)
         {
             Debug.Log(
-                "PARRY → ENEMY BALANCE " +
-                "BROKEN → STAGGER"
+                "PARRY → ENEMY BALANCE BROKEN → STAGGER"
             );
 
             return true;
         }
 
+        // Balance kırılmadıysa enemy stagger'a girmez.
+        // AttackState recovery'ye devam eder.
         return false;
     }
 }
-

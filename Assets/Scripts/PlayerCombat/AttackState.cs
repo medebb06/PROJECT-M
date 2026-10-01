@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -319,9 +318,9 @@ public class AttackState : ICombatState
         onEnd?.Invoke();
     }
 
-    // =========================================================
+    // =====================================================
     // HIT
-    // =========================================================
+    // =====================================================
 
     private void Hit()
     {
@@ -338,7 +337,9 @@ public class AttackState : ICombatState
             player.attackPoint.localPosition;
 
         attackPointLocal.x =
-            Mathf.Abs(attackPointLocal.x) *
+            Mathf.Abs(
+                attackPointLocal.x
+            ) *
             attackDirection;
 
         Vector2 boxCenter =
@@ -381,36 +382,68 @@ public class AttackState : ICombatState
             // SAME ENEMY CAN HAVE MULTIPLE COLLIDERS
             // =================================================
 
-            if (processedEnemies.Contains(enemy))
+            if (
+                processedEnemies.Contains(
+                    enemy
+                )
+            )
+            {
                 continue;
+            }
 
             processedEnemies.Add(enemy);
 
             hitSomething = true;
 
+            // =================================================
+            // VFX POSITION
+            // =================================================
+
+            Vector2 contactPoint =
+                h.ClosestPoint(
+                    boxCenter
+                );
+
+            Vector2 enemyCenter =
+                h.bounds.center;
+
             Vector2 hitPosition =
-                h.ClosestPoint(boxCenter);
+                Vector2.Lerp(
+                    contactPoint,
+                    enemyCenter,
+                    combat.HitVFXInsideAmount
+                );
+
+            hitPosition +=
+                dir *
+                combat.HitVFXForwardOffset;
 
             // =================================================
             // BALANCE
             // =================================================
 
             EnemyBalance balance =
-                enemy.GetComponentInParent<EnemyBalance>();
+                enemy.GetComponentInParent<
+                    EnemyBalance
+                >();
 
             // =================================================
             // HEALTH
             // =================================================
 
             Health health =
-                enemy.GetComponentInParent<Health>();
+                enemy.GetComponentInParent<
+                    Health
+                >();
 
             // =================================================
             // HIT FEEDBACK
             // =================================================
 
             EnemyHitFeedback hitFeedback =
-                enemy.GetComponentInParent<EnemyHitFeedback>();
+                enemy.GetComponentInParent<
+                    EnemyHitFeedback
+                >();
 
             // =================================================
             // NORMAL BALANCE HIT
@@ -443,7 +476,9 @@ public class AttackState : ICombatState
 
                 if (!balance.IsBroken)
                 {
-                    enemy.ApplyBalanceHit(dir);
+                    enemy.ApplyBalanceHit(
+                        dir
+                    );
                 }
 
                 // =================================================
@@ -453,7 +488,8 @@ public class AttackState : ICombatState
                 else
                 {
                     Debug.Log(
-                        "ATTACK → BALANCE BROKEN → NO HEALTH DAMAGE"
+                        "ATTACK → BALANCE BROKEN → " +
+                        "NO HEALTH DAMAGE"
                     );
 
                     enemy.ApplyAttackHit(
@@ -465,19 +501,13 @@ public class AttackState : ICombatState
                 // =================================================
                 // IMPORTANT
                 // =================================================
-                //
-                // Bu attack'ın geri kalanında bu enemy için
-                // health damage uygulanmayacak.
-                //
-                // Bu yüzden burada continue ediyoruz.
-                // =================================================
 
                 continue;
             }
 
-            // =================================================
+            // =====================================================
             // BALANCE ALREADY BROKEN → HEALTH
-            // =================================================
+            // =====================================================
 
             if (
                 balance != null &&
@@ -490,7 +520,9 @@ public class AttackState : ICombatState
 
                     if (hitFeedback != null)
                     {
-                        hitFeedback.PlayHealthHit(dir);
+                        hitFeedback.PlayHealthHit(
+                            dir
+                        );
                     }
 
                     enemy.PlayHealthHitSound();
@@ -504,9 +536,9 @@ public class AttackState : ICombatState
                 continue;
             }
 
-            // =================================================
+            // =====================================================
             // NO BALANCE → HEALTH
-            // =================================================
+            // =====================================================
 
             if (
                 balance == null &&
@@ -517,7 +549,9 @@ public class AttackState : ICombatState
 
                 if (hitFeedback != null)
                 {
-                    hitFeedback.PlayHealthHit(dir);
+                    hitFeedback.PlayHealthHit(
+                        dir
+                    );
                 }
 
                 enemy.PlayHealthHitSound();
@@ -536,7 +570,9 @@ public class AttackState : ICombatState
         if (hitSomething)
         {
             CombatImpactFeedback combatFeedback =
-                player.GetComponent<CombatImpactFeedback>();
+                player.GetComponent<
+                    CombatImpactFeedback
+                >();
 
             if (combatFeedback != null)
             {
@@ -550,8 +586,9 @@ public class AttackState : ICombatState
 
         if (player.audioPlayer != null)
         {
-            player.audioPlayer.PlayAttackWoosh(step);
+            player.audioPlayer.PlayAttackWoosh(
+                step
+            );
         }
     }
 }
-

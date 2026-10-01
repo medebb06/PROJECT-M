@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -18,6 +17,19 @@ public class PlayerCombatController : MonoBehaviour
 
     [Header("Attack Range")]
     public Vector2 hitBoxSize = new Vector2(1.5f, 1.2f);
+
+    [Header("Hit VFX Position")]
+    [SerializeField]
+    private float hitVFXInsideAmount = 0.65f;
+
+    [SerializeField]
+    private float hitVFXForwardOffset = 0.20f;
+
+    public float HitVFXInsideAmount =>
+        hitVFXInsideAmount;
+
+    public float HitVFXForwardOffset =>
+        hitVFXForwardOffset;
 
     [Header("Attack Move (Feel)")]
     public float attackMoveDistance = 0.25f;
@@ -98,8 +110,10 @@ public class PlayerCombatController : MonoBehaviour
         // DEFENSE LOCK
         // =====================================================
 
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        if (
+            defenseController != null &&
+            defenseController.IsDefending
+        )
         {
             bufferTimer = 0f;
 
@@ -123,8 +137,10 @@ public class PlayerCombatController : MonoBehaviour
         if (comboTimer <= 0f)
             comboStep = 0;
 
-        if (bufferTimer > 0f &&
-            currentState == null)
+        if (
+            bufferTimer > 0f &&
+            currentState == null
+        )
         {
             if (!player.IsGrounded())
             {
@@ -142,8 +158,10 @@ public class PlayerCombatController : MonoBehaviour
 
     void StartAttack()
     {
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        if (
+            defenseController != null &&
+            defenseController.IsDefending
+        )
         {
             return;
         }
@@ -292,4 +310,3 @@ public class PlayerCombatController : MonoBehaviour
         Time.timeScale = 1f;
     }
 }
-
