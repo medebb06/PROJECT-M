@@ -136,7 +136,11 @@ public class AttackState : ICombatState
             float allowedDistance =
                 moveDistance;
 
-            for (int i = 0; i < hitCount; i++)
+            for (
+                int i = 0;
+                i < hitCount;
+                i++
+            )
             {
                 if (hits[i].collider == null)
                     continue;
@@ -257,7 +261,7 @@ public class AttackState : ICombatState
         }
     }
 
-    void UpdateFacing()
+    private void UpdateFacing()
     {
         if (
             Mathf.Abs(
@@ -302,7 +306,11 @@ public class AttackState : ICombatState
         onEnd?.Invoke();
     }
 
-    void Hit()
+    // =========================================================
+    // HIT
+    // =========================================================
+
+    private void Hit()
     {
         Vector2 dir =
             player.facingDir > 0
@@ -312,7 +320,7 @@ public class AttackState : ICombatState
         Vector2 boxCenter =
             player.attackPoint.position;
 
-        var combat =
+        PlayerCombatController combat =
             player.GetComponent<
                 PlayerCombatController
             >();
@@ -332,20 +340,116 @@ public class AttackState : ICombatState
 
         foreach (var h in hits)
         {
-            var dmg =
-                h.GetComponentInParent<
-                    IDamageable
-                >();
-
-            if (dmg == null)
+            if (h == null)
                 continue;
 
-            dmg.TakeDamage(
-                1,
-                dir * 6f
-            );
+            EnemyController enemy =
+                h.GetComponentInParent<
+                    EnemyController
+                >();
+
+            if (enemy == null)
+                continue;
 
             hitSomething = true;
+
+            // =================================================
+            // BALANCE
+            // =================================================
+
+            EnemyBalance balance =
+                enemy.GetComponentInParent<
+                    EnemyBalance
+                >();
+
+            // =================================================
+            // HEALTH
+            // =================================================
+
+            Health health =
+                enemy.GetComponentInParent<
+                    Health
+                >();
+
+            // =================================================
+            // NORMAL BALANCE HIT
+            // =================================================
+
+            if (
+                balance != null &&
+                !balance.IsBroken
+            )
+            {
+                bool balanceDamaged =
+                    balance.AddBalanceDamage(1);
+
+                if (!balanceDamaged)
+                    continue;
+
+                enemy.PlayPostureHitSound();
+
+                // Balance kırılmadı:
+                // EnemyController Inspector değerlerini kullanır.
+
+                if (!balance.IsBroken)
+                {
+                    enemy.ApplyBalanceHit(
+                        dir
+                    );
+                }
+
+                // Bu vuruş balance'ı kırdı:
+                // Posture knockback kullanılır.
+
+                else
+                {
+                    enemy.ApplyAttackHit(
+                        dir,
+                        false
+                    );
+                }
+            }
+
+            // =================================================
+            // BALANCE ALREADY BROKEN → HEALTH
+            // =================================================
+
+            else if (
+                balance != null &&
+                balance.IsBroken
+            )
+            {
+                if (health != null)
+                {
+                    health.TakeDamage(1);
+
+                    enemy.PlayHealthHitSound();
+
+                    enemy.ApplyAttackHit(
+                        dir,
+                        true
+                    );
+                }
+            }
+
+            // =================================================
+            // NO BALANCE → HEALTH
+            // =================================================
+
+            else if (
+                balance == null &&
+                health != null
+            )
+            {
+                health.TakeDamage(1);
+
+                enemy.PlayHealthHitSound();
+
+                enemy.ApplyAttackHit(
+                    dir,
+                    true
+                );
+            }
         }
 
         // =====================================================
@@ -364,14 +468,13 @@ public class AttackState : ICombatState
                 combatFeedback.PlayAttackImpact();
             }
         }
-        else
+
+        // Her saldırıda kendi combo sesini çal
+        if (player.audioPlayer != null)
         {
-            if (player.audioPlayer != null)
-            {
-                player.audioPlayer.PlayAttackWoosh(
-                    step
-                );
-            }
+            player.audioPlayer.PlayAttackWoosh(
+                step
+            );
         }
     }
 }

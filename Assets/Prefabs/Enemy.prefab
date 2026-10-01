@@ -579,25 +579,41 @@ MonoBehaviour:
   attackDuration: 0.8
   attackWarningTime: 1
   attackRecoveryTime: 0.5
-  knockbackForceX: 5
-  knockbackForceY: 1
-  hitDuration: 0.5
-  knockbackDeceleration: 20
+  knockbackForceX: 0.1
+  knockbackForceY: 0.1
+  hitDuration: 0.1
+  knockbackDeceleration: 100
   hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitFlashDuration: 0.06
   staggerFlashColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  staggerFlashDuration: 0.15
-  attackKnockbackForce: 6
+  staggerFlashDuration: 3
+  attackKnockbackForce: 1
   attackKnockbackVerticalForce: 1
-  attackKnockbackDuration: 0.5
-  blockKnockbackForce: 2
-  blockKnockbackVerticalForce: 2
+  attackKnockbackDuration: 0.1
+  balanceHitKnockbackForce: 2
+  balanceHitKnockbackVerticalForce: 2
+  balanceHitKnockbackDuration: 0.2
+  balanceHitKnockbackDeceleration: 555
+  postureKnockbackForce: 3
+  postureKnockbackVerticalForce: 4
+  postureKnockbackDuration: 0
+  healthKnockbackForce: 3
+  healthKnockbackVerticalForce: 2
+  healthKnockbackDuration: 0.01
+  blockKnockbackForce: 5
+  blockKnockbackVerticalForce: 5
   blockKnockbackDuration: 1
+  blockKnockbackDeceleration: 12
   blockRecoveryTime: 0.5
+  blockBalanceDamage: 1
   parryBalanceDamage: 3
   executeDamage: 10
   executeDistance: 2
   executeDuration: 0.15
+  hitAudioSource: {fileID: 0}
+  healthHitClip: {fileID: 0}
+  postureHitClip: {fileID: 8300000, guid: 5e619d0ca54d33246a187596450f2ebb, type: 3}
+  knockbackClip: {fileID: 0}
   target: {fileID: 0}
   chaseRange: 10
 --- !u!114 &5855789144524007510
@@ -618,7 +634,7 @@ MonoBehaviour:
   recoveryDelay: 2
   recoverySpeed: 0.25
   fadeOnDeath: 1
-  fadeDuration: 1
+  fadeDuration: 0.5
 --- !u!114 &940674076928422292
 MonoBehaviour:
   m_ObjectHideFlags: 0

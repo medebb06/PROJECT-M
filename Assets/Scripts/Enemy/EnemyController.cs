@@ -10,9 +10,6 @@ public class EnemyController : MonoBehaviour
 
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
-
-
-
     public float attackDuration = 1f;
     public float attackWarningTime = 1f;
 
@@ -35,15 +32,32 @@ public class EnemyController : MonoBehaviour
     public Color staggerFlashColor = Color.yellow;
     public float staggerFlashDuration = 0.15f;
 
-    [Header("Attack Knockback")]
-    public float attackKnockbackForce = 6f;
-    public float attackKnockbackVerticalForce = 1f;
+    [Header("Enemy Attack Knockback")]
+    public float attackKnockbackForce = 7f;
+    public float attackKnockbackVerticalForce = 3f;
     public float attackKnockbackDuration = 0.12f;
+
+    [Header("Balance Hit Knockback")]
+    public float balanceHitKnockbackForce = 1.5f;
+    public float balanceHitKnockbackVerticalForce = 0f;
+    public float balanceHitKnockbackDuration = 0.10f;
+    public float balanceHitKnockbackDeceleration = 15f;
+
+    [Header("Posture Hit Knockback")]
+    public float postureKnockbackForce = 6f;
+    public float postureKnockbackVerticalForce = 1f;
+    public float postureKnockbackDuration = 0.12f;
+
+    [Header("Health Hit Knockback")]
+    public float healthKnockbackForce = 8f;
+    public float healthKnockbackVerticalForce = 1.5f;
+    public float healthKnockbackDuration = 0.12f;
 
     [Header("Block Knockback")]
     public float blockKnockbackForce = 2.5f;
     public float blockKnockbackVerticalForce = 0.2f;
     public float blockKnockbackDuration = 0.15f;
+    public float blockKnockbackDeceleration = 12f;
     public float blockRecoveryTime = 0.25f;
 
     [Header("Defense Balance")]
@@ -55,18 +69,26 @@ public class EnemyController : MonoBehaviour
     public float executeDistance = 1.2f;
     public float executeDuration = 0.08f;
 
+    [Header("Hit Sounds")]
+    public AudioSource hitAudioSource;
+    public AudioClip healthHitClip;
+    public AudioClip postureHitClip;
+    public AudioClip knockbackClip;
+
     public Transform target;
     public float chaseRange = 5f;
 
     private float attackRecoveryTimer;
     private float movementLockTimer;
 
-    public bool CanAttack => attackRecoveryTimer <= 0f;
+    private EnemyBalance enemyBalance;
+    private IEnemyState currentState;
+
+    public bool CanAttack =>
+        attackRecoveryTimer <= 0f;
 
     public bool IsMovementLocked =>
         movementLockTimer > 0f;
-
-    private IEnemyState currentState;
 
     public bool IsStaggered =>
         currentState is EnemyStaggerState;
@@ -74,11 +96,47 @@ public class EnemyController : MonoBehaviour
     public IEnemyState CurrentState =>
         currentState;
 
-    void Update()
+    private void Awake()
+    {
+        if (hitAudioSource == null)
+        {
+            hitAudioSource =
+                GetComponent<AudioSource>();
+
+            if (hitAudioSource == null)
+            {
+                hitAudioSource =
+                    gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        hitAudioSource.playOnAwake = false;
+
+        enemyBalance =
+            GetComponent<EnemyBalance>();
+
+        if (enemyBalance != null)
+        {
+            enemyBalance.OnBalanceBroken +=
+                HandleBalanceBroken;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (enemyBalance != null)
+        {
+            enemyBalance.OnBalanceBroken -=
+                HandleBalanceBroken;
+        }
+    }
+
+    private void Update()
     {
         if (attackRecoveryTimer > 0f)
         {
-            attackRecoveryTimer -= Time.deltaTime;
+            attackRecoveryTimer -=
+                Time.deltaTime;
 
             if (attackRecoveryTimer < 0f)
                 attackRecoveryTimer = 0f;
@@ -86,7 +144,8 @@ public class EnemyController : MonoBehaviour
 
         if (movementLockTimer > 0f)
         {
-            movementLockTimer -= Time.deltaTime;
+            movementLockTimer -=
+                Time.deltaTime;
 
             if (movementLockTimer < 0f)
                 movementLockTimer = 0f;
@@ -95,7 +154,7 @@ public class EnemyController : MonoBehaviour
         currentState?.Tick();
     }
 
-    void Start()
+    private void Start()
     {
         if (target == null)
         {
@@ -111,9 +170,14 @@ public class EnemyController : MonoBehaviour
         );
     }
 
-    public void ChangeState(IEnemyState newState)
+    public void ChangeState(
+        IEnemyState newState
+    )
     {
         if (newState == null)
+            return;
+
+        if (currentState == newState)
             return;
 
         currentState?.Exit();
@@ -135,10 +199,17 @@ public class EnemyController : MonoBehaviour
 
     public void StartAttackRecovery()
     {
-        attackRecoveryTimer = attackRecoveryTime;
+        attackRecoveryTimer =
+            attackRecoveryTime;
     }
 
-    public void ApplyBlockKnockback(Vector2 hitDirection)
+    // =========================================================
+    // BALANCE HIT
+    // =========================================================
+
+    public void ApplyBalanceHit(
+        Vector2 hitDirection
+    )
     {
         Rigidbody2D rb =
             GetComponent<Rigidbody2D>();
@@ -152,15 +223,197 @@ public class EnemyController : MonoBehaviour
         if (direction == 0f)
             direction = 1f;
 
+        Vector2 knockback =
+            new Vector2(
+                direction *
+                balanceHitKnockbackForce,
+                balanceHitKnockbackVerticalForce
+            );
+
+        movementLockTimer =
+            balanceHitKnockbackDuration;
+
+        if (!IsStaggered)
+        {
+            ChangeState(
+                new EnemyHitState(
+                    this,
+                    balanceHitKnockbackDuration,
+                    balanceHitKnockbackDeceleration
+                )
+            );
+        }
+
+        // ÖNEMLİ:
+        // ChangeState'ten SONRA velocity veriyoruz.
+        // Çünkü eski state'in Exit() metodu velocity'yi sıfırlayabilir.
+
+        rb.linearVelocity =
+            knockback;
+    }
+
+    // =========================================================
+    // ATTACK HIT
+    // =========================================================
+
+    public void ApplyAttackHit(
+        Vector2 hitDirection,
+        bool healthHit
+    )
+    {
+        Rigidbody2D rb =
+            GetComponent<Rigidbody2D>();
+
+        if (rb == null)
+            return;
+
+        float direction =
+            Mathf.Sign(hitDirection.x);
+
+        if (direction == 0f)
+            direction = 1f;
+
+        float knockbackForce =
+            healthHit
+                ? healthKnockbackForce
+                : postureKnockbackForce;
+
+        float knockbackVerticalForce =
+            healthHit
+                ? healthKnockbackVerticalForce
+                : postureKnockbackVerticalForce;
+
+        float knockbackDuration =
+            healthHit
+                ? healthKnockbackDuration
+                : postureKnockbackDuration;
+
+        Vector2 knockback =
+            new Vector2(
+                direction *
+                knockbackForce,
+                knockbackVerticalForce
+            );
+
+        movementLockTimer =
+            knockbackDuration;
+
+        if (!IsStaggered)
+        {
+            ChangeState(
+                new EnemyHitState(
+                    this,
+                    knockbackDuration
+                )
+            );
+        }
+
+        // ChangeState SONRASI velocity.
+        rb.linearVelocity =
+            knockback;
+
+        PlayKnockbackSound();
+    }
+
+    // =========================================================
+    // AUDIO
+    // =========================================================
+
+    public void PlayHealthHitSound()
+    {
+        if (hitAudioSource == null)
+            return;
+
+        if (healthHitClip == null)
+            return;
+
+        hitAudioSource.PlayOneShot(
+            healthHitClip
+        );
+    }
+
+    public void PlayPostureHitSound()
+    {
+        if (hitAudioSource == null)
+            return;
+
+        if (postureHitClip == null)
+            return;
+
+        hitAudioSource.PlayOneShot(
+            postureHitClip
+        );
+    }
+
+    public void PlayKnockbackSound()
+    {
+        if (hitAudioSource == null)
+            return;
+
+        if (knockbackClip == null)
+            return;
+
+        hitAudioSource.PlayOneShot(
+            knockbackClip
+        );
+    }
+
+    // =========================================================
+    // BLOCK KNOCKBACK
+    // =========================================================
+
+    public void ApplyBlockKnockback(
+        Vector2 hitDirection
+    )
+    {
+        Rigidbody2D rb =
+            GetComponent<Rigidbody2D>();
+
+        if (rb == null)
+            return;
+
+        float direction =
+            Mathf.Sign(
+                hitDirection.x
+            );
+
+        if (direction == 0f)
+            direction = 1f;
+
         float knockbackDirection =
             -direction;
 
-        rb.linearVelocity = new Vector2(
-            knockbackDirection * blockKnockbackForce,
-            blockKnockbackVerticalForce
-        );
+        Vector2 knockback =
+            new Vector2(
+                knockbackDirection *
+                blockKnockbackForce,
+                blockKnockbackVerticalForce
+            );
 
         movementLockTimer =
             blockKnockbackDuration;
+
+        if (!IsStaggered)
+        {
+            ChangeState(
+                new EnemyHitState(
+                    this,
+                    blockKnockbackDuration,
+                    blockKnockbackDeceleration
+                )
+            );
+        }
+
+        rb.linearVelocity =
+            knockback;
+    }
+
+    // =========================================================
+    // BALANCE BROKEN
+    // =========================================================
+
+    private void HandleBalanceBroken()
+    {
+        ForceStagger();
     }
 }

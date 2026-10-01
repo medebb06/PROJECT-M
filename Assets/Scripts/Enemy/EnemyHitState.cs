@@ -3,34 +3,38 @@
 public class EnemyHitState : IEnemyState
 {
     private EnemyController enemy;
-    private Vector2 hitDirection;
-
     private Rigidbody2D rb;
 
     private float timer;
+    private float deceleration;
 
     public EnemyHitState(
         EnemyController enemy,
-        Vector2 hitDirection
+        float knockbackDuration
     )
     {
         this.enemy = enemy;
-        this.hitDirection = hitDirection;
+        this.timer = knockbackDuration;
+
+        deceleration =
+            enemy.knockbackDeceleration;
+    }
+
+    public EnemyHitState(
+        EnemyController enemy,
+        float knockbackDuration,
+        float customDeceleration
+    )
+    {
+        this.enemy = enemy;
+        this.timer = knockbackDuration;
+        this.deceleration = customDeceleration;
     }
 
     public void Enter()
     {
-        rb = enemy.GetComponent<Rigidbody2D>();
-
-        timer = enemy.hitDuration;
-
-        if (rb != null)
-        {
-            rb.linearVelocity = new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
-        }
+        rb =
+            enemy.GetComponent<Rigidbody2D>();
     }
 
     public void Tick()
@@ -49,10 +53,11 @@ public class EnemyHitState : IEnemyState
     {
         if (rb != null)
         {
-            rb.linearVelocity = new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
+            rb.linearVelocity =
+                new Vector2(
+                    0f,
+                    rb.linearVelocity.y
+                );
         }
     }
 }

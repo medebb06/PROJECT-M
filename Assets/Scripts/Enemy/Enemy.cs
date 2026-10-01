@@ -15,10 +15,17 @@ public class Enemy : MonoBehaviour, IDamageable
 
     void Awake()
     {
-        controller = GetComponent<EnemyController>();
-        health = GetComponent<Health>();
-        balance = GetComponent<EnemyBalance>();
-        hitFeedback = GetComponent<EnemyHitFeedback>();
+        controller =
+            GetComponent<EnemyController>();
+
+        health =
+            GetComponent<Health>();
+
+        balance =
+            GetComponent<EnemyBalance>();
+
+        hitFeedback =
+            GetComponent<EnemyHitFeedback>();
     }
 
     void OnEnable()
@@ -27,7 +34,8 @@ public class Enemy : MonoBehaviour, IDamageable
             health.OnDeath += Die;
 
         if (balance != null)
-            balance.OnBalanceBroken += HandleBalanceBroken;
+            balance.OnBalanceBroken +=
+                HandleBalanceBroken;
     }
 
     void OnDisable()
@@ -36,7 +44,8 @@ public class Enemy : MonoBehaviour, IDamageable
             health.OnDeath -= Die;
 
         if (balance != null)
-            balance.OnBalanceBroken -= HandleBalanceBroken;
+            balance.OnBalanceBroken -=
+                HandleBalanceBroken;
     }
 
     public void TakeDamage(
@@ -92,11 +101,26 @@ public class Enemy : MonoBehaviour, IDamageable
             balance.MaxBalance
         );
 
-        // Balance kırıldıysa
-        // EnemyBalance event'i zaten
-        // HandleBalanceBroken() çağırdı.
+        // ==================================================
+        // BALANCE BREAK
+        // ==================================================
+
         if (balance.IsBroken)
+        {
+            if (controller != null)
+            {
+                controller.ApplyAttackHit(
+                    hitDirection,
+                    false
+                );
+            }
+
             return;
+        }
+
+        // ==================================================
+        // BALANCE HIT FEEDBACK
+        // ==================================================
 
         if (hitFeedback != null)
         {
@@ -105,7 +129,16 @@ public class Enemy : MonoBehaviour, IDamageable
             );
         }
 
-        EnterHitState(hitDirection);
+        // ==================================================
+        // SMALL BALANCE HIT KNOCKBACK
+        // ==================================================
+
+        if (controller != null)
+        {
+            controller.ApplyBalanceHit(
+                hitDirection
+            );
+        }
 
         StartCoroutine(IFrame());
     }
@@ -138,25 +171,19 @@ public class Enemy : MonoBehaviour, IDamageable
         if (health.IsDead)
             return;
 
+        // ==================================================
+        // HEALTH KNOCKBACK
+        // ==================================================
+
+        if (controller != null)
+        {
+            controller.ApplyAttackHit(
+                hitDirection,
+                true
+            );
+        }
+
         StartCoroutine(IFrame());
-    }
-
-    private void EnterHitState(
-        Vector2 hitDirection
-    )
-    {
-        if (controller == null)
-            return;
-
-        if (controller.IsStaggered)
-            return;
-
-        controller.ChangeState(
-            new EnemyHitState(
-                controller,
-                hitDirection
-            )
-        );
     }
 
     private void HandleBalanceBroken()
