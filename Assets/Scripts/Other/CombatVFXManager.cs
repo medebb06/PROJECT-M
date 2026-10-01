@@ -1,5 +1,5 @@
-
 using UnityEngine;
+using UnityEngine.VFX;
 
 public class CombatVFXManager : MonoBehaviour
 {
@@ -29,6 +29,10 @@ public class CombatVFXManager : MonoBehaviour
         Debug.Log("COMBAT VFX MANAGER AWAKE");
     }
 
+    // =========================================================
+    // HEALTH HIT
+    // =========================================================
+
     public void PlayHealthHit(Vector3 position, Vector2 direction)
     {
         Debug.Log("VFX MANAGER: PLAY HEALTH HIT");
@@ -48,6 +52,10 @@ public class CombatVFXManager : MonoBehaviour
             direction
         );
     }
+
+    // =========================================================
+    // BALANCE HIT
+    // =========================================================
 
     public void PlayBalanceHit(Vector3 position, Vector2 direction)
     {
@@ -69,6 +77,10 @@ public class CombatVFXManager : MonoBehaviour
         );
     }
 
+    // =========================================================
+    // PARRY
+    // =========================================================
+
     public void PlayParry(Vector3 position, Vector2 direction)
     {
         Debug.Log("VFX MANAGER: PLAY PARRY");
@@ -88,6 +100,10 @@ public class CombatVFXManager : MonoBehaviour
             direction
         );
     }
+
+    // =========================================================
+    // BLOCK
+    // =========================================================
 
     public void PlayBlock(Vector3 position, Vector2 direction)
     {
@@ -109,6 +125,10 @@ public class CombatVFXManager : MonoBehaviour
         );
     }
 
+    // =========================================================
+    // BALANCE BREAK
+    // =========================================================
+
     public void PlayBalanceBreak(Vector3 position, Vector2 direction)
     {
         Debug.Log("VFX MANAGER: PLAY BALANCE BREAK");
@@ -128,6 +148,10 @@ public class CombatVFXManager : MonoBehaviour
             direction
         );
     }
+
+    // =========================================================
+    // SPAWN
+    // =========================================================
 
     private void SpawnVFX(
         GameObject prefab,
@@ -178,6 +202,34 @@ public class CombatVFXManager : MonoBehaviour
             vfx.name
         );
 
+        // =====================================================
+        // VISUAL EFFECT GRAPH
+        // =====================================================
+
+        VisualEffect[] visualEffects =
+            vfx.GetComponentsInChildren<VisualEffect>(
+                true
+            );
+
+        Debug.Log(
+            "VFX MANAGER: VISUAL EFFECT SAYISI -> " +
+            visualEffects.Length
+        );
+
+        foreach (
+            VisualEffect visualEffect
+            in visualEffects)
+        {
+            if (visualEffect == null)
+                continue;
+
+            visualEffect.Play();
+        }
+
+        // =====================================================
+        // NORMAL PARTICLE SYSTEM
+        // =====================================================
+
         ParticleSystem[] particleSystems =
             vfx.GetComponentsInChildren<ParticleSystem>(
                 true
@@ -192,23 +244,40 @@ public class CombatVFXManager : MonoBehaviour
             ParticleSystem particleSystem
             in particleSystems)
         {
+            if (particleSystem == null)
+                continue;
+
             particleSystem.Play(true);
         }
 
+        // =====================================================
+        // DESTROY
+        // =====================================================
+
         DestroyVFXWhenFinished(
             vfx,
-            particleSystems
+            particleSystems,
+            visualEffects
         );
     }
 
+    // =========================================================
+    // DESTROY
+    // =========================================================
+
     private void DestroyVFXWhenFinished(
         GameObject vfx,
-        ParticleSystem[] particleSystems)
+        ParticleSystem[] particleSystems,
+        VisualEffect[] visualEffects)
     {
         if (vfx == null)
             return;
 
         float longestLifetime = 0f;
+
+        // -----------------------------------------------------
+        // PARTICLE SYSTEM LIFETIME
+        // -----------------------------------------------------
 
         foreach (
             ParticleSystem particleSystem
@@ -237,6 +306,21 @@ public class CombatVFXManager : MonoBehaviour
 
             if (lifetime > longestLifetime)
                 longestLifetime = lifetime;
+        }
+
+        // -----------------------------------------------------
+        // VFX GRAPH
+        // -----------------------------------------------------
+
+        if (visualEffects.Length > 0)
+        {
+            // VFX Graph'ın kendi output/event sistemi
+            // çalışmaya devam etsin.
+            //
+            // Güvenli varsayılan olarak prefabı birkaç saniye
+            // sonra temizliyoruz.
+            if (longestLifetime < 2f)
+                longestLifetime = 2f;
         }
 
         if (longestLifetime <= 0f)

@@ -2461,7 +2461,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66f4fe4b4403b694cb71993c7e6c2c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatVFXManager
-  healthHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  healthHitVFX: {fileID: 5545173171955001552, guid: 7ac879c2caac1ca41b6c438e77d8b25d, type: 3}
   balanceHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
   parryVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
   blockVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
@@ -2516,7 +2516,6 @@ GameObject:
   - component: {fileID: 2122615057}
   - component: {fileID: 2122615054}
   - component: {fileID: 2122615060}
-  - component: {fileID: 2122615046}
   - component: {fileID: 2122615050}
   - component: {fileID: 2122615048}
   - component: {fileID: 2122615049}
@@ -2579,96 +2578,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!114 &2122615046
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2122615041}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ab5e3666c438455479f43e31dae56b65, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  rb: {fileID: 0}
-  col: {fileID: 0}
-  modelPivot: {fileID: 0}
-  attackPoint: {fileID: 0}
-  audioPlayer: {fileID: 0}
-  dustPrefab: {fileID: 0}
-  footPoint: {fileID: 0}
-  playerSprite: {fileID: 0}
-  impulseSource: {fileID: 0}
-  defenseController: {fileID: 0}
-  impactSettings:
-    slamSpeed: 35
-    slamDamageRadius: 2
-    slamDamage: 25
-    enemyLayer:
-      m_Bits: 0
-    jumpBufferTime: 0.15
-    coyoteTime: 0.12
-    jumpCutMultiplier: 2
-    jumpCutVelocityMultiplier: 0.75
-    fallMultiplier: 2.5
-    maxFallSpeed: 20
-    lightThreshold: 4
-    mediumThreshold: 7
-    heavyThreshold: 10
-    lightIntensity: 0.25
-    mediumIntensity: 0.6
-    heavyIntensity: 1.2
-    shakeCurve:
-      m_Curve:
-      - time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    maxFallDistance: 10
-    minDistance: 2
-  dashDistance: 10
-  dashTime: 0.15
-  dashCooldown: 0.4
-  afterImagePrefab: {fileID: 0}
-  afterImageSpacing: 0.05
-  stepTimer: 0
-  inputLockDuration: 0.12
-  slamLockDuration: 0.12
-  slamFreezeTime: 0.04
-  canControl: 1
-  isDashing: 0
-  isInvincible: 0
-  isAttackLocked: 0
-  slamGroundLock: 0
-  slamLockTimer: 0
-  dashCooldownTimer: 0
-  dashPressed: 0
-  jumpConsumed: 0
-  inputLocked: 0
-  inputLockTimer: 0
-  attackFacingLocked: 0
-  moveInput: 0
-  jumpHeld: 0
-  isGrounded: 0
-  facingDir: 1
-  slamPressed: 0
-  verticalInput: 0
 --- !u!114 &2122615048
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3003,7 +2912,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDamageReceiver
   health: {fileID: 2122615054}
-  player: {fileID: 2122615046}
+  player: {fileID: 0}
   knockback: {fileID: 2122615057}
 --- !u!114 &2122615057
 MonoBehaviour:

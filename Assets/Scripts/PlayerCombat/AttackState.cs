@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -88,15 +89,6 @@ public class AttackState : ICombatState
 
         // =====================================================
         // ATTACK DIRECTION
-        // =====================================================
-        // Saldırı başladığı anda Player'ın baktığı yönü kaydet.
-        //
-        // +1 = sağ
-        // -1 = sol
-        //
-        // ModelPivot scale'ına bakmıyoruz.
-        // Görsel yön artık PlayerController tarafından
-        // playerSprite.flipX üzerinden yönetiliyor.
         // =====================================================
 
         attackDirection =
@@ -331,9 +323,6 @@ public class AttackState : ICombatState
         // =====================================================
         // ATTACK POINT DIRECTION
         // =====================================================
-        // AttackPoint'un Inspector'daki X konumunu koruyoruz.
-        // Saldırı yönüne göre sağ/sol tarafa aynalıyoruz.
-        // =====================================================
 
         Vector3 attackPointLocal =
             player.attackPoint.localPosition;
@@ -398,6 +387,13 @@ public class AttackState : ICombatState
                 enemy.GetComponentInParent<Health>();
 
             // =================================================
+            // HIT FEEDBACK
+            // =================================================
+
+            EnemyHitFeedback hitFeedback =
+                enemy.GetComponentInParent<EnemyHitFeedback>();
+
+            // =================================================
             // NORMAL BALANCE HIT
             // =================================================
 
@@ -411,9 +407,6 @@ public class AttackState : ICombatState
 
                 if (!balanceDamaged)
                     continue;
-
-                EnemyHitFeedback hitFeedback =
-                    enemy.GetComponentInParent<EnemyHitFeedback>();
 
                 if (hitFeedback != null)
                 {
@@ -451,6 +444,11 @@ public class AttackState : ICombatState
                 {
                     health.TakeDamage(1);
 
+                    if (hitFeedback != null)
+                    {
+                        hitFeedback.PlayHealthHit(dir);
+                    }
+
                     enemy.PlayHealthHitSound();
 
                     enemy.ApplyAttackHit(
@@ -470,6 +468,11 @@ public class AttackState : ICombatState
             )
             {
                 health.TakeDamage(1);
+
+                if (hitFeedback != null)
+                {
+                    hitFeedback.PlayHealthHit(dir);
+                }
 
                 enemy.PlayHealthHitSound();
 
