@@ -75,6 +75,9 @@ public class EnemyController : MonoBehaviour
     public float executeDistance = 1.2f;
     public float executeDuration = 0.08f;
 
+    [Header("Finisher Target")]
+    [SerializeField] private GameObject finisherTargetIndicator;
+
     [Header("Hit Sounds")]
     public AudioSource hitAudioSource;
     public AudioClip healthHitClip;
@@ -597,7 +600,30 @@ public class EnemyController : MonoBehaviour
     // =========================================================
     // BALANCE BROKEN
     // =========================================================
+    public void SetFinisherTarget(bool active)
+    {
+        if (finisherTargetIndicator == null)
+            return;
 
+        finisherTargetIndicator.SetActive(active);
+    }
+
+    public void Execute()
+    {
+        if (!IsStaggered)
+            return;
+
+        Debug.Log(
+            "EXECUTE TARGET: " +
+            gameObject.name
+        );
+
+        SetFinisherTarget(false);
+
+        ChangeState(
+            new EnemyExecuteState(this)
+        );
+    }
     private void HandleBalanceBroken()
     {
         ForceStagger();

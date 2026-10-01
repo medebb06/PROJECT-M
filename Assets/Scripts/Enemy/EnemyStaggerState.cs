@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class EnemyStaggerState : IEnemyState
@@ -51,7 +52,8 @@ public class EnemyStaggerState : IEnemyState
 
         if (flashTimer > 0f)
         {
-            flashTimer -= Time.deltaTime;
+            flashTimer -=
+                Time.deltaTime;
 
             if (flashTimer <= 0f)
             {
@@ -60,27 +62,11 @@ public class EnemyStaggerState : IEnemyState
         }
 
         // ==========================================
-        // EXECUTE
-        // ==========================================
-
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            Debug.Log(
-                "EXECUTE INPUT!"
-            );
-
-            enemy.ChangeState(
-                new EnemyExecuteState(enemy)
-            );
-
-            return;
-        }
-
-        // ==========================================
         // STAGGER TIMER
         // ==========================================
 
-        staggerTimer -= Time.deltaTime;
+        staggerTimer -=
+            Time.deltaTime;
 
         if (staggerTimer <= 0f)
         {
@@ -95,6 +81,8 @@ public class EnemyStaggerState : IEnemyState
     public void Exit()
     {
         RestoreColor();
+
+        enemy.SetFinisherTarget(false);
     }
 
     private void RestoreColor()
@@ -121,3 +109,4 @@ public class EnemyStaggerState : IEnemyState
         );
     }
 }
+
