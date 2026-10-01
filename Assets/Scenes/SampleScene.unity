@@ -2382,8 +2382,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1942622294}
+  - component: {fileID: 1942622296}
   - component: {fileID: 1942622293}
   - component: {fileID: 1942622295}
+  - component: {fileID: 1942622297}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -2434,6 +2436,36 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TeleportToMouse
   cam: {fileID: 519420031}
   rb: {fileID: 2122615044}
+--- !u!114 &1942622296
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a229a0927645db14e82505ae375b909f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RespawnManager
+  player: {fileID: 2122615062}
+--- !u!114 &1942622297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66f4fe4b4403b694cb71993c7e6c2c67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatVFXManager
+  healthHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  balanceHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  parryVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  blockVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  balanceBreakVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
 --- !u!1 &2024794329
 GameObject:
   m_ObjectHideFlags: 0
@@ -2951,6 +2983,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 5
   currentHealth: 0
+  destroyOnDeath: 1
   enableRecovery: 1
   recoveryDelay: 2
   recoverySpeed: 0.25

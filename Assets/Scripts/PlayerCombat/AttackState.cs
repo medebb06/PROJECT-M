@@ -353,6 +353,8 @@ public class AttackState : ICombatState
                 continue;
 
             hitSomething = true;
+            Vector2 hitPosition =
+    h.ClosestPoint(boxCenter);
 
             // =================================================
             // BALANCE
@@ -399,7 +401,7 @@ public class AttackState : ICombatState
                 if (hitFeedback != null)
                 {
                     hitFeedback.PlayBalanceHit(
-                        boxCenter,
+                        hitPosition,
                         dir
                     );
                 }

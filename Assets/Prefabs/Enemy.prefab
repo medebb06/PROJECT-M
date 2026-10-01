@@ -687,7 +687,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83671b96497f18541a7582c9068c0553, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBalance
-  maxBalance: 3
+  maxBalance: 5
   currentBalance: 0
   canRecover: 1
   recoveryDelay: 3
