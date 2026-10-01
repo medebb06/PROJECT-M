@@ -2662,6 +2662,7 @@ MonoBehaviour:
   jumpConsumed: 0
   inputLocked: 0
   inputLockTimer: 0
+  attackFacingLocked: 0
   moveInput: 0
   jumpHeld: 0
   isGrounded: 0
@@ -3065,17 +3066,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactFeedback
   impulseSource: {fileID: 2122615049}
-  attackHitStopTimeScale: 0.03
-  attackHitStopDuration: 0.06
+  punchTarget: {fileID: 901546197}
+  attackHitStopTimeScale: 0.05
+  attackHitStopDuration: 0.04
+  attackPunchAmount: 0.1
+  attackPunchDuration: 0.55
   parryHitStopTimeScale: 0.01
   parryHitStopDuration: 0.08
   parryShakeForce: 0.3
+  parryPunchAmount: 0.16
+  parryPunchDuration: 0.075
   blockHitStopTimeScale: 0.035
   blockHitStopDuration: 0.035
   blockShakeForce: 0.25
+  blockPunchAmount: 0.08
+  blockPunchDuration: 0.055
   balanceBreakHitStopTimeScale: 0.01
   balanceBreakHitStopDuration: 0.12
   balanceBreakShakeForce: 0.3
+  balanceBreakPunchAmount: 0.24
+  balanceBreakPunchDuration: 0.1
 --- !u!70 &2122615061
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -3200,6 +3210,7 @@ MonoBehaviour:
   jumpConsumed: 0
   inputLocked: 0
   inputLockTimer: 0
+  attackFacingLocked: 0
   moveInput: 0
   jumpHeld: 0
   isGrounded: 0

@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -84,6 +85,14 @@ public class EnemyController : MonoBehaviour
     private EnemyBalance enemyBalance;
     private IEnemyState currentState;
 
+    // =========================================================
+    // HIT FLASH
+    // =========================================================
+
+    private SpriteRenderer[] spriteRenderers;
+    private Color[] originalColors;
+    private Coroutine flashRoutine;
+
     public bool CanAttack =>
         attackRecoveryTimer <= 0f;
 
@@ -119,6 +128,22 @@ public class EnemyController : MonoBehaviour
         {
             enemyBalance.OnBalanceBroken +=
                 HandleBalanceBroken;
+        }
+
+        // Tüm child SpriteRenderer'ları alıyoruz.
+        spriteRenderers =
+            GetComponentsInChildren<SpriteRenderer>(true);
+
+        originalColors =
+            new Color[spriteRenderers.Length];
+
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            originalColors[i] =
+                spriteRenderers[i].color;
         }
     }
 
@@ -192,6 +217,11 @@ public class EnemyController : MonoBehaviour
         if (IsStaggered)
             return;
 
+        PlayFlash(
+            staggerFlashColor,
+            staggerFlashDuration
+        );
+
         ChangeState(
             new EnemyStaggerState(this)
         );
@@ -211,6 +241,12 @@ public class EnemyController : MonoBehaviour
         Vector2 hitDirection
     )
     {
+        // Balance hit flash
+        PlayFlash(
+            hitFlashColor,
+            hitFlashDuration
+        );
+
         Rigidbody2D rb =
             GetComponent<Rigidbody2D>();
 
@@ -261,6 +297,12 @@ public class EnemyController : MonoBehaviour
         bool healthHit
     )
     {
+        // Health / posture hit flash
+        PlayFlash(
+            hitFlashColor,
+            hitFlashDuration
+        );
+
         Rigidbody2D rb =
             GetComponent<Rigidbody2D>();
 
@@ -313,6 +355,92 @@ public class EnemyController : MonoBehaviour
             knockback;
 
         PlayKnockbackSound();
+    }
+
+    // =========================================================
+    // HIT FLASH
+    // =========================================================
+
+    private void PlayFlash(
+        Color flashColor,
+        float duration
+    )
+    {
+        if (spriteRenderers == null ||
+            spriteRenderers.Length == 0)
+            return;
+
+        if (flashRoutine != null)
+        {
+            StopCoroutine(flashRoutine);
+
+            RestoreOriginalColors();
+        }
+
+        flashRoutine =
+            StartCoroutine(
+                FlashCoroutine(
+                    flashColor,
+                    duration
+                )
+            );
+    }
+
+    private System.Collections.IEnumerator FlashCoroutine(
+        Color flashColor,
+        float duration
+    )
+    {
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            Color color =
+                spriteRenderers[i].color;
+
+            color.r = flashColor.r;
+            color.g = flashColor.g;
+            color.b = flashColor.b;
+
+            spriteRenderers[i].color =
+                color;
+        }
+
+        yield return new WaitForSeconds(
+            duration
+        );
+
+        RestoreOriginalColors();
+
+        flashRoutine = null;
+    }
+
+    private void RestoreOriginalColors()
+    {
+        if (spriteRenderers == null)
+            return;
+
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            Color color =
+                spriteRenderers[i].color;
+
+            color.r =
+                originalColors[i].r;
+
+            color.g =
+                originalColors[i].g;
+
+            color.b =
+                originalColors[i].b;
+
+            spriteRenderers[i].color =
+                color;
+        }
     }
 
     // =========================================================
@@ -417,3 +545,4 @@ public class EnemyController : MonoBehaviour
         ForceStagger();
     }
 }
+

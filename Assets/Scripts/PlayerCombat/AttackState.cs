@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 
 public class AttackState : ICombatState
@@ -32,6 +31,12 @@ public class AttackState : ICombatState
     float t;
 
     bool hasHit;
+
+    // =====================================================
+    // ATTACK DIRECTION
+    // =====================================================
+
+    private float attackDirection;
 
     const float collisionSkin = 0.02f;
 
@@ -76,15 +81,50 @@ public class AttackState : ICombatState
         hasHit = false;
 
         // =====================================================
+        // LOCK PLAYER FACING
+        // =====================================================
+
+        player.attackFacingLocked = true;
+
+        // =====================================================
+        // ATTACK DIRECTION
+        // =====================================================
+        // Saldırı başladığı anda Player'ın baktığı yönü kaydet.
+        //
+        // +1 = sağ
+        // -1 = sol
+        //
+        // ModelPivot scale'ına bakmıyoruz.
+        // Görsel yön artık PlayerController tarafından
+        // playerSprite.flipX üzerinden yönetiliyor.
+        // =====================================================
+
+        attackDirection =
+            player.facingDir >= 0f
+                ? 1f
+                : -1f;
+
+        player.facingDir =
+            attackDirection;
+
+        // =====================================================
         // ATTACK ANIMATION
         // =====================================================
 
         player.PlayAttackAnimation(step);
 
+        // =====================================================
+        // ATTACK DIRECTION VECTOR
+        // =====================================================
+
         Vector2 dir =
-            player.facingDir > 0
+            attackDirection > 0f
                 ? Vector2.right
                 : Vector2.left;
+
+        // =====================================================
+        // ATTACK START POSITION
+        // =====================================================
 
         start =
             player.rb.position;
@@ -189,8 +229,6 @@ public class AttackState : ICombatState
 
         t += Time.deltaTime;
 
-        UpdateFacing();
-
         // =====================================================
         // NORMALIZED ATTACK TIME
         // =====================================================
@@ -262,42 +300,14 @@ public class AttackState : ICombatState
         }
     }
 
-    private void UpdateFacing()
-    {
-        if (
-            Mathf.Abs(
-                player.moveInput
-            ) < 0.01f
-        )
-            return;
-
-        float newDirection =
-            Mathf.Sign(
-                player.moveInput
-            );
-
-        if (
-            player.facingDir ==
-            newDirection
-        )
-            return;
-
-        player.facingDir =
-            newDirection;
-
-        Vector3 scale =
-            player.modelPivot.localScale;
-
-        scale.x =
-            Mathf.Abs(scale.x) *
-            player.facingDir;
-
-        player.modelPivot.localScale =
-            scale;
-    }
-
     public void Exit()
     {
+        // =====================================================
+        // UNLOCK PLAYER FACING
+        // =====================================================
+
+        player.attackFacingLocked = false;
+
         player.rb.linearVelocity =
             new Vector2(
                 0f,
@@ -314,20 +324,38 @@ public class AttackState : ICombatState
     private void Hit()
     {
         Vector2 dir =
-            player.facingDir > 0
+            attackDirection > 0f
                 ? Vector2.right
                 : Vector2.left;
 
+        // =====================================================
+        // ATTACK POINT DIRECTION
+        // =====================================================
+        // AttackPoint'un Inspector'daki X konumunu koruyoruz.
+        // Saldırı yönüne göre sağ/sol tarafa aynalıyoruz.
+        // =====================================================
+
+        Vector3 attackPointLocal =
+            player.attackPoint.localPosition;
+
+        attackPointLocal.x =
+            Mathf.Abs(attackPointLocal.x) *
+            attackDirection;
+
         Vector2 boxCenter =
-            player.attackPoint.position;
+            player.transform.TransformPoint(
+                attackPointLocal
+            );
 
         PlayerCombatController combat =
-            player.GetComponent<
-                PlayerCombatController
-            >();
+            player.GetComponent<PlayerCombatController>();
 
         if (combat == null)
             return;
+
+        // =====================================================
+        // HITBOX
+        // =====================================================
 
         Collider2D[] hits =
             Physics2D.OverlapBoxAll(
@@ -345,34 +373,29 @@ public class AttackState : ICombatState
                 continue;
 
             EnemyController enemy =
-                h.GetComponentInParent<
-                    EnemyController
-                >();
+                h.GetComponentInParent<EnemyController>();
 
             if (enemy == null)
                 continue;
 
             hitSomething = true;
+
             Vector2 hitPosition =
-    h.ClosestPoint(boxCenter);
+                h.ClosestPoint(boxCenter);
 
             // =================================================
             // BALANCE
             // =================================================
 
             EnemyBalance balance =
-                enemy.GetComponentInParent<
-                    EnemyBalance
-                >();
+                enemy.GetComponentInParent<EnemyBalance>();
 
             // =================================================
             // HEALTH
             // =================================================
 
             Health health =
-                enemy.GetComponentInParent<
-                    Health
-                >();
+                enemy.GetComponentInParent<Health>();
 
             // =================================================
             // NORMAL BALANCE HIT
@@ -389,14 +412,8 @@ public class AttackState : ICombatState
                 if (!balanceDamaged)
                     continue;
 
-                // =================================================
-                // BALANCE HIT FEEDBACK
-                // =================================================
-
                 EnemyHitFeedback hitFeedback =
-                    enemy.GetComponentInParent<
-                        EnemyHitFeedback
-                    >();
+                    enemy.GetComponentInParent<EnemyHitFeedback>();
 
                 if (hitFeedback != null)
                 {
@@ -406,22 +423,12 @@ public class AttackState : ICombatState
                     );
                 }
 
-                // Mevcut posture hit sesi
                 enemy.PlayPostureHitSound();
-
-                // Balance kırılmadı:
-                // EnemyController Inspector değerlerini kullanır.
 
                 if (!balance.IsBroken)
                 {
-                    enemy.ApplyBalanceHit(
-                        dir
-                    );
+                    enemy.ApplyBalanceHit(dir);
                 }
-
-                // Bu vuruş balance'ı kırdı:
-                // Posture knockback kullanılır.
-
                 else
                 {
                     enemy.ApplyAttackHit(
@@ -480,9 +487,7 @@ public class AttackState : ICombatState
         if (hitSomething)
         {
             CombatImpactFeedback combatFeedback =
-                player.GetComponent<
-                    CombatImpactFeedback
-                >();
+                player.GetComponent<CombatImpactFeedback>();
 
             if (combatFeedback != null)
             {
@@ -490,13 +495,13 @@ public class AttackState : ICombatState
             }
         }
 
-        // Her saldırıda kendi combo sesini çal
+        // =====================================================
+        // ATTACK SOUND
+        // =====================================================
+
         if (player.audioPlayer != null)
         {
-            player.audioPlayer.PlayAttackWoosh(
-                step
-            );
+            player.audioPlayer.PlayAttackWoosh(step);
         }
     }
 }
-

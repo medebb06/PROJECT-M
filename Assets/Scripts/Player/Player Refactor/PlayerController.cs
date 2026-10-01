@@ -6,6 +6,8 @@ public class PlayerController : MonoBehaviour
     [System.Serializable]
     public class ImpactSettings
     {
+        
+
         [Header("Ground Slam")]
         public float slamSpeed = 35f;
         public float slamDamageRadius = 2f;
@@ -98,6 +100,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public bool jumpConsumed;
     [HideInInspector] public bool inputLocked;
     [HideInInspector] public float inputLockTimer;
+    [HideInInspector] public bool attackFacingLocked;
 
     public float moveInput;
     public bool jumpHeld;
@@ -341,10 +344,15 @@ public class PlayerController : MonoBehaviour
         return isGrounded;
     }
 
+
+
     private void HandleFacing()
     {
         if (defenseController != null &&
             defenseController.IsDefending)
+            return;
+
+        if (attackFacingLocked)
             return;
 
         if (moveInput == 0f)
@@ -352,17 +360,16 @@ public class PlayerController : MonoBehaviour
 
         facingDir = Mathf.Sign(moveInput);
 
-        if (modelPivot == null)
+        if (playerSprite == null)
             return;
 
-        Vector3 scale = modelPivot.localScale;
-
-        scale.x =
-            Mathf.Abs(scale.x) *
-            facingDir;
-
-        modelPivot.localScale = scale;
+        playerSprite.flipX =
+            facingDir < 0f;
     }
+
+
+
+
 
     private void HandleRunAudio()
     {
