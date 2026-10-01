@@ -56,18 +56,36 @@ public class EnemyHitFeedback : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // BALANCE HIT
+    // =========================================================
+
     public void PlayBalanceHit(Vector2 hitDirection)
+    {
+        PlayBalanceHit(
+            transform.position,
+            hitDirection
+        );
+    }
+
+    public void PlayBalanceHit(
+        Vector3 hitPosition,
+        Vector2 hitDirection)
     {
         PlayRandomSound(balanceHitSounds);
 
         if (CombatVFXManager.Instance != null)
         {
             CombatVFXManager.Instance.PlayBalanceHit(
-                transform.position,
+                hitPosition,
                 hitDirection
             );
         }
     }
+
+    // =========================================================
+    // HEALTH HIT
+    // =========================================================
 
     public void PlayHealthHit(Vector2 hitDirection)
     {
@@ -81,6 +99,10 @@ public class EnemyHitFeedback : MonoBehaviour
             );
         }
     }
+
+    // =========================================================
+    // BALANCE BREAK
+    // =========================================================
 
     public void PlayBalanceBreak(
         Vector2 hitDirection
@@ -122,6 +144,10 @@ public class EnemyHitFeedback : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // PARRY
+    // =========================================================
+
     public void PlayParry(
         Vector2 hitDirection
     )
@@ -138,6 +164,10 @@ public class EnemyHitFeedback : MonoBehaviour
             );
         }
     }
+
+    // =========================================================
+    // BLOCK
+    // =========================================================
 
     public void PlayBlock(
         Vector2 hitDirection
@@ -156,6 +186,10 @@ public class EnemyHitFeedback : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // AUDIO
+    // =========================================================
+
     private void PlayRandomSound(
         AudioClip[] clips
     )
@@ -163,8 +197,10 @@ public class EnemyHitFeedback : MonoBehaviour
         if (audioSource == null)
             return;
 
-        if (clips == null ||
-            clips.Length == 0)
+        if (
+            clips == null ||
+            clips.Length == 0
+        )
             return;
 
         AudioClip clip =

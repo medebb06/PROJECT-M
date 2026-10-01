@@ -399,6 +399,7 @@ public class AttackState : ICombatState
                 if (hitFeedback != null)
                 {
                     hitFeedback.PlayBalanceHit(
+                        boxCenter,
                         dir
                     );
                 }
