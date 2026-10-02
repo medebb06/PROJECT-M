@@ -107,6 +107,20 @@ public class PlayerCombatController : MonoBehaviour
         comboTimer -= Time.deltaTime;
 
         // =====================================================
+        // PLAYER CONTROL LOCK
+        // =====================================================
+
+        if (player == null)
+            return;
+
+        if (!player.canAttack)
+        {
+            bufferTimer = 0f;
+
+            return;
+        }
+
+        // =====================================================
         // DEFENSE LOCK
         // =====================================================
 
@@ -158,6 +172,20 @@ public class PlayerCombatController : MonoBehaviour
 
     void StartAttack()
     {
+        // =====================================================
+        // PLAYER CONTROL LOCK
+        // =====================================================
+
+        if (player == null)
+            return;
+
+        if (!player.canAttack)
+            return;
+
+        // =====================================================
+        // DEFENSE LOCK
+        // =====================================================
+
         if (
             defenseController != null &&
             defenseController.IsDefending

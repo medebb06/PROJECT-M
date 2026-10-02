@@ -6,7 +6,8 @@ public class PlayerController : MonoBehaviour
     [System.Serializable]
     public class ImpactSettings
     {
-        
+
+
 
         [Header("Ground Slam")]
         public float slamSpeed = 35f;
@@ -83,6 +84,11 @@ public class PlayerController : MonoBehaviour
     [Header("Input Lock")]
     public float inputLockDuration = 0.12f;
 
+    [Header("Posture Break")]
+    public float postureBreakDuration = 0.45f;
+    public float postureBreakKnockback = 2.5f;
+
+
     [Header("Ground Slam")]
     public float slamLockDuration = 0.12f;
 
@@ -111,8 +117,13 @@ public class PlayerController : MonoBehaviour
     public float verticalInput;
 
     public bool canAttack =>
-        !isDashing &&
-        !isAttackLocked;
+    canControl &&
+    !isDashing &&
+    !isAttackLocked;
+
+    public bool IsFullyLocked =>
+        stateMachine != null &&
+        stateMachine.CurrentState is PlayerPostureBreakState;
 
     public PlayerStateMachine stateMachine;
 
@@ -451,27 +462,26 @@ public class PlayerController : MonoBehaviour
         if (rb == null)
             return;
 
-        float direction =
-            Mathf.Sign(hitDirection.x);
-
-        if (direction == 0f)
-            direction = 1f;
-
-        rb.linearVelocity =
-            new Vector2(
-                -direction * 2.5f,
-                rb.linearVelocity.y
-            );
-
-        inputLocked = true;
-        inputLockTimer = 0.10f;
-
         moveInput = 0f;
         jumpHeld = false;
         dashPressed = false;
 
+        // Posture kırıldığı anda mevcut
+        // block / parry state'ini kapat.
+        if (defenseController != null)
+        {
+            defenseController.ChangeState(null);
+        }
+
+        stateMachine.ChangeState(
+            new PlayerPostureBreakState(
+                this,
+                hitDirection
+            )
+        );
+
         Debug.Log(
-            "PLAYER POSTURE BREAK → INPUT LOCK + KNOCKBACK"
+            "PLAYER POSTURE BREAK → STAGGER STATE"
         );
     }
 

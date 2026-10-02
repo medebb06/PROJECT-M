@@ -65,6 +65,11 @@ public class PlayerDefenseController : MonoBehaviour
         if (player == null)
             return;
 
+        // Posture break sırasında yeni
+        // block/parry başlatılamaz.
+        if (!player.canControl)
+            return;
+
         if (player.inputLocked)
             return;
 
@@ -146,10 +151,6 @@ public class PlayerDefenseController : MonoBehaviour
             combatFeedback.PlayParryImpact();
     }
 
-    // =========================================================
-    // BLOCK / POSTURE
-    // =========================================================
-
     public void HandleBlockHit(
         Vector2 hitDirection,
         int postureDamage
@@ -187,6 +188,7 @@ public class PlayerDefenseController : MonoBehaviour
                 "PLAYER POSTURE BROKEN!"
             );
 
+            // Önce mevcut block/parry'yi kapat.
             ChangeState(null);
 
             if (player != null)

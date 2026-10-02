@@ -9646,6 +9646,8 @@ MonoBehaviour:
   afterImageSpacing: 0.05
   stepTimer: 0
   inputLockDuration: 0.12
+  postureBreakDuration: 1
+  postureBreakKnockback: 5
   slamLockDuration: 0.12
   slamFreezeTime: 0.04
   canControl: 1
