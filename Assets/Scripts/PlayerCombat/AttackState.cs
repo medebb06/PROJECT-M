@@ -20,6 +20,12 @@ public class AttackState : ICombatState
     float duration;
 
     // =====================================================
+    // PLAYER COMBAT CONTROLLER
+    // =====================================================
+
+    private PlayerCombatController combat;
+
+    // =====================================================
     // CUSTOM ATTACK TIMING
     // =====================================================
 
@@ -62,7 +68,8 @@ public class AttackState : ICombatState
         float attackDuration,
         float moveStart,
         float moveEnd,
-        float hitTime
+        float hitTime,
+        PlayerCombatController combat
     )
     {
         this.player = player;
@@ -82,6 +89,8 @@ public class AttackState : ICombatState
         this.moveStart = moveStart;
         this.moveEnd = moveEnd;
         this.hitTime = hitTime;
+
+        this.combat = combat;
     }
 
     public void Enter()
@@ -348,9 +357,6 @@ public class AttackState : ICombatState
                 attackPointLocal
             );
 
-        PlayerCombatController combat =
-            player.GetComponent<PlayerCombatController>();
-
         if (combat == null)
             return;
 
@@ -463,13 +469,13 @@ public class AttackState : ICombatState
                     GetBalanceDamage();
 
                 Debug.Log(
-     "PLAYER ATTACK → BALANCE DAMAGE: " +
-     balanceDamage +
-     " | CURRENT: " +
-     balance.CurrentBalance +
-     "/" +
-     balance.MaxBalance
- );
+                    "PLAYER ATTACK → BALANCE DAMAGE: " +
+                    balanceDamage +
+                    " | CURRENT: " +
+                    balance.CurrentBalance +
+                    "/" +
+                    balance.MaxBalance
+                );
 
                 bool balanceDamaged =
                     balance.AddBalanceDamage(
@@ -483,8 +489,7 @@ public class AttackState : ICombatState
                     balance.MaxBalance +
                     " | BROKEN: " +
                     balance.IsBroken
-                
-                    );
+                );
 
                 if (!balanceDamaged)
                     continue;
@@ -545,7 +550,19 @@ public class AttackState : ICombatState
             {
                 if (health != null)
                 {
-                    health.TakeDamage(1);
+                    int healthDamage =
+                        combat.GetHealthDamage(
+                            step
+                        );
+
+                    Debug.Log(
+                        "PLAYER ATTACK → HEALTH DAMAGE: " +
+                        healthDamage
+                    );
+
+                    health.TakeDamage(
+                        healthDamage
+                    );
 
                     if (hitFeedback != null)
                     {
@@ -558,7 +575,8 @@ public class AttackState : ICombatState
 
                     enemy.ApplyAttackHit(
                         dir,
-                        true
+                        true,
+                        step
                     );
                 }
 
@@ -574,7 +592,19 @@ public class AttackState : ICombatState
                 health != null
             )
             {
-                health.TakeDamage(1);
+                int healthDamage =
+                    combat.GetHealthDamage(
+                        step
+                    );
+
+                Debug.Log(
+                    "PLAYER ATTACK → HEALTH DAMAGE: " +
+                    healthDamage
+                );
+
+                health.TakeDamage(
+                    healthDamage
+                );
 
                 if (hitFeedback != null)
                 {
@@ -587,7 +617,8 @@ public class AttackState : ICombatState
 
                 enemy.ApplyAttackHit(
                     dir,
-                    true
+                    true,
+                    step
                 );
             }
         }
@@ -646,3 +677,4 @@ public class AttackState : ICombatState
         }
     }
 }
+

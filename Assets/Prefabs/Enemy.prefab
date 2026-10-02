@@ -631,7 +631,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  attackRange: 3
+  attackRange: 4
   chaseStopDistance: 3
   animator: {fileID: 6221554288633988248}
   staggerDuration: 3
@@ -646,9 +646,9 @@ MonoBehaviour:
   hitFlashDuration: 0.06
   staggerFlashColor: {r: 0.4198113, g: 0.5465635, b: 1, a: 1}
   staggerFlashDuration: 3
-  attackKnockbackForce: 1
+  attackKnockbackForce: 1.2
   attackKnockbackVerticalForce: 1
-  attackKnockbackDuration: 0.1
+  attackKnockbackDuration: 0.2
   balanceHitKnockbackForce: 2
   balanceHitKnockbackVerticalForce: 2
   balanceHitKnockbackDuration: 0.2
@@ -668,9 +668,10 @@ MonoBehaviour:
   blockKnockbackDuration: 1
   blockKnockbackDeceleration: 12
   blockRecoveryTime: 0.5
-  blockBalanceDamage: 1
+  attackDamage: 25
   parryBalanceDamage: 50
-  executeDamage: 50
+  blockBalanceDamage: 50
+  executeDamage: 100
   executeDistance: 2
   executeDuration: 0.15
   hitAudioSource: {fileID: 0}
@@ -692,7 +693,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7ca65978ec59c48a384579cde03103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 15
+  maxHealth: 100
   currentHealth: 0
   destroyOnDeath: 1
   enableRecovery: 0

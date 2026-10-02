@@ -16,6 +16,8 @@ public class EnemyController : MonoBehaviour
     public float attackDuration = 1f;
     public float attackWarningTime = 1f;
 
+
+
     [Header("Attack Recovery")]
     public float attackRecoveryTime = 0.8f;
 
@@ -62,6 +64,7 @@ public class EnemyController : MonoBehaviour
     public float attack3KnockbackForce = 7f;
     public float attack4KnockbackForce = 9f;
 
+
     [Header("Block Knockback")]
     public float blockKnockbackForce = 2.5f;
     public float blockKnockbackVerticalForce = 0.2f;
@@ -69,9 +72,15 @@ public class EnemyController : MonoBehaviour
     public float blockKnockbackDeceleration = 12f;
     public float blockRecoveryTime = 0.25f;
 
+    [Header("Attack Damage")]
+    public int attackDamage = 1;
+
+
+    [Header("Parry")]
+    public int parryBalanceDamage = 50;
+  
     [Header("Defense Balance")]
     public int blockBalanceDamage = 1;
-    public int parryBalanceDamage = 2;
 
     [Header("Execute")]
     public int executeDamage = 10;

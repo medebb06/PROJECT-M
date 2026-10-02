@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -82,6 +83,20 @@ public class PlayerCombatController : MonoBehaviour
 
     [Range(0f, 1f)]
     public float attack4HitTime = 0.50f;
+
+    // =====================================================
+    // HEALTH DAMAGE
+    // =====================================================
+
+    [Header("Attack Health Damage")]
+    public int attack1HealthDamage = 1;
+    public int attack2HealthDamage = 1;
+    public int attack3HealthDamage = 2;
+    public int attack4HealthDamage = 3;
+
+    // =====================================================
+    // HIT STOP
+    // =====================================================
 
     [Header("Hit Stop")]
     public float hitStopTimeScale = 0.05f;
@@ -289,7 +304,8 @@ public class PlayerCombatController : MonoBehaviour
             attackDuration,
             moveStart,
             moveEnd,
-            hitTime
+            hitTime,
+            this
         );
 
         currentState.Enter();
@@ -307,6 +323,35 @@ public class PlayerCombatController : MonoBehaviour
             comboTimer = 0f;
         }
     }
+
+    // =====================================================
+    // HEALTH DAMAGE
+    // =====================================================
+
+    public int GetHealthDamage(int step)
+    {
+        switch (step)
+        {
+            case 1:
+                return attack1HealthDamage;
+
+            case 2:
+                return attack2HealthDamage;
+
+            case 3:
+                return attack3HealthDamage;
+
+            case 4:
+                return attack4HealthDamage;
+
+            default:
+                return attack1HealthDamage;
+        }
+    }
+
+    // =====================================================
+    // HIT STOP
+    // =====================================================
 
     public void DoHitStop(
         float duration,
@@ -338,3 +383,4 @@ public class PlayerCombatController : MonoBehaviour
         Time.timeScale = 1f;
     }
 }
+
