@@ -9318,16 +9318,16 @@ MonoBehaviour:
   attack4Duration: 0.3
   attack1MoveStart: 0.07
   attack1MoveEnd: 0.15
-  attack1HitTime: 0.4
+  attack1HitTime: 0
   attack2MoveStart: 0.12
   attack2MoveEnd: 0.16
-  attack2HitTime: 0.35
+  attack2HitTime: 0
   attack3MoveStart: 0.065
   attack3MoveEnd: 0.18
-  attack3HitTime: 0.35
+  attack3HitTime: 0
   attack4MoveStart: 0.2
   attack4MoveEnd: 0.282
-  attack4HitTime: 0.2
+  attack4HitTime: 0
   hitStopTimeScale: 1
   hitStopDuration: 1
 --- !u!114 &2122615051
@@ -9753,7 +9753,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 169b8195ef3a6cd468b82d7f3ab6492e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFinisher
-  finisherRange: 2.5
+  finisherRange: 3
   forwardPriority: 1.5
   executeKey: 101
 --- !u!1001 &3087399739372231210
