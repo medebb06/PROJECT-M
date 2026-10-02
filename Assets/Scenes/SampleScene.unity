@@ -647,7 +647,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5.625
+  orthographic size: 11.568182
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -723,7 +723,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.PixelPerfectCamera
   m_ComponentVersion: 1
-  m_AssetsPPU: 14
+  m_AssetsPPU: 11
   m_RefResolutionX: 320
   m_RefResolutionY: 180
   m_CropFrame: 0
