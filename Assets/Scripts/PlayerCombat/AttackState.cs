@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -454,8 +455,36 @@ public class AttackState : ICombatState
                 !balance.IsBroken
             )
             {
+                // =================================================
+                // COMBO STEP'E GÖRE BALANCE DAMAGE
+                // =================================================
+
+                int balanceDamage =
+                    GetBalanceDamage();
+
+                Debug.Log(
+     "PLAYER ATTACK → BALANCE DAMAGE: " +
+     balanceDamage +
+     " | CURRENT: " +
+     balance.CurrentBalance +
+     "/" +
+     balance.MaxBalance
+ );
+
                 bool balanceDamaged =
-                    balance.AddBalanceDamage(1);
+                    balance.AddBalanceDamage(
+                        balanceDamage
+                    );
+
+                Debug.Log(
+                    "AFTER BALANCE → " +
+                    balance.CurrentBalance +
+                    "/" +
+                    balance.MaxBalance +
+                    " | BROKEN: " +
+                    balance.IsBroken
+                
+                    );
 
                 if (!balanceDamaged)
                     continue;
@@ -589,6 +618,31 @@ public class AttackState : ICombatState
             player.audioPlayer.PlayAttackWoosh(
                 step
             );
+        }
+    }
+
+    // =====================================================
+    // BALANCE DAMAGE
+    // =====================================================
+
+    private int GetBalanceDamage()
+    {
+        switch (step)
+        {
+            case 1:
+                return 10;
+
+            case 2:
+                return 10;
+
+            case 3:
+                return 15;
+
+            case 4:
+                return 20;
+
+            default:
+                return 10;
         }
     }
 }

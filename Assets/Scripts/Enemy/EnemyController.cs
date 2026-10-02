@@ -46,8 +46,6 @@ public class EnemyController : MonoBehaviour
     public float balanceHitKnockbackDuration = 0.10f;
     public float balanceHitKnockbackDeceleration = 15f;
 
-  
-
     [Header("Posture Hit Knockback")]
     public float postureKnockbackForce = 6f;
     public float postureKnockbackVerticalForce = 1f;
@@ -88,6 +86,7 @@ public class EnemyController : MonoBehaviour
 
     public Transform target;
     public float chaseRange = 5f;
+
     [Header("Facing")]
     [SerializeField] private SpriteRenderer enemySprite;
 
@@ -98,12 +97,8 @@ public class EnemyController : MonoBehaviour
     private IEnemyState currentState;
 
     // =========================================================
-    // HIT FLASH
+    // PUBLIC STATE INFO
     // =========================================================
-
-    private SpriteRenderer[] spriteRenderers;
-    private Color[] originalColors;
-    private Coroutine flashRoutine;
 
     public bool CanAttack =>
         attackRecoveryTimer <= 0f;
@@ -114,8 +109,26 @@ public class EnemyController : MonoBehaviour
     public bool IsStaggered =>
         currentState is EnemyStaggerState;
 
+    public bool IsAttacking =>
+        currentState is EnemyAttackState;
+
+    public bool IsInAttackRecovery =>
+        attackRecoveryTimer > 0f;
+
     public IEnemyState CurrentState =>
         currentState;
+
+    // =========================================================
+    // HIT FLASH
+    // =========================================================
+
+    private SpriteRenderer[] spriteRenderers;
+    private Color[] originalColors;
+    private Coroutine flashRoutine;
+
+    // =========================================================
+    // ATTACK ANIMATION
+    // =========================================================
 
     public void PlayAttackAnimation()
     {
@@ -124,6 +137,10 @@ public class EnemyController : MonoBehaviour
 
         animator.SetTrigger("Attack");
     }
+
+    // =========================================================
+    // AWAKE
+    // =========================================================
 
     private void Awake()
     {
@@ -170,6 +187,10 @@ public class EnemyController : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // DESTROY
+    // =========================================================
+
     private void OnDestroy()
     {
         if (enemyBalance != null)
@@ -178,6 +199,11 @@ public class EnemyController : MonoBehaviour
                 HandleBalanceBroken;
         }
     }
+
+    // =========================================================
+    // FACING
+    // =========================================================
+
     private void FaceTarget()
     {
         if (target == null)
@@ -196,8 +222,16 @@ public class EnemyController : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // UPDATE
+    // =========================================================
+
     private void Update()
     {
+        // -----------------------------------------------------
+        // ATTACK RECOVERY TIMER
+        // -----------------------------------------------------
+
         if (attackRecoveryTimer > 0f)
         {
             attackRecoveryTimer -=
@@ -206,6 +240,10 @@ public class EnemyController : MonoBehaviour
             if (attackRecoveryTimer < 0f)
                 attackRecoveryTimer = 0f;
         }
+
+        // -----------------------------------------------------
+        // MOVEMENT LOCK
+        // -----------------------------------------------------
 
         if (movementLockTimer > 0f)
         {
@@ -216,10 +254,31 @@ public class EnemyController : MonoBehaviour
                 movementLockTimer = 0f;
         }
 
-        FaceTarget();
+        // -----------------------------------------------------
+        // FACING
+        // -----------------------------------------------------
+        // Enemy attack sırasında oyuncuyu takip ederek
+        // dönmeyecek.
+        //
+        // Attack state'ten çıktığında tekrar FaceTarget
+        // çalışmaya başlayacak.
+        // -----------------------------------------------------
+
+        if (!(currentState is EnemyAttackState))
+        {
+            FaceTarget();
+        }
+
+        // -----------------------------------------------------
+        // STATE
+        // -----------------------------------------------------
 
         currentState?.Tick();
     }
+
+    // =========================================================
+    // START
+    // =========================================================
 
     private void Start()
     {
@@ -236,6 +295,10 @@ public class EnemyController : MonoBehaviour
             new EnemyIdleState(this)
         );
     }
+
+    // =========================================================
+    // CHANGE STATE
+    // =========================================================
 
     public void ChangeState(
         IEnemyState newState
@@ -254,6 +317,10 @@ public class EnemyController : MonoBehaviour
         currentState.Enter();
     }
 
+    // =========================================================
+    // FORCE STAGGER
+    // =========================================================
+
     public void ForceStagger()
     {
         if (IsStaggered)
@@ -268,6 +335,10 @@ public class EnemyController : MonoBehaviour
             new EnemyStaggerState(this)
         );
     }
+
+    // =========================================================
+    // ATTACK RECOVERY
+    // =========================================================
 
     public void StartAttackRecovery()
     {
@@ -326,7 +397,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // ATTACK HIT - OLD COMPATIBILITY METHOD
+    // ATTACK HIT - OLD COMPATIBILITY
     // =========================================================
 
     public void ApplyAttackHit(
@@ -342,7 +413,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // ATTACK HIT - COMBO VERSION
+    // ATTACK HIT - COMBO
     // =========================================================
 
     public void ApplyAttackHit(
@@ -420,7 +491,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // COMBO KNOCKBACK FORCE
+    // COMBO KNOCKBACK
     // =========================================================
 
     private float GetComboKnockbackForce(

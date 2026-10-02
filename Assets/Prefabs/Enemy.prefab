@@ -669,7 +669,7 @@ MonoBehaviour:
   blockKnockbackDeceleration: 12
   blockRecoveryTime: 0.5
   blockBalanceDamage: 1
-  parryBalanceDamage: 3
+  parryBalanceDamage: 50
   executeDamage: 50
   executeDistance: 2
   executeDuration: 0.15
@@ -751,11 +751,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83671b96497f18541a7582c9068c0553, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBalance
-  maxBalance: 7
+  maxBalance: 100
   currentBalance: 0
   canRecover: 1
-  recoveryDelay: 3
-  recoverySpeed: 1
+  recoveryDelay: 1.5
+  recoverySpeed: 20
 --- !u!82 &7337914096097080713
 AudioSource:
   m_ObjectHideFlags: 0
