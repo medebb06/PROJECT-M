@@ -10264,14 +10264,6 @@ PrefabInstance:
       propertyPath: target
       value: 
       objectReference: {fileID: 2122615042}
-    - target: {fileID: 8306325381340741459, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
-      propertyPath: attackKnockbackForce
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 8306325381340741459, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
-      propertyPath: attackKnockbackDuration
-      value: 0.2
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

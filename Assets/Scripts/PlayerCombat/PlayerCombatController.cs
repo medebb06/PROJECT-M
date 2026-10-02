@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -132,6 +131,27 @@ public class PlayerCombatController : MonoBehaviour
         {
             bufferTimer = 0f;
 
+            currentState?.Tick();
+
+            return;
+        }
+
+        // =====================================================
+        // DASH / EXECUTE LOCK
+        // =====================================================
+
+        if (
+            player.isDashing ||
+            (
+                player.stateMachine != null &&
+                player.stateMachine.CurrentState is PlayerExecuteState
+            )
+        )
+        {
+            bufferTimer = 0f;
+
+            currentState?.Tick();
+
             return;
         }
 
@@ -196,6 +216,21 @@ public class PlayerCombatController : MonoBehaviour
 
         if (!player.canAttack)
             return;
+
+        // =====================================================
+        // DASH / EXECUTE LOCK
+        // =====================================================
+
+        if (
+            player.isDashing ||
+            (
+                player.stateMachine != null &&
+                player.stateMachine.CurrentState is PlayerExecuteState
+            )
+        )
+        {
+            return;
+        }
 
         // =====================================================
         // DEFENSE LOCK
@@ -383,4 +418,3 @@ public class PlayerCombatController : MonoBehaviour
         Time.timeScale = 1f;
     }
 }
-
