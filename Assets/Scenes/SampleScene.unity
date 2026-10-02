@@ -374,7 +374,7 @@ GameObject:
   - component: {fileID: 330698419}
   - component: {fileID: 330698418}
   - component: {fileID: 330698416}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Grid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -622,7 +622,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.3964489, g: 0.5319646, b: 0.5566038, a: 0}
+  m_BackGroundColor: {r: 0.39057493, g: 0.5967339, b: 0.6320754, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -647,7 +647,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5.625
+  orthographic size: 9.089286
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -723,7 +723,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.PixelPerfectCamera
   m_ComponentVersion: 1
-  m_AssetsPPU: 11
+  m_AssetsPPU: 14
   m_RefResolutionX: 320
   m_RefResolutionY: 180
   m_CropFrame: 0
@@ -1391,7 +1391,7 @@ GameObject:
   - component: {fileID: 1075144585}
   - component: {fileID: 1075144584}
   - component: {fileID: 1075144583}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Tilemap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -8933,7 +8933,7 @@ Transform:
   m_GameObject: {fileID: 1942488873}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.146, z: 0}
+  m_LocalPosition: {x: 0, y: 0.107, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9598,8 +9598,8 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.09297764, y: 1.6085094}
-  m_Size: {x: 1.1667235, y: 2.7660615}
+  m_Offset: {x: 0.029902995, y: 1.5939537}
+  m_Size: {x: 1.1958348, y: 2.795173}
   m_Direction: 0
 --- !u!114 &2122615062
 MonoBehaviour:
