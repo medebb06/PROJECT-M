@@ -643,7 +643,7 @@ MonoBehaviour:
   knockbackDeceleration: 100
   hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitFlashDuration: 0.06
-  staggerFlashColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  staggerFlashColor: {r: 0.4198113, g: 0.5465635, b: 1, a: 1}
   staggerFlashDuration: 3
   attackKnockbackForce: 1
   attackKnockbackVerticalForce: 1
