@@ -8,6 +8,9 @@ public class EnemyController : MonoBehaviour
     [Header("Chase")]
     public float chaseStopDistance = 1.8f;
 
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
     public float attackDuration = 1f;
@@ -113,6 +116,14 @@ public class EnemyController : MonoBehaviour
 
     public IEnemyState CurrentState =>
         currentState;
+
+    public void PlayAttackAnimation()
+    {
+        if (animator == null)
+            return;
+
+        animator.SetTrigger("Attack");
+    }
 
     private void Awake()
     {

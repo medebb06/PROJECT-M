@@ -149,7 +149,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 1.5}
+  m_AnchoredPosition: {x: 0, y: 2.11}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &5568643269363869309
@@ -494,7 +494,7 @@ GameObject:
   - component: {fileID: 3277053383293481984}
   - component: {fileID: 5363998208822575816}
   - component: {fileID: 6221554288633988248}
-  - component: {fileID: 7278265398824912156}
+  - component: {fileID: 7222443890327140745}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -568,7 +568,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 2977439394897149065, guid: 97edc8b4439cadc40a1105a5a4682fc3, type: 3}
+  m_Sprite: {fileID: 2752677570131296368, guid: 7762019bb3755d14f9e911552351e14f, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -633,6 +633,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 3
   chaseStopDistance: 3
+  animator: {fileID: 6221554288633988248}
   staggerDuration: 3
   attackDuration: 0.8
   attackWarningTime: 1
@@ -904,8 +905,8 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!61 &7278265398824912156
-BoxCollider2D:
+--- !u!70 &7222443890327140745
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -938,18 +939,9 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.65625}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0}
-    oldSize: {x: 1.8125, y: 1.3125}
-    newSize: {x: 1, y: 2}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 1.8125, y: 1.3125}
-  m_EdgeRadius: 0
+  m_Offset: {x: 0.028853416, y: 0.9490083}
+  m_Size: {x: 1.5477486, y: 1.9144348}
+  m_Direction: 0
 --- !u!1 &6601302652787602694
 GameObject:
   m_ObjectHideFlags: 0

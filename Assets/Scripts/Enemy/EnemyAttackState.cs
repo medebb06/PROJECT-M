@@ -25,6 +25,7 @@ public class EnemyAttackState : IEnemyState
 
     public void Enter()
     {
+        enemy.PlayAttackAnimation();
         warningTimer =
             enemy.attackWarningTime;
 
