@@ -16,6 +16,10 @@ public class CombatVFXManager : MonoBehaviour
     [Header("Balance VFX")]
     [SerializeField] private GameObject balanceBreakVFX;
 
+    [Header("VFX Render")]
+    [SerializeField] private string vfxSortingLayer = "Default";
+    [SerializeField] private int vfxSortingOrder = 100;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -29,196 +33,127 @@ public class CombatVFXManager : MonoBehaviour
         Debug.Log("COMBAT VFX MANAGER AWAKE");
     }
 
-    // =========================================================
-    // HEALTH HIT
-    // =========================================================
-
     public void PlayHealthHit(Vector3 position, Vector2 direction)
     {
-        Debug.Log("VFX MANAGER: PLAY HEALTH HIT");
-
         if (healthHitVFX == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: HEALTH HIT VFX ATANMAMIŞ!"
-            );
-
+            Debug.LogWarning("HEALTH HIT VFX ASSIGNED DEĞİL!");
             return;
         }
 
-        SpawnVFX(
-            healthHitVFX,
-            position,
-            direction
-        );
+        SpawnVFX(healthHitVFX, position, direction);
     }
-
-    // =========================================================
-    // BALANCE HIT
-    // =========================================================
 
     public void PlayBalanceHit(Vector3 position, Vector2 direction)
     {
-        Debug.Log("VFX MANAGER: PLAY BALANCE HIT");
-
         if (balanceHitVFX == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: BALANCE HIT VFX ATANMAMIŞ!"
-            );
-
+            Debug.LogWarning("BALANCE HIT VFX ASSIGNED DEĞİL!");
             return;
         }
 
-        SpawnVFX(
-            balanceHitVFX,
-            position,
-            direction
-        );
+        SpawnVFX(balanceHitVFX, position, direction);
     }
-
-    // =========================================================
-    // PARRY
-    // =========================================================
 
     public void PlayParry(Vector3 position, Vector2 direction)
     {
-        Debug.Log("VFX MANAGER: PLAY PARRY");
-
         if (parryVFX == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: PARRY VFX ATANMAMIŞ!"
-            );
-
+            Debug.LogWarning("PARRY VFX ASSIGNED DEĞİL!");
             return;
         }
 
-        SpawnVFX(
-            parryVFX,
-            position,
-            direction
-        );
+        SpawnVFX(parryVFX, position, direction);
     }
-
-    // =========================================================
-    // BLOCK
-    // =========================================================
 
     public void PlayBlock(Vector3 position, Vector2 direction)
     {
-        Debug.Log("VFX MANAGER: PLAY BLOCK");
-
         if (blockVFX == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: BLOCK VFX ATANMAMIŞ!"
-            );
-
+            Debug.LogWarning("BLOCK VFX ASSIGNED DEĞİL!");
             return;
         }
 
-        SpawnVFX(
-            blockVFX,
-            position,
-            direction
-        );
+        SpawnVFX(blockVFX, position, direction);
     }
-
-    // =========================================================
-    // BALANCE BREAK
-    // =========================================================
 
     public void PlayBalanceBreak(Vector3 position, Vector2 direction)
     {
-        Debug.Log("VFX MANAGER: PLAY BALANCE BREAK");
-
         if (balanceBreakVFX == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: BALANCE BREAK VFX ATANMAMIŞ!"
-            );
-
+            Debug.LogWarning("BALANCE BREAK VFX ASSIGNED DEĞİL!");
             return;
         }
 
-        SpawnVFX(
-            balanceBreakVFX,
-            position,
-            direction
-        );
+        SpawnVFX(balanceBreakVFX, position, direction);
     }
-
-    // =========================================================
-    // SPAWN
-    // =========================================================
 
     private void SpawnVFX(
         GameObject prefab,
         Vector3 position,
         Vector2 direction)
     {
-        Debug.Log(
-            "VFX MANAGER: INSTANTIATE -> " +
-            prefab.name
-        );
+        Debug.Log("VFX MANAGER: INSTANTIATE -> " + prefab.name);
 
         Quaternion rotation = Quaternion.identity;
 
         if (direction.sqrMagnitude > 0.001f)
         {
-            float angle =
-                Mathf.Atan2(
-                    direction.y,
-                    direction.x
-                ) * Mathf.Rad2Deg;
-
-            rotation =
-                Quaternion.Euler(
-                    0f,
-                    0f,
-                    angle
-                );
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            rotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        GameObject vfx =
-            Instantiate(
-                prefab,
-                position,
-                rotation
-            );
+        GameObject vfx = Instantiate(prefab, position, rotation);
 
         if (vfx == null)
         {
-            Debug.LogError(
-                "VFX MANAGER: INSTANTIATE BAŞARISIZ!"
-            );
-
+            Debug.LogError("VFX MANAGER: INSTANTIATE BAŞARISIZ!");
             return;
         }
 
+        Debug.Log("VFX MANAGER: VFX OLUŞTU -> " + vfx.name);
+
+        // --------------------------------------------------
+        // PARTICLE SYSTEM RENDER ORDER
+        // --------------------------------------------------
+
+        ParticleSystemRenderer[] particleRenderers =
+            vfx.GetComponentsInChildren<ParticleSystemRenderer>(true);
+
         Debug.Log(
-            "VFX MANAGER: VFX OLUŞTU -> " +
-            vfx.name
+            "VFX MANAGER: PARTICLE RENDERER SAYISI -> " +
+            particleRenderers.Length
         );
 
-        // =====================================================
+        foreach (ParticleSystemRenderer renderer in particleRenderers)
+        {
+            if (renderer == null)
+                continue;
+
+            renderer.sortingLayerName = vfxSortingLayer;
+            renderer.sortingOrder = vfxSortingOrder;
+
+            Debug.Log(
+                "VFX RENDER SET -> Layer: " +
+                renderer.sortingLayerName +
+                " | Order: " +
+                renderer.sortingOrder
+            );
+        }
+
+        // --------------------------------------------------
         // VISUAL EFFECT GRAPH
-        // =====================================================
+        // --------------------------------------------------
 
         VisualEffect[] visualEffects =
-            vfx.GetComponentsInChildren<VisualEffect>(
-                true
-            );
+            vfx.GetComponentsInChildren<VisualEffect>(true);
 
         Debug.Log(
             "VFX MANAGER: VISUAL EFFECT SAYISI -> " +
             visualEffects.Length
         );
 
-        foreach (
-            VisualEffect visualEffect
-            in visualEffects)
+        foreach (VisualEffect visualEffect in visualEffects)
         {
             if (visualEffect == null)
                 continue;
@@ -226,23 +161,19 @@ public class CombatVFXManager : MonoBehaviour
             visualEffect.Play();
         }
 
-        // =====================================================
-        // NORMAL PARTICLE SYSTEM
-        // =====================================================
+        // --------------------------------------------------
+        // PARTICLE SYSTEM
+        // --------------------------------------------------
 
         ParticleSystem[] particleSystems =
-            vfx.GetComponentsInChildren<ParticleSystem>(
-                true
-            );
+            vfx.GetComponentsInChildren<ParticleSystem>(true);
 
         Debug.Log(
             "VFX MANAGER: PARTICLE SYSTEM SAYISI -> " +
             particleSystems.Length
         );
 
-        foreach (
-            ParticleSystem particleSystem
-            in particleSystems)
+        foreach (ParticleSystem particleSystem in particleSystems)
         {
             if (particleSystem == null)
                 continue;
@@ -250,20 +181,12 @@ public class CombatVFXManager : MonoBehaviour
             particleSystem.Play(true);
         }
 
-        // =====================================================
-        // DESTROY
-        // =====================================================
-
         DestroyVFXWhenFinished(
             vfx,
             particleSystems,
             visualEffects
         );
     }
-
-    // =========================================================
-    // DESTROY
-    // =========================================================
 
     private void DestroyVFXWhenFinished(
         GameObject vfx,
@@ -275,29 +198,19 @@ public class CombatVFXManager : MonoBehaviour
 
         float longestLifetime = 0f;
 
-        // -----------------------------------------------------
-        // PARTICLE SYSTEM LIFETIME
-        // -----------------------------------------------------
-
-        foreach (
-            ParticleSystem particleSystem
-            in particleSystems)
+        foreach (ParticleSystem particleSystem in particleSystems)
         {
             if (particleSystem == null)
                 continue;
 
-            var main =
-                particleSystem.main;
+            var main = particleSystem.main;
 
-            float lifetime =
-                main.duration;
+            float lifetime = main.duration;
 
-            if (
-                main.startLifetime.mode ==
+            if (main.startLifetime.mode ==
                 ParticleSystemCurveMode.Constant)
             {
-                lifetime +=
-                    main.startLifetime.constant;
+                lifetime += main.startLifetime.constant;
             }
             else
             {
@@ -308,17 +221,8 @@ public class CombatVFXManager : MonoBehaviour
                 longestLifetime = lifetime;
         }
 
-        // -----------------------------------------------------
-        // VFX GRAPH
-        // -----------------------------------------------------
-
         if (visualEffects.Length > 0)
         {
-            // VFX Graph'ın kendi output/event sistemi
-            // çalışmaya devam etsin.
-            //
-            // Güvenli varsayılan olarak prefabı birkaç saniye
-            // sonra temizliyoruz.
             if (longestLifetime < 2f)
                 longestLifetime = 2f;
         }
@@ -326,9 +230,6 @@ public class CombatVFXManager : MonoBehaviour
         if (longestLifetime <= 0f)
             longestLifetime = 2f;
 
-        Destroy(
-            vfx,
-            longestLifetime + 0.2f
-        );
+        Destroy(vfx, longestLifetime + 0.2f);
     }
 }

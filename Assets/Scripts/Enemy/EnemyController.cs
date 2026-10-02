@@ -43,6 +43,8 @@ public class EnemyController : MonoBehaviour
     public float balanceHitKnockbackDuration = 0.10f;
     public float balanceHitKnockbackDeceleration = 15f;
 
+  
+
     [Header("Posture Hit Knockback")]
     public float postureKnockbackForce = 6f;
     public float postureKnockbackVerticalForce = 1f;
@@ -83,6 +85,8 @@ public class EnemyController : MonoBehaviour
 
     public Transform target;
     public float chaseRange = 5f;
+    [Header("Facing")]
+    [SerializeField] private SpriteRenderer enemySprite;
 
     private float attackRecoveryTimer;
     private float movementLockTimer;
@@ -163,6 +167,23 @@ public class EnemyController : MonoBehaviour
                 HandleBalanceBroken;
         }
     }
+    private void FaceTarget()
+    {
+        if (target == null)
+            return;
+
+        if (enemySprite == null)
+            return;
+
+        if (target.position.x > transform.position.x)
+        {
+            enemySprite.flipX = false;
+        }
+        else if (target.position.x < transform.position.x)
+        {
+            enemySprite.flipX = true;
+        }
+    }
 
     private void Update()
     {
@@ -183,6 +204,8 @@ public class EnemyController : MonoBehaviour
             if (movementLockTimer < 0f)
                 movementLockTimer = 0f;
         }
+
+        FaceTarget();
 
         currentState?.Tick();
     }
