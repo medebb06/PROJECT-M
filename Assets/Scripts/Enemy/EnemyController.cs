@@ -47,6 +47,17 @@ public class EnemyController : MonoBehaviour
     public Color staggerFlashColor = Color.yellow;
     public float staggerFlashDuration = 0.15f;
 
+    [Header("Balance Damage Flash (beyaz flaş)")]
+    [Tooltip(
+        "Denge (posture) hasarı alınca sprite tamamen beyaz yanıp söner. " +
+        "SpriteWhiteFlash.shader dosyası Assets/Resources içinde olmalı; " +
+        "yoksa sadece renk tonu değişir (renkli sprite'ta görünmez).")]
+    public bool solidWhiteFlash = true;
+
+    public Color balanceHitFlashColor = Color.white;
+
+    public float balanceHitFlashDuration = 0.09f;
+
     [Header("Enemy Attack Damage (Player'ın can birimine)")]
     [Tooltip(
         "Bu düşmanın normal vuruşunun oyuncunun Health'inden düştüğü miktar. " +
@@ -137,6 +148,10 @@ public class EnemyController : MonoBehaviour
 
     private SpriteRenderer[] spriteRenderers;
     private Color[] originalColors;
+    private Material[] originalMaterials;
+
+    private static Material sharedFlashMaterial;
+    private static bool warnedMissingFlashShader;
     private Coroutine flashRoutine;
 
     // Stagger boyunca korunan renk tonu.
@@ -245,6 +260,18 @@ public class EnemyController : MonoBehaviour
 
             originalColors[i] =
                 spriteRenderers[i].color;
+        }
+
+        originalMaterials =
+            new Material[spriteRenderers.Length];
+
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            originalMaterials[i] =
+                spriteRenderers[i].sharedMaterial;
         }
     }
 
@@ -436,10 +463,8 @@ public class EnemyController : MonoBehaviour
         if (TryAbsorbCommittedHit())
             return;
 
-        PlayFlash(
-            hitFlashColor,
-            hitFlashDuration
-        );
+        // Denge hasarı: beyaz flaş.
+        PlayBalanceDamageFlash();
 
         Rigidbody2D rb =
             GetComponent<Rigidbody2D>();
@@ -508,10 +533,19 @@ public class EnemyController : MonoBehaviour
         if (TryAbsorbCommittedHit())
             return;
 
-        PlayFlash(
-            hitFlashColor,
-            hitFlashDuration
-        );
+        // Can vuruşu: eski renk tonu flaşı.
+        // Denge kıran vuruş (healthHit = false): beyaz flaş.
+        if (healthHit)
+        {
+            PlayFlash(
+                hitFlashColor,
+                hitFlashDuration
+            );
+        }
+        else
+        {
+            PlayBalanceDamageFlash();
+        }
 
         Rigidbody2D rb =
             GetComponent<Rigidbody2D>();
@@ -607,9 +641,21 @@ public class EnemyController : MonoBehaviour
     // HIT FLASH
     // =========================================================
 
+    // Denge (posture) hasarı alınca çağrılır: beyaz flaş.
+    // Shader bulunamazsa renk tonuna düşer (eski davranış).
+    public void PlayBalanceDamageFlash()
+    {
+        PlayFlash(
+            balanceHitFlashColor,
+            balanceHitFlashDuration,
+            solidWhiteFlash
+        );
+    }
+
     private void PlayFlash(
         Color flashColor,
-        float duration
+        float duration,
+        bool solid = false
     )
     {
         if (spriteRenderers == null ||
@@ -627,20 +673,35 @@ public class EnemyController : MonoBehaviour
             StartCoroutine(
                 FlashCoroutine(
                     flashColor,
-                    duration
+                    duration,
+                    solid
                 )
             );
     }
 
     private System.Collections.IEnumerator FlashCoroutine(
         Color flashColor,
-        float duration
+        float duration,
+        bool solid
     )
     {
+        // Sprite renkliyse "beyaz tint" hiçbir şey değiştirmez.
+        // Gerçek flaş için sprite'ı tam dolu silüete çeviren
+        // materyale geçici olarak geçiyoruz.
+        bool useSolid =
+            solid &&
+            GetFlashMaterial() != null;
+
         for (int i = 0; i < spriteRenderers.Length; i++)
         {
             if (spriteRenderers[i] == null)
                 continue;
+
+            if (useSolid)
+            {
+                spriteRenderers[i].sharedMaterial =
+                    sharedFlashMaterial;
+            }
 
             Color color =
                 spriteRenderers[i].color;
@@ -662,6 +723,37 @@ public class EnemyController : MonoBehaviour
         flashRoutine = null;
     }
 
+    private static Material GetFlashMaterial()
+    {
+        if (sharedFlashMaterial != null)
+            return sharedFlashMaterial;
+
+        Shader shader =
+            Shader.Find("Custom/SpriteWhiteFlash");
+
+        if (shader == null)
+        {
+            if (!warnedMissingFlashShader)
+            {
+                warnedMissingFlashShader = true;
+
+                Debug.LogWarning(
+                    "EnemyController: 'Custom/SpriteWhiteFlash' " +
+                    "shader'ı bulunamadı. SpriteWhiteFlash.shader " +
+                    "dosyasını Assets/Resources/ klasörüne koy. " +
+                    "O zamana kadar flaş sadece renk tonu olarak çalışır."
+                );
+            }
+
+            return null;
+        }
+
+        sharedFlashMaterial =
+            new Material(shader);
+
+        return sharedFlashMaterial;
+    }
+
     // Flash bitince dönülecek renk:
     // Stagger tonu hâlâ aktifse o, değilse orijinal renk.
     // (Eskiden stagger sırasında alınan ilk vuruşun flash'ı
@@ -679,6 +771,18 @@ public class EnemyController : MonoBehaviour
         {
             if (spriteRenderers[i] == null)
                 continue;
+
+            // Flaş için değiştirilen materyali geri ver.
+            if (
+                originalMaterials != null &&
+                originalMaterials[i] != null &&
+                spriteRenderers[i].sharedMaterial !=
+                originalMaterials[i]
+            )
+            {
+                spriteRenderers[i].sharedMaterial =
+                    originalMaterials[i];
+            }
 
             Color baseColor =
                 staggerTinted

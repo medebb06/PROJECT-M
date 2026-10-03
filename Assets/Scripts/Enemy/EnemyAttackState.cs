@@ -488,6 +488,9 @@ public class EnemyAttackState : IEnemyState
             enemy.parryBalanceDamage
         );
 
+        // Parry de düşmanın dengesine vuruyor: beyaz flaş.
+        enemy.PlayBalanceDamageFlash();
+
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()
         // zaten ForceStagger() çağırıyor.
