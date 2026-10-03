@@ -647,7 +647,7 @@ MonoBehaviour:
   hitFlashDuration: 0.06
   staggerFlashColor: {r: 0.4198113, g: 0.5465635, b: 1, a: 1}
   staggerFlashDuration: 3
-  attackDamage: 10
+  attackDamage: 30
   attackKnockbackForce: 1.2
   attackKnockbackVerticalForce: 1
   attackKnockbackDuration: 0.2
