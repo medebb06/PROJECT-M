@@ -140,9 +140,13 @@ public class EnemyController : MonoBehaviour
     [Range(0f, 1f)]
     public float unblockableCommitPoint = 0.15f;
 
-    [Tooltip("Oyuncunun can birimine verdiği hasar.")]
+    [Tooltip(
+        "Engellenemez vuruşun oyuncunun CAN birimine verdiği hasar. " +
+        "Block ve parry bu vuruşa karşı tamamen etkisizdir. " +
+        "DİKKAT: Health 'birim' mantığıyla çalışır (1 = bir can birimi); " +
+        "oyuncunun Max Health'inden büyük bir değer anında öldürür.")]
     [Min(1)]
-    public int unblockableDamage = 2;
+    public int unblockableDamage = 75;
 
     [Tooltip("Oyuncuya uygulanan savrulma çarpanı.")]
     [Min(0f)]

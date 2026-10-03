@@ -568,14 +568,15 @@ public class EnemyAttackState : IEnemyState
 
         // =====================================================
         // ENGELLENEMEZ VURUŞ
-        // Parry ve block bu vuruşu durduramaz.
-        // Cevap: dash (i-frame, yukarıda kontrol edildi) ya da menzil dışı.
+        // Parry ve block TAMAMEN etkisiz: hasar direkt can birimine gider.
+        // Tek cevap: dash (i-frame, yukarıda kontrol edildi), zıplama,
+        // arkaya geçme ya da kutunun dışına çıkma.
         // =====================================================
 
         if (isUnblockable)
         {
             Debug.Log(
-                "UNBLOCKABLE HIT → PARRY/BLOCK IGNORED"
+                "UNBLOCKABLE HIT → PARRY/BLOCK IGNORED → DIRECT HEALTH DAMAGE"
             );
 
             return DealDirectHit(hitDirection);
