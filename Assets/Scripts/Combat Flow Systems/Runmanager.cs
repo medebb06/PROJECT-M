@@ -50,7 +50,11 @@ public class RunManager : MonoBehaviour
     [Tooltip("Her bölümde eklenen düşman sayısı (kesirli birikir).")]
     [SerializeField] private float enemiesPerStage = 0.75f;
 
-    [SerializeField] private int maxEnemies = 8;
+    [Tooltip("Bir bölümün TOPLAM düşman sayısı üst sınırı (sonsuz modda yüksek tutulur).")]
+    [SerializeField] private int maxEnemiesPerStage = 30;
+
+    [Tooltip("Bir dalgada AYNI ANDA ekranda olabilecek düşman sayısı üst sınırı.")]
+    [SerializeField] private int maxEnemiesPerWave = 6;
 
     [Header("Waves (bölümü uzatır)")]
     [Tooltip(
@@ -65,7 +69,7 @@ public class RunManager : MonoBehaviour
     [Tooltip("Kaç bölümde bir dalga sayısı +1 artsın. 0 = hiç artmaz.")]
     [SerializeField] private int extraWaveEveryNStages = 3;
 
-    [SerializeField] private int maxWavesPerStage = 4;
+    [SerializeField] private int maxWavesPerStage = 8;
 
     [Tooltip(
         "Sıradaki dalga, canlı düşman sayısı bu değere (veya altına) inince " +
@@ -83,7 +87,16 @@ public class RunManager : MonoBehaviour
     [Tooltip("Her bölümde engellenemez vuruş ihtimaline eklenen değer.")]
     [SerializeField] private float unblockableBonusPerStage = 0.02f;
 
-    [SerializeField] private float unblockableChanceCap = 0.6f;
+    [SerializeField] private float unblockableChanceCap = 0.8f;
+
+    [Tooltip("Düşman hızına eklenebilecek en yüksek oran (0.6 = %60).")]
+    [SerializeField] private float maxSpeedBonus = 0.6f;
+
+    [Tooltip(
+        "Her bölümde düşman canına eklenen oran (0.25 = bölüm başına %25). " +
+        "Düşmanın Execute Damage'ini aşınca execute tek vuruşta öldüremez; " +
+        "can hasarı charm'ları (Ağır Darbe, kritik) o zaman anlam kazanır.")]
+    [SerializeField] private float healthBonusPerStage = 0.25f;
 
     [Header("Charms")]
     [Tooltip("Koşunun en başında bir charm seçilsin (bölüm 1'den önce).")]
@@ -387,24 +400,25 @@ public class RunManager : MonoBehaviour
         );
     }
 
-    // Bölümün TOPLAM düşman sayısı: eski formül × uzunluk çarpanı.
+    // Bölümün TOPLAM düşman sayısı: (taban + bölüm artışı) × uzunluk çarpanı.
     private int TotalEnemiesForStage()
     {
-        int baseCount =
-            Mathf.Min(
-                maxEnemies,
-                baseEnemyCount +
-                Mathf.FloorToInt((Stage - 1) * enemiesPerStage)
-            );
+        float baseCount =
+            baseEnemyCount +
+            Mathf.FloorToInt((Stage - 1) * enemiesPerStage);
 
-        return Mathf.Max(
+        int total =
+            Mathf.RoundToInt(baseCount * stageLengthMultiplier);
+
+        return Mathf.Clamp(
+            total,
             1,
-            Mathf.RoundToInt(baseCount * stageLengthMultiplier)
+            Mathf.Max(1, maxEnemiesPerStage)
         );
     }
 
     // Toplamı dalgalara böler (artan sayı ilk dalgalara dağılır).
-    // Aynı anda ekranda olabilecek düşman sayısı maxEnemies ile sınırlı.
+    // Aynı anda ekranda olabilecek düşman sayısı maxEnemiesPerWave ile sınırlı.
     private int EnemiesForWave(int wave)
     {
         int total = TotalEnemiesForStage();
@@ -413,7 +427,7 @@ public class RunManager : MonoBehaviour
 
         int count = total / waves + (wave <= total % waves ? 1 : 0);
 
-        return Mathf.Clamp(count, 1, Mathf.Max(1, maxEnemies));
+        return Mathf.Clamp(count, 1, Mathf.Max(1, maxEnemiesPerWave));
     }
 
     // Bir dalgayı doğurur. Önceki dalgaların düşmanları listede kalır.
@@ -493,13 +507,30 @@ public class RunManager : MonoBehaviour
 
         enemy.chaseRange = aggroRange;
 
-        enemy.chaseSpeed *= 1f + speedBonusPerStage * t;
+        // Hız: bölümle artar, üst sınırı var.
+        enemy.chaseSpeed *=
+            1f + Mathf.Min(maxSpeedBonus, speedBonusPerStage * t);
 
         enemy.unblockableChance =
             Mathf.Min(
                 unblockableChanceCap,
                 enemy.unblockableChance + unblockableBonusPerStage * t
             );
+
+        // Can: bölümle artar. Execute Damage'i aşınca execute tek vuruşta
+        // öldüremez, bu da can hasarı charm'larını anlamlı kılar.
+        Health health = enemy.GetComponent<Health>();
+
+        if (health != null && healthBonusPerStage > 0f)
+        {
+            int scaled =
+                Mathf.RoundToInt(
+                    health.MaxHealth *
+                    (1f + healthBonusPerStage * t)
+                );
+
+            health.SetMaxHealth(scaled, true);
+        }
     }
 
     private void RefreshAlive()

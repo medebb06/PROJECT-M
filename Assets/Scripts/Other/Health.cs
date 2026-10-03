@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System;
 using System.Collections;
@@ -179,6 +178,23 @@ public class Health : MonoBehaviour
                 currentHealth,
                 maxHealth
             );
+
+        OnHealthChanged?.Invoke(
+            currentHealth,
+            maxHealth
+        );
+    }
+
+    // Çalışma anında max canı ayarlar (ör. bölümle ölçeklenen düşmanlar).
+    // refill: true ise can yeni maksimuma doldurulur.
+    public void SetMaxHealth(int newMax, bool refill = true)
+    {
+        maxHealth = Mathf.Max(1, newMax);
+
+        currentHealth =
+            refill
+                ? maxHealth
+                : Mathf.Min(currentHealth, maxHealth);
 
         OnHealthChanged?.Invoke(
             currentHealth,
@@ -373,4 +389,3 @@ public class Health : MonoBehaviour
         }
     }
 }
-
