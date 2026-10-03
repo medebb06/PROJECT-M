@@ -1,5 +1,41 @@
 using UnityEngine;
 
+// Vurulunca uygulanan slow-mo profili.
+// Ağır başlar, zamanla normal hıza döner:
+//   timeScale(t) = Lerp(startTimeScale, 1, t ^ rampPower)
+[System.Serializable]
+public class HitSlowMotion
+{
+    public bool enabled = true;
+
+    [Tooltip("Slow-mo'nun toplam süresi (GERÇEK zaman, saniye).")]
+    [Min(0f)]
+    public float duration = 0.35f;
+
+    [Tooltip("Başlangıç zaman hızı. Küçük = daha ağır başlar (0.1 = %10 hız).")]
+    [Range(0f, 1f)]
+    public float startTimeScale = 0.12f;
+
+    [Tooltip(
+        "1 = düz hızlanma. 2 = bir süre ağır kalır sonra hızlanır. " +
+        "3 = daha da geç hızlanır.")]
+    [Min(1f)]
+    public float rampPower = 2f;
+
+    public HitSlowMotion() { }
+
+    public HitSlowMotion(
+        float duration,
+        float startTimeScale,
+        float rampPower
+    )
+    {
+        this.duration = duration;
+        this.startTimeScale = startTimeScale;
+        this.rampPower = rampPower;
+    }
+}
+
 public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 {
     [Header("References")]
@@ -18,6 +54,27 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         "Sersemleme bitince kontrol geri gelir ama oyuncu bu süre " +
         "dolana kadar hâlâ korumalıdır ve sprite yanıp söner.")]
     [SerializeField] private float invincibilityDuration = 0.7f;
+
+    [Header("Hit Slow-Mo")]
+    [Tooltip(
+        "Vurulduktan sonra kalan can bu değer veya altındaysa " +
+        "'Low Health' profili kullanılır (1 = son can birimi).")]
+    [SerializeField] private int lowHealthThreshold = 1;
+
+    [Tooltip("Normal hasar.")]
+    [SerializeField]
+    private HitSlowMotion normalHitSlowMo =
+        new HitSlowMotion(0.35f, 0.12f, 2f);
+
+    [Tooltip("Hasar sonrası son can (veya eşik) kaldığında: daha uzun ve ağır.")]
+    [SerializeField]
+    private HitSlowMotion lowHealthSlowMo =
+        new HitSlowMotion(0.6f, 0.08f, 2f);
+
+    [Tooltip("Ölümcül vuruş: en uzun ve en ağır.")]
+    [SerializeField]
+    private HitSlowMotion lethalSlowMo =
+        new HitSlowMotion(1.2f, 0.05f, 2.5f);
 
     [Header("Default Knockback")]
     [SerializeField] private float defaultKnockbackForce = 8f;
@@ -53,6 +110,43 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         invincibilityDuration =
             Mathf.Max(hurtLockDuration, invincibilityDuration);
+    }
+
+    // --------------------------------------------------
+    // SLOW-MO
+    // --------------------------------------------------
+
+    private void PlayHitSlowMotion()
+    {
+        HitSlowMotion profile;
+        int priority = 0;
+
+        if (health.IsDead)
+        {
+            profile = lethalSlowMo;
+
+            // Denge kırılma hit-stop'uyla (10) birlikte çalışsın.
+            priority = 10;
+        }
+        else if (health.CurrentHealth <= lowHealthThreshold)
+        {
+            profile = lowHealthSlowMo;
+        }
+        else
+        {
+            profile = normalHitSlowMo;
+        }
+
+        if (profile == null || !profile.enabled)
+            return;
+
+        HitStop.RequestRamp(
+            profile.duration,
+            profile.startTimeScale,
+            1f,
+            profile.rampPower,
+            priority
+        );
     }
 
     // --------------------------------------------------
@@ -108,6 +202,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         // Vurulma flaşı (ölümcül vuruşta da oynar).
         if (blink != null)
             blink.PlayHitFlash();
+
+        // Vurulma slow-mo'su: normal / son can / ölümcül.
+        PlayHitSlowMotion();
 
         // --------------------------------
         // ÖLDÜ

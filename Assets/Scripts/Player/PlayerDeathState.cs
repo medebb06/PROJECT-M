@@ -241,5 +241,8 @@ public class PlayerDeathState : IPlayerState
 
         // Death animasyonunda takılı kalmasın.
         player.ResetAnimation();
+
+        // Ölüm slow-mo'su respawn sonrası sürmesin.
+        HitStop.ClearAll();
     }
 }

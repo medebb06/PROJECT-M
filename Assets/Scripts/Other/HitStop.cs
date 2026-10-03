@@ -29,6 +29,14 @@ public class HitStop : MonoBehaviour
         public float endTime;   // Time.unscaledTime cinsinden
         public float timeScale;
         public int priority;
+
+        // Rampa isteği: ağır başla, zamanla normale dön.
+        public bool ramp;
+        public float startTime;
+        public float duration;
+        public float startScale;
+        public float endScale;
+        public float power;
     }
 
     private static HitStop instance;
@@ -91,6 +99,37 @@ public class HitStop : MonoBehaviour
         Instance.AddRequest(
             duration,
             Mathf.Clamp01(timeScale),
+            priority
+        );
+    }
+
+    /// <summary>
+    /// Ağır başlayıp zamanla normale dönen yavaşlatma (slow-mo rampası).
+    ///
+    ///   scale(t) = Lerp(startScale, endScale, t ^ power),  t = 0..1
+    ///
+    /// duration GERÇEK zaman saniyesidir (timeScale'den etkilenmez).
+    /// power 1 = düz, 2 = yavaş kalır sonra hızlanır, 3 = daha da geç hızlanır.
+    /// </summary>
+    public static void RequestRamp(
+        float duration,
+        float startScale,
+        float endScale = 1f,
+        float power = 2f,
+        int priority = 0
+    )
+    {
+        if (!Application.isPlaying)
+            return;
+
+        if (duration <= 0f)
+            return;
+
+        Instance.AddRamp(
+            duration,
+            Mathf.Clamp01(startScale),
+            Mathf.Clamp01(endScale),
+            Mathf.Max(0.1f, power),
             priority
         );
     }
@@ -160,6 +199,61 @@ public class HitStop : MonoBehaviour
         Apply();
     }
 
+    private void AddRamp(
+        float duration,
+        float startScale,
+        float endScale,
+        float power,
+        int priority
+    )
+    {
+        PurgeExpired();
+
+        if (priority < HighestActivePriority())
+            return;
+
+        float now =
+            Time.unscaledTime;
+
+        requests.Add(
+            new StopRequest
+            {
+                ramp = true,
+                startTime = now,
+                endTime = now + duration,
+                duration = duration,
+                startScale = startScale,
+                endScale = endScale,
+                power = power,
+                timeScale = startScale,
+                priority = priority
+            }
+        );
+
+        Apply();
+    }
+
+    private static float EvaluateScale(
+        StopRequest request,
+        float now
+    )
+    {
+        if (!request.ramp)
+            return request.timeScale;
+
+        float t =
+            Mathf.Clamp01(
+                (now - request.startTime) /
+                Mathf.Max(0.0001f, request.duration)
+            );
+
+        return Mathf.Lerp(
+            request.startScale,
+            request.endScale,
+            Mathf.Pow(t, request.power)
+        );
+    }
+
     private void Update()
     {
         // Update, timeScale 0 iken de çalışır.
@@ -219,12 +313,18 @@ public class HitStop : MonoBehaviour
             applied = true;
         }
 
+        float now =
+            Time.unscaledTime;
+
         float slowest = 1f;
 
         for (int i = 0; i < requests.Count; i++)
         {
-            if (requests[i].timeScale < slowest)
-                slowest = requests[i].timeScale;
+            float scale =
+                EvaluateScale(requests[i], now);
+
+            if (scale < slowest)
+                slowest = scale;
         }
 
         Time.timeScale = slowest;
