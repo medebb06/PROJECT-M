@@ -5,6 +5,10 @@ public class EnemyChaseState : IEnemyState
     EnemyController enemy;
     Rigidbody2D rb;
 
+    // Oyuncuya göre hangi tarafta bekliyoruz (+1 sağ, -1 sol).
+    // Tam üstündeyken (dx ~ 0) yön değiştirmesin diye hatırlanır.
+    float standbySide = 1f;
+
     public EnemyChaseState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -13,6 +17,13 @@ public class EnemyChaseState : IEnemyState
 
     public void Enter()
     {
+        if (enemy.target != null)
+        {
+            standbySide =
+                enemy.transform.position.x >= enemy.target.position.x
+                    ? 1f
+                    : -1f;
+        }
     }
 
     public void Tick()
@@ -55,6 +66,36 @@ public class EnemyChaseState : IEnemyState
             );
 
             return;
+        }
+
+        // -----------------------------------------
+        // STANDBY (SIRA BEKLEME / DAĞILMA)
+        // Saldırıya hazır düşmanlar sıraya girer.
+        // Sıradaki (rank 0) oyuncuya yaklaşır, diğerleri
+        // sıra numaralarına göre kademeli geride bekler.
+        // Böylece kalabalık üst üste yığılmaz, okunur.
+        // -----------------------------------------
+
+        if (
+            enemy.useStandby &&
+            enemy.CanAttack &&
+            dist <= enemy.chaseRange * 1.3f
+        )
+        {
+            EnemyAttackCoordinator.JoinQueue(enemy);
+
+            int rank =
+                EnemyAttackCoordinator.GetStandbyRank(enemy);
+
+            if (rank > 0)
+            {
+                MoveToStandby(rank);
+
+                return;
+            }
+
+            // rank 0: aşağıdaki normal akış
+            // (yaklaş + saldırı sırası iste).
         }
 
         // -----------------------------------------
@@ -108,10 +149,8 @@ public class EnemyChaseState : IEnemyState
         // -----------------------------------------
         // CHASE
         // -----------------------------------------
-        // FIX: Eskiden normalize edilmiş 2D vektörün x'i
-        // kullanılıyordu; oyuncu yukarıdaysa/aşağıdaysa düşman
-        // yavaşlıyordu. Artık sadece yatay yön kullanılıyor.
-        // Hız da sabit 4 yerine enemy.chaseSpeed.
+        // Sadece yatay yön kullanılıyor (oyuncu yukarıdaysa
+        // düşman yavaşlamasın). Hız enemy.chaseSpeed.
 
         float deltaX =
             enemy.target.position.x -
@@ -124,6 +163,58 @@ public class EnemyChaseState : IEnemyState
 
         rb.linearVelocity = new Vector2(
             dirX * enemy.chaseSpeed,
+            rb.linearVelocity.y
+        );
+    }
+
+    // =========================================================
+    // STANDBY HAREKETİ
+    // =========================================================
+
+    private void MoveToStandby(int rank)
+    {
+        float deltaToPlayer =
+            enemy.transform.position.x -
+            enemy.target.position.x;
+
+        // Oyuncunun tam üstündeyken önceki tarafı koru.
+        if (Mathf.Abs(deltaToPlayer) > 0.1f)
+            standbySide = Mathf.Sign(deltaToPlayer);
+
+        // rank 1 -> standbyDistance, rank 2 -> +spacing, ...
+        // ChaseState'in "too far" sınırının (chaseRange * 1.5) içinde kal;
+        // yoksa düşman Idle'a düşüp tekrar Chase'e dönerdi (salınım).
+        float desiredDistance =
+            Mathf.Min(
+                enemy.standbyDistance +
+                (rank - 1) * enemy.standbySpacing,
+                enemy.chaseRange * 1.3f
+            );
+
+        float desiredX =
+            enemy.target.position.x +
+            standbySide * desiredDistance;
+
+        float deltaX =
+            desiredX -
+            enemy.transform.position.x;
+
+        if (Mathf.Abs(deltaX) <= enemy.standbyArrivalTolerance)
+        {
+            rb.linearVelocity = new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
+
+            return;
+        }
+
+        // Geri çekilirken de yaklaşırken de oyuncuya dönük kalır
+        // (EnemyController.FaceTarget).
+        rb.linearVelocity = new Vector2(
+            Mathf.Sign(deltaX) *
+            enemy.chaseSpeed *
+            enemy.standbySpeedMultiplier,
             rb.linearVelocity.y
         );
     }

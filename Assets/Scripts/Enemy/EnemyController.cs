@@ -9,6 +9,28 @@ public class EnemyController : MonoBehaviour
     public float chaseStopDistance = 1.8f;
     public float chaseSpeed = 4f;
 
+    [Header("Standby (sıra bekleme / dağılma)")]
+    [Tooltip(
+        "Açıkken: saldırıya hazır düşmanlar sıraya girer. Sıradaki oyuncuya " +
+        "yaklaşır, diğerleri sıra numarasına göre geride kademeli bekler. " +
+        "Kapalıysa eski davranış (hepsi yığılır).")]
+    public bool useStandby = true;
+
+    [Tooltip("Sırada 2. olan düşmanın oyuncuya uzaklığı.")]
+    public float standbyDistance = 4.5f;
+
+    [Tooltip(
+        "Sıradaki her düşman bir öncekinden bu kadar daha geride durur. " +
+        "Düşman collider'ı genişse artır.")]
+    public float standbySpacing = 1.5f;
+
+    [Tooltip("Bekleme pozisyonuna yürürken hız çarpanı (temkinli görünsün).")]
+    [Range(0.1f, 1f)]
+    public float standbySpeedMultiplier = 0.7f;
+
+    [Tooltip("Hedef konuma bu kadar yaklaşınca durur (titremeyi önler).")]
+    public float standbyArrivalTolerance = 0.2f;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
 

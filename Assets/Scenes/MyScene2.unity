@@ -9955,9 +9955,26 @@ MonoBehaviour:
   blink: {fileID: 0}
   hurtLockDuration: 0.22
   invincibilityDuration: 0.7
+  lowHealthThreshold: 1
+  normalHitSlowMo:
+    enabled: 1
+    duration: 0.35
+    startTimeScale: 0.12
+    rampPower: 2
+  lowHealthSlowMo:
+    enabled: 1
+    duration: 0.6
+    startTimeScale: 0.08
+    rampPower: 2
+  lethalSlowMo:
+    enabled: 1
+    duration: 1.2
+    startTimeScale: 0.05
+    rampPower: 2.5
   defaultKnockbackForce: 8
   defaultKnockbackVerticalForce: 4.8
   defaultKnockbackDuration: 0.1
+  defaultKnockbackDeceleration: 40
 --- !u!114 &2122615057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10239,6 +10256,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc9b77c610048e14bbf877f64c420a84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInvincibilityBlink
+  solidWhiteFlash: 1
+  flashColor: {r: 1, g: 1, b: 1, a: 1}
+  flashDuration: 0.1
   blinkInterval: 0.1
   dimmedAlpha: 0
 --- !u!1001 &2131245513

@@ -634,6 +634,11 @@ MonoBehaviour:
   attackRange: 4
   chaseStopDistance: 3
   chaseSpeed: 5
+  useStandby: 1
+  standbyDistance: 4.5
+  standbySpacing: 1.5
+  standbySpeedMultiplier: 0.7
+  standbyArrivalTolerance: 0.2
   animator: {fileID: 6221554288633988248}
   staggerDuration: 3
   attackWarningTime: 1
@@ -654,6 +659,7 @@ MonoBehaviour:
   attackKnockbackForce: 5
   attackKnockbackVerticalForce: 2
   attackKnockbackDuration: 0.4
+  attackKnockbackDeceleration: 40
   balanceHitKnockbackForce: 2
   balanceHitKnockbackVerticalForce: 2
   balanceHitKnockbackDuration: 0.2

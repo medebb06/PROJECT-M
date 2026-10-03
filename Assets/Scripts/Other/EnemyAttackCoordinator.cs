@@ -70,6 +70,12 @@ public class EnemyAttackCoordinator : MonoBehaviour
     private readonly Dictionary<EnemyController, float> lastAsk =
         new Dictionary<EnemyController, float>();
 
+    // Menzilde olup saldırı izni isteyen düşmanların son istek zamanı.
+    // Sıradaki düşman menzile takılırsa kuyruğu kilitlemesin diye
+    // izin sırası SADECE bunlar arasından belirlenir.
+    private readonly Dictionary<EnemyController, float> lastRangeAsk =
+        new Dictionary<EnemyController, float>();
+
     // Uyarı (wind-up) halindeki düşmanlar -> vuruş zamanı
     private readonly Dictionary<EnemyController, float> activeAttackers =
         new Dictionary<EnemyController, float>();
@@ -137,6 +143,33 @@ public class EnemyAttackCoordinator : MonoBehaviour
     }
 
     /// <summary>
+    /// Saldırıya hazır düşman sıraya girer / yerini korur (HER KARE çağrılır).
+    /// Menzilde olmasa bile sıra numarası alır; böylece geride bekleyenler
+    /// sıralarını kaybetmez. Saldırı izni için TryRequestAttack kullanılır.
+    /// </summary>
+    public static void JoinQueue(EnemyController enemy)
+    {
+        if (!Application.isPlaying || enemy == null)
+            return;
+
+        Instance.JoinInternal(enemy);
+    }
+
+    /// <summary>
+    /// Düşmanın bulunduğu taraftaki sıra numarası.
+    /// 0 = o tarafın en önündeki (oyuncuya yaklaşıp saldırı bekler),
+    /// 1, 2, ... = geride kademeli bekler.
+    /// Sıraya girmemişse 0.
+    /// </summary>
+    public static int GetStandbyRank(EnemyController enemy)
+    {
+        if (instance == null || enemy == null)
+            return 0;
+
+        return instance.RankInternal(enemy);
+    }
+
+    /// <summary>
     /// Düşmanın vuruşu gerçekleşince (veya saldırı iptal olunca) çağrılır.
     /// Birden fazla çağrılması zararsızdır.
     /// </summary>
@@ -201,6 +234,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         // -----------------------------------------------------
 
         lastAsk[enemy] = now;
+        lastRangeAsk[enemy] = now;
 
         if (!firstAsk.ContainsKey(enemy))
             firstAsk[enemy] = askCounter++;
@@ -252,6 +286,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
         firstAsk.Remove(enemy);
         lastAsk.Remove(enemy);
+        lastRangeAsk.Remove(enemy);
 
         activeAttackers[enemy] = hitTime;
 
@@ -281,6 +316,69 @@ public class EnemyAttackCoordinator : MonoBehaviour
         return beatInterval * multiplier;
     }
 
+    private void JoinInternal(EnemyController enemy)
+    {
+        float now = Time.time;
+
+        PurgeStale(now);
+
+        lastAsk[enemy] = now;
+
+        if (!firstAsk.ContainsKey(enemy))
+            firstAsk[enemy] = askCounter++;
+    }
+
+    private int RankInternal(EnemyController enemy)
+    {
+        if (
+            enemy.target == null ||
+            !firstAsk.TryGetValue(enemy, out int myOrder)
+        )
+        {
+            return 0;
+        }
+
+        float targetX =
+            enemy.target.position.x;
+
+        int mySide =
+            SideOf(enemy, targetX);
+
+        int rank = 0;
+
+        foreach (var pair in firstAsk)
+        {
+            if (
+                pair.Key == null ||
+                pair.Key == enemy
+            )
+            {
+                continue;
+            }
+
+            // Aynı tarafta, benden önce sıraya girmiş olanları say.
+            if (
+                pair.Value < myOrder &&
+                SideOf(pair.Key, targetX) == mySide
+            )
+            {
+                rank++;
+            }
+        }
+
+        return rank;
+    }
+
+    private static int SideOf(
+        EnemyController enemy,
+        float targetX
+    )
+    {
+        return enemy.transform.position.x >= targetX
+            ? 1
+            : -1;
+    }
+
     private bool IsFrontOfQueue(
         EnemyController enemy
     )
@@ -292,6 +390,17 @@ public class EnemyAttackCoordinator : MonoBehaviour
         {
             if (pair.Key == null)
                 continue;
+
+            // Menzilde olup izin isteyenler arasından seç:
+            // geride bekleyen ya da menzile takılan bir düşman
+            // kuyruğu kilitlemesin.
+            if (
+                !lastRangeAsk.TryGetValue(pair.Key, out float rangeTime) ||
+                Time.time - rangeTime > queueMemory
+            )
+            {
+                continue;
+            }
 
             // Sıra numarası her düşmanda benzersiz,
             // yani eşitlik / tie-break sorunu yok.
@@ -325,6 +434,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         {
             lastAsk.Remove(removeBuffer[i]);
             firstAsk.Remove(removeBuffer[i]);
+            lastRangeAsk.Remove(removeBuffer[i]);
         }
 
         // Güvenlik: Release hiç çağrılmadıysa takılı kalmasın.
@@ -351,6 +461,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     {
         firstAsk.Clear();
         lastAsk.Clear();
+        lastRangeAsk.Clear();
         activeAttackers.Clear();
     }
 
