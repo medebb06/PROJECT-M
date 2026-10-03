@@ -635,6 +635,7 @@ MonoBehaviour:
   attackRange: 6
   chaseStopDistance: 4
   chaseSpeed: 5
+  alwaysHunt: 0
   useStandby: 1
   standbyDistance: 4.5
   standbySpacing: 2.5

@@ -78,7 +78,7 @@ public static class CharmCatalog
 
         parryHeal.trigger = HealTrigger.OnParry;
         parryHeal.chancePerStack = 0.2f;
-        parryHeal.amount = 1;
+        parryHeal.healPercent = 0.08f;
 
         list.Add(
             Make(
@@ -96,7 +96,7 @@ public static class CharmCatalog
 
         killHeal.trigger = HealTrigger.OnKill;
         killHeal.chancePerStack = 0.15f;
-        killHeal.amount = 1;
+        killHeal.healPercent = 0.06f;
 
         list.Add(
             Make(

@@ -60,6 +60,13 @@ public class PlayerCombatController : MonoBehaviour
         }
     }
 
+    [Header("Health Damage (sersemlemiş düşmana)")]
+    [Tooltip(
+        "Kombo vuruşunun, DENGESİ KIRIK düşmanın canına verdiği taban hasar. " +
+        "Düşman canı büyük ölçekteyse (ör. 100) bunu artır; charm'lar bunu " +
+        "çarpar.")]
+    [Min(1)] public int attackHealthDamage = 1;
+
     [Header("Attack Move (Feel)")]
     public float attackMoveDistance = 0.25f;
     public float attackMoveSpeed = 6f;

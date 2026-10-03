@@ -16,6 +16,7 @@ public class RunUI : MonoBehaviour
     private GUIStyle smallStyle;
     private GUIStyle cardStyle;
     private GUIStyle bannerStyle;
+    private GUIStyle riposteStyle;
 
     private Texture2D dimTexture;
 
@@ -141,6 +142,48 @@ public class RunUI : MonoBehaviour
 
             y += 20f;
         }
+
+        DrawBuildStats(run);
+
+        DrawRiposte();
+    }
+
+    // Build'in toplam etkisi: charm'ların ve riposte'un birleşik sonucu.
+    private void DrawBuildStats(RunManager run)
+    {
+        PlayerStats stats = PlayerStats.Current;
+
+        if (stats == null)
+            return;
+
+        string text =
+            "Kritik %" + Mathf.RoundToInt(stats.CritChance * 100f) +
+            " (x" + stats.CritMultiplier.ToString("0.0") + ")" +
+            "    Denge x" +
+            stats.Get(StatType.BalanceDamage, 1f).ToString("0.00") +
+            "    Can x" +
+            stats.Get(StatType.HealthDamage, 1f).ToString("0.00");
+
+        GUI.Label(
+            new Rect(16, 686, 700, 24),
+            text,
+            smallStyle
+        );
+    }
+
+    // Parry sonrası güçlenmiş vuruş hakları.
+    private void DrawRiposte()
+    {
+        if (!ParryRiposte.IsActive)
+            return;
+
+        float width = Screen.width / (Screen.height / 720f);
+
+        GUI.Label(
+            new Rect(0, 96, width, 40),
+            "RİPOSTE  " + new string('●', Mathf.Max(0, ParryRiposte.HitsLeft)),
+            riposteStyle
+        );
     }
 
     // =========================================================
@@ -324,6 +367,15 @@ public class RunUI : MonoBehaviour
             richText = true,
             padding = new RectOffset(16, 16, 14, 14)
         };
+
+        riposteStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 30,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter
+        };
+
+        riposteStyle.normal.textColor = new Color(1f, 0.82f, 0.2f);
 
         bannerStyle = new GUIStyle(GUI.skin.label)
         {

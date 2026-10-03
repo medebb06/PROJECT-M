@@ -136,9 +136,50 @@ public class RunManager : MonoBehaviour
     private List<CharmDefinition> extraCharms =
         new List<CharmDefinition>();
 
-    [Header("Recovery")]
-    [Tooltip("Her bölüm temizlenince iyileşen can birimi.")]
-    [SerializeField] private int healBetweenStages = 1;
+    [Header("Parry odaklı denge (bedava takası bitir)")]
+    [Tooltip(
+        "AÇIK: oyuncu kendiliğinden can yenilemez (koşu boyunca). " +
+        "Hasar yiyip yenilenerek vurmak parry'den kârlı olmasın; iyileşme " +
+        "sadece charm'lardan, parry'den ve bölüm aralarından gelir.")]
+    [SerializeField] private bool disablePlayerHealthRecovery = true;
+
+    [Tooltip(
+        "Koşuda düşman saldırısı, uyarının bu oranından sonra vurarak " +
+        "KESİLEMEZ. Prefab'daki Attack Commit Point bunun üstündeyse buna " +
+        "düşürülür (altındaysa dokunulmaz). Düşük değer = saldırıyı vurarak " +
+        "iptal etmek zorlaşır, cevap parry/dash/geri çekilme olur.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float runAttackCommitPoint = 0.15f;
+
+    [Tooltip("Her bölümde düşmanın NORMAL saldırı hasarına eklenen oran (0.06 = %6).")]
+    [SerializeField] private float damageBonusPerStage = 0.06f;
+
+    [Tooltip("Hasar artışının üst sınırı (1.5 = en fazla +%150).")]
+    [SerializeField] private float maxDamageBonus = 1.5f;
+
+    [Tooltip("Bölüm temizlenince iyileşen can: oyuncunun MAX canının yüzdesi (0.1 = %10).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float healBetweenStagesPercent = 0.10f;
+
+    [Header("Riposte (parry ödülü)")]
+    [Tooltip("Başarılı parry'den sonra güçlenmiş vuruşların süresi (sn).")]
+    [SerializeField] private float riposteDuration = 2f;
+
+    [Tooltip("En fazla kaç vuruş güçlenmiş sayılır (süre ya da vuruş, hangisi önce biterse).")]
+    [SerializeField] private int riposteMaxHits = 3;
+
+    [Tooltip("Riposte sırasında denge hasarı çarpanı.")]
+    [SerializeField] private float riposteBalanceMultiplier = 2f;
+
+    [Tooltip("Riposte sırasında can hasarı çarpanı.")]
+    [SerializeField] private float riposteHealthMultiplier = 1.5f;
+
+    [Tooltip("Riposte sırasında kritik şansına eklenen değer (0.5 = +%50).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float riposteCritChanceBonus = 0.5f;
+
+    [Tooltip("Parry'nin oyuncuya iade ettiği posture.")]
+    [SerializeField] private int postureRefundOnParry = 25;
 
     // ---------------------------------------------------------
     // Durum (arayüz okur)
@@ -167,6 +208,10 @@ public class RunManager : MonoBehaviour
 
     private Health playerHealth;
     private Vector3 playerStartPosition;
+
+    // Doğurmada kullanılan şablon. 'Enemy Prefab' gerçek bir prefab ise
+    // onun kendisi; sahne nesnesi atanmışsa gizli bir kopyası.
+    private GameObject spawnTemplate;
 
     // =========================================================
     // KURULUM
@@ -211,7 +256,28 @@ public class RunManager : MonoBehaviour
         playerHealth = player.GetComponent<Health>();
         playerStartPosition = player.transform.position;
 
+        spawnTemplate = PrepareTemplate(enemyPrefab);
+
         Inventory = new CharmInventory(player.gameObject);
+
+        // Koşuda bedava can yenilenmesi kapalı.
+        if (disablePlayerHealthRecovery)
+            playerHealth.SetRecoveryEnabled(false);
+
+        // Parry ödülü (riposte).
+        ParryRiposte riposte = player.GetComponent<ParryRiposte>();
+
+        if (riposte == null)
+            riposte = player.gameObject.AddComponent<ParryRiposte>();
+
+        riposte.Configure(
+            riposteDuration,
+            riposteMaxHits,
+            riposteBalanceMultiplier,
+            riposteHealthMultiplier,
+            riposteCritChanceBonus,
+            postureRefundOnParry
+        );
 
         if (includeDefaultCharms)
             pool.AddRange(CharmCatalog.CreateDefaults());
@@ -280,7 +346,24 @@ public class RunManager : MonoBehaviour
 
                     WaveBannerUntil = Time.unscaledTime + 1.6f;
 
+                    int spawnedBefore = spawned.Count;
+
                     yield return SpawnWave(EnemiesForWave(Wave));
+
+                    // Hiç düşman doğmadıysa (şablon geçersiz) döngüyü sessizce
+                    // dönmek yerine net bir hatayla durdur.
+                    if (
+                        spawned.Count == spawnedBefore &&
+                        !playerHealth.IsDead
+                    )
+                    {
+                        Debug.LogError(
+                            "RunManager: düşman doğurulamadı! " +
+                            "'Enemy Prefab' alanını kontrol et."
+                        );
+
+                        yield break;
+                    }
 
                     // Sıradaki dalga için eşik; son dalga hepsinin ölmesini bekler.
                     int target =
@@ -334,8 +417,19 @@ public class RunManager : MonoBehaviour
 
                 yield return new WaitForSecondsRealtime(1.2f);
 
-                if (healBetweenStages > 0)
-                    playerHealth.Heal(healBetweenStages);
+                if (healBetweenStagesPercent > 0f)
+                {
+                    int heal =
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                playerHealth.MaxHealth *
+                                healBetweenStagesPercent
+                            )
+                        );
+
+                    playerHealth.Heal(heal);
+                }
 
                 if (ShouldOffer())
                     yield return OfferRoutine(false);
@@ -525,8 +619,24 @@ public class RunManager : MonoBehaviour
             position = new Vector3(x, y, playerPosition.z);
         }
 
+        // Şablon yok olduysa (ör. sahne düşmanı öldü) Instantiate hata
+        // verir ve doğma coroutine'i çökerdi: kontrol et.
+        if (spawnTemplate == null)
+        {
+            Debug.LogError(
+                "RunManager: düşman şablonu yok edilmiş! 'Enemy Prefab' " +
+                "alanına Project penceresinden PREFAB ata (sahne nesnesi değil)."
+            );
+
+            return;
+        }
+
         GameObject obj =
-            Instantiate(enemyPrefab, position, Quaternion.identity);
+            Instantiate(spawnTemplate, position, Quaternion.identity);
+
+        // Gizli şablondan gelen kopya kapalıdır; aç (Awake/Start şimdi çalışır).
+        if (!obj.activeSelf)
+            obj.SetActive(true);
 
         EnemyController enemy =
             obj.GetComponent<EnemyController>();
@@ -548,6 +658,22 @@ public class RunManager : MonoBehaviour
 
         // Uzakta Idle'a düşüp bölümü kilitlemesin.
         enemy.alwaysHunt = true;
+
+        // Saldırı erken kararlı olsun: vurarak iptal etmek zorlaşsın,
+        // parry en iyi cevap kalsın. (Prefab daha düşükse ona dokunma.)
+        enemy.attackCommitPoint =
+            Mathf.Min(enemy.attackCommitPoint, runAttackCommitPoint);
+
+        // Normal saldırı hasarı bölümle artar: hasar yemek giderek pahalı.
+        // (Engellenemez vuruş zaten büyük; ölçeklenmez.)
+        float damageMultiplier =
+            1f + Mathf.Min(maxDamageBonus, damageBonusPerStage * t);
+
+        enemy.attackDamage =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(enemy.attackDamage * damageMultiplier)
+            );
 
         // Hız: bölümle artar, üst sınırı var.
         enemy.chaseSpeed *=
@@ -671,6 +797,32 @@ public class RunManager : MonoBehaviour
             y = hit.point.y + spawnHeightOffset;
 
         return new Vector3(x, y, playerPosition.z);
+    }
+
+    // 'Enemy Prefab' alanına Project penceresinden gerçek bir prefab
+    // atanmışsa onu kullanır. SAHNEDEKİ bir düşman atanmışsa, o düşman
+    // ölünce nesne yok olur ve sonraki doğmalar kırılır; bu yüzden
+    // başlangıçta gizli bir kopyasını çıkarıp onu şablon yapar.
+    private GameObject PrepareTemplate(GameObject source)
+    {
+        // Prefab asset'lerinin sahnesi geçersizdir; sahne nesnelerinin geçerli.
+        if (!source.scene.IsValid())
+            return source;
+
+        Debug.LogWarning(
+            "RunManager: 'Enemy Prefab' alanına SAHNEDEKİ bir düşman (" +
+            source.name + ") atanmış. Gizli bir şablon kopyası " +
+            "oluşturuluyor. Doğrusu: Project penceresinden prefab'ı atamak."
+        );
+
+        GameObject template =
+            Instantiate(source, transform);
+
+        template.name = source.name + " (Şablon)";
+
+        template.SetActive(false);
+
+        return template;
     }
 
     private void RefreshAlive()

@@ -185,6 +185,17 @@ public class Health : MonoBehaviour
         );
     }
 
+    // Kendiliğinden can yenilenmesini çalışma anında aç/kapat.
+    // (Koşuda kapatılır: hasar yiyip yenilenerek vurmak parry'den
+    // daha kârlı olmasın.)
+    public void SetRecoveryEnabled(bool enabled)
+    {
+        enableRecovery = enabled;
+
+        recoveryTimer = 0f;
+        recoveryAccumulator = 0f;
+    }
+
     // Çalışma anında max canı ayarlar (ör. bölümle ölçeklenen düşmanlar).
     // refill: true ise can yeni maksimuma doldurulur.
     public void SetMaxHealth(int newMax, bool refill = true)

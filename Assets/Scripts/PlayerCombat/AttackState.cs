@@ -423,7 +423,7 @@ public class AttackState : ICombatState
                     source = DamageSource.Attack,
                     comboStep = step,
                     balanceDamage = combat.GetBalanceDamage(step),
-                    healthDamage = 1,
+                    healthDamage = combat.attackHealthDamage,
                     direction = dir,
                     hitPosition = hitPosition
                 }

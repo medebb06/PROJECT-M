@@ -19,8 +19,9 @@ public class HealCharmEffect : CharmEffect
     [Range(0f, 1f)]
     public float chancePerStack = 0.2f;
 
-    [Min(1)]
-    public int amount = 1;
+    [Tooltip("İyileşme miktarı: oyuncunun MAX canının yüzdesi (0.08 = %8). Ölçekten bağımsız.")]
+    [Range(0f, 1f)]
+    public float healPercent = 0.08f;
 
     private CharmContext context;
     private int stacks;
@@ -101,7 +102,17 @@ public class HealCharmEffect : CharmEffect
             Mathf.Clamp01(chancePerStack * stacks);
 
         if (Random.value < chance)
+        {
+            int amount =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        context.playerHealth.MaxHealth * healPercent
+                    )
+                );
+
             context.playerHealth.Heal(amount);
+        }
     }
 
     public override string Describe(int newStacks)
@@ -117,6 +128,8 @@ public class HealCharmEffect : CharmEffect
             );
 
         return
-            "%" + percent + " ihtimalle " + amount + " can (" + when + ")";
+            "%" + percent + " ihtimalle max canın %" +
+            Mathf.RoundToInt(healPercent * 100f) +
+            "'i kadar iyileşme (" + when + ")";
     }
 }

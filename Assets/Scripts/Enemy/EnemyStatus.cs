@@ -5,6 +5,7 @@ using UnityEngine;
 /// EnemyStatus.Get(enemy) ile kendiliğinden eklenir.
 ///
 /// Zehir, EnemyTime saatiyle akar: parry slow-mo'sunda zehir de yavaşlar.
+/// Hasar düşmanın MAX değerinin yüzdesi olarak verilir (ölçekten bağımsız).
 ///
 /// Zehir tikleri PlayerDamage hattından GEÇMEZ (vuruş tepkisi, savrulma ve
 /// ses üretmez, düşmanın saldırısını kesmez); doğrudan denge/can azaltır.
@@ -20,7 +21,8 @@ public class EnemyStatus : MonoBehaviour
     private EnemyBalance balance;
     private Health health;
 
-    private float poisonRate;
+    private float balanceFraction;   // max dengenin yüzdesi / sn
+    private float healthFraction;    // max canın yüzdesi / sn
     private float poisonTimeLeft;
     private float accumulator;
 
@@ -44,10 +46,16 @@ public class EnemyStatus : MonoBehaviour
         health = GetComponent<Health>();
     }
 
-    // Her vuruşta süre yenilenir; hız en son uygulanan değerdir.
-    public void ApplyPoison(float ratePerSecond, float duration)
+    // Her vuruşta süre yenilenir; hızlar en son uygulanan değerdir.
+    public void ApplyPoison(
+        float balanceFractionPerSecond,
+        float healthFractionPerSecond,
+        float duration
+    )
     {
-        poisonRate = Mathf.Max(0f, ratePerSecond);
+        balanceFraction = Mathf.Max(0f, balanceFractionPerSecond);
+        healthFraction = Mathf.Max(0f, healthFractionPerSecond);
+
         poisonTimeLeft = Mathf.Max(poisonTimeLeft, duration);
     }
 
@@ -66,8 +74,27 @@ public class EnemyStatus : MonoBehaviour
 
         poisonTimeLeft -= dt;
 
+        // Şu an hangi katmandayız? Hız o katmanın max değerine göre.
+        bool onBalance =
+            balance != null && !balance.IsBroken;
+
+        float perSecond;
+
+        if (onBalance)
+        {
+            perSecond = balance.MaxBalance * balanceFraction;
+        }
+        else if (health != null && !health.IsDead)
+        {
+            perSecond = health.MaxHealth * healthFraction;
+        }
+        else
+        {
+            perSecond = 0f;
+        }
+
         // Kesirli hasar birikir; tam sayıya ulaşınca uygulanır.
-        accumulator += poisonRate * dt;
+        accumulator += perSecond * dt;
 
         while (accumulator >= 1f)
         {
@@ -79,7 +106,8 @@ public class EnemyStatus : MonoBehaviour
         if (poisonTimeLeft <= 0f)
         {
             poisonTimeLeft = 0f;
-            poisonRate = 0f;
+            balanceFraction = 0f;
+            healthFraction = 0f;
             accumulator = 0f;
         }
     }

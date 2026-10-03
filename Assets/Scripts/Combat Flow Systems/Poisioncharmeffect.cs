@@ -5,16 +5,24 @@ using UnityEngine;
 /// Zehir ZAMANLA önce düşmanın DENGESİNİ eritir (denge kırılırsa stagger),
 /// denge zaten kırıksa CANINI eritir. Süre her vuruşta yenilenir.
 ///
-/// İstif: saniyedeki hasar artar (baseRate + (istif-1) × ratePerExtraStack).
+/// Hasar, düşmanın MAKSİMUM değerinin YÜZDESİ olarak verilir; yani denge/can
+/// ölçeği 7 de olsa 100 de olsa aynı etkiyi yapar.
+///
+/// İstif: şiddet = 1 + (istif - 1) × extraStrengthPerStack
 /// </summary>
 [CreateAssetMenu(menuName = "Charms/Effect/Poison", fileName = "PoisonEffect")]
 public class PoisonCharmEffect : CharmEffect
 {
-    [Tooltip("1 istifte saniyedeki hasar (denge/can birimi).")]
-    public float baseRate = 0.7f;
+    [Tooltip("1 istifte saniyede, düşmanın MAX dengesinin yüzdesi (0.05 = %5).")]
+    [Range(0f, 1f)]
+    public float balancePercentPerSecond = 0.05f;
 
-    [Tooltip("Her ek istif için saniyedeki ek hasar.")]
-    public float ratePerExtraStack = 0.5f;
+    [Tooltip("Denge kırıkken saniyede, düşmanın MAX canının yüzdesi (0.015 = %1.5).")]
+    [Range(0f, 1f)]
+    public float healthPercentPerSecond = 0.015f;
+
+    [Tooltip("Her ek istif şiddete bu kadar ekler (0.6 = taban hızın %60'ı).")]
+    public float extraStrengthPerStack = 0.6f;
 
     [Tooltip("Zehrin süresi (düşman saniyesi). Her vuruşta yenilenir.")]
     public float duration = 4f;
@@ -22,8 +30,10 @@ public class PoisonCharmEffect : CharmEffect
     private int stacks;
     private bool subscribed;
 
-    private float Rate =>
-        baseRate + Mathf.Max(0, stacks - 1) * ratePerExtraStack;
+    private float Strength(int s)
+    {
+        return 1f + Mathf.Max(0, s - 1) * extraStrengthPerStack;
+    }
 
     public override void Apply(CharmContext context, int newStacks)
     {
@@ -55,20 +65,27 @@ public class PoisonCharmEffect : CharmEffect
         if (!result.hit || enemy == null)
             return;
 
-        // Zehir tikleri zaten bu yoldan geçmez, ama güvenli olsun.
         if (info.source == DamageSource.Poison)
             return;
 
-        EnemyStatus.Get(enemy).ApplyPoison(Rate, duration);
+        float strength = Strength(stacks);
+
+        EnemyStatus.Get(enemy).ApplyPoison(
+            balancePercentPerSecond * strength,
+            healthPercentPerSecond * strength,
+            duration
+        );
     }
 
     public override string Describe(int newStacks)
     {
-        float rate =
-            baseRate + Mathf.Max(0, newStacks - 1) * ratePerExtraStack;
+        float strength = Strength(newStacks);
 
         return
-            "Zehir: saniyede " + rate.ToString("0.0") +
-            " hasar, " + duration.ToString("0.#") + " sn";
+            "Zehir: saniyede %" +
+            (balancePercentPerSecond * strength * 100f).ToString("0.#") +
+            " denge (sersemleyince %" +
+            (healthPercentPerSecond * strength * 100f).ToString("0.#") +
+            " can), " + duration.ToString("0.#") + " sn";
     }
 }
