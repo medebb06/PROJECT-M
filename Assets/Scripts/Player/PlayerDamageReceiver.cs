@@ -24,6 +24,12 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [SerializeField] private float defaultKnockbackVerticalForce = 4.8f;
     [SerializeField] private float defaultKnockbackDuration = 0.1f;
 
+    [Tooltip(
+        "Savrulma sonunda yatay hızın ne kadar hızlı sıfırlandığı " +
+        "(birim/sn²). Küçük = uzun kayar, büyük = çabuk durur, " +
+        "0 = ani dur (eski davranış). Ek kayma mesafesi ≈ hız² / (2 × bu değer).")]
+    [SerializeField] private float defaultKnockbackDeceleration = 40f;
+
     void Awake()
     {
         if (health == null)
@@ -61,7 +67,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             hitDirection,
             defaultKnockbackForce,
             defaultKnockbackVerticalForce,
-            defaultKnockbackDuration
+            defaultKnockbackDuration,
+            defaultKnockbackDeceleration
         );
     }
 
@@ -75,7 +82,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         Vector2 hitDirection,
         float knockbackForce,
         float knockbackVerticalForce,
-        float knockbackDuration
+        float knockbackDuration,
+        float knockbackDeceleration = -1f
     )
     {
         if (health == null)
@@ -96,6 +104,10 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         // --------------------------------
 
         health.TakeDamage(damage);
+
+        // Vurulma flaşı (ölümcül vuruşta da oynar).
+        if (blink != null)
+            blink.PlayHitFlash();
 
         // --------------------------------
         // ÖLDÜ
@@ -133,7 +145,10 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
                 knockbackVerticalForce,
                 knockbackDuration,
                 hurtLockDuration,
-                invincibilityDuration
+                invincibilityDuration,
+                knockbackDeceleration >= 0f
+                    ? knockbackDeceleration
+                    : defaultKnockbackDeceleration
             )
         );
     }

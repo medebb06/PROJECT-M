@@ -71,6 +71,12 @@ public class EnemyController : MonoBehaviour
     public float attackKnockbackVerticalForce = 3f;
     public float attackKnockbackDuration = 0.12f;
 
+    [Tooltip(
+        "Savrulma sonunda oyuncunun yatay hızı bu ivmeyle sıfırlanır " +
+        "(birim/sn²). Küçük = uzun kayar, büyük = çabuk durur, " +
+        "0 = ani dur. Ek kayma ≈ kuvvet² / (2 × bu değer).")]
+    public float attackKnockbackDeceleration = 40f;
+
     [Header("Balance Hit Knockback")]
     public float balanceHitKnockbackForce = 1.5f;
     public float balanceHitKnockbackVerticalForce = 0f;

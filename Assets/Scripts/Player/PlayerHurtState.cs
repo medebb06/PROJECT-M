@@ -21,6 +21,7 @@ public class PlayerHurtState : IPlayerState
     private float knockbackForce;
     private float knockbackVerticalForce;
     private float knockbackDuration;
+    private float knockbackDeceleration;
 
     public PlayerHurtState(
         PlayerController player,
@@ -30,7 +31,8 @@ public class PlayerHurtState : IPlayerState
         float verticalForce = -1f,
         float knockbackDuration = 0.1f,
         float lockDuration = 0.22f,
-        float invincibleDuration = 0.7f)
+        float invincibleDuration = 0.7f,
+        float knockbackDeceleration = 40f)
     {
         this.player = player;
         this.sm = sm;
@@ -46,6 +48,7 @@ public class PlayerHurtState : IPlayerState
                 : force * 0.6f;
 
         this.knockbackDuration = knockbackDuration;
+        this.knockbackDeceleration = knockbackDeceleration;
 
         this.lockDuration =
             Mathf.Max(0.01f, lockDuration);
@@ -107,22 +110,43 @@ public class PlayerHurtState : IPlayerState
 
         timer -= dt;
 
-        // Knockback süresi bitince yatay momentum kalmasın.
         if (!knockbackEnded)
         {
+            // 1) Sabit hızla savrulma fazı (knockbackDuration kadar).
             knockbackTimer -= dt;
 
             if (knockbackTimer <= 0f)
             {
                 knockbackEnded = true;
 
-                player.SetVelocity(
-                    new Vector2(
-                        0f,
-                        player.rb.linearVelocity.y
-                    )
-                );
+                // Yavaşlama kapalıysa (<= 0) eski davranış: ani dur.
+                if (knockbackDeceleration <= 0f)
+                {
+                    player.SetVelocity(
+                        new Vector2(
+                            0f,
+                            player.rb.linearVelocity.y
+                        )
+                    );
+                }
             }
+        }
+        else if (knockbackDeceleration > 0f)
+        {
+            // 2) Yavaşlayarak durma fazı: "duvara çarpma" hissi yok.
+            float newX =
+                Mathf.MoveTowards(
+                    player.rb.linearVelocity.x,
+                    0f,
+                    knockbackDeceleration * dt
+                );
+
+            player.SetVelocity(
+                new Vector2(
+                    newX,
+                    player.rb.linearVelocity.y
+                )
+            );
         }
 
         if (timer <= 0f)

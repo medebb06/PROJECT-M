@@ -413,7 +413,8 @@ public class EnemyAttackState : IEnemyState
             hitDirection,
             enemy.attackKnockbackForce,
             enemy.attackKnockbackVerticalForce,
-            enemy.attackKnockbackDuration
+            enemy.attackKnockbackDuration,
+            enemy.attackKnockbackDeceleration
         );
 
         // Oyuncu vuruldu: ardışık vuruş yağmurunu kes.
