@@ -151,6 +151,47 @@ public class EnemyController : MonoBehaviour
     [Min(0.05f)]
     public float unblockableDodgeCueLead = 0.4f;
 
+    [Header("Attack Shape (yönlü / uzun vuruş)")]
+    [Tooltip(
+        "Açıkken: engellenemez vuruş SADECE düşmanın baktığı tarafa, " +
+        "uzun bir kutu içinde isabet eder. Arkasına geçen ya da " +
+        "yeterince yükseğe zıplayan oyuncu vurulmaz. Kapalıysa eski " +
+        "dairesel erişim.")]
+    public bool unblockableFrontOnly = true;
+
+    [Tooltip(
+        "Engellenemez vuruşun ileriye doğru uzunluğu (düşman merkezinden). " +
+        "Normal Attack Range'den büyük olması 'uzun vuruş' hissini verir.")]
+    [Min(0.5f)]
+    public float unblockableForwardReach = 5.5f;
+
+    [Tooltip(
+        "Vuruş kutusunun yüksekliği (düşmanın ayaklarından yukarı). " +
+        "Oyuncunun ayakları bunun üstündeyse vuruş ıskalar (zıplayarak kaçış).")]
+    [Min(0.2f)]
+    public float unblockableHitHeight = 2.2f;
+
+    [Tooltip(
+        "Düşmanın oyuncuya bakışını uyarının bu oranında KİLİTLER. " +
+        "Kilitlendikten sonra oyuncu arkasına geçerse vuruş boşa gider. " +
+        "0 = baştan kilitli, 1 = hiç kilitlenmez (hep oyuncuya döner).")]
+    [Range(0f, 1f)]
+    public float unblockableFacingLockPoint = 0.3f;
+
+    [Tooltip(
+        "Yönlü vuruşlarda düşmanın hemen arkasında kalan pay " +
+        "(tam üst üste duran oyuncu da vurulsun diye).")]
+    [Min(0f)]
+    public float attackBackTolerance = 0.4f;
+
+    [Tooltip(
+        "Açıkken NORMAL saldırılar da sadece baktığı tarafa isabet eder " +
+        "(menzil = Attack Range).")]
+    public bool normalAttackFrontOnly = false;
+
+    [Min(0.2f)]
+    public float normalAttackHitHeight = 2.2f;
+
     [Header("Danger Indicator (okunurluk)")]
     [Tooltip("Engellenemez vuruşta düşmanın başının üstünde '!' simgesi.")]
     public bool showDangerIcon = true;
@@ -675,6 +716,10 @@ public class EnemyController : MonoBehaviour
 
     private void FaceTarget()
     {
+        // Saldırının uyarısında yön kilitlenmişse oyuncuya dönme.
+        if (facingLocked)
+            return;
+
         if (target == null)
             return;
 
@@ -926,6 +971,30 @@ public class EnemyController : MonoBehaviour
 
         return false;
     }
+
+    // =========================================================
+    // YÖN (yönlü vuruşlar için)
+    // =========================================================
+
+    private bool facingLocked;
+
+    public void LockFacing(bool locked)
+    {
+        facingLocked = locked;
+    }
+
+    // +1 = sağa, -1 = sola bakıyor.
+    // (FaceTarget: hedef sağdaysa flipX = false, yani sprite sağa bakar.)
+    public float FacingDirection =>
+        enemySprite != null && enemySprite.flipX
+            ? -1f
+            : 1f;
+
+    // Düşmanın ayak hizası (vuruş kutusu buradan yukarı ölçülür).
+    public float FeetY =>
+        bodyCollider != null
+            ? bodyCollider.bounds.min.y
+            : transform.position.y;
 
     // Engellenemez vuruşun başlangıcında net bir "dikkat!" işareti.
     public void PlayAlertFlash()

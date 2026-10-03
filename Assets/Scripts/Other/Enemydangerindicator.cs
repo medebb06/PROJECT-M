@@ -49,6 +49,10 @@ public class EnemyDangerIndicator : MonoBehaviour
     private float cueUntil;
     private float reach;
 
+    // Yönlü mod: düşmanın baktığı yönde uzun, yüksekliği olan kutu.
+    private bool frontOnly;
+    private float hitHeight;
+
     private void Awake()
     {
         enemy = GetComponent<EnemyController>();
@@ -59,10 +63,20 @@ public class EnemyDangerIndicator : MonoBehaviour
     // API
     // =========================================================
 
-    public void Show(float reachDistance)
+    // Dairesel erişim (eski): ayaklarda ortalanmış ince bant.
+    // Yönlü (front = true): baktığı yönde reachDistance uzunluğunda,
+    // height yüksekliğinde kutu.
+    public void Show(
+        float reachDistance,
+        float height = 0f,
+        bool front = false
+    )
     {
         if (enemy == null)
             return;
+
+        frontOnly = front && height > 0f;
+        hitHeight = height;
 
         EnsureObjects();
 
@@ -90,7 +104,12 @@ public class EnemyDangerIndicator : MonoBehaviour
         iconRenderer.sortingOrder = order + 500;
 
         zoneRenderer.sortingLayerID = layer;
-        zoneRenderer.sortingOrder = order;
+
+        // Büyük kutu düşmanın ARKASINDA çizilsin (üstünü kapatmasın).
+        zoneRenderer.sortingOrder =
+            frontOnly
+                ? order - 1
+                : order;
 
         iconRenderer.enabled = enemy.showDangerIcon;
         zoneRenderer.enabled = enemy.showDangerZone;
@@ -176,7 +195,7 @@ public class EnemyDangerIndicator : MonoBehaviour
                     : baseColor;
         }
 
-        // ---------------- ZEMİN BANDI ----------------
+        // ---------------- ERİŞİM ALANI ----------------
 
         if (zoneRenderer.enabled)
         {
@@ -187,27 +206,66 @@ public class EnemyDangerIndicator : MonoBehaviour
                         ? mainRenderer.bounds.min.y
                         : position.y);
 
-            zoneRenderer.transform.position =
-                new Vector3(
-                    position.x,
-                    feetY + ZoneHeight * 0.5f + 0.04f,
-                    position.z
-                );
+            Vector3 zonePosition;
+            Vector3 zoneScale;
+            float baseAlpha;
 
-            zoneRenderer.transform.localScale =
-                new Vector3(
-                    reach * 2f,
-                    ZoneHeight,
-                    1f
-                );
+            if (frontOnly)
+            {
+                // Sadece düşmanın baktığı yönde: uzunluk x yükseklik kutusu.
+                // -back (hemen arkası) ile +reach (ileri) arasında.
+                float dir = enemy.FacingDirection;
+                float back = enemy.attackBackTolerance;
+                float length = reach + back;
+
+                zonePosition =
+                    new Vector3(
+                        position.x + dir * (reach - back) * 0.5f,
+                        feetY + hitHeight * 0.5f,
+                        position.z
+                    );
+
+                zoneScale =
+                    new Vector3(
+                        length,
+                        hitHeight,
+                        1f
+                    );
+
+                // Büyük alan: daha saydam.
+                baseAlpha =
+                    Mathf.Lerp(0.10f, 0.32f, progress);
+            }
+            else
+            {
+                zonePosition =
+                    new Vector3(
+                        position.x,
+                        feetY + ZoneHeight * 0.5f + 0.04f,
+                        position.z
+                    );
+
+                zoneScale =
+                    new Vector3(
+                        reach * 2f,
+                        ZoneHeight,
+                        1f
+                    );
+
+                baseAlpha =
+                    Mathf.Lerp(0.18f, 0.5f, progress);
+            }
+
+            zoneRenderer.transform.position = zonePosition;
+            zoneRenderer.transform.localScale = zoneScale;
 
             // Vuruşa yaklaştıkça parlaklaşır.
             float alpha =
-                Mathf.Lerp(0.18f, 0.5f, progress) +
-                0.08f * Mathf.Sin(time * 10f);
+                baseAlpha +
+                0.06f * Mathf.Sin(time * 10f);
 
             if (cue)
-                alpha += 0.2f;
+                alpha += frontOnly ? 0.15f : 0.2f;
 
             Color zoneColor =
                 cue

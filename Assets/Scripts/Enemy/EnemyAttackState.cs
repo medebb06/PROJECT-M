@@ -94,6 +94,15 @@ public class EnemyAttackState : IEnemyState
         if (indicator != null)
             indicator.SetProgress(progress);
 
+        // Yön kilidi: bundan sonra oyuncu arkasına geçerse vuruş ıskalar.
+        if (
+            progress >= enemy.unblockableFacingLockPoint &&
+            enemy.unblockableFacingLockPoint < 1f
+        )
+        {
+            enemy.LockFacing(true);
+        }
+
         // Kaçış payı için: oyuncunun dash'te olduğu son anı hatırla.
         if (playerRef != null && playerRef.isDashing)
             lastDashSeenTime = Time.time;
@@ -107,6 +116,68 @@ public class EnemyAttackState : IEnemyState
 
         if (!dodgeCueTriggered && warningTimer <= lead)
             TriggerDodgeCue();
+    }
+
+    // Vuruş isabet alanında mı?
+    //  - Engellenemez + yönlü: baktığı yönde uzun kutu (arkaya ve yüksekliğe duyarlı)
+    //  - Normal + yönlü (isteğe bağlı): aynı kutu, menzil = attackRange
+    //  - Diğer: eski dairesel erişim
+    private bool IsInReach(
+        PlayerController player,
+        float distance,
+        float circularReach
+    )
+    {
+        if (isUnblockable && enemy.unblockableFrontOnly)
+        {
+            return IsInFrontArea(
+                player,
+                enemy.unblockableForwardReach,
+                enemy.unblockableHitHeight
+            );
+        }
+
+        if (!isUnblockable && enemy.normalAttackFrontOnly)
+        {
+            return IsInFrontArea(
+                player,
+                enemy.attackRange,
+                enemy.normalAttackHitHeight
+            );
+        }
+
+        return distance <= circularReach;
+    }
+
+    private bool IsInFrontArea(
+        PlayerController player,
+        float forwardReach,
+        float hitHeight
+    )
+    {
+        // Düşmanın baktığı yönde ne kadar ilerideyim?
+        // (+ = önünde, - = arkasında)
+        float forward =
+            (
+                player.transform.position.x -
+                enemy.transform.position.x
+            ) * enemy.FacingDirection;
+
+        if (
+            forward < -enemy.attackBackTolerance ||
+            forward > forwardReach
+        )
+        {
+            return false;
+        }
+
+        // Yüksekliğe göre: yeterince zıplayan oyuncu kutunun üstünden geçer.
+        float playerFeet =
+            player.col != null
+                ? player.col.bounds.min.y
+                : player.transform.position.y;
+
+        return playerFeet <= enemy.FeetY + hitHeight;
     }
 
     private void TriggerDodgeCue()
@@ -192,10 +263,26 @@ public class EnemyAttackState : IEnemyState
                         .AddComponent<EnemyDangerIndicator>();
             }
 
-            indicator.Show(
-                enemy.attackRange *
-                enemy.unblockableReachMultiplier
-            );
+            if (enemy.unblockableFrontOnly)
+            {
+                // Düşmanın baktığı yöne doğru uzun kutu.
+                indicator.Show(
+                    enemy.unblockableForwardReach,
+                    enemy.unblockableHitHeight,
+                    true
+                );
+            }
+            else
+            {
+                indicator.Show(
+                    enemy.attackRange *
+                    enemy.unblockableReachMultiplier
+                );
+            }
+
+            // Kilit noktası 0 ise yön baştan sabitlenir.
+            if (enemy.unblockableFacingLockPoint <= 0f)
+                enemy.LockFacing(true);
 
             Debug.Log(
                 "ENEMY UNBLOCKABLE ATTACK STARTED"
@@ -248,6 +335,9 @@ public class EnemyAttackState : IEnemyState
                 DoAttack();
 
             attackDone = true;
+
+            // Vuruş bitti: düşman tekrar oyuncuya dönebilir.
+            enemy.LockFacing(false);
 
             // Vuruş anı geçti: ritim koordinatörüne bildir.
             EnemyAttackCoordinator.ReleaseAttack(enemy);
@@ -316,6 +406,9 @@ public class EnemyAttackState : IEnemyState
         // Saldırı herhangi bir sebeple yarıda kesilirse
         // (stagger, oyuncu öldü vb.) slotu serbest bırak.
         EnemyAttackCoordinator.ReleaseAttack(enemy);
+
+        // Yarıda kesilirse yön kilidi asla açık kalmasın.
+        enemy.LockFacing(false);
 
         if (indicator != null)
             indicator.Hide();
@@ -417,7 +510,7 @@ public class EnemyAttackState : IEnemyState
                 ? enemy.attackRange * enemy.unblockableReachMultiplier
                 : enemy.attackRange;
 
-        if (distance > reach)
+        if (!IsInReach(player, distance, reach))
         {
             Debug.Log(
                 "ENEMY ATTACK MISSED!"

@@ -663,6 +663,13 @@ MonoBehaviour:
   unblockableDodgeGrace: 0.12
   unblockableReachMultiplier: 0.9
   unblockableDodgeCueLead: 0.4
+  unblockableFrontOnly: 1
+  unblockableForwardReach: 5.5
+  unblockableHitHeight: 2.2
+  unblockableFacingLockPoint: 0.3
+  attackBackTolerance: 0.4
+  normalAttackFrontOnly: 0
+  normalAttackHitHeight: 2.2
   showDangerIcon: 1
   showDangerZone: 1
   dangerColor: {r: 1, g: 0.85, b: 0.1, a: 1}
