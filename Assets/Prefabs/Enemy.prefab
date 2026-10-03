@@ -632,7 +632,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  attackRange: 5
+  attackRange: 6
   chaseStopDistance: 4
   chaseSpeed: 5
   useStandby: 1
