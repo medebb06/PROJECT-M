@@ -31,6 +31,35 @@ public class PlayerCombatController : MonoBehaviour
     public float HitVFXForwardOffset =>
         hitVFXForwardOffset;
 
+    [Header("Balance Damage (düşmanın dengesine)")]
+    [Tooltip(
+        "Her kombo vuruşunun düşman dengesine verdiği hasar. " +
+        "Düşmanın EnemyBalance.maxBalance değeriyle birlikte düşün " +
+        "(prefab'da 7). Parry: EnemyController.parryBalanceDamage, " +
+        "Slam: EnemyController.slamBalanceDamage.")]
+    [Min(0)] public int attack1BalanceDamage = 1;
+    [Min(0)] public int attack2BalanceDamage = 1;
+    [Min(0)] public int attack3BalanceDamage = 1;
+    [Min(0)] public int attack4BalanceDamage = 1;
+
+    public int GetBalanceDamage(int comboStep)
+    {
+        switch (comboStep)
+        {
+            case 1:
+                return attack1BalanceDamage;
+
+            case 2:
+                return attack2BalanceDamage;
+
+            case 3:
+                return attack3BalanceDamage;
+
+            default:
+                return attack4BalanceDamage;
+        }
+    }
+
     [Header("Attack Move (Feel)")]
     public float attackMoveDistance = 0.25f;
     public float attackMoveSpeed = 6f;

@@ -9391,6 +9391,7 @@ GameObject:
   - component: {fileID: 1942622296}
   - component: {fileID: 1942622293}
   - component: {fileID: 1942622295}
+  - component: {fileID: 1942622298}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -9473,6 +9474,30 @@ MonoBehaviour:
   balanceBreakVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
   vfxSortingLayer: Default
   vfxSortingOrder: 4
+--- !u!114 &1942622298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33969f424dcfa494dadcf4acc4c25f05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackCoordinator
+  beatInterval: 0.9
+  beatPattern:
+  - 1
+  - 1
+  - 1
+  - 2
+  onBeatTolerance: 0.08
+  maxConcurrentAttackers: 2
+  queueMemory: 0.3
+  idleResetTime: 3
+  postHitGrace: 0.6
+  showDebug: 0
 --- !u!1 &2024794329
 GameObject:
   m_ObjectHideFlags: 0
@@ -9728,6 +9753,10 @@ MonoBehaviour:
   hitBoxSize: {x: 3, y: 2}
   hitVFXInsideAmount: 1.32
   hitVFXForwardOffset: 0.56
+  attack1BalanceDamage: 10
+  attack2BalanceDamage: 10
+  attack3BalanceDamage: 10
+  attack4BalanceDamage: 20
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
   attackMoveCurve:
@@ -9770,8 +9799,6 @@ MonoBehaviour:
   attack4MoveStart: 0.2
   attack4MoveEnd: 0.282
   attack4HitTime: 0
-  hitStopTimeScale: 1
-  hitStopDuration: 1
 --- !u!114 &2122615051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9924,7 +9951,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDamageReceiver
   health: {fileID: 2122615054}
   player: {fileID: 0}
-  knockback: {fileID: 2122615057}
   defaultKnockbackForce: 8
   defaultKnockbackVerticalForce: 4.8
   defaultKnockbackDuration: 0.1
@@ -10075,12 +10101,6 @@ MonoBehaviour:
     enemyLayer:
       serializedVersion: 2
       m_Bits: 1024
-    jumpBufferTime: 0.15
-    coyoteTime: 0.12
-    jumpCutMultiplier: 2
-    jumpCutVelocityMultiplier: 0.75
-    fallMultiplier: 2.5
-    maxFallSpeed: 20
     lightThreshold: 4
     mediumThreshold: 7
     heavyThreshold: 10

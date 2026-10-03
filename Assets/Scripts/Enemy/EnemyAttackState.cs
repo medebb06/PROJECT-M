@@ -13,6 +13,10 @@ public class EnemyAttackState : IEnemyState
     private bool attackDone;
     private bool isRecovering;
 
+    // Kararlı aşama (super armor) takibi
+    private float warningDuration;
+    private bool commitTriggered;
+
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -27,11 +31,56 @@ public class EnemyAttackState : IEnemyState
             enemy.GetComponent<Rigidbody2D>();
     }
 
+    // =========================================================
+    // COMMIT (KARARLI AŞAMA)
+    // Uyarının attackCommitPoint oranından sonra saldırı artık
+    // hasar alınca kesilmez. Cevap: parry, dash veya geri çekilme.
+    // Vuruş anından sonraki recovery'de düşman yine açık hedeftir.
+    // =========================================================
+
+    public bool IsCommitted
+    {
+        get
+        {
+            if (attackDone)
+                return false;
+
+            // 1 = kararlı aşama yok (eski davranış)
+            if (enemy.attackCommitPoint >= 1f)
+                return false;
+
+            float progress =
+                1f -
+                (warningTimer / warningDuration);
+
+            return progress >= enemy.attackCommitPoint;
+        }
+    }
+
+    private void TriggerCommit()
+    {
+        commitTriggered = true;
+
+        if (telegraph != null)
+            telegraph.SetCommitted();
+
+        if (attackAudio != null)
+            attackAudio.PlayCommit();
+    }
+
     public void Enter()
     {
         enemy.PlayAttackAnimation();
         warningTimer =
             enemy.attackWarningTime;
+
+        warningDuration =
+            Mathf.Max(
+                0.0001f,
+                enemy.attackWarningTime
+            );
+
+        commitTriggered = false;
 
         recoveryTimer = 0f;
 
@@ -71,6 +120,9 @@ public class EnemyAttackState : IEnemyState
             StopMovement();
 
             warningTimer -= Time.deltaTime;
+
+            if (!commitTriggered && IsCommitted)
+                TriggerCommit();
 
             if (warningTimer > 0f)
                 return;
@@ -357,7 +409,7 @@ public class EnemyAttackState : IEnemyState
         // ApplyKnockback (PlayerKnockback) ayrı ayrı çağrılıp
         // birbirinin hızını eziyordu.
         damageReceiver.TakeDamage(
-            1,
+            enemy.attackDamage,
             hitDirection,
             enemy.attackKnockbackForce,
             enemy.attackKnockbackVerticalForce,

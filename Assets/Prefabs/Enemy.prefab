@@ -636,17 +636,18 @@ MonoBehaviour:
   chaseSpeed: 5
   animator: {fileID: 6221554288633988248}
   staggerDuration: 3
-  attackDuration: 0.8
   attackWarningTime: 1
   attackRecoveryTime: 0.5
-  knockbackForceX: 0.1
-  knockbackForceY: 0.1
-  hitDuration: 0.1
+  attackCommitPoint: 0.4
+  committedHitFlashColor: {r: 1, g: 0.6, b: 0.1, a: 1}
+  committedFlashDuration: 0.1
+  committedHitClip: {fileID: 0}
   knockbackDeceleration: 100
   hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitFlashDuration: 0.06
   staggerFlashColor: {r: 0.4198113, g: 0.5465635, b: 1, a: 1}
   staggerFlashDuration: 3
+  attackDamage: 10
   attackKnockbackForce: 1.2
   attackKnockbackVerticalForce: 1
   attackKnockbackDuration: 0.2
@@ -668,8 +669,6 @@ MonoBehaviour:
   blockKnockbackVerticalForce: 5
   blockKnockbackDuration: 1
   blockKnockbackDeceleration: 12
-  blockRecoveryTime: 0.5
-  blockBalanceDamage: 50
   parryBalanceDamage: 50
   blockPostureDamage: 25
   slamBalanceDamage: 3
@@ -741,6 +740,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackAudio
   warningSound: {fileID: 8300000, guid: d3f5be683568bb740b9d13a1894df000, type: 3}
   warningVolume: 1
+  commitSound: {fileID: 0}
+  commitVolume: 1
   audioSource: {fileID: 0}
 --- !u!114 &8410307713417043197
 MonoBehaviour:
@@ -871,6 +872,8 @@ MonoBehaviour:
   spriteRenderer: {fileID: 0}
   warningColor: {r: 1, g: 0, b: 0, a: 1}
   flashSpeed: 30
+  committedColor: {r: 1, g: 0.15, b: 0, a: 1}
+  committedFlashSpeed: 22
 --- !u!114 &5363998208822575816
 MonoBehaviour:
   m_ObjectHideFlags: 0

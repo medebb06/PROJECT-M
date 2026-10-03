@@ -8,6 +8,13 @@ public class EnemyAttackAudio : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float warningVolume = 1f;
 
+    [Header("Attack Commit")]
+    [Tooltip("Saldırı kesilemez hale geçtiğinde çalar. Boşsa sessiz.")]
+    [SerializeField] private AudioClip commitSound;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float commitVolume = 1f;
+
     [SerializeField] private AudioSource audioSource;
 
     void Awake()
@@ -30,6 +37,17 @@ public class EnemyAttackAudio : MonoBehaviour
         audioSource.PlayOneShot(
             warningSound,
             warningVolume
+        );
+    }
+
+    public void PlayCommit()
+    {
+        if (commitSound == null)
+            return;
+
+        audioSource.PlayOneShot(
+            commitSound,
+            commitVolume
         );
     }
 }

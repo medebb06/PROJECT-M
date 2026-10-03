@@ -19,6 +19,23 @@ public class EnemyController : MonoBehaviour
     [Header("Attack Recovery")]
     public float attackRecoveryTime = 0.8f;
 
+    [Header("Attack Commit (Super Armor)")]
+    [Tooltip(
+        "Uyarı süresinin bu oranından sonra saldırı hasar alınca " +
+        "KESİLMEZ ve düşman savrulmaz. 0 = baştan itibaren, " +
+        "1 = hiç (eski davranış). Ağır düşman: ~0.15, normal: ~0.4, " +
+        "hafif: 1.")]
+    [Range(0f, 1f)]
+    public float attackCommitPoint = 0.4f;
+
+    public Color committedHitFlashColor =
+        new Color(1f, 0.6f, 0.1f);
+
+    public float committedFlashDuration = 0.1f;
+
+    [Tooltip("Kararlı saldırı vurulduğunda ek çalan ses (boşsa sessiz).")]
+    public AudioClip committedHitClip;
+
     [Header("Hit Deceleration")]
     public float knockbackDeceleration = 45f;
 
@@ -29,6 +46,14 @@ public class EnemyController : MonoBehaviour
     [Header("Stagger Flash")]
     public Color staggerFlashColor = Color.yellow;
     public float staggerFlashDuration = 0.15f;
+
+    [Header("Enemy Attack Damage (Player'ın can birimine)")]
+    [Tooltip(
+        "Bu düşmanın normal vuruşunun oyuncunun Health'inden düştüğü miktar. " +
+        "Health 'birim' mantığıyla çalışır: 1 = bir can birimi. " +
+        "Block/parry'de can hasarı yoktur.")]
+    [Min(1)]
+    public int attackDamage = 1;
 
     [Header("Enemy Attack Knockback (Player'a uygulanır)")]
     public float attackKnockbackForce = 7f;
@@ -101,6 +126,7 @@ public class EnemyController : MonoBehaviour
     private Health health;
     private Health targetHealth;
     private FinisherTargetHighlight finisherHighlight;
+    private EnemyAttackTelegraph telegraph;
 
     private bool deathHandled;
     private float nextTargetSearchTime;
@@ -129,6 +155,11 @@ public class EnemyController : MonoBehaviour
     public bool IsDead =>
         health != null &&
         health.IsDead;
+
+    // Saldırının kararlı aşamasında mı?
+    public bool IsAttackCommitted =>
+        currentState is EnemyAttackState attack &&
+        attack.IsCommitted;
 
     // Hedef (oyuncu) öldü mü?
     public bool IsTargetDead
@@ -184,6 +215,9 @@ public class EnemyController : MonoBehaviour
 
         finisherHighlight =
             GetComponent<FinisherTargetHighlight>();
+
+        telegraph =
+            GetComponent<EnemyAttackTelegraph>();
 
         enemyBalance =
             GetComponent<EnemyBalance>();
@@ -398,6 +432,10 @@ public class EnemyController : MonoBehaviour
         Vector2 hitDirection
     )
     {
+        // Kararlı saldırı: kesilmez, savrulmaz.
+        if (TryAbsorbCommittedHit())
+            return;
+
         PlayFlash(
             hitFlashColor,
             hitFlashDuration
@@ -466,6 +504,10 @@ public class EnemyController : MonoBehaviour
         int attackStep
     )
     {
+        // Kararlı saldırı: kesilmez, savrulmaz.
+        if (TryAbsorbCommittedHit())
+            return;
+
         PlayFlash(
             hitFlashColor,
             hitFlashDuration
@@ -712,6 +754,46 @@ public class EnemyController : MonoBehaviour
 
         hitAudioSource.PlayOneShot(
             postureHitClip
+        );
+    }
+
+    // =========================================================
+    // COMMITTED HIT
+    // Hasar ve denge hasarı zaten uygulandı (çağıran taraf).
+    // Burada sadece state kesilmez, knockback yok, farklı geri bildirim.
+    // Denge kırılırsa yine stagger olur ve saldırı iptal edilir.
+    // =========================================================
+
+    private bool TryAbsorbCommittedHit()
+    {
+        if (!IsAttackCommitted)
+            return false;
+
+        // Telegraph rengi her karede sprite'ı ezdiği için
+        // vuruş flaşı görünmezdi; kısa süre sustur.
+        if (telegraph != null)
+            telegraph.Suppress(committedFlashDuration);
+
+        PlayFlash(
+            committedHitFlashColor,
+            committedFlashDuration
+        );
+
+        PlayCommittedHitSound();
+
+        return true;
+    }
+
+    public void PlayCommittedHitSound()
+    {
+        if (hitAudioSource == null)
+            return;
+
+        if (committedHitClip == null)
+            return;
+
+        hitAudioSource.PlayOneShot(
+            committedHitClip
         );
     }
 

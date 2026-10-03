@@ -446,8 +446,12 @@ public class AttackState : ICombatState
                 !balance.IsBroken
             )
             {
+                // Her kombo adımının denge hasarı artık
+                // PlayerCombatController Inspector'ından ayarlanıyor.
                 bool balanceDamaged =
-                    balance.AddBalanceDamage(1);
+                    balance.AddBalanceDamage(
+                        combat.GetBalanceDamage(step)
+                    );
 
                 if (!balanceDamaged)
                     continue;
