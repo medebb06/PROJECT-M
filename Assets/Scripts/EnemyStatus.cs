@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Düşman üzerindeki DURUM ETKİLERİ (şimdilik zehir). Düşmanda yoksa
-/// EnemyStatus.Get(enemy) ile kendiliğinden eklenir.
+/// Düşman üzerindeki DURUM ETKİLERİ (zehir) ve charm'ların düşmana özel
+/// verisi (execute çarpanı). Düşmanda yoksa EnemyStatus.Get(enemy) ile
+/// kendiliğinden eklenir.
 ///
 /// Zehir, EnemyTime saatiyle akar: parry slow-mo'sunda zehir de yavaşlar.
 /// Hasar düşmanın MAX değerinin yüzdesi olarak verilir (ölçekten bağımsız).
@@ -17,6 +18,18 @@ public class EnemyStatus : MonoBehaviour
     private static readonly Color PoisonTint =
         new Color(0.45f, 1f, 0.35f);
 
+    // Felç Edici Zehir: zehirli düşmanın saldırı uyarısı bu çarpanla uzar.
+    // Charm koyar / kaldırır. 1 = etkisiz.
+    public static float PoisonedWindupMultiplier = 1f;
+
+    [RuntimeInitializeOnLoadMethod(
+        RuntimeInitializeLoadType.SubsystemRegistration
+    )]
+    private static void ResetStatics()
+    {
+        PoisonedWindupMultiplier = 1f;
+    }
+
     private EnemyController enemy;
     private EnemyBalance balance;
     private Health health;
@@ -27,6 +40,17 @@ public class EnemyStatus : MonoBehaviour
     private float accumulator;
 
     public bool IsPoisoned => poisonTimeLeft > 0f;
+
+    // Ölürken zehirli miydi? (Salgın charm'ı için.)
+    public bool DiedPoisoned { get; private set; }
+
+    // Şu anki zehir hızları (yayılma için).
+    public float PoisonBalanceRate => balanceFraction;
+    public float PoisonHealthRate => healthFraction;
+
+    // Ezici Parry: bir sonraki execute'un hasar çarpanı.
+    // Stagger başlarken 1'e döner; execute kullanınca sıfırlanır.
+    public float ExecuteMultiplier { get; set; } = 1f;
 
     public static EnemyStatus Get(EnemyController enemy)
     {
@@ -39,6 +63,19 @@ public class EnemyStatus : MonoBehaviour
         return status;
     }
 
+    // Saldırı uyarısı çarpanı (zehirli değilse 1).
+    public static float WindupMultiplierFor(EnemyController enemy)
+    {
+        if (enemy == null || PoisonedWindupMultiplier <= 1f)
+            return 1f;
+
+        EnemyStatus status = enemy.GetComponent<EnemyStatus>();
+
+        return status != null && status.IsPoisoned
+            ? PoisonedWindupMultiplier
+            : 1f;
+    }
+
     private void Awake()
     {
         enemy = GetComponent<EnemyController>();
@@ -46,15 +83,28 @@ public class EnemyStatus : MonoBehaviour
         health = GetComponent<Health>();
     }
 
-    // Her vuruşta süre yenilenir; hızlar en son uygulanan değerdir.
+    // Her vuruşta süre yenilenir; hızlar en güçlü olan tutulur
+    // (zayıf bir kaynak — ör. yayılan zehir — güçlü zehri ezmesin).
     public void ApplyPoison(
         float balanceFractionPerSecond,
         float healthFractionPerSecond,
         float duration
     )
     {
-        balanceFraction = Mathf.Max(0f, balanceFractionPerSecond);
-        healthFraction = Mathf.Max(0f, healthFractionPerSecond);
+        if (enemy != null && enemy.IsDead)
+            return;
+
+        if (!IsPoisoned)
+        {
+            balanceFraction = 0f;
+            healthFraction = 0f;
+        }
+
+        balanceFraction =
+            Mathf.Max(balanceFraction, balanceFractionPerSecond);
+
+        healthFraction =
+            Mathf.Max(healthFraction, healthFractionPerSecond);
 
         poisonTimeLeft = Mathf.Max(poisonTimeLeft, duration);
     }
@@ -66,6 +116,8 @@ public class EnemyStatus : MonoBehaviour
 
         if (enemy == null || enemy.IsDead)
         {
+            // Hızlar silinmez: Salgın ölüm anındaki zehri yayabilsin.
+            DiedPoisoned = true;
             poisonTimeLeft = 0f;
             return;
         }

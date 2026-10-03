@@ -80,6 +80,36 @@ public class StatCharmEffect : CharmEffect
                 case StatType.HealthDamage:
                     sb.Append(Format("Can hasarı", add, mult));
                     break;
+
+                case StatType.DamageTaken:
+                    sb.Append(Format("ALINAN hasar", add, mult));
+                    break;
+
+                case StatType.ParryWindow:
+                    sb.Append(
+                        "Parry penceresi +" +
+                        Mathf.RoundToInt(add * 1000f) + " ms"
+                    );
+                    break;
+
+                case StatType.RiposteHits:
+                    sb.Append("Riposte +" + Mathf.RoundToInt(add) + " vuruş");
+                    break;
+
+                case StatType.RiposteDuration:
+                    sb.Append("Riposte +" + add.ToString("0.#") + " sn");
+                    break;
+
+                case StatType.RiposteStrength:
+                    sb.Append(Format("Riposte gücü", add, mult));
+                    break;
+
+                case StatType.BlockHealthCost:
+                    sb.Append(
+                        "Block posture yerine max canın %" +
+                        Mathf.RoundToInt(add * 100f) + "'i kadar CAN yer"
+                    );
+                    break;
             }
         }
 

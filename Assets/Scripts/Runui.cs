@@ -163,8 +163,15 @@ public class RunUI : MonoBehaviour
             string stacks =
                 e.stacks > 1 ? "  x" + e.stacks : "";
 
+            // Davranış charm'larının anlık durumu (Ritim 3/5, AKTİF...).
+            string status =
+                e.effect != null ? e.effect.Status() : "";
+
+            if (!string.IsNullOrEmpty(status))
+                stacks += "   [" + status + "]";
+
             GUI.Label(
-                new Rect(16, y, 420, 22),
+                new Rect(16, y, 520, 22),
                 e.definition.displayName + stacks,
                 smallStyle
             );
@@ -287,7 +294,9 @@ public class RunUI : MonoBehaviour
         string heading =
             run.IsStartOffer
                 ? "BAŞLANGIÇ CHARM'INI SEÇ"
-                : "BİR CHARM SEÇ";
+                : run.IsBonusOffer
+                    ? "KUSURSUZ BÖLÜM: BONUS CHARM"
+                    : "BİR CHARM SEÇ";
 
         GUI.Label(
             new Rect(0, 90, width, 50),

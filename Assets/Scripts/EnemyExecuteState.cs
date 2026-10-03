@@ -152,15 +152,30 @@ public class EnemyExecuteState : IEnemyState
 
         // =====================================================
         // DAMAGE
+        // Ezici Parry charm'ı execute hasarını çarpabilir (tek kullanım).
         // =====================================================
 
         Health health =
             enemy.GetComponent<Health>();
 
+        EnemyStatus status =
+            enemy.GetComponent<EnemyStatus>();
+
+        float multiplier = 1f;
+
+        if (status != null)
+        {
+            multiplier = Mathf.Max(1f, status.ExecuteMultiplier);
+            status.ExecuteMultiplier = 1f;
+        }
+
         if (health != null)
         {
             health.TakeDamage(
-                enemy.executeDamage
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(enemy.executeDamage * multiplier)
+                )
             );
         }
 

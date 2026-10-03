@@ -27,7 +27,12 @@ public class PlayerDefenseController : MonoBehaviour
         }
     }
 
-    public float ParryWindow => parryWindow;
+    // Charm'lar (Kusursuz Zamanlama) pencereyi genişletebilir.
+    public float ParryWindow =>
+        Mathf.Max(
+            0.02f,
+            PlayerStats.GetOr(StatType.ParryWindow, parryWindow)
+        );
 
     void Awake()
     {
@@ -156,6 +161,16 @@ public class PlayerDefenseController : MonoBehaviour
         int postureDamage
     )
     {
+        // Kan Bedeli charm'ı: block posture yerine CAN yer.
+        float healthCost =
+            PlayerStats.GetOr(StatType.BlockHealthCost, 0f);
+
+        if (healthCost > 0f)
+        {
+            PayBlockWithHealth(healthCost, hitDirection);
+            return;
+        }
+
         PlayerPosture posture =
             GetComponent<PlayerPosture>();
 
@@ -198,5 +213,49 @@ public class PlayerDefenseController : MonoBehaviour
                 );
             }
         }
+    }
+
+    // Block bedeli candan ödenir. ÖLDÜRMEZ: en az 1 can bırakır
+    // (block'lamak hiçbir zaman ölüm nedeni olmasın).
+    private void PayBlockWithHealth(
+        float healthCost,
+        Vector2 hitDirection
+    )
+    {
+        Health health = GetComponent<Health>();
+
+        if (health == null || health.IsDead)
+            return;
+
+        int amount =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(health.MaxHealth * healthCost)
+            );
+
+        amount =
+            Mathf.Min(amount, health.CurrentHealth - 1);
+
+        if (amount <= 0)
+            return;
+
+        health.TakeDamage(amount);
+
+        CombatEvents.RaisePlayerDamaged(
+            new PlayerDamageReport
+            {
+                amount = amount,
+                healthAfter = health.CurrentHealth,
+                maxHealth = health.MaxHealth,
+                lethal = false,
+                kind = PlayerHitKind.BlockCost,
+                source = null,
+                direction = hitDirection
+            }
+        );
+
+        Debug.Log(
+            "PLAYER BLOCK → KAN BEDELİ -" + amount + " can"
+        );
     }
 }

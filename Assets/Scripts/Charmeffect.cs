@@ -5,6 +5,8 @@ public class CharmContext
 {
     public PlayerStats stats;
     public Health playerHealth;
+    public PlayerController player;
+    public PlayerPosture posture;
 
     // Bu charm örneğinin kimliği: stat değiştiricileri bununla kaydedilir
     // ve çıkarılırken bununla silinir.
@@ -18,6 +20,8 @@ public class CharmContext
 /// Apply: charm eklenince ve her istif (stack) artışında çağrılır.
 ///        Tekrar çağrılabilir olmalı (idempotent).
 /// Remove: koşu bitince çağrılır; her şeyi geri al (olay aboneliği, stat).
+/// Status: HUD'da charm adının yanında gösterilen anlık durum
+///         (ör. "Ritim 3/5", "AKTİF"). Boş = gösterme.
 /// </summary>
 public abstract class CharmEffect : ScriptableObject
 {
@@ -27,6 +31,11 @@ public abstract class CharmEffect : ScriptableObject
 
     // Seçim ekranında gösterilecek "bu istifte ne yapar" satırı.
     public virtual string Describe(int stacks)
+    {
+        return "";
+    }
+
+    public virtual string Status()
     {
         return "";
     }

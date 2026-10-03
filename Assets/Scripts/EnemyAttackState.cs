@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class EnemyAttackState : IEnemyState
 {
@@ -222,8 +222,12 @@ public class EnemyAttackState : IEnemyState
                 ? enemy.target.GetComponent<PlayerController>()
                 : null;
 
-        float windup =
+        float baseWindup =
             enemy.WindupFor(isUnblockable);
+
+        // Felç Edici Zehir: zehirli düşmanın uyarısı uzar.
+        float windup =
+            baseWindup * EnemyStatus.WindupMultiplierFor(enemy);
 
         warningTimer = windup;
 
@@ -234,7 +238,8 @@ public class EnemyAttackState : IEnemyState
             );
 
         // Animasyon zamanlaması:
-        // Normal saldırı: animasyon hemen başlar (eskisi gibi).
+        // Normal saldırı: animasyon hemen başlar (eskisi gibi); zehirle uyarı
+        // uzadıysa uzama kadar gecikir, vuruş karesi hasar anına denk gelir.
         // Engellenemez: uyarı uzun olduğu için animasyon, vuruş karesi
         // hasar anına gelecek şekilde GEÇ başlatılır; önce sarı uyarı
         // (flaş, "!", kutu), sonra vuruş animasyonu.
@@ -246,7 +251,7 @@ public class EnemyAttackState : IEnemyState
                     0f,
                     windup - enemy.AttackAnimationHitTime
                 )
-                : 0f;
+                : Mathf.Max(0f, windup - baseWindup);
 
         if (animationDelay <= 0f)
         {

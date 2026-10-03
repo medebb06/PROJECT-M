@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +24,12 @@ public class CharmDefinition : ScriptableObject
     [Tooltip("Seçim ekranında çıkma ağırlığı. Büyük = daha sık.")]
     [Min(0f)]
     public float weight = 1f;
+
+    [Tooltip(
+        "Boş değilse: bu charm ancak listedekilerden EN AZ BİRİ envanterdeyse " +
+        "teklif edilir (ör. Salgın, bir zehir kaynağı olmadan çıkmaz).")]
+    public List<CharmDefinition> requiresAnyOf =
+        new List<CharmDefinition>();
 
     public CharmEffect effect;
 }

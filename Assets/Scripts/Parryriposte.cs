@@ -12,6 +12,10 @@ using UnityEngine;
 ///
 /// Değerler RunManager'dan ayarlanır (Configure). PlayerStats üzerinden
 /// geçici değiştirici ekler, süre/vuruş bitince kaldırır; charm'larla çarpılır.
+///
+/// Charm'lar riposte'u şu stat'larla değiştirir:
+///   RiposteHits (+vuruş), RiposteDuration (+sn),
+///   RiposteStrength (bonusların çarpanı: 2x denge bonusu ×1.5 → 2.5x).
 /// </summary>
 public class ParryRiposte : MonoBehaviour
 {
@@ -31,6 +35,7 @@ public class ParryRiposte : MonoBehaviour
     private PlayerPosture posture;
 
     private float endTime;
+    private float activeDuration;
     private bool active;
 
     [RuntimeInitializeOnLoadMethod(
@@ -101,16 +106,38 @@ public class ParryRiposte : MonoBehaviour
         // Yenilenen parry pencereyi tazeler (üst üste binmez).
         stats.RemoveModifiers(this);
 
-        stats.AddModifier(this, StatType.BalanceDamage, 0f, balanceMultiplier);
-        stats.AddModifier(this, StatType.HealthDamage, 0f, healthMultiplier);
-        stats.AddModifier(this, StatType.CritChance, critChanceBonus, 1f);
+        // Charm katkıları (kendi değiştiricilerimiz kaldırıldıktan SONRA oku).
+        float strength =
+            Mathf.Max(0f, stats.Get(StatType.RiposteStrength, 1f));
 
-        endTime = Time.time + duration;
+        int hits =
+            Mathf.Max(
+                1,
+                maxHits +
+                Mathf.RoundToInt(stats.Get(StatType.RiposteHits, 0f))
+            );
+
+        activeDuration =
+            Mathf.Max(
+                0.1f,
+                duration + stats.Get(StatType.RiposteDuration, 0f)
+            );
+
+        // Güç, çarpanın BONUS kısmını ölçekler (2x → 1 + 1×güç).
+        float balanceMult = 1f + (balanceMultiplier - 1f) * strength;
+        float healthMult = 1f + (healthMultiplier - 1f) * strength;
+        float critBonus = critChanceBonus * strength;
+
+        stats.AddModifier(this, StatType.BalanceDamage, 0f, balanceMult);
+        stats.AddModifier(this, StatType.HealthDamage, 0f, healthMult);
+        stats.AddModifier(this, StatType.CritChance, critBonus, 1f);
+
+        endTime = Time.time + activeDuration;
 
         active = true;
 
         IsActive = true;
-        HitsLeft = maxHits;
+        HitsLeft = hits;
         TimeLeftFraction = 1f;
     }
 
@@ -145,7 +172,7 @@ public class ParryRiposte : MonoBehaviour
             return;
         }
 
-        TimeLeftFraction = (endTime - Time.time) / duration;
+        TimeLeftFraction = (endTime - Time.time) / activeDuration;
     }
 
     private void End()

@@ -24,6 +24,20 @@ public class RunManager : MonoBehaviour
 {
     public static RunManager Instance { get; private set; }
 
+    // Bölüm olayları (charm'lar dinler: Kusursuzluk vb.). int: bölüm no.
+    public static event System.Action<int> StageStarted;
+    public static event System.Action<int> StageCleared;
+
+    [RuntimeInitializeOnLoadMethod(
+        RuntimeInitializeLoadType.SubsystemRegistration
+    )]
+    private static void ResetStatics()
+    {
+        Instance = null;
+        StageStarted = null;
+        StageCleared = null;
+    }
+
     [Header("References")]
     public GameObject enemyPrefab;
 
@@ -193,6 +207,7 @@ public class RunManager : MonoBehaviour
     public string WaveBannerText { get; private set; } = "";
     public float WaveBannerUntil { get; private set; }
     public bool IsStartOffer { get; private set; }
+    public bool IsBonusOffer { get; private set; }
     public CharmInventory Inventory { get; private set; }
     public RunStats Stats { get; private set; }
     public IReadOnlyList<CharmDefinition> Offers => offers;
@@ -200,6 +215,9 @@ public class RunManager : MonoBehaviour
     private List<CharmDefinition> offers = new List<CharmDefinition>();
     private int chosenIndex = -1;
     private bool restartRequested;
+
+    // Charm'ların verdiği ekstra charm seçimleri (bölüm sonunda kullanılır).
+    private int bonusOffers;
 
     private readonly List<CharmDefinition> pool =
         new List<CharmDefinition>();
@@ -320,6 +338,32 @@ public class RunManager : MonoBehaviour
             restartRequested = true;
     }
 
+    // Bölüm sonunda bir ekstra charm seçimi (ör. Kusursuzluk).
+    public void QueueBonusOffer()
+    {
+        bonusOffers++;
+    }
+
+    private static void RaiseStage(System.Action<int> handlers, int stage)
+    {
+        if (handlers == null)
+            return;
+
+        System.Delegate[] list = handlers.GetInvocationList();
+
+        for (int i = 0; i < list.Length; i++)
+        {
+            try
+            {
+                ((System.Action<int>)list[i])(stage);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("RunManager: bölüm olayı abone hatası → " + e);
+            }
+        }
+    }
+
     // =========================================================
     // ANA DÖNGÜ
     // =========================================================
@@ -341,6 +385,8 @@ public class RunManager : MonoBehaviour
                 Stage++;
 
                 Stats.BeginStage(Stage);
+
+                RaiseStage(StageStarted, Stage);
 
                 spawned.Clear();
 
@@ -432,6 +478,8 @@ public class RunManager : MonoBehaviour
 
                 Stats.EndStage(true);
 
+                RaiseStage(StageCleared, Stage);
+
                 yield return new WaitForSecondsRealtime(1.2f);
 
                 if (healBetweenStagesPercent > 0f)
@@ -450,6 +498,14 @@ public class RunManager : MonoBehaviour
 
                 if (ShouldOffer())
                     yield return OfferRoutine(false);
+
+                // Charm'ların verdiği ekstra seçimler.
+                while (bonusOffers > 0 && !playerHealth.IsDead)
+                {
+                    bonusOffers--;
+
+                    yield return OfferRoutine(false, true);
+                }
 
                 yield return new WaitForSecondsRealtime(0.4f);
             }
@@ -490,7 +546,7 @@ public class RunManager : MonoBehaviour
     // CHARM SEÇİMİ
     // =========================================================
 
-    private IEnumerator OfferRoutine(bool isStartOffer)
+    private IEnumerator OfferRoutine(bool isStartOffer, bool isBonus = false)
     {
         List<CharmDefinition> rolled =
             CharmCatalog.Roll(pool, Inventory, offerChoices);
@@ -502,6 +558,7 @@ public class RunManager : MonoBehaviour
         offers = rolled;
         chosenIndex = -1;
         IsStartOffer = isStartOffer;
+        IsBonusOffer = isBonus;
         State = RunState.Offer;
 
         // Duraklatmadan önce kalan zaman efektlerini temizle.
@@ -880,6 +937,7 @@ public class RunManager : MonoBehaviour
         }
 
         spawned.Clear();
+        bonusOffers = 0;
         AliveEnemies = 0;
         Wave = 0;
         WaveCount = 0;

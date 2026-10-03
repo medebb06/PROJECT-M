@@ -7,7 +7,15 @@ public enum StatType
     BalanceDamage,   // düşman dengesine verilen hasar
     HealthDamage,    // düşman canına verilen hasar
     CritChance,      // 0..1
-    CritMultiplier   // kritikte hasar çarpanı
+    CritMultiplier,  // kritikte hasar çarpanı
+
+    // --- Davranış charm'ları için (taban değer kullanan yerde okunur) ---
+    DamageTaken,     // oyuncunun aldığı hasar çarpanı (taban = gelen hasar)
+    ParryWindow,     // parry penceresine eklenen saniye (taban = Inspector değeri)
+    RiposteHits,     // riposte'a eklenen vuruş hakkı (taban 0)
+    RiposteDuration, // riposte'a eklenen saniye (taban 0)
+    RiposteStrength, // riposte bonuslarının çarpanı (taban 1)
+    BlockHealthCost  // > 0 ise block posture yerine max canın bu oranı kadar CAN yer
 }
 
 /// <summary>
@@ -183,6 +191,16 @@ public class PlayerStats : MonoBehaviour
 
     public float CritMultiplier =>
         Mathf.Max(1f, Get(StatType.CritMultiplier, baseCritMultiplier));
+
+    // Stat'sız durumda da güvenle çağrılabilen kısa yol.
+    public static float GetOr(StatType type, float baseValue)
+    {
+        PlayerStats stats = Current;
+
+        return stats != null
+            ? stats.Get(type, baseValue)
+            : baseValue;
+    }
 
     private void Changed()
     {

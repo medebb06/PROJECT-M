@@ -6,7 +6,8 @@ public enum PlayerHitKind
 {
     Normal,       // düşmanın normal (parry/block edilebilir) vuruşu
     Unblockable,  // engellenemez vuruş
-    Other         // kaynağı belirtilmemiş (eski IDamageable yolu vb.)
+    Other,        // kaynağı belirtilmemiş (eski IDamageable yolu vb.)
+    BlockCost     // Kan Bedeli: block'un candan ödenen bedeli (öldürmez)
 }
 
 // Oyuncunun aldığı bir hasarın tam kaydı.

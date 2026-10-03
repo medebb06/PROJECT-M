@@ -200,6 +200,18 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         // DAMAGE
         // --------------------------------
 
+        // Charm'lar (Cam Top) alınan hasarı ölçekleyebilir.
+        if (damage > 0)
+        {
+            damage =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        PlayerStats.GetOr(StatType.DamageTaken, damage)
+                    )
+                );
+        }
+
         int healthBefore = health.CurrentHealth;
 
         health.TakeDamage(damage);

@@ -20,6 +20,8 @@ public class CharmInventory
 
     private readonly PlayerStats stats;
     private readonly Health playerHealth;
+    private readonly PlayerController playerController;
+    private readonly PlayerPosture posture;
 
     public IReadOnlyList<Entry> Entries => entries;
 
@@ -33,6 +35,11 @@ public class CharmInventory
             stats = player.AddComponent<PlayerStats>();
 
         playerHealth = player.GetComponent<Health>();
+        playerController = player.GetComponent<PlayerController>();
+        posture = player.GetComponent<PlayerPosture>();
+
+        // Davranış charm'larının saat/dash takibi.
+        CharmRunner.Ensure(player);
     }
 
     public int GetStacks(CharmDefinition definition)
@@ -42,15 +49,34 @@ public class CharmInventory
         return e != null ? e.stacks : 0;
     }
 
-    // maxStacks 0 ise sınırsız.
+    // maxStacks 0 ise sınırsız. Ön koşul (requiresAnyOf) da kontrol edilir.
     public bool CanAdd(CharmDefinition definition)
     {
         if (definition == null)
             return false;
 
+        if (!MeetsRequirements(definition))
+            return false;
+
         return
             definition.maxStacks <= 0 ||
             GetStacks(definition) < definition.maxStacks;
+    }
+
+    public bool MeetsRequirements(CharmDefinition definition)
+    {
+        List<CharmDefinition> req = definition.requiresAnyOf;
+
+        if (req == null || req.Count == 0)
+            return true;
+
+        for (int i = 0; i < req.Count; i++)
+        {
+            if (req[i] != null && GetStacks(req[i]) > 0)
+                return true;
+        }
+
+        return false;
     }
 
     public bool Add(CharmDefinition definition)
@@ -77,6 +103,8 @@ public class CharmInventory
                 {
                     stats = stats,
                     playerHealth = playerHealth,
+                    player = playerController,
+                    posture = posture,
                     owner = e
                 };
 

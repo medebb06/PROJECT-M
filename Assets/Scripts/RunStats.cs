@@ -34,7 +34,7 @@ public class RunStats : MonoBehaviour
         "(Application.persistentDataPath). Koşular arası karşılaştırma için.")]
     [SerializeField] private bool appendCsv = true;
 
-    [SerializeField] private string csvFileName = "run_stats.csv";
+    [SerializeField] private string csvFileName = "run_stats_v2.csv";
 
     [Tooltip(
         "Dash'ten sonra bu kadar saniye içinde kaçılan saldırı 'dash' " +
@@ -108,7 +108,9 @@ public class RunStats : MonoBehaviour
     public int DamageUnblockable { get; private set; }
     public int DamageOther { get; private set; }
     public int HitsOther { get; private set; }
-    public int DamageTotal => DamageNormal + DamageUnblockable + DamageOther;
+    public int DamageBlockCost { get; private set; }
+    public int DamageTotal =>
+        DamageNormal + DamageUnblockable + DamageOther + DamageBlockCost;
     public int Healed { get; private set; }
     public int LowestHealth { get; private set; }
 
@@ -264,6 +266,7 @@ public class RunStats : MonoBehaviour
         DamageUnblockable = 0;
         DamageOther = 0;
         HitsOther = 0;
+        DamageBlockCost = 0;
         Healed = 0;
 
         Hits = 0;
@@ -498,6 +501,11 @@ public class RunStats : MonoBehaviour
                 DamageUnblockable += r.amount;
                 break;
 
+            case PlayerHitKind.BlockCost:
+                // Kan Bedeli: block'un bedeli. Vuruş sayılmaz, sadece hasar.
+                DamageBlockCost += r.amount;
+                break;
+
             default:
                 HitsOther++;
                 DamageOther += r.amount;
@@ -506,7 +514,9 @@ public class RunStats : MonoBehaviour
 
         if (currentStage != null)
         {
-            currentStage.hitsTaken++;
+            if (r.kind != PlayerHitKind.BlockCost)
+                currentStage.hitsTaken++;
+
             currentStage.damageTaken += r.amount;
         }
 
@@ -643,6 +653,9 @@ public class RunStats : MonoBehaviour
             (DamageOther > 0
                 ? "  diğer " + DamageOther + " (" + HitsOther + ")"
                 : "") +
+            (DamageBlockCost > 0
+                ? "  block bedeli " + DamageBlockCost
+                : "") +
             "   İyileşme " + Healed +
             "   En düşük can " + LowestHealth +
             (max > 0 ? "/" + max : "");
@@ -727,7 +740,7 @@ public class RunStats : MonoBehaviour
         "n_toplam;n_parry;n_block;n_dash;n_kacti;n_kesildi;n_iframe;n_yendi;" +
         "u_toplam;u_dash;u_kacti;u_kesildi;u_iframe;u_yendi;" +
         "parry_kiran;posture_kirildi;dash_sayisi;" +
-        "hasar_normal;hasar_engellenemez;hasar_diger;iyilesme;en_dusuk_can;" +
+        "hasar_normal;hasar_engellenemez;hasar_diger;hasar_block_bedeli;iyilesme;en_dusuk_can;" +
         "denge_verilen;can_verilen;isabet;kritik;" +
         "olum_turu;olum_kaynak;build";
 
@@ -775,6 +788,7 @@ public class RunStats : MonoBehaviour
                 DamageNormal.ToString(inv),
                 DamageUnblockable.ToString(inv),
                 DamageOther.ToString(inv),
+                DamageBlockCost.ToString(inv),
                 Healed.ToString(inv),
                 LowestHealth.ToString(inv),
 

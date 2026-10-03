@@ -14,6 +14,12 @@ public class EnemyStaggerState : IEnemyState
         this.enemy = enemy;
     }
 
+    // Charm'lar (Ezici Parry) sersemlemeyi uzatabilir.
+    public void Extend(float seconds)
+    {
+        staggerTimer += Mathf.Max(0f, seconds);
+    }
+
     public void Enter()
     {
         staggerTimer =
@@ -21,6 +27,10 @@ public class EnemyStaggerState : IEnemyState
 
         rb =
             enemy.GetComponent<Rigidbody2D>();
+
+        // Yeni sersemleme: önceki execute bonusu taşınmasın.
+        // (Ezici Parry bonusu parry olayında, Enter'dan SONRA verilir.)
+        ResetExecuteBonus();
 
         // Finisher için hedef çerçevesi.
         // (FinisherTargetHighlight daha önce hiç açılmıyordu.)
@@ -69,6 +79,9 @@ public class EnemyStaggerState : IEnemyState
 
         if (staggerTimer <= 0f)
         {
+            // Execute fırsatı kaçtı: bonus da biter.
+            ResetExecuteBonus();
+
             enemy.ChangeState(
                 new EnemyChaseState(enemy)
             );
@@ -86,6 +99,15 @@ public class EnemyStaggerState : IEnemyState
         // execute ile çıkılıp düşman hayatta kalırsa denge
         // sonsuza kadar kırık kalıyordu.
         RecoverBalance();
+    }
+
+    private void ResetExecuteBonus()
+    {
+        EnemyStatus status =
+            enemy.GetComponent<EnemyStatus>();
+
+        if (status != null)
+            status.ExecuteMultiplier = 1f;
     }
 
     private void RecoverBalance()
