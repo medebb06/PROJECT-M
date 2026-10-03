@@ -99,15 +99,6 @@ public class EnemyAttackState : IEnemyState
         if (indicator != null)
             indicator.SetProgress(progress);
 
-        // Yön kilidi: bundan sonra oyuncu arkasına geçerse vuruş ıskalar.
-        if (
-            progress >= enemy.unblockableFacingLockPoint &&
-            enemy.unblockableFacingLockPoint < 1f
-        )
-        {
-            enemy.LockFacing(true);
-        }
-
         // Kaçış payı için: oyuncunun dash'te olduğu son anı hatırla.
         if (playerRef != null && playerRef.isDashing)
             lastDashSeenTime = Time.time;
@@ -266,6 +257,12 @@ public class EnemyAttackState : IEnemyState
         attackDone = false;
         isRecovering = false;
 
+        // YÖN KİLİDİ: saldırı başladığı anda baktığı yönü sabitle ve
+        // saldırı bitene kadar oyuncuya dönme. Dash ile arkasına geçen
+        // oyuncu vurulmaz (vuruş sadece ön alana isabet eder).
+        if (enemy.lockFacingDuringAttack)
+            enemy.LockFacing(true);
+
         StopMovement();
 
         PlayWarning();
@@ -305,10 +302,6 @@ public class EnemyAttackState : IEnemyState
                     enemy.unblockableReachMultiplier
                 );
             }
-
-            // Kilit noktası 0 ise yön baştan sabitlenir.
-            if (enemy.unblockableFacingLockPoint <= 0f)
-                enemy.LockFacing(true);
 
             Debug.Log(
                 "ENEMY UNBLOCKABLE ATTACK STARTED"
@@ -374,8 +367,10 @@ public class EnemyAttackState : IEnemyState
 
             attackDone = true;
 
-            // Vuruş bitti: düşman tekrar oyuncuya dönebilir.
-            enemy.LockFacing(false);
+            // Varsayılan: kilit saldırı bitene (recovery dahil) kadar sürer;
+            // Exit'te açılır. İstenirse vuruş anında açılır.
+            if (enemy.releaseFacingAtHit)
+                enemy.LockFacing(false);
 
             // Vuruş anı geçti: ritim koordinatörüne bildir.
             EnemyAttackCoordinator.ReleaseAttack(enemy);

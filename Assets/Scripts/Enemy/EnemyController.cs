@@ -191,11 +191,17 @@ public class EnemyController : MonoBehaviour
     public float unblockableHitHeight = 2.2f;
 
     [Tooltip(
-        "Düşmanın oyuncuya bakışını uyarının bu oranında KİLİTLER. " +
-        "Kilitlendikten sonra oyuncu arkasına geçerse vuruş boşa gider. " +
-        "0 = baştan kilitli, 1 = hiç kilitlenmez (hep oyuncuya döner).")]
-    [Range(0f, 1f)]
-    public float unblockableFacingLockPoint = 0.3f;
+        "AÇIKKEN: düşman saldırıya BAŞLADIĞI anda baktığı yönü kilitler ve " +
+        "saldırı bitene kadar oyuncuya DÖNMEZ. Vuruş sadece o yöne isabet " +
+        "eder; oyuncu dash ile arkasına geçerse vuruş boşa gider. " +
+        "(Normal ve engellenemez tüm saldırılar için geçerli.)")]
+    public bool lockFacingDuringAttack = true;
+
+    [Tooltip(
+        "Açıkken yön kilidi vuruş anında açılır (düşman recovery'de oyuncuya " +
+        "döner). Kapalıyken saldırı bitene kadar (recovery dahil) kilitli kalır, " +
+        "yani arkasına geçen oyuncuyu recovery boyunca göremez.")]
+    public bool releaseFacingAtHit = false;
 
     [Tooltip(
         "Yönlü vuruşlarda düşmanın hemen arkasında kalan pay " +
@@ -205,8 +211,9 @@ public class EnemyController : MonoBehaviour
 
     [Tooltip(
         "Açıkken NORMAL saldırılar da sadece baktığı tarafa isabet eder " +
-        "(menzil = Attack Range).")]
-    public bool normalAttackFrontOnly = false;
+        "(menzil = Attack Range). Arkasına geçen oyuncu vurulmaz. " +
+        "Kapalıyken eski dairesel erişim: yön kilidi tek başına yetmez.")]
+    public bool normalAttackFrontOnly = true;
 
     [Min(0.2f)]
     public float normalAttackHitHeight = 2.2f;

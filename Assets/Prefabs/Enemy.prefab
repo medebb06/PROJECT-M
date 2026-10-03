@@ -668,9 +668,10 @@ MonoBehaviour:
   unblockableFrontOnly: 1
   unblockableForwardReach: 5.5
   unblockableHitHeight: 2.2
-  unblockableFacingLockPoint: 0.3
+  lockFacingDuringAttack: 1
+  releaseFacingAtHit: 0
   attackBackTolerance: 0.4
-  normalAttackFrontOnly: 0
+  normalAttackFrontOnly: 1
   normalAttackHitHeight: 2.2
   parrySlowMo:
     enabled: 1
