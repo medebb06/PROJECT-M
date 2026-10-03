@@ -43,14 +43,15 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float balanceBreakPunchAmount = 0.18f;
     [SerializeField] private float balanceBreakPunchDuration = 0.1f;
 
-    private Coroutine hitStopRoutine;
+    // HitStop öncelikleri:
+    // Balance break aktifken daha düşük öncelikli (normal vuruş,
+    // block, parry) hit-stop'lar yok sayılır.
+    private const int NormalPriority = 0;
+    private const int BalanceBreakPriority = 10;
+
     private Coroutine punchRoutine;
 
     private Vector3 originalPunchScale;
-
-    // Balance break sırasında normal attack hitstop'un
-    // sistemi ezmesini engeller.
-    private bool balanceBreakActive;
 
     private void Awake()
     {
@@ -69,25 +70,10 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayAttackImpact()
     {
-        if (balanceBreakActive)
-        {
-            Debug.Log(
-                "ATTACK HITSTOP IGNORED -> BALANCE BREAK ACTIVE"
-            );
-
-            // Punch yine oynayabilir.
-            PlayPunch(
-                attackPunchAmount,
-                attackPunchDuration
-            );
-
-            return;
-        }
-
-        PlayHitStop(
+        HitStop.Request(
             attackHitStopDuration,
             attackHitStopTimeScale,
-            false
+            NormalPriority
         );
 
         PlayPunch(
@@ -102,10 +88,10 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayParryImpact()
     {
-        PlayHitStop(
+        HitStop.Request(
             parryHitStopDuration,
             parryHitStopTimeScale,
-            false
+            NormalPriority
         );
 
         PlayScreenShake(parryShakeForce);
@@ -122,10 +108,10 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayBlockImpact()
     {
-        PlayHitStop(
+        HitStop.Request(
             blockHitStopDuration,
             blockHitStopTimeScale,
-            false
+            NormalPriority
         );
 
         PlayScreenShake(blockShakeForce);
@@ -142,16 +128,10 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayBalanceBreakImpact()
     {
-        Debug.Log(
-            "BALANCE BREAK IMPACT CALLED"
-        );
-
-        balanceBreakActive = true;
-
-        PlayHitStop(
+        HitStop.Request(
             balanceBreakHitStopDuration,
             balanceBreakHitStopTimeScale,
-            true
+            BalanceBreakPriority
         );
 
         PlayScreenShake(
@@ -161,96 +141,6 @@ public class CombatImpactFeedback : MonoBehaviour
         PlayPunch(
             balanceBreakPunchAmount,
             balanceBreakPunchDuration
-        );
-    }
-
-    // =========================================================
-    // HITSTOP
-    // =========================================================
-
-    private void PlayHitStop(
-        float duration,
-        float timeScale,
-        bool isBalanceBreak
-    )
-    {
-        // Balance break zaten aktifse,
-        // normal hitstop hiçbir şekilde üzerine yazamaz.
-        if (
-            balanceBreakActive &&
-            !isBalanceBreak
-        )
-        {
-            Debug.Log(
-                "HITSTOP IGNORED -> BALANCE BREAK ACTIVE"
-            );
-
-            return;
-        }
-
-        if (hitStopRoutine != null)
-        {
-            StopCoroutine(hitStopRoutine);
-            hitStopRoutine = null;
-
-            Time.timeScale = 1f;
-        }
-
-        hitStopRoutine =
-            StartCoroutine(
-                HitStopCoroutine(
-                    duration,
-                    timeScale,
-                    isBalanceBreak
-                )
-            );
-    }
-
-    private IEnumerator HitStopCoroutine(
-        float duration,
-        float timeScale,
-        bool isBalanceBreak
-    )
-    {
-        Debug.Log(
-            "HITSTOP START -> Scale: " +
-            timeScale +
-            " Duration: " +
-            duration
-        );
-
-        Time.timeScale = timeScale;
-
-        Debug.Log(
-            "TIME SCALE AFTER SET -> " +
-            Time.timeScale
-        );
-
-        yield return new WaitForSecondsRealtime(
-            duration
-        );
-
-        Debug.Log(
-            "HITSTOP END -> Before Reset: " +
-            Time.timeScale
-        );
-
-        Time.timeScale = 1f;
-
-        hitStopRoutine = null;
-
-        if (isBalanceBreak)
-        {
-            balanceBreakActive = false;
-
-            Debug.Log(
-                "BALANCE BREAK HITSTOP FINISHED"
-            );
-        }
-
-        Debug.Log(
-            "TIME SCALE AFTER RESET -> " +
-            Time.timeScale
         );
     }
 

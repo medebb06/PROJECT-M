@@ -8,20 +8,11 @@ public class PlayerController : MonoBehaviour
     {
 
 
-
         [Header("Ground Slam")]
         public float slamSpeed = 35f;
         public float slamDamageRadius = 2f;
         public int slamDamage = 25;
         public LayerMask enemyLayer;
-
-        [Header("Jump Feel")]
-        public float jumpBufferTime = 0.15f;
-        public float coyoteTime = 0.12f;
-        public float jumpCutMultiplier = 2f;
-        public float jumpCutVelocityMultiplier = 0.75f;
-        public float fallMultiplier = 2.5f;
-        public float maxFallSpeed = 20f;
 
         [Header("Height Thresholds")]
         public float lightThreshold = 4f;
@@ -88,7 +79,6 @@ public class PlayerController : MonoBehaviour
     public float postureBreakDuration = 0.45f;
     public float postureBreakKnockback = 2.5f;
 
-
     [Header("Ground Slam")]
     public float slamLockDuration = 0.12f;
 
@@ -117,9 +107,9 @@ public class PlayerController : MonoBehaviour
     public float verticalInput;
 
     public bool canAttack =>
-    canControl &&
-    !isDashing &&
-    !isAttackLocked;
+        canControl &&
+        !isDashing &&
+        !isAttackLocked;
 
     public bool IsFullyLocked =>
         stateMachine != null &&
@@ -318,18 +308,8 @@ public class PlayerController : MonoBehaviour
 
         jumpConsumed = true;
 
-        animationController.PlayJump();
-
-        if (audioPlayer != null)
-        {
-            float jumpStrength =
-                Mathf.Clamp01(
-                    movement.jumpForce / 12f
-                );
-
-            audioPlayer.PlayJump(jumpStrength);
-        }
-
+        // Zıplama animasyonu ve sesi artık JumpState.Enter içinde.
+        // (Eskiden hem burada hem GroundedState'te kopya vardı.)
         stateMachine.ChangeState(
             new JumpState(this, stateMachine)
         );
@@ -516,14 +496,17 @@ public class PlayerController : MonoBehaviour
                defenseController.IsDefending;
     }
 
-    public System.Collections.IEnumerator FreezeFrame(
-        float duration)
+    // JumpState tarafından çağrılır.
+    public void PlayJumpAnimation()
     {
-        Time.timeScale = 0f;
+        animationController.PlayJump();
+    }
 
-        yield return new WaitForSecondsRealtime(duration);
-
-        Time.timeScale = 1f;
+    // Respawn gibi durumlarda animator'ü temiz bir
+    // hareket animasyonuna döndürür (Death'te takılı kalmasın).
+    public void ResetAnimation()
+    {
+        animationController.ResetToLocomotion();
     }
 
     void OnDrawGizmosSelected()

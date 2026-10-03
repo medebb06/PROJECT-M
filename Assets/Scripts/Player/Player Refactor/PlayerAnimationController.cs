@@ -32,8 +32,13 @@ public class PlayerAnimationController : MonoBehaviour
         if (animator == null)
             return;
 
+        // Savunmadayken karakter yerinde duruyor. Yön tuşuna
+        // basılı olsa bile Speed 0 gitsin; yoksa Parry/Block
+        // animasyonları Idle'a dönemiyordu.
         float speed =
-            Mathf.Abs(player.moveInput);
+            player.IsDefending()
+                ? 0f
+                : Mathf.Abs(player.moveInput);
 
         animator.SetFloat(
             "Speed",
@@ -56,6 +61,72 @@ public class PlayerAnimationController : MonoBehaviour
             "IsDashing",
             player.isDashing
         );
+
+        RecoverStuckStates();
+    }
+
+    // =========================================================
+    // TAKILI KALAN ANİMASYONLAR
+    // =========================================================
+
+    // Parry'nin Animator'daki tek çıkışı "Speed < 0.1 ve Grounded".
+    // Savunma bittiğinde tuşa basılıysa animasyon takılı kalıyordu.
+    private void RecoverStuckStates()
+    {
+        if (animator.IsInTransition(0))
+            return;
+
+        AnimatorStateInfo info =
+            animator.GetCurrentAnimatorStateInfo(0);
+
+        if (
+            info.IsName("Parry") &&
+            info.normalizedTime >= 1f &&
+            !player.IsDefending()
+        )
+        {
+            ResetToLocomotion(0.05f);
+        }
+    }
+
+    // Duruma göre Idle / Run / Fall'a döner.
+    // Respawn sonrası Death'te takılı kalmayı da bu çözüyor
+    // (Death state'inin Animator'da çıkışı yok).
+    public void ResetToLocomotion(float fadeTime = 0f)
+    {
+        if (animator == null)
+            return;
+
+        animator.ResetTrigger("Land");
+        animator.ResetTrigger("Death");
+        animator.ResetTrigger("Parry");
+
+        string target;
+
+        if (!player.isGrounded)
+            target = "Fall";
+        else if (Mathf.Abs(player.moveInput) > 0.1f)
+            target = "Run";
+        else
+            target = "Idle";
+
+        if (fadeTime > 0f)
+        {
+            animator.CrossFadeInFixedTime(
+                target,
+                fadeTime,
+                0,
+                0f
+            );
+        }
+        else
+        {
+            animator.Play(
+                target,
+                0,
+                0f
+            );
+        }
     }
 
     public void PlayJump()

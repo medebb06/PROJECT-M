@@ -14,16 +14,10 @@ public class EnemyController : MonoBehaviour
 
     [Header("Stagger")]
     public float staggerDuration = 1.2f;
-    public float attackDuration = 1f;
     public float attackWarningTime = 1f;
 
     [Header("Attack Recovery")]
     public float attackRecoveryTime = 0.8f;
-
-    [Header("Hit / Knockback")]
-    public float knockbackForceX = 7f;
-    public float knockbackForceY = 3f;
-    public float hitDuration = 0.12f;
 
     [Header("Hit Deceleration")]
     public float knockbackDeceleration = 45f;
@@ -68,12 +62,8 @@ public class EnemyController : MonoBehaviour
     public float blockKnockbackVerticalForce = 0.2f;
     public float blockKnockbackDuration = 0.15f;
     public float blockKnockbackDeceleration = 12f;
-    public float blockRecoveryTime = 0.25f;
 
     [Header("Defense Balance")]
-    // LEGACY: Eskiden block'ta oyuncu posture hasarı olarak
-    // kullanılıyordu. Artık blockPostureDamage kullanılıyor.
-    public int blockBalanceDamage = 1;
     public int parryBalanceDamage = 2;
 
     [Header("Player Block Posture")]

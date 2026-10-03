@@ -5,7 +5,6 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [Header("References")]
     [SerializeField] private Health health;
     [SerializeField] private PlayerController player;
-    [SerializeField] private PlayerKnockback knockback;
 
     [Header("Default Knockback")]
     [SerializeField] private float defaultKnockbackForce = 8f;
@@ -19,9 +18,6 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         if (player == null)
             player = GetComponent<PlayerController>();
-
-        if (knockback == null)
-            knockback = GetComponent<PlayerKnockback>();
     }
 
     // --------------------------------------------------
@@ -103,29 +99,6 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
                 knockbackVerticalForce,
                 knockbackDuration
             )
-        );
-    }
-
-    // --------------------------------------------------
-    // LEGACY: Eski PlayerKnockback bileşeni için.
-    // Artık hasar akışında kullanılmıyor.
-    // --------------------------------------------------
-
-    public void ApplyKnockback(
-        Vector2 hitDirection,
-        float force,
-        float verticalForce,
-        float duration
-    )
-    {
-        if (knockback == null)
-            return;
-
-        knockback.ApplyKnockback(
-            hitDirection,
-            force,
-            verticalForce,
-            duration
         );
     }
 }

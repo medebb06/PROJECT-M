@@ -13,9 +13,6 @@ public class AttackState : ICombatState
     float moveSpeed;
     AnimationCurve moveCurve;
 
-    float hitStopScale;
-    float hitStopDuration;
-
     float duration;
 
     // =====================================================
@@ -53,8 +50,6 @@ public class AttackState : ICombatState
         LayerMask enemyLayer,
         int step,
         Action onEnd,
-        float hitStopScale,
-        float hitStopDuration,
         float moveDistance,
         float moveSpeed,
         AnimationCurve moveCurve,
@@ -68,9 +63,6 @@ public class AttackState : ICombatState
         this.enemyLayer = enemyLayer;
         this.step = step;
         this.onEnd = onEnd;
-
-        this.hitStopScale = hitStopScale;
-        this.hitStopDuration = hitStopDuration;
 
         this.moveDistance = moveDistance;
         this.moveSpeed = moveSpeed;

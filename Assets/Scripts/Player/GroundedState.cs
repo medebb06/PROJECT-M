@@ -16,12 +16,8 @@ public class GroundedState : IPlayerState
 
     public void Enter()
     {
-        PlayerMovement movement =
-            player.Movement;
-
-        // Yere basınca coyote yenilenir.
-        movement.coyoteCounter =
-            movement.coyoteTime;
+        // Coyote time artık PlayerMovement.UpdateTimers içinde
+        // yerdeyken sürekli yenileniyor.
 
         // Jump lock reset.
         player.jumpConsumed = false;
@@ -46,9 +42,6 @@ public class GroundedState : IPlayerState
     {
         if (!player.canControl)
             return;
-
-        PlayerMovement movement =
-            player.Movement;
 
         // =====================================================
         // DEFENSE
@@ -101,44 +94,8 @@ public class GroundedState : IPlayerState
             return;
         }
 
-        // =====================================================
-        // JUMP
-        // =====================================================
-
-        if (
-            !player.jumpConsumed &&
-            movement.jumpBufferCounter > 0f &&
-            movement.coyoteCounter > 0f
-        )
-        {
-            movement.jumpBufferCounter = 0f;
-            movement.coyoteCounter = 0f;
-
-            player.jumpConsumed = true;
-
-            float jumpStrength =
-                Mathf.Clamp01(
-                    Mathf.Abs(
-                        player.moveInput
-                    ) * 0.5f + 0.5f
-                );
-
-            if (player.audioPlayer != null)
-            {
-                player.audioPlayer.PlayJump(
-                    jumpStrength
-                );
-            }
-
-            sm.ChangeState(
-                new JumpState(
-                    player,
-                    sm
-                )
-            );
-
-            return;
-        }
+        // Zıplama PlayerController.HandleJump'ta başlıyor ve
+        // JumpState.Enter'da uygulanıyor (burada tekrar yok).
     }
 
     public void FixedUpdate()

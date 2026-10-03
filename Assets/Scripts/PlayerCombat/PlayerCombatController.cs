@@ -83,13 +83,7 @@ public class PlayerCombatController : MonoBehaviour
     [Range(0f, 1f)]
     public float attack4HitTime = 0.50f;
 
-    [Header("Hit Stop")]
-    public float hitStopTimeScale = 0.05f;
-    public float hitStopDuration = 0.06f;
-
     private ICombatState currentState;
-
-    Coroutine hitStopRoutine;
 
     void Awake()
     {
@@ -301,8 +295,6 @@ public class PlayerCombatController : MonoBehaviour
             enemyLayer,
             comboStep,
             OnAttackEnd,
-            hitStopTimeScale,
-            hitStopDuration,
             attackMoveDistance,
             attackMoveSpeed,
             attackMoveCurve,
@@ -326,35 +318,5 @@ public class PlayerCombatController : MonoBehaviour
             comboStep = 0;
             comboTimer = 0f;
         }
-    }
-
-    public void DoHitStop(
-        float duration,
-        float timeScale
-    )
-    {
-        if (hitStopRoutine != null)
-            StopCoroutine(hitStopRoutine);
-
-        hitStopRoutine = StartCoroutine(
-            HitStopCoroutine(
-                duration,
-                timeScale
-            )
-        );
-    }
-
-    IEnumerator HitStopCoroutine(
-        float duration,
-        float scale
-    )
-    {
-        Time.timeScale = scale;
-
-        yield return new WaitForSecondsRealtime(
-            duration
-        );
-
-        Time.timeScale = 1f;
     }
 }

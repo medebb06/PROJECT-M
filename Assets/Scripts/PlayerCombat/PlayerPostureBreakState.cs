@@ -84,12 +84,14 @@ public class PlayerPostureBreakState : IPlayerState
         if (player.rb == null)
             return;
 
-        // Stagger boyunca yatay hareket yok.
+        float newX = Mathf.MoveTowards(
+            player.rb.linearVelocity.x,
+            0f,
+            20f * Time.fixedDeltaTime
+        );
+
         player.rb.linearVelocity =
-            new Vector2(
-                0f,
-                player.rb.linearVelocity.y
-            );
+            new Vector2(newX, player.rb.linearVelocity.y);
     }
 
     public void Exit()

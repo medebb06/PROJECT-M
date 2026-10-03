@@ -238,5 +238,8 @@ public class PlayerDeathState : IPlayerState
 
         fadeComplete = false;
         fadeTimer = 0f;
+
+        // Death animasyonunda takılı kalmasın.
+        player.ResetAnimation();
     }
 }

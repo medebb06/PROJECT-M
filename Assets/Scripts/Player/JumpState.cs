@@ -39,8 +39,24 @@ public class JumpState : IPlayerState
         }
 
         // =====================================================
-        // JUMP FX
+        // JUMP FX  (animasyon + ses + toz: tek yerden)
         // =====================================================
+
+        player.PlayJumpAnimation();
+
+        if (player.audioPlayer != null)
+        {
+            float jumpStrength =
+                Mathf.Clamp01(
+                    Mathf.Abs(
+                        player.moveInput
+                    ) * 0.5f + 0.5f
+                );
+
+            player.audioPlayer.PlayJump(
+                jumpStrength
+            );
+        }
 
         player.SpawnDust();
 

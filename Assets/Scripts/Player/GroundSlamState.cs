@@ -138,10 +138,9 @@ public class GroundSlamState : IPlayerState
         // FREEZE FRAME
         // =====================================================
 
-        player.StartCoroutine(
-            player.FreezeFrame(
-                player.slamFreezeTime
-            )
+        HitStop.Request(
+            player.slamFreezeTime,
+            0f
         );
 
         // =====================================================

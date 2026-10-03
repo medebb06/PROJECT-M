@@ -757,8 +757,8 @@ MonoBehaviour:
   maxBalance: 100
   currentBalance: 0
   canRecover: 1
-  recoveryDelay: 1.5
-  recoverySpeed: 20
+  recoveryDelay: 2
+  recoverySpeed: 15
 --- !u!82 &7337914096097080713
 AudioSource:
   m_ObjectHideFlags: 0
