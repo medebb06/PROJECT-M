@@ -659,7 +659,15 @@ MonoBehaviour:
   unblockableWindupMultiplier: 1.3
   unblockableCommitPoint: 0.15
   unblockableDamage: 2
-  unblockableKnockbackMultiplier: 1.4
+  unblockableKnockbackMultiplier: 4
+  unblockableDodgeGrace: 0.12
+  unblockableReachMultiplier: 0.9
+  unblockableDodgeCueLead: 0.4
+  showDangerIcon: 1
+  showDangerZone: 1
+  dangerColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  dangerIconScale: 1.5
+  dangerIconHeightOffset: 0.4
   unblockableRecoveryMultiplier: 1.6
   knockbackDeceleration: 100
   hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
@@ -765,6 +773,8 @@ MonoBehaviour:
   warningVolume: 1
   unblockableWarningSound: {fileID: 0}
   unblockableWarningVolume: 1
+  dodgeCueSound: {fileID: 0}
+  dodgeCueVolume: 1
   commitSound: {fileID: 0}
   commitVolume: 1
   audioSource: {fileID: 0}
@@ -901,6 +911,7 @@ MonoBehaviour:
   committedFlashSpeed: 22
   unblockableColor: {r: 1, g: 0.85, b: 0.1, a: 1}
   unblockableFlashSpeed: 14
+  unblockableMaxSpeedMultiplier: 2.4
 --- !u!114 &5363998208822575816
 MonoBehaviour:
   m_ObjectHideFlags: 0

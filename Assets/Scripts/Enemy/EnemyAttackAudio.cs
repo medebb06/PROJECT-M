@@ -15,6 +15,15 @@ public class EnemyAttackAudio : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float unblockableWarningVolume = 1f;
 
+    [Header("Dodge Cue (ŞİMDİ KAÇ)")]
+    [Tooltip(
+        "Engellenemez vuruşa kısa süre kala çalar: dash zamanı geldi. " +
+        "Boşsa sessiz.")]
+    [SerializeField] private AudioClip dodgeCueSound;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float dodgeCueVolume = 1f;
+
     [Header("Attack Commit")]
     [Tooltip("Saldırı kesilemez hale geçtiğinde çalar. Boşsa sessiz.")]
     [SerializeField] private AudioClip commitSound;
@@ -58,6 +67,17 @@ public class EnemyAttackAudio : MonoBehaviour
         audioSource.PlayOneShot(
             unblockableWarningSound,
             unblockableWarningVolume
+        );
+    }
+
+    public void PlayDodgeCue()
+    {
+        if (dodgeCueSound == null)
+            return;
+
+        audioSource.PlayOneShot(
+            dodgeCueSound,
+            dodgeCueVolume
         );
     }
 

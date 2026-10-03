@@ -116,7 +116,7 @@ public class EnemyController : MonoBehaviour
 
     [Tooltip("Uyarı süresi çarpanı. Uzun uyarı = dash için okunur zaman.")]
     [Min(1f)]
-    public float unblockableWindupMultiplier = 1.3f;
+    public float unblockableWindupMultiplier = 1.6f;
 
     [Tooltip(
         "Uyarının bu oranından sonra hasar alınca kesilmez. " +
@@ -133,6 +133,39 @@ public class EnemyController : MonoBehaviour
     [Min(0f)]
     public float unblockableKnockbackMultiplier = 1.4f;
 
+    [Tooltip(
+        "KAÇIŞ PAYI: Dash bittikten sonra bu kadar süre içinde de hâlâ " +
+        "kaçmış sayılırsın. Dash basma penceresi = Dash Time + bu değer.")]
+    [Min(0f)]
+    public float unblockableDodgeGrace = 0.12f;
+
+    [Tooltip(
+        "Vuruş anında erişim mesafesi bu çarpanla küçülür. " +
+        "1 altında geri çekilmek kolaylaşır.")]
+    [Range(0.5f, 1f)]
+    public float unblockableReachMultiplier = 0.9f;
+
+    [Tooltip(
+        "Vuruşa bu kadar kala 'ŞİMDİ KAÇ' işareti verilir " +
+        "(simge ve bant beyaza döner, ses çalar).")]
+    [Min(0.05f)]
+    public float unblockableDodgeCueLead = 0.4f;
+
+    [Header("Danger Indicator (okunurluk)")]
+    [Tooltip("Engellenemez vuruşta düşmanın başının üstünde '!' simgesi.")]
+    public bool showDangerIcon = true;
+
+    [Tooltip("Zeminde vuruşun erişim alanını gösteren bant.")]
+    public bool showDangerZone = true;
+
+    public Color dangerColor = new Color(1f, 0.85f, 0.1f);
+
+    public float dangerIconScale = 1.2f;
+
+    [Tooltip("Simgenin sprite'ın üstünden yüksekliği.")]
+    public float dangerIconHeightOffset = 0.4f;
+
+    [Header("Unblockable Recovery")]
     [Tooltip(
         "Vuruş sonrası recovery çarpanı. Boşa giden (dash ile kaçılan) " +
         "engellenemez vuruş düşmanı uzun süre açıkta bırakır.")]
@@ -710,6 +743,13 @@ public class EnemyController : MonoBehaviour
 
         if (telegraph != null)
             telegraph.enabled = false;
+
+        // Ölürken engellenemez vuruş göstergeleri ekranda kalmasın.
+        EnemyDangerIndicator danger =
+            GetComponent<EnemyDangerIndicator>();
+
+        if (danger != null)
+            danger.Hide();
 
         SetFinisherHighlight(false);
     }

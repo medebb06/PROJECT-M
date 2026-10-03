@@ -20,6 +20,12 @@ public class EnemyAttackState : IEnemyState
     // Engellenemez vuruş: parry/block işe yaramaz, dash/geri çekilme gerekir.
     private bool isUnblockable;
 
+    // Engellenemez vuruş okunurluğu + kaçış payı
+    private EnemyDangerIndicator indicator;
+    private PlayerController playerRef;
+    private bool dodgeCueTriggered;
+    private float lastDashSeenTime;
+
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -74,6 +80,49 @@ public class EnemyAttackState : IEnemyState
     public float RemainingWindup =>
         Mathf.Max(0f, warningTimer);
 
+    // Engellenemez vuruşun uyarı aşaması her karede:
+    // işaretleri ilerlet, dash'i takip et, "ŞİMDİ KAÇ" zamanını yakala.
+    private void UpdateUnblockableWindup()
+    {
+        float progress =
+            1f -
+            (warningTimer / warningDuration);
+
+        if (telegraph != null)
+            telegraph.SetProgress(progress);
+
+        if (indicator != null)
+            indicator.SetProgress(progress);
+
+        // Kaçış payı için: oyuncunun dash'te olduğu son anı hatırla.
+        if (playerRef != null && playerRef.isDashing)
+            lastDashSeenTime = Time.time;
+
+        // Uyarı kısaysa işaret hemen başta çıkmasın.
+        float lead =
+            Mathf.Min(
+                enemy.unblockableDodgeCueLead,
+                warningDuration * 0.7f
+            );
+
+        if (!dodgeCueTriggered && warningTimer <= lead)
+            TriggerDodgeCue();
+    }
+
+    private void TriggerDodgeCue()
+    {
+        dodgeCueTriggered = true;
+
+        if (indicator != null)
+            indicator.TriggerNowCue();
+
+        if (telegraph != null)
+            telegraph.TriggerCue();
+
+        if (attackAudio != null)
+            attackAudio.PlayDodgeCue();
+    }
+
     private void TriggerCommit()
     {
         commitTriggered = true;
@@ -93,6 +142,14 @@ public class EnemyAttackState : IEnemyState
         // aynı uyarı süresini bildirdi; tutarlı kalsın.)
         isUnblockable =
             enemy.ConsumePlannedAttack();
+
+        dodgeCueTriggered = false;
+        lastDashSeenTime = -999f;
+
+        playerRef =
+            enemy.target != null
+                ? enemy.target.GetComponent<PlayerController>()
+                : null;
 
         float windup =
             enemy.WindupFor(isUnblockable);
@@ -121,10 +178,25 @@ public class EnemyAttackState : IEnemyState
 
         // StartWarning flaş bastırmasını sıfırladığı için SONRA çağrılır.
         if (isUnblockable)
+        {
             enemy.PlayAlertFlash();
 
-        if (isUnblockable)
-        {
+            // Başın üstünde "!" ve zeminde erişim bandı.
+            indicator =
+                enemy.GetComponent<EnemyDangerIndicator>();
+
+            if (indicator == null)
+            {
+                indicator =
+                    enemy.gameObject
+                        .AddComponent<EnemyDangerIndicator>();
+            }
+
+            indicator.Show(
+                enemy.attackRange *
+                enemy.unblockableReachMultiplier
+            );
+
             Debug.Log(
                 "ENEMY UNBLOCKABLE ATTACK STARTED"
             );
@@ -160,8 +232,14 @@ public class EnemyAttackState : IEnemyState
             if (!commitTriggered && IsCommitted)
                 TriggerCommit();
 
+            if (isUnblockable)
+                UpdateUnblockableWindup();
+
             if (warningTimer > 0f)
                 return;
+
+            if (indicator != null)
+                indicator.Hide();
 
             if (telegraph != null)
                 telegraph.StopWarning();
@@ -239,6 +317,9 @@ public class EnemyAttackState : IEnemyState
         // (stagger, oyuncu öldü vb.) slotu serbest bırak.
         EnemyAttackCoordinator.ReleaseAttack(enemy);
 
+        if (indicator != null)
+            indicator.Hide();
+
         if (telegraph != null)
             telegraph.StopWarning();
 
@@ -301,10 +382,20 @@ public class EnemyAttackState : IEnemyState
         // PLAYER INVINCIBLE
         // -----------------------------------------------------
 
-        if (player.isInvincible)
+        // Dash i-frame'i VEYA (engellenemez vuruşta) dash'in hemen
+        // ardından gelen kısa kaçış payı.
+        bool dodged =
+            player.isInvincible ||
+            (
+                isUnblockable &&
+                Time.time - lastDashSeenTime <=
+                enemy.unblockableDodgeGrace
+            );
+
+        if (dodged)
         {
             Debug.Log(
-                "ENEMY ATTACK CANCELLED → PLAYER INVINCIBLE"
+                "ENEMY ATTACK CANCELLED → PLAYER DODGED"
             );
 
             return false;
@@ -320,7 +411,13 @@ public class EnemyAttackState : IEnemyState
                 enemy.target.position
             );
 
-        if (distance > enemy.attackRange)
+        // Engellenemez vuruşta erişim biraz kısalır: geri çekilmek kolaylaşır.
+        float reach =
+            isUnblockable
+                ? enemy.attackRange * enemy.unblockableReachMultiplier
+                : enemy.attackRange;
+
+        if (distance > reach)
         {
             Debug.Log(
                 "ENEMY ATTACK MISSED!"
