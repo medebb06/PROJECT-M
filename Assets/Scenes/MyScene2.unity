@@ -1025,7 +1025,7 @@ MonoBehaviour:
   enemiesPerStage: 0.75
   maxEnemiesPerStage: 30
   maxEnemiesPerWave: 6
-  stageLengthMultiplier: 1.5
+  stageLengthMultiplier: 1.1
   wavesPerStage: 2
   extraWaveEveryNStages: 3
   maxWavesPerStage: 4
@@ -1035,14 +1035,24 @@ MonoBehaviour:
   unblockableBonusPerStage: 0.02
   unblockableChanceCap: 0.6
   maxSpeedBonus: 0.6
-  healthBonusPerStage: 0.1
+  healthBonusPerStage: 0.05
   offerAtRunStart: 1
   firstOfferStage: 1
   offerEveryNStages: 1
   offerChoices: 3
   includeDefaultCharms: 1
   extraCharms: []
-  healBetweenStages: 1
+  disablePlayerHealthRecovery: 1
+  runAttackCommitPoint: 0.15
+  damageBonusPerStage: 0.06
+  maxDamageBonus: 1.5
+  healBetweenStagesPercent: 0.1
+  riposteDuration: 2
+  riposteMaxHits: 3
+  riposteBalanceMultiplier: 2
+  riposteHealthMultiplier: 1.5
+  riposteCritChanceBonus: 0.5
+  postureRefundOnParry: 25
 --- !u!1 &576347936
 GameObject:
   m_ObjectHideFlags: 0
@@ -9838,6 +9848,7 @@ MonoBehaviour:
   attack2BalanceDamage: 10
   attack3BalanceDamage: 10
   attack4BalanceDamage: 20
+  attackHealthDamage: 1
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
   attackMoveCurve:
