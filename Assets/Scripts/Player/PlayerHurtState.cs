@@ -5,76 +5,148 @@ public class PlayerHurtState : IPlayerState
     private PlayerController player;
     private PlayerStateMachine sm;
 
+    // Hurt state'in toplam süresi (bu sürede dokunulmaz + kontrolsüz)
     private float timer;
-    private float duration = 0.35f;
+    private readonly float duration = 0.35f;
+
+    // Knockback hızının uygulandığı süre.
+    // Süre bitince yatay hız sıfırlanır.
+    private float knockbackTimer;
+    private bool knockbackEnded;
 
     private Vector2 knockbackDir;
     private float knockbackForce;
-
-    private bool applied;
+    private float knockbackVerticalForce;
+    private float knockbackDuration;
 
     public PlayerHurtState(
         PlayerController player,
         PlayerStateMachine sm,
         Vector2 hitDirection,
-        float force = 8f)
+        float force = 8f,
+        float verticalForce = -1f,
+        float knockbackDuration = 0.1f)
     {
         this.player = player;
         this.sm = sm;
 
-        knockbackDir = hitDirection.normalized;
+        knockbackDir = hitDirection;
         knockbackForce = force;
+
+        // verticalForce verilmediyse (negatif) eski davranış:
+        // yatay kuvvetin %60'ı kadar yukarı.
+        knockbackVerticalForce =
+            verticalForce >= 0f
+                ? verticalForce
+                : force * 0.6f;
+
+        this.knockbackDuration = knockbackDuration;
     }
 
     public void Enter()
     {
         timer = duration;
-        applied = false;
+        knockbackTimer = knockbackDuration;
+        knockbackEnded = false;
 
         player.isInvincible = true;
-        player.canControl = false;   // kontrolü kesiyoruz (çok önemli)
+        player.canControl = false;
+
+        // Hurt sırasında saldırı yapılamasın.
+        player.isAttackLocked = true;
+
+        // Devam eden saldırı varsa iptal et.
+        // (AttackState.Exit yatay hızı sıfırladığı için
+        // knockback'ten ÖNCE çağrılmalı.)
+        PlayerCombatController combat =
+            player.GetComponent<PlayerCombatController>();
+
+        if (combat != null)
+            combat.CancelAttack();
+
+        ApplyKnockback();
     }
 
     public void Exit()
     {
         player.isInvincible = false;
         player.canControl = true;
+        player.isAttackLocked = false;
     }
 
     public void Update()
     {
-        if (!applied)
-        {
-            ApplyKnockback();
-            applied = true;
-        }
+        float dt = Time.deltaTime;
 
-        timer -= Time.deltaTime;
+        timer -= dt;
+
+        // Knockback süresi bitince yatay momentum kalmasın.
+        if (!knockbackEnded)
+        {
+            knockbackTimer -= dt;
+
+            if (knockbackTimer <= 0f)
+            {
+                knockbackEnded = true;
+
+                player.SetVelocity(
+                    new Vector2(
+                        0f,
+                        player.rb.linearVelocity.y
+                    )
+                );
+            }
+        }
 
         if (timer <= 0f)
         {
-            sm.ChangeState(new GroundedState(player, sm));
+            // FIX: Eskiden her zaman GroundedState'e dönüyordu.
+            // Havadaysan GroundedState.Enter coyote time'ı yeniliyor
+            // ve havada bedava zıplama hakkı veriyordu.
+            if (player.IsGrounded())
+            {
+                sm.ChangeState(
+                    new GroundedState(player, sm)
+                );
+            }
+            else
+            {
+                sm.ChangeState(
+                    new AirState(player, sm)
+                );
+            }
         }
     }
 
     public void FixedUpdate()
     {
-        // ekstra physics yok, kasmıyoruz
+        // ekstra physics yok
     }
 
     private void ApplyKnockback()
     {
         Rigidbody2D rb = player.rb;
 
-        // mevcut hız sıfırla → kontrol hissi daha temiz olur
-        rb.linearVelocity = Vector2.zero;
+        if (rb == null)
+            return;
 
-        // yatay + hafif yukarı knockback
-        Vector2 force = new Vector2(
-            knockbackDir.x * knockbackForce,
-            knockbackForce * 0.6f
-        );
+        // Sadece yatay yönü kullan.
+        float directionX;
 
-        rb.linearVelocity = force;
+        if (Mathf.Abs(knockbackDir.x) > 0.01f)
+        {
+            directionX = Mathf.Sign(knockbackDir.x);
+        }
+        else
+        {
+            // Yön belli değilse baktığın yönün tersine.
+            directionX = player.facingDir >= 0f ? -1f : 1f;
+        }
+
+        rb.linearVelocity =
+            new Vector2(
+                directionX * knockbackForce,
+                knockbackVerticalForce
+            );
     }
 }

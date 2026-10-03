@@ -22,7 +22,11 @@ public class DashState : IPlayerState
     public void Enter()
     {
         float speedFactor = Mathf.InverseLerp(0f, 20f, player.rb.linearVelocity.magnitude);
-        player.audioPlayer.PlayDash(speedFactor);
+
+        // FIX: audioPlayer atanmamışsa NullReferenceException atıyordu.
+        if (player.audioPlayer != null)
+            player.audioPlayer.PlayDash(speedFactor);
+
         player.isDashing = true;
         player.canControl = false;
         player.isInvincible = true;
@@ -37,8 +41,22 @@ public class DashState : IPlayerState
         // collision layer save
         originalLayer = player.gameObject.layer;
 
-        // dash layer
-        player.gameObject.layer = LayerMask.NameToLayer("Dash");
+        // FIX: "Dash" layer'ı projede yoksa NameToLayer -1 döner
+        // ve gameObject.layer = -1 hata verir.
+        int dashLayer = LayerMask.NameToLayer("Dash");
+
+        if (dashLayer >= 0)
+        {
+            player.gameObject.layer = dashLayer;
+        }
+        else
+        {
+            Debug.LogWarning(
+                "DashState: 'Dash' layer'ı bulunamadı! " +
+                "Project Settings > Tags and Layers'tan ekle " +
+                "ve Collision Matrix'i ayarla."
+            );
+        }
 
         // dash başlangıcında vertical velocity temizle
         Vector2 vel = player.rb.linearVelocity;
@@ -138,14 +156,18 @@ public class DashState : IPlayerState
 
         if (ghost != null)
         {
+            // FIX: Yön artık gerçekten kullanılan kaynaktan
+            // (SpriteRenderer.flipX) okunuyor.
             bool flipX =
-                player.modelPivot.localScale.x < 0f;
+                player.playerSprite.flipX;
 
             Vector3 ghostScale =
-                player.modelPivot.localScale;
+                player.modelPivot != null
+                    ? player.modelPivot.localScale
+                    : Vector3.one;
 
-            // Yön bilgisini flipX'e bırak.
-            // Scale'i her zaman pozitif tut.
+            // Scale'i her zaman pozitif tut,
+            // yön bilgisi flipX'te.
             ghostScale.x =
                 Mathf.Abs(ghostScale.x);
 

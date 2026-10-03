@@ -29,6 +29,16 @@ public class PlayerFinisher : MonoBehaviour
         if (!Input.GetKeyDown(executeKey))
             return;
 
+        // FIX: Hurt / dash / ölüm gibi kontrolsüz
+        // durumlarda finisher tetiklenmesin.
+        if (
+            player == null ||
+            !player.canControl
+        )
+        {
+            return;
+        }
+
         TryExecute();
     }
 
@@ -74,8 +84,11 @@ public class PlayerFinisher : MonoBehaviour
 
     private EnemyController FindBestTarget()
     {
+        // FIX: FindObjectsOfType Unity 6'da obsolete.
         EnemyController[] enemies =
-            FindObjectsOfType<EnemyController>();
+            FindObjectsByType<EnemyController>(
+                FindObjectsSortMode.None
+            );
 
         EnemyController bestTarget = null;
 
@@ -149,11 +162,5 @@ public class PlayerFinisher : MonoBehaviour
         }
 
         return bestTarget;
-    }
-
-    private void OnDisable()
-    {
-        // Artık target tutulmadığı için
-        // temizlenecek bir şey yok.
     }
 }

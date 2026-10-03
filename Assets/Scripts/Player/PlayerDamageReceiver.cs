@@ -7,6 +7,11 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [SerializeField] private PlayerController player;
     [SerializeField] private PlayerKnockback knockback;
 
+    [Header("Default Knockback")]
+    [SerializeField] private float defaultKnockbackForce = 8f;
+    [SerializeField] private float defaultKnockbackVerticalForce = 4.8f;
+    [SerializeField] private float defaultKnockbackDuration = 0.1f;
+
     void Awake()
     {
         if (health == null)
@@ -19,7 +24,36 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             knockback = GetComponent<PlayerKnockback>();
     }
 
+    // --------------------------------------------------
+    // IDamageable
+    // Varsayılan knockback değerleriyle hasar al.
+    // --------------------------------------------------
+
     public void TakeDamage(int damage, Vector2 hitDirection)
+    {
+        TakeDamage(
+            damage,
+            hitDirection,
+            defaultKnockbackForce,
+            defaultKnockbackVerticalForce,
+            defaultKnockbackDuration
+        );
+    }
+
+    // --------------------------------------------------
+    // Hasar + knockback TEK yerden.
+    // Knockback'i PlayerHurtState uygular.
+    // (Eskiden hem HurtState hem PlayerKnockback aynı anda
+    // hızı eziyordu ve birbirini bozuyordu.)
+    // --------------------------------------------------
+
+    public void TakeDamage(
+        int damage,
+        Vector2 hitDirection,
+        float knockbackForce,
+        float knockbackVerticalForce,
+        float knockbackDuration
+    )
     {
         if (health == null)
             return;
@@ -64,13 +98,17 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             new PlayerHurtState(
                 player,
                 player.stateMachine,
-                hitDirection
+                hitDirection,
+                knockbackForce,
+                knockbackVerticalForce,
+                knockbackDuration
             )
         );
     }
 
     // --------------------------------------------------
-    // CUSTOM KNOCKBACK
+    // LEGACY: Eski PlayerKnockback bileşeni için.
+    // Artık hasar akışında kullanılmıyor.
     // --------------------------------------------------
 
     public void ApplyKnockback(

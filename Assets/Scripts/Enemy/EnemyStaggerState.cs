@@ -3,13 +3,9 @@ using UnityEngine;
 public class EnemyStaggerState : IEnemyState
 {
     private EnemyController enemy;
+    private Rigidbody2D rb;
 
     private float staggerTimer;
-
-    private SpriteRenderer spriteRenderer;
-    private Color originalColor;
-
-    private float flashTimer;
 
     public EnemyStaggerState(
         EnemyController enemy
@@ -20,37 +16,19 @@ public class EnemyStaggerState : IEnemyState
 
     public void Enter()
     {
-        // ==========================================
-        // STAGGER TIMER
-        // ==========================================
-
         staggerTimer =
             enemy.staggerDuration;
 
-        flashTimer =
-            enemy.staggerFlashDuration;
+        rb =
+            enemy.GetComponent<Rigidbody2D>();
 
-        // ==========================================
-        // STOP ENEMY MOVEMENT
-        // ==========================================
+        // Finisher için hedef çerçevesi.
+        // (FinisherTargetHighlight daha önce hiç açılmıyordu.)
+        enemy.SetFinisherHighlight(true);
 
-        StopMovement();
-
-        // ==========================================
-        // STAGGER FLASH
-        // ==========================================
-
-        spriteRenderer =
-            enemy.GetComponent<SpriteRenderer>();
-
-        if (spriteRenderer != null)
-        {
-            originalColor =
-                spriteRenderer.color;
-
-            spriteRenderer.color =
-                enemy.staggerFlashColor;
-        }
+        // Not: Stagger rengi artık EnemyController.ForceStagger
+        // içinde yönetiliyor. Burada tekrar renk değiştirmiyoruz;
+        // aksi halde iki sistem birbirinin rengini eziyordu.
 
         Debug.Log(
             "ENEMY STAGGER!"
@@ -60,24 +38,26 @@ public class EnemyStaggerState : IEnemyState
     public void Tick()
     {
         // ==========================================
-        // STAGGER MOVEMENT LOCK
+        // KNOCKBACK YAVAŞLAMASI
+        // Stagger sırasında alınan vuruşlar hız veriyor
+        // ama yavaşlatan bir state yoktu; düşman kayıyordu.
         // ==========================================
 
-        StopMovement();
-
-        // ==========================================
-        // STAGGER FLASH
-        // ==========================================
-
-        if (flashTimer > 0f)
+        if (rb != null)
         {
-            flashTimer -=
-                Time.deltaTime;
+            float newX =
+                Mathf.MoveTowards(
+                    rb.linearVelocity.x,
+                    0f,
+                    enemy.knockbackDeceleration *
+                    Time.deltaTime
+                );
 
-            if (flashTimer <= 0f)
-            {
-                RestoreColor();
-            }
+            rb.linearVelocity =
+                new Vector2(
+                    newX,
+                    rb.linearVelocity.y
+                );
         }
 
         // ==========================================
@@ -87,49 +67,25 @@ public class EnemyStaggerState : IEnemyState
         staggerTimer -=
             Time.deltaTime;
 
-        if (staggerTimer > 0f)
-            return;
-
-        // ==========================================
-        // STAGGER FINISHED
-        // ==========================================
-
-        RecoverBalance();
-
-        enemy.ChangeState(
-            new EnemyChaseState(enemy)
-        );
+        if (staggerTimer <= 0f)
+        {
+            enemy.ChangeState(
+                new EnemyChaseState(enemy)
+            );
+        }
     }
 
     public void Exit()
     {
-        StopMovement();
+        enemy.SetFinisherHighlight(false);
 
-        RestoreColor();
-    }
+        enemy.ClearStaggerTint();
 
-    private void StopMovement()
-    {
-        Rigidbody2D rb =
-            enemy.GetComponent<Rigidbody2D>();
-
-        if (rb == null)
-            return;
-
-        rb.linearVelocity =
-            new Vector2(
-                0f,
-                rb.linearVelocity.y
-            );
-    }
-
-    private void RestoreColor()
-    {
-        if (spriteRenderer == null)
-            return;
-
-        spriteRenderer.color =
-            originalColor;
+        // FIX: Denge toparlanması artık Exit'te.
+        // Eskiden sadece süre dolunca toparlanıyordu;
+        // execute ile çıkılıp düşman hayatta kalırsa denge
+        // sonsuza kadar kırık kalıyordu.
+        RecoverBalance();
     }
 
     private void RecoverBalance()
@@ -138,9 +94,6 @@ public class EnemyStaggerState : IEnemyState
             enemy.GetComponent<EnemyBalance>();
 
         if (balance == null)
-            return;
-
-        if (!balance.IsBroken)
             return;
 
         balance.RecoverBalance();

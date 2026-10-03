@@ -7,6 +7,7 @@ public class EnemyController : MonoBehaviour
 
     [Header("Chase")]
     public float chaseStopDistance = 1.8f;
+    public float chaseSpeed = 4f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -15,8 +16,6 @@ public class EnemyController : MonoBehaviour
     public float staggerDuration = 1.2f;
     public float attackDuration = 1f;
     public float attackWarningTime = 1f;
-
-
 
     [Header("Attack Recovery")]
     public float attackRecoveryTime = 0.8f;
@@ -37,7 +36,7 @@ public class EnemyController : MonoBehaviour
     public Color staggerFlashColor = Color.yellow;
     public float staggerFlashDuration = 0.15f;
 
-    [Header("Enemy Attack Knockback")]
+    [Header("Enemy Attack Knockback (Player'a uygulanır)")]
     public float attackKnockbackForce = 7f;
     public float attackKnockbackVerticalForce = 3f;
     public float attackKnockbackDuration = 0.12f;
@@ -64,7 +63,6 @@ public class EnemyController : MonoBehaviour
     public float attack3KnockbackForce = 7f;
     public float attack4KnockbackForce = 9f;
 
-
     [Header("Block Knockback")]
     public float blockKnockbackForce = 2.5f;
     public float blockKnockbackVerticalForce = 0.2f;
@@ -72,15 +70,21 @@ public class EnemyController : MonoBehaviour
     public float blockKnockbackDeceleration = 12f;
     public float blockRecoveryTime = 0.25f;
 
-    [Header("Attack Damage")]
-    public int attackDamage = 1;
-
-
-    [Header("Parry")]
-    public int parryBalanceDamage = 50;
-  
     [Header("Defense Balance")]
+    // LEGACY: Eskiden block'ta oyuncu posture hasarı olarak
+    // kullanılıyordu. Artık blockPostureDamage kullanılıyor.
     public int blockBalanceDamage = 1;
+    public int parryBalanceDamage = 2;
+
+    [Header("Player Block Posture")]
+    // Oyuncunun block'ladığı her vuruşta PlayerPosture'dan
+    // düşen miktar. (PlayerPosture max 100.)
+    public int blockPostureDamage = 25;
+
+    [Header("Ground Slam")]
+    // Oyuncunun ground slam'i bu düşmanın dengesine
+    // ne kadar hasar verir.
+    public int slamBalanceDamage = 3;
 
     [Header("Execute")]
     public int executeDamage = 10;
@@ -95,7 +99,6 @@ public class EnemyController : MonoBehaviour
 
     public Transform target;
     public float chaseRange = 5f;
-
     [Header("Facing")]
     [SerializeField] private SpriteRenderer enemySprite;
 
@@ -105,9 +108,24 @@ public class EnemyController : MonoBehaviour
     private EnemyBalance enemyBalance;
     private IEnemyState currentState;
 
+    private Health health;
+    private Health targetHealth;
+    private FinisherTargetHighlight finisherHighlight;
+
+    private bool deathHandled;
+    private float nextTargetSearchTime;
+
     // =========================================================
-    // PUBLIC STATE INFO
+    // HIT FLASH
     // =========================================================
+
+    private SpriteRenderer[] spriteRenderers;
+    private Color[] originalColors;
+    private Coroutine flashRoutine;
+
+    // Stagger boyunca korunan renk tonu.
+    // Hit flash bitince bu tona geri dönülür.
+    private float staggerTintEndTime;
 
     public bool CanAttack =>
         attackRecoveryTimer <= 0f;
@@ -118,26 +136,34 @@ public class EnemyController : MonoBehaviour
     public bool IsStaggered =>
         currentState is EnemyStaggerState;
 
-    public bool IsAttacking =>
-        currentState is EnemyAttackState;
+    public bool IsDead =>
+        health != null &&
+        health.IsDead;
 
-    public bool IsInAttackRecovery =>
-        attackRecoveryTimer > 0f;
+    // Hedef (oyuncu) öldü mü?
+    public bool IsTargetDead
+    {
+        get
+        {
+            if (target == null)
+                return false;
+
+            if (
+                targetHealth == null ||
+                targetHealth.gameObject != target.gameObject
+            )
+            {
+                targetHealth =
+                    target.GetComponent<Health>();
+            }
+
+            return targetHealth != null &&
+                   targetHealth.IsDead;
+        }
+    }
 
     public IEnemyState CurrentState =>
         currentState;
-
-    // =========================================================
-    // HIT FLASH
-    // =========================================================
-
-    private SpriteRenderer[] spriteRenderers;
-    private Color[] originalColors;
-    private Coroutine flashRoutine;
-
-    // =========================================================
-    // ATTACK ANIMATION
-    // =========================================================
 
     public void PlayAttackAnimation()
     {
@@ -146,10 +172,6 @@ public class EnemyController : MonoBehaviour
 
         animator.SetTrigger("Attack");
     }
-
-    // =========================================================
-    // AWAKE
-    // =========================================================
 
     private void Awake()
     {
@@ -166,6 +188,12 @@ public class EnemyController : MonoBehaviour
         }
 
         hitAudioSource.playOnAwake = false;
+
+        health =
+            GetComponent<Health>();
+
+        finisherHighlight =
+            GetComponent<FinisherTargetHighlight>();
 
         enemyBalance =
             GetComponent<EnemyBalance>();
@@ -196,10 +224,6 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    // =========================================================
-    // DESTROY
-    // =========================================================
-
     private void OnDestroy()
     {
         if (enemyBalance != null)
@@ -210,8 +234,33 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // FACING
+    // TARGET
     // =========================================================
+
+    // Hedef yoksa Player tag'iyle bulmayı dener.
+    // Her karede aramasın diye 0.5 sn'de bir dener.
+    public bool TryFindTarget()
+    {
+        if (target != null)
+            return true;
+
+        if (Time.time < nextTargetSearchTime)
+            return false;
+
+        nextTargetSearchTime =
+            Time.time + 0.5f;
+
+        GameObject playerObj =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObj == null)
+            return false;
+
+        target =
+            playerObj.transform;
+
+        return true;
+    }
 
     private void FaceTarget()
     {
@@ -231,15 +280,21 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
     private void Update()
     {
-        // -----------------------------------------------------
-        // ATTACK RECOVERY TIMER
-        // -----------------------------------------------------
+        // =====================================================
+        // ÖLÜ DÜŞMAN
+        // Health fade-out sırasında düşman hâlâ Update
+        // alıyordu ve ölürken bile oyuncuya vurabiliyordu.
+        // =====================================================
+
+        if (health != null && health.IsDead)
+        {
+            if (!deathHandled)
+                HandleDeath();
+
+            return;
+        }
 
         if (attackRecoveryTimer > 0f)
         {
@@ -250,10 +305,6 @@ public class EnemyController : MonoBehaviour
                 attackRecoveryTimer = 0f;
         }
 
-        // -----------------------------------------------------
-        // MOVEMENT LOCK
-        // -----------------------------------------------------
-
         if (movementLockTimer > 0f)
         {
             movementLockTimer -=
@@ -263,51 +314,36 @@ public class EnemyController : MonoBehaviour
                 movementLockTimer = 0f;
         }
 
-        // -----------------------------------------------------
-        // FACING
-        // -----------------------------------------------------
-        // Enemy attack sırasında oyuncuyu takip ederek
-        // dönmeyecek.
-        //
-        // Attack state'ten çıktığında tekrar FaceTarget
-        // çalışmaya başlayacak.
-        // -----------------------------------------------------
+        UpdateStaggerTint();
 
-        if (!(currentState is EnemyAttackState))
-        {
-            FaceTarget();
-        }
-
-        // -----------------------------------------------------
-        // STATE
-        // -----------------------------------------------------
+        FaceTarget();
 
         currentState?.Tick();
     }
 
-    // =========================================================
-    // START
-    // =========================================================
+    private void HandleDeath()
+    {
+        deathHandled = true;
+
+        // Telegraph kapatılmazsa her karede rengi ezip
+        // fade-out'u bozar.
+        EnemyAttackTelegraph telegraph =
+            GetComponent<EnemyAttackTelegraph>();
+
+        if (telegraph != null)
+            telegraph.enabled = false;
+
+        SetFinisherHighlight(false);
+    }
 
     private void Start()
     {
-        if (target == null)
-        {
-            GameObject playerObj =
-                GameObject.FindGameObjectWithTag("Player");
-
-            if (playerObj != null)
-                target = playerObj.transform;
-        }
+        TryFindTarget();
 
         ChangeState(
             new EnemyIdleState(this)
         );
     }
-
-    // =========================================================
-    // CHANGE STATE
-    // =========================================================
 
     public void ChangeState(
         IEnemyState newState
@@ -326,10 +362,6 @@ public class EnemyController : MonoBehaviour
         currentState.Enter();
     }
 
-    // =========================================================
-    // FORCE STAGGER
-    // =========================================================
-
     public void ForceStagger()
     {
         if (IsStaggered)
@@ -340,19 +372,32 @@ public class EnemyController : MonoBehaviour
             staggerFlashDuration
         );
 
+        staggerTintEndTime =
+            Time.time + staggerFlashDuration;
+
         ChangeState(
             new EnemyStaggerState(this)
         );
     }
 
-    // =========================================================
-    // ATTACK RECOVERY
-    // =========================================================
-
     public void StartAttackRecovery()
     {
         attackRecoveryTimer =
             attackRecoveryTime;
+    }
+
+    // =========================================================
+    // FINISHER HIGHLIGHT
+    // =========================================================
+
+    public void SetFinisherHighlight(bool highlighted)
+    {
+        if (finisherHighlight == null)
+            return;
+
+        finisherHighlight.SetHighlighted(
+            highlighted
+        );
     }
 
     // =========================================================
@@ -406,7 +451,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // ATTACK HIT - OLD COMPATIBILITY
+    // ATTACK HIT - OLD COMPATIBILITY METHOD
     // =========================================================
 
     public void ApplyAttackHit(
@@ -422,7 +467,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // ATTACK HIT - COMBO
+    // ATTACK HIT - COMBO VERSION
     // =========================================================
 
     public void ApplyAttackHit(
@@ -500,7 +545,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // =========================================================
-    // COMBO KNOCKBACK
+    // COMBO KNOCKBACK FORCE
     // =========================================================
 
     private float GetComboKnockbackForce(
@@ -543,7 +588,7 @@ public class EnemyController : MonoBehaviour
         {
             StopCoroutine(flashRoutine);
 
-            RestoreOriginalColors();
+            RestoreBaseColors();
         }
 
         flashRoutine =
@@ -580,36 +625,74 @@ public class EnemyController : MonoBehaviour
             duration
         );
 
-        RestoreOriginalColors();
+        RestoreBaseColors();
 
         flashRoutine = null;
     }
 
-    private void RestoreOriginalColors()
+    // Flash bitince dönülecek renk:
+    // Stagger tonu hâlâ aktifse o, değilse orijinal renk.
+    // (Eskiden stagger sırasında alınan ilk vuruşun flash'ı
+    // stagger rengini siliyordu.)
+    private void RestoreBaseColors()
     {
         if (spriteRenderers == null)
             return;
+
+        bool staggerTinted =
+            IsStaggered &&
+            Time.time < staggerTintEndTime;
 
         for (int i = 0; i < spriteRenderers.Length; i++)
         {
             if (spriteRenderers[i] == null)
                 continue;
 
+            Color baseColor =
+                staggerTinted
+                    ? staggerFlashColor
+                    : originalColors[i];
+
             Color color =
                 spriteRenderers[i].color;
 
-            color.r =
-                originalColors[i].r;
-
-            color.g =
-                originalColors[i].g;
-
-            color.b =
-                originalColors[i].b;
+            // Alpha'ya dokunma (ölüm fade-out'u için).
+            color.r = baseColor.r;
+            color.g = baseColor.g;
+            color.b = baseColor.b;
 
             spriteRenderers[i].color =
                 color;
         }
+    }
+
+    private void UpdateStaggerTint()
+    {
+        if (staggerTintEndTime <= 0f)
+            return;
+
+        if (Time.time < staggerTintEndTime)
+            return;
+
+        staggerTintEndTime = 0f;
+
+        if (flashRoutine == null)
+            RestoreBaseColors();
+    }
+
+    // EnemyStaggerState.Exit tarafından çağrılır.
+    public void ClearStaggerTint()
+    {
+        staggerTintEndTime = 0f;
+
+        if (flashRoutine != null)
+        {
+            StopCoroutine(flashRoutine);
+
+            flashRoutine = null;
+        }
+
+        RestoreBaseColors();
     }
 
     // =========================================================

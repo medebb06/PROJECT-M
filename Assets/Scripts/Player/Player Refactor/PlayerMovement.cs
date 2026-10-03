@@ -91,28 +91,38 @@ public class PlayerMovement : MonoBehaviour
 
     public void UpdateTimers()
     {
-        jumpBufferCounter -= Time.deltaTime;
-
         jumpBufferCounter =
             Mathf.Max(
                 0f,
-                jumpBufferCounter
+                jumpBufferCounter - Time.deltaTime
             );
-
-        wallJumpBufferCounter -=
-            Time.deltaTime;
 
         wallJumpBufferCounter =
             Mathf.Max(
                 0f,
-                wallJumpBufferCounter
+                wallJumpBufferCounter - Time.deltaTime
             );
 
-        coyoteCounter =
-            Mathf.Max(
-                0f,
-                coyoteCounter
-            );
+        // FIX: Eskiden coyoteCounter hiç azalmıyordu.
+        // Bu yüzden platformdan yürüyerek düşünce havada,
+        // istediğin zaman bir kez zıplayabiliyordun.
+        //
+        // Artık: yerdeyken sürekli dolu, havadayken geri sayar.
+        if (
+            player != null &&
+            player.isGrounded
+        )
+        {
+            coyoteCounter = coyoteTime;
+        }
+        else
+        {
+            coyoteCounter =
+                Mathf.Max(
+                    0f,
+                    coyoteCounter - Time.deltaTime
+                );
+        }
     }
 
     // =========================================================

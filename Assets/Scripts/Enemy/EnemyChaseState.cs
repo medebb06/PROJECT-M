@@ -2,10 +2,8 @@
 
 public class EnemyChaseState : IEnemyState
 {
-    private EnemyController enemy;
-    private Rigidbody2D rb;
-
-    private float speed = 4f;
+    EnemyController enemy;
+    Rigidbody2D rb;
 
     public EnemyChaseState(EnemyController enemy)
     {
@@ -22,24 +20,33 @@ public class EnemyChaseState : IEnemyState
         if (enemy.target == null)
             return;
 
-        // =====================================================
-        // MOVEMENT LOCK
-        // =====================================================
+        // Oyuncu öldüyse kovalamayı bırak.
+        if (enemy.IsTargetDead)
+        {
+            enemy.ChangeState(
+                new EnemyIdleState(enemy)
+            );
+
+            return;
+        }
+
+        // -----------------------------------------
+        // BLOCK KNOCKBACK / MOVEMENT LOCK
+        // -----------------------------------------
 
         if (enemy.IsMovementLocked)
         {
             return;
         }
 
-        float dist =
-            Vector2.Distance(
-                enemy.transform.position,
-                enemy.target.position
-            );
+        float dist = Vector2.Distance(
+            enemy.transform.position,
+            enemy.target.position
+        );
 
-        // =====================================================
+        // -----------------------------------------
         // TOO FAR
-        // =====================================================
+        // -----------------------------------------
 
         if (dist > enemy.chaseRange * 1.5f)
         {
@@ -50,26 +57,26 @@ public class EnemyChaseState : IEnemyState
             return;
         }
 
-        // =====================================================
+        // -----------------------------------------
         // STOP DISTANCE
-        // =====================================================
+        // -----------------------------------------
 
         if (dist <= enemy.chaseStopDistance)
         {
-            rb.linearVelocity =
-                new Vector2(
-                    0f,
-                    rb.linearVelocity.y
-                );
+            // Enemy oyuncuya yeterince yaklaştı.
+            // Artık chase hareketi yapma.
+            rb.linearVelocity = new Vector2(
+                0f,
+                rb.linearVelocity.y
+            );
 
-            // =================================================
+            // -----------------------------------------
             // ATTACK RANGE
-            // =================================================
+            // -----------------------------------------
 
             if (dist <= enemy.attackRange)
             {
-                // Attack recovery devam ediyorsa
-                // kesinlikle yeni attack başlatma.
+                // Saldırı cooldown'daysa bekle.
                 if (!enemy.CanAttack)
                 {
                     return;
@@ -85,26 +92,31 @@ public class EnemyChaseState : IEnemyState
             return;
         }
 
-        // =====================================================
+        // -----------------------------------------
         // CHASE
-        // =====================================================
+        // -----------------------------------------
+        // FIX: Eskiden normalize edilmiş 2D vektörün x'i
+        // kullanılıyordu; oyuncu yukarıdaysa/aşağıdaysa düşman
+        // yavaşlıyordu. Artık sadece yatay yön kullanılıyor.
+        // Hız da sabit 4 yerine enemy.chaseSpeed.
 
-        Vector2 dir =
-            (
-                enemy.target.position -
-                enemy.transform.position
-            ).normalized;
+        float deltaX =
+            enemy.target.position.x -
+            enemy.transform.position.x;
 
-        rb.linearVelocity =
-            new Vector2(
-                dir.x * speed,
-                rb.linearVelocity.y
-            );
+        float dirX =
+            Mathf.Abs(deltaX) > 0.05f
+                ? Mathf.Sign(deltaX)
+                : 0f;
+
+        rb.linearVelocity = new Vector2(
+            dirX * enemy.chaseSpeed,
+            rb.linearVelocity.y
+        );
     }
 
     public void Exit()
     {
-        rb.linearVelocity =
-            Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
     }
 }

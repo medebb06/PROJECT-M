@@ -633,6 +633,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 4
   chaseStopDistance: 3
+  chaseSpeed: 5
   animator: {fileID: 6221554288633988248}
   staggerDuration: 3
   attackDuration: 0.8
@@ -668,9 +669,10 @@ MonoBehaviour:
   blockKnockbackDuration: 1
   blockKnockbackDeceleration: 12
   blockRecoveryTime: 0.5
-  attackDamage: 25
-  parryBalanceDamage: 50
   blockBalanceDamage: 50
+  parryBalanceDamage: 50
+  blockPostureDamage: 25
+  slamBalanceDamage: 3
   executeDamage: 100
   executeDistance: 2
   executeDuration: 0.15

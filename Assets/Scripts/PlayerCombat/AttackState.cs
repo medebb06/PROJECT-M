@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -18,12 +17,6 @@ public class AttackState : ICombatState
     float hitStopDuration;
 
     float duration;
-
-    // =====================================================
-    // PLAYER COMBAT CONTROLLER
-    // =====================================================
-
-    private PlayerCombatController combat;
 
     // =====================================================
     // CUSTOM ATTACK TIMING
@@ -68,8 +61,7 @@ public class AttackState : ICombatState
         float attackDuration,
         float moveStart,
         float moveEnd,
-        float hitTime,
-        PlayerCombatController combat
+        float hitTime
     )
     {
         this.player = player;
@@ -89,8 +81,6 @@ public class AttackState : ICombatState
         this.moveStart = moveStart;
         this.moveEnd = moveEnd;
         this.hitTime = hitTime;
-
-        this.combat = combat;
     }
 
     public void Enter()
@@ -357,6 +347,9 @@ public class AttackState : ICombatState
                 attackPointLocal
             );
 
+        PlayerCombatController combat =
+            player.GetComponent<PlayerCombatController>();
+
         if (combat == null)
             return;
 
@@ -461,35 +454,8 @@ public class AttackState : ICombatState
                 !balance.IsBroken
             )
             {
-                // =================================================
-                // COMBO STEP'E GÖRE BALANCE DAMAGE
-                // =================================================
-
-                int balanceDamage =
-                    GetBalanceDamage();
-
-                Debug.Log(
-                    "PLAYER ATTACK → BALANCE DAMAGE: " +
-                    balanceDamage +
-                    " | CURRENT: " +
-                    balance.CurrentBalance +
-                    "/" +
-                    balance.MaxBalance
-                );
-
                 bool balanceDamaged =
-                    balance.AddBalanceDamage(
-                        balanceDamage
-                    );
-
-                Debug.Log(
-                    "AFTER BALANCE → " +
-                    balance.CurrentBalance +
-                    "/" +
-                    balance.MaxBalance +
-                    " | BROKEN: " +
-                    balance.IsBroken
-                );
+                    balance.AddBalanceDamage(1);
 
                 if (!balanceDamaged)
                     continue;
@@ -550,19 +516,7 @@ public class AttackState : ICombatState
             {
                 if (health != null)
                 {
-                    int healthDamage =
-                        combat.GetHealthDamage(
-                            step
-                        );
-
-                    Debug.Log(
-                        "PLAYER ATTACK → HEALTH DAMAGE: " +
-                        healthDamage
-                    );
-
-                    health.TakeDamage(
-                        healthDamage
-                    );
+                    health.TakeDamage(1);
 
                     if (hitFeedback != null)
                     {
@@ -573,6 +527,9 @@ public class AttackState : ICombatState
 
                     enemy.PlayHealthHitSound();
 
+                    // FIX: Kombo adımı artık iletiliyor.
+                    // Eskiden attack1-4 KnockbackForce değerleri
+                    // hiç kullanılmıyordu (hep 1. adım).
                     enemy.ApplyAttackHit(
                         dir,
                         true,
@@ -592,19 +549,7 @@ public class AttackState : ICombatState
                 health != null
             )
             {
-                int healthDamage =
-                    combat.GetHealthDamage(
-                        step
-                    );
-
-                Debug.Log(
-                    "PLAYER ATTACK → HEALTH DAMAGE: " +
-                    healthDamage
-                );
-
-                health.TakeDamage(
-                    healthDamage
-                );
+                health.TakeDamage(1);
 
                 if (hitFeedback != null)
                 {
@@ -651,30 +596,4 @@ public class AttackState : ICombatState
             );
         }
     }
-
-    // =====================================================
-    // BALANCE DAMAGE
-    // =====================================================
-
-    private int GetBalanceDamage()
-    {
-        switch (step)
-        {
-            case 1:
-                return 10;
-
-            case 2:
-                return 10;
-
-            case 3:
-                return 15;
-
-            case 4:
-                return 20;
-
-            default:
-                return 10;
-        }
-    }
 }
-

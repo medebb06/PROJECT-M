@@ -1,20 +1,16 @@
-﻿using Unity.VisualScripting;
-
-using Unity.VisualScripting.Antlr3.Runtime.Tree;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class EnemyAttackState : IEnemyState
 {
     private EnemyController enemy;
     private EnemyAttackAudio attackAudio;
     private EnemyAttackTelegraph telegraph;
+    private Rigidbody2D rb;
 
     private float warningTimer;
-    private float activeTimer;
     private float recoveryTimer;
 
     private bool attackDone;
-    private bool isActive;
     private bool isRecovering;
 
     public EnemyAttackState(EnemyController enemy)
@@ -26,20 +22,20 @@ public class EnemyAttackState : IEnemyState
 
         telegraph =
             enemy.GetComponent<EnemyAttackTelegraph>();
+
+        rb =
+            enemy.GetComponent<Rigidbody2D>();
     }
 
     public void Enter()
     {
         enemy.PlayAttackAnimation();
-
         warningTimer =
             enemy.attackWarningTime;
 
-        activeTimer = 0f;
         recoveryTimer = 0f;
 
         attackDone = false;
-        isActive = false;
         isRecovering = false;
 
         StopMovement();
@@ -48,15 +44,16 @@ public class EnemyAttackState : IEnemyState
 
         if (telegraph != null)
             telegraph.StartWarning();
-
-        Debug.Log(
-            "ENEMY ATTACK → PREPARE"
-        );
     }
 
     public void Tick()
     {
-        if (enemy.target == null)
+        // FIX: Oyuncu ölünce düşman ölü oyuncuya
+        // sonsuza kadar saldırmaya devam ediyordu.
+        if (
+            enemy.target == null ||
+            enemy.IsTargetDead
+        )
         {
             enemy.ChangeState(
                 new EnemyIdleState(enemy)
@@ -66,10 +63,10 @@ public class EnemyAttackState : IEnemyState
         }
 
         // =====================================================
-        // PREPARE
+        // ATTACK
         // =====================================================
 
-        if (!attackDone && !isActive && !isRecovering)
+        if (!attackDone)
         {
             StopMovement();
 
@@ -81,27 +78,32 @@ public class EnemyAttackState : IEnemyState
             if (telegraph != null)
                 telegraph.StopWarning();
 
-            StartActive();
+            bool enemyStaggered =
+                DoAttack();
 
-            return;
-        }
+            attackDone = true;
 
-        // =====================================================
-        // ACTIVE
-        // =====================================================
+            // Parry sonucu BALANCE KIRILDIYSA
+            // EnemyController zaten stagger state'e geçti.
+            if (enemyStaggered)
+            {
+                Debug.Log(
+                    "ENEMY ATTACK → PARRY BROKE BALANCE → STAGGER"
+                );
 
-        if (isActive)
-        {
-            StopMovement();
-
-            activeTimer -= Time.deltaTime;
-
-            if (activeTimer > 0f)
                 return;
+            }
 
-            isActive = false;
+            // Normal attack / block / normal parry
+            // sonrası recovery başlat.
+            enemy.StartAttackRecovery();
 
-            StartRecovery();
+            recoveryTimer =
+                enemy.attackRecoveryTime;
+
+            isRecovering = true;
+
+            StopMovement();
 
             return;
         }
@@ -142,68 +144,11 @@ public class EnemyAttackState : IEnemyState
     }
 
     // =========================================================
-    // ACTIVE
-    // =========================================================
-
-    private void StartActive()
-    {
-        isActive = true;
-
-        activeTimer =
-            enemy.attackDuration;
-
-        Debug.Log(
-            "ENEMY ATTACK → ACTIVE"
-        );
-
-        bool enemyStaggered =
-            DoAttack();
-
-        attackDone = true;
-
-        if (enemyStaggered)
-        {
-            Debug.Log(
-                "ENEMY ATTACK → PARRY BROKE BALANCE → STAGGER"
-            );
-
-            isActive = false;
-
-            return;
-        }
-
-        StopMovement();
-    }
-
-    // =========================================================
-    // RECOVERY
-    // =========================================================
-
-    private void StartRecovery()
-    {
-        enemy.StartAttackRecovery();
-
-        recoveryTimer =
-            enemy.attackRecoveryTime;
-
-        isRecovering = true;
-
-        StopMovement();
-
-        Debug.Log(
-            "ENEMY ATTACK → RECOVERY"
-        );
-    }
-
-    // =========================================================
     // MOVEMENT
     // =========================================================
 
     private void StopMovement()
     {
-        Rigidbody2D rb =
-            enemy.GetComponent<Rigidbody2D>();
-
         if (rb == null)
             return;
 
@@ -227,7 +172,7 @@ public class EnemyAttackState : IEnemyState
     }
 
     // =========================================================
-    // DO ATTACK
+    // ATTACK
     // =========================================================
 
     private bool DoAttack()
@@ -299,9 +244,7 @@ public class EnemyAttackState : IEnemyState
             defense.CanParry()
         )
         {
-            Debug.Log(
-                "PLAYER PARRY!"
-            );
+            Debug.Log("PLAYER PARRY!");
 
             defense.PlayParryFeedback();
 
@@ -347,9 +290,7 @@ public class EnemyAttackState : IEnemyState
             defense.CanBlock()
         )
         {
-            Debug.Log(
-                "PLAYER BLOCK!"
-            );
+            Debug.Log("PLAYER BLOCK!");
 
             EnemyHitFeedback hitFeedback =
                 enemy.GetComponent<
@@ -401,16 +342,15 @@ public class EnemyAttackState : IEnemyState
         }
 
         Debug.Log(
-            "ENEMY HIT PLAYER → DAMAGE = " +
-            enemy.attackDamage
+            "ENEMY HIT PLAYER"
         );
 
+        // FIX: Hasar + knockback tek çağrıda.
+        // Eskiden TakeDamage (HurtState knockback'i) ve
+        // ApplyKnockback (PlayerKnockback) ayrı ayrı çağrılıp
+        // birbirinin hızını eziyordu.
         damageReceiver.TakeDamage(
-            enemy.attackDamage,
-            hitDirection
-        );
-
-        damageReceiver.ApplyKnockback(
+            1,
             hitDirection,
             enemy.attackKnockbackForce,
             enemy.attackKnockbackVerticalForce,
@@ -439,14 +379,18 @@ public class EnemyAttackState : IEnemyState
 
         if (defense != null)
         {
+            // FIX: PlayerPosture max 100 iken block başına
+            // sadece 1 hasar (blockBalanceDamage) veriliyordu;
+            // posture neredeyse hiç kırılmıyordu.
             defense.HandleBlockHit(
                 hitDirection,
-                enemy.blockBalanceDamage
+                enemy.blockPostureDamage
             );
         }
 
         Debug.Log(
-            "PLAYER BLOCK → NO ENEMY BALANCE DAMAGE"
+            "PLAYER BLOCK → " +
+            "NO ENEMY BALANCE DAMAGE"
         );
     }
 
@@ -458,75 +402,33 @@ public class EnemyAttackState : IEnemyState
         Vector2 hitDirection
     )
     {
-        // Önce aynı GameObject'te ara.
         EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
+            enemy.GetComponent<
+                EnemyBalance
+            >();
 
-        // Bulamazsa child objelerde ara.
         if (balance == null)
         {
-            balance =
-                enemy.GetComponentInChildren<EnemyBalance>();
-        }
-
-        // Hâlâ yoksa açıkça hata ver.
-        if (balance == null)
-        {
-            Debug.LogError(
-                "PARRY ERROR → EnemyBalance bulunamadı! " +
-                "EnemyController veya child objelerinde " +
-                "EnemyBalance component'i olmalı."
+            Debug.LogWarning(
+                "EnemyAttackState: " +
+                "EnemyBalance bulunamadı!"
             );
 
             return false;
         }
 
-        int damage =
-            enemy.parryBalanceDamage;
-
         Debug.Log(
-            "========================================"
+            "PARRY → ENEMY BALANCE +" +
+            enemy.parryBalanceDamage
         );
 
-        Debug.Log(
-            "PARRY → BALANCE DAMAGE: " +
-            damage
+        balance.AddBalanceDamage(
+            enemy.parryBalanceDamage
         );
 
-        Debug.Log(
-            "PARRY → BALANCE BEFORE: " +
-            balance.CurrentBalance +
-            "/" +
-            balance.MaxBalance
-        );
-
-        // Asıl balance hasarı.
-        bool changed =
-            balance.AddBalanceDamage(
-                damage
-            );
-
-        Debug.Log(
-            "PARRY → AddBalanceDamage RESULT: " +
-            changed
-        );
-
-        Debug.Log(
-            "PARRY → BALANCE AFTER: " +
-            balance.CurrentBalance +
-            "/" +
-            balance.MaxBalance
-        );
-
-        Debug.Log(
-            "PARRY → IS BROKEN: " +
-            balance.IsBroken
-        );
-
-        Debug.Log(
-            "========================================"
-        );
-
+        // Balance kırıldıysa EnemyBalance.OnBalanceBroken
+        // üzerinden EnemyController.HandleBalanceBroken()
+        // zaten ForceStagger() çağırıyor.
         if (balance.IsBroken)
         {
             Debug.Log(
@@ -536,7 +438,8 @@ public class EnemyAttackState : IEnemyState
             return true;
         }
 
+        // Balance kırılmadıysa enemy stagger'a girmez.
+        // AttackState recovery'ye devam eder.
         return false;
     }
 }
-

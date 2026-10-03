@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 public class GroundSlamState : IPlayerState
@@ -173,10 +172,10 @@ public class GroundSlamState : IPlayerState
                 player.impactSettings.enemyLayer
             );
 
-        // Aynı enemy'de birden fazla collider varsa
-        // aynı Slam'in birden fazla kez vurmasını engeller.
-        HashSet<EnemyPosture> processedPostures =
-            new HashSet<EnemyPosture>();
+        // Aynı düşmanda birden fazla collider varsa
+        // aynı slam'in birden fazla kez vurmasını engeller.
+        HashSet<EnemyController> processedEnemies =
+            new HashSet<EnemyController>();
 
         HashSet<Health> processedHealth =
             new HashSet<Health>();
@@ -186,111 +185,160 @@ public class GroundSlamState : IPlayerState
             if (hit == null)
                 continue;
 
-            // =================================================
-            // POSTURE
-            // =================================================
+            EnemyController enemy =
+                hit.GetComponentInParent<EnemyController>();
 
-            EnemyPosture posture =
-                hit.GetComponentInParent<EnemyPosture>();
+            // -------------------------------------------------
+            // DÜŞMAN (EnemyController var)
+            // -------------------------------------------------
 
-            // =================================================
-            // HEALTH
-            // =================================================
+            if (enemy != null)
+            {
+                if (processedEnemies.Add(enemy))
+                {
+                    DamageEnemy(enemy);
+                }
+
+                continue;
+            }
+
+            // -------------------------------------------------
+            // DÜŞMAN OLMAYAN, CAN'I OLAN NESNE
+            // -------------------------------------------------
 
             Health health =
                 hit.GetComponentInParent<Health>();
 
-            // =================================================
-            // POSTURE VARSA
-            // =================================================
-
-            if (posture != null)
+            if (
+                health != null &&
+                processedHealth.Add(health)
+            )
             {
-                // -------------------------------------------------
-                // POSTURE HENÜZ KIRILMADI
-                // -------------------------------------------------
-
-                if (!posture.IsBroken)
-                {
-                    if (processedPostures.Add(posture))
-                    {
-                        posture.TakeDamage(
-                            player.impactSettings.slamDamage
-                        );
-
-                        Debug.Log(
-                            "SLAM → POSTURE DAMAGE: " +
-                            posture.gameObject.name
-                        );
-                    }
-                }
-
-                // -------------------------------------------------
-                // POSTURE ZATEN KIRIK
-                // -------------------------------------------------
-
-                else if (health != null)
-                {
-                    if (processedHealth.Add(health))
-                    {
-                        health.TakeDamage(
-                            player.impactSettings.slamDamage
-                        );
-
-                        Debug.Log(
-                            "SLAM → HEALTH DAMAGE: " +
-                            health.gameObject.name
-                        );
-                    }
-                }
-            }
-
-            // =================================================
-            // POSTURE YOKSA → DIRECT HEALTH
-            // =================================================
-
-            else if (health != null)
-            {
-                if (processedHealth.Add(health))
-                {
-                    health.TakeDamage(
-                        player.impactSettings.slamDamage
-                    );
-
-                    Debug.Log(
-                        "SLAM → DIRECT HEALTH DAMAGE: " +
-                        health.gameObject.name
-                    );
-                }
-            }
-
-            // =================================================
-            // SMALL KNOCKBACK
-            // =================================================
-
-            Rigidbody2D enemyRb =
-                hit.GetComponentInParent<Rigidbody2D>();
-
-            if (enemyRb != null)
-            {
-                float direction =
-                    Mathf.Sign(
-                        enemyRb.position.x -
-                        player.rb.position.x
-                    );
-
-                if (direction == 0f)
-                {
-                    direction =
-                        player.facingDir;
-                }
-
-                enemyRb.linearVelocity =
-                    new Vector2(
-                        direction * 1.5f,
-                        0.25f
-                    );
+                health.TakeDamage(
+                    player.impactSettings.slamDamage
+                );
             }
         }
+    }
+
+    // =========================================================
+    // DAMAGE ENEMY
+    // Normal saldırıyla (AttackState) aynı kural:
+    // - Denge kırık değilse: sadece BALANCE hasarı
+    // - Denge kırıksa (stagger): HEALTH hasarı
+    // =========================================================
+
+    void DamageEnemy(EnemyController enemy)
+    {
+        Health health =
+            enemy.GetComponent<Health>();
+
+        if (
+            health != null &&
+            health.IsDead
+        )
+        {
+            return;
+        }
+
+        EnemyBalance balance =
+            enemy.GetComponent<EnemyBalance>();
+
+        EnemyHitFeedback feedback =
+            enemy.GetComponent<EnemyHitFeedback>();
+
+        // Slam yönü: düşman oyuncunun neresindeyse o tarafa.
+        float deltaX =
+            enemy.transform.position.x -
+            player.transform.position.x;
+
+        float directionX =
+            Mathf.Abs(deltaX) > 0.01f
+                ? Mathf.Sign(deltaX)
+                : (player.facingDir >= 0f ? 1f : -1f);
+
+        Vector2 hitDirection =
+            new Vector2(
+                directionX,
+                0f
+            );
+
+        Vector3 hitPosition =
+            enemy.transform.position;
+
+        // -----------------------------------------------------
+        // BALANCE HASARI
+        // -----------------------------------------------------
+
+        if (
+            balance != null &&
+            !balance.IsBroken
+        )
+        {
+            bool balanceChanged =
+                balance.AddBalanceDamage(
+                    enemy.slamBalanceDamage
+                );
+
+            if (!balanceChanged)
+                return;
+
+            if (feedback != null)
+            {
+                feedback.PlayBalanceHit(
+                    hitPosition,
+                    hitDirection
+                );
+            }
+
+            enemy.PlayPostureHitSound();
+
+            if (balance.IsBroken)
+            {
+                // Denge bu vuruşta kırıldı.
+                // Stagger EnemyBalance event'i ile zaten başladı.
+                enemy.ApplyAttackHit(
+                    hitDirection,
+                    false
+                );
+            }
+            else
+            {
+                enemy.ApplyBalanceHit(
+                    hitDirection
+                );
+            }
+
+            return;
+        }
+
+        // -----------------------------------------------------
+        // HEALTH HASARI
+        // (denge kırık ya da düşmanda EnemyBalance yok)
+        // -----------------------------------------------------
+
+        if (health == null)
+            return;
+
+        health.TakeDamage(
+            player.impactSettings.slamDamage
+        );
+
+        if (feedback != null)
+        {
+            feedback.PlayHealthHit(
+                hitDirection
+            );
+        }
+
+        enemy.PlayHealthHitSound();
+
+        if (health.IsDead)
+            return;
+
+        enemy.ApplyAttackHit(
+            hitDirection,
+            true
+        );
     }
 }

@@ -13,6 +13,15 @@ public class EnemyIdleState : IEnemyState
 
     public void Tick()
     {
+        // FIX: Sahnede "Player" tag'li obje yoksa (veya henüz
+        // yoksa) eskiden her karede NullReferenceException atıyordu.
+        if (!enemy.TryFindTarget())
+            return;
+
+        // Oyuncu öldüyse boşta bekle.
+        if (enemy.IsTargetDead)
+            return;
+
         float dist = Vector2.Distance(enemy.transform.position, enemy.target.position);
 
         if (dist < enemy.chaseRange)

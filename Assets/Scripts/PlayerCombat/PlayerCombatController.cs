@@ -83,20 +83,6 @@ public class PlayerCombatController : MonoBehaviour
     [Range(0f, 1f)]
     public float attack4HitTime = 0.50f;
 
-    // =====================================================
-    // HEALTH DAMAGE
-    // =====================================================
-
-    [Header("Attack Health Damage")]
-    public int attack1HealthDamage = 1;
-    public int attack2HealthDamage = 1;
-    public int attack3HealthDamage = 2;
-    public int attack4HealthDamage = 3;
-
-    // =====================================================
-    // HIT STOP
-    // =====================================================
-
     [Header("Hit Stop")]
     public float hitStopTimeScale = 0.05f;
     public float hitStopDuration = 0.06f;
@@ -115,45 +101,17 @@ public class PlayerCombatController : MonoBehaviour
                 GetComponent<PlayerDefenseController>();
     }
 
+    void OnDisable()
+    {
+        // Ölümde combat controller kapatılıyor.
+        // Yarım kalan saldırı geri açılınca devam etmesin.
+        CancelAttack();
+    }
+
     void Update()
     {
         bufferTimer -= Time.deltaTime;
         comboTimer -= Time.deltaTime;
-
-        // =====================================================
-        // PLAYER CONTROL LOCK
-        // =====================================================
-
-        if (player == null)
-            return;
-
-        if (!player.canAttack)
-        {
-            bufferTimer = 0f;
-
-            currentState?.Tick();
-
-            return;
-        }
-
-        // =====================================================
-        // DASH / EXECUTE LOCK
-        // =====================================================
-
-        if (
-            player.isDashing ||
-            (
-                player.stateMachine != null &&
-                player.stateMachine.CurrentState is PlayerExecuteState
-            )
-        )
-        {
-            bufferTimer = 0f;
-
-            currentState?.Tick();
-
-            return;
-        }
 
         // =====================================================
         // DEFENSE LOCK
@@ -174,12 +132,15 @@ public class PlayerCombatController : MonoBehaviour
         // =====================================================
         // ATTACK INPUT
         // =====================================================
+        // FIX: Havadayken tıklayınca eskiden Update'ten
+        // return ediliyordu ve o karede currentState.Tick()
+        // atlanıyordu. Artık sadece buffer'a yazılmıyor.
 
-        if (Input.GetMouseButtonDown(0))
+        if (
+            Input.GetMouseButtonDown(0) &&
+            player.IsGrounded()
+        )
         {
-            if (!player.IsGrounded())
-                return;
-
             bufferTimer = inputBufferTime;
         }
 
@@ -195,8 +156,15 @@ public class PlayerCombatController : MonoBehaviour
             {
                 bufferTimer = 0f;
             }
-            else
+            else if (
+                player.canControl &&
+                player.canAttack &&
+                !player.inputLocked
+            )
             {
+                // Hurt / dash / slam / posture break sırasında
+                // buffer beklemeye devam eder, süresi dolarsa düşer.
+                // Dash biterken tıklarsan saldırı yine başlar.
                 bufferTimer = 0f;
                 StartAttack();
             }
@@ -205,37 +173,36 @@ public class PlayerCombatController : MonoBehaviour
         currentState?.Tick();
     }
 
-    void StartAttack()
+    // =========================================================
+    // CANCEL
+    // =========================================================
+
+    public void CancelAttack()
     {
-        // =====================================================
-        // PLAYER CONTROL LOCK
-        // =====================================================
+        bufferTimer = 0f;
 
-        if (player == null)
+        if (currentState == null)
             return;
 
-        if (!player.canAttack)
-            return;
+        ICombatState state = currentState;
 
-        // =====================================================
-        // DASH / EXECUTE LOCK
-        // =====================================================
+        currentState = null;
 
+        // Sahne kapanırken rb yok edilmiş olabilir.
         if (
-            player.isDashing ||
-            (
-                player.stateMachine != null &&
-                player.stateMachine.CurrentState is PlayerExecuteState
-            )
+            player == null ||
+            player.rb == null
         )
         {
             return;
         }
 
-        // =====================================================
-        // DEFENSE LOCK
-        // =====================================================
+        // AttackState.Exit -> OnAttackEnd çağırır.
+        state.Exit();
+    }
 
+    void StartAttack()
+    {
         if (
             defenseController != null &&
             defenseController.IsDefending
@@ -245,6 +212,9 @@ public class PlayerCombatController : MonoBehaviour
         }
 
         if (!player.IsGrounded())
+            return;
+
+        if (!player.canAttack)
             return;
 
         Debug.Log("ATTACK START");
@@ -339,8 +309,7 @@ public class PlayerCombatController : MonoBehaviour
             attackDuration,
             moveStart,
             moveEnd,
-            hitTime,
-            this
+            hitTime
         );
 
         currentState.Enter();
@@ -358,35 +327,6 @@ public class PlayerCombatController : MonoBehaviour
             comboTimer = 0f;
         }
     }
-
-    // =====================================================
-    // HEALTH DAMAGE
-    // =====================================================
-
-    public int GetHealthDamage(int step)
-    {
-        switch (step)
-        {
-            case 1:
-                return attack1HealthDamage;
-
-            case 2:
-                return attack2HealthDamage;
-
-            case 3:
-                return attack3HealthDamage;
-
-            case 4:
-                return attack4HealthDamage;
-
-            default:
-                return attack1HealthDamage;
-        }
-    }
-
-    // =====================================================
-    // HIT STOP
-    // =====================================================
 
     public void DoHitStop(
         float duration,

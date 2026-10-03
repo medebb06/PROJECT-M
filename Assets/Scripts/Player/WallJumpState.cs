@@ -48,19 +48,23 @@ public class WallJumpState : IPlayerState
             )
         );
 
-        // Oyuncunun yönünü launch yönüne çevir.
+        // --------------------------------------------------
+        // FACING
+        // --------------------------------------------------
+        // FIX: Oyunun geri kalanı (PlayerController.HandleFacing)
+        // yönü SpriteRenderer.flipX ile çeviriyor.
+        // Burada ayrıca modelPivot.localScale.x'i çevirmek
+        // çift ters çevirmeye (sprite yanlış yöne bakmasına)
+        // ve DashState hayaletlerinin yanlış bakmasına yol açıyordu.
+
         player.facingDir =
             jumpDirection;
 
-        Vector3 scale =
-            player.modelPivot.localScale;
-
-        scale.x =
-            Mathf.Abs(scale.x) *
-            player.facingDir;
-
-        player.modelPivot.localScale =
-            scale;
+        if (player.playerSprite != null)
+        {
+            player.playerSprite.flipX =
+                player.facingDir < 0f;
+        }
 
         movement.jumpBufferCounter = 0f;
         movement.wallJumpBufferCounter = 0f;
