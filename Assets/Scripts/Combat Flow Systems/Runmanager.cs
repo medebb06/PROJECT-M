@@ -42,6 +42,25 @@ public class RunManager : MonoBehaviour
     [Tooltip("Doğan düşmanın oyuncuyu fark etme mesafesi (chaseRange'in yerine geçer).")]
     [SerializeField] private float aggroRange = 14f;
 
+    [Tooltip(
+        "Zemini ararken ışının oyuncunun ne kadar üstünden başlayacağı. " +
+        "Büyük olursa oyuncunun üstündeki platformlara doğabilirler; " +
+        "küçük tutmak ulaşılamaz yerde doğmayı azaltır.")]
+    [SerializeField] private float spawnRaycastHeight = 3f;
+
+    [Header("Stuck Recovery (takılma kurtarma)")]
+    [Tooltip(
+        "Bir dalgada bu kadar saniye hiç düşman ölmez/doğmazsa kurtarma çalışır: " +
+        "uzakta ya da ulaşılamayan düşmanlar oyuncunun yanına taşınır, " +
+        "haritadan düşenler silinir. 0 = kapalı.")]
+    [SerializeField] private float stuckTimeout = 15f;
+
+    [Tooltip("Oyuncudan bu kadar uzaktaki canlı düşman 'takılmış' sayılır.")]
+    [SerializeField] private float stragglerDistance = 16f;
+
+    [Tooltip("Oyuncunun bu kadar altına düşen düşman haritadan düşmüş sayılır ve silinir.")]
+    [SerializeField] private float fallKillDepth = 25f;
+
     [SerializeField] private float spawnInterval = 0.35f;
 
     [Header("Stage")]
@@ -269,12 +288,32 @@ public class RunManager : MonoBehaviour
                             ? Mathf.Max(0, nextWaveAliveThreshold)
                             : 0;
 
+                    // İlerleme izleme: canlı sayısı değişmiyorsa (kimse ölmüyor)
+                    // takılma olabilir; stuckTimeout sonra kurtarma çalışır.
+                    int lastAlive = AliveEnemies;
+                    float lastProgressTime = Time.time;
+
                     while (!playerHealth.IsDead)
                     {
                         RefreshAlive();
 
                         if (AliveEnemies <= target)
                             break;
+
+                        if (AliveEnemies != lastAlive)
+                        {
+                            lastAlive = AliveEnemies;
+                            lastProgressTime = Time.time;
+                        }
+                        else if (
+                            stuckTimeout > 0f &&
+                            Time.time - lastProgressTime > stuckTimeout
+                        )
+                        {
+                            RecoverStragglers();
+
+                            lastProgressTime = Time.time;
+                        }
 
                         yield return null;
                     }
@@ -474,7 +513,7 @@ public class RunManager : MonoBehaviour
             // Zemini bul: yukarıdan aşağı ışın at.
             RaycastHit2D hit =
                 Physics2D.Raycast(
-                    new Vector2(x, playerPosition.y + 6f),
+                    new Vector2(x, playerPosition.y + spawnRaycastHeight),
                     Vector2.down,
                     30f,
                     player.Movement.groundMask
@@ -507,6 +546,9 @@ public class RunManager : MonoBehaviour
 
         enemy.chaseRange = aggroRange;
 
+        // Uzakta Idle'a düşüp bölümü kilitlemesin.
+        enemy.alwaysHunt = true;
+
         // Hız: bölümle artar, üst sınırı var.
         enemy.chaseSpeed *=
             1f + Mathf.Min(maxSpeedBonus, speedBonusPerStage * t);
@@ -531,6 +573,104 @@ public class RunManager : MonoBehaviour
 
             health.SetMaxHealth(scaled, true);
         }
+    }
+
+    // =========================================================
+    // TAKILMA KURTARMA
+    // =========================================================
+
+    // Uzun süredir ilerleme yok: canlı düşmanlara bak, çözülebilenleri çöz.
+    private void RecoverStragglers()
+    {
+        Vector3 playerPosition = player.transform.position;
+
+        string report = "";
+        int moved = 0;
+        int removed = 0;
+
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            EnemyController e = spawned[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            Vector3 ep = e.transform.position;
+
+            string stateName =
+                e.CurrentState != null
+                    ? e.CurrentState.GetType().Name
+                    : "null";
+
+            report +=
+                "\n  " + e.name + " konum=" + ep +
+                " durum=" + stateName;
+
+            // 1) Haritadan düşmüş: sil.
+            if (ep.y < playerPosition.y - fallKillDepth)
+            {
+                Destroy(e.gameObject);
+
+                removed++;
+
+                continue;
+            }
+
+            // 2) Uzakta ya da Idle'da takılı: oyuncunun yanına taşı.
+            float distance =
+                Vector2.Distance(ep, playerPosition);
+
+            if (
+                distance > stragglerDistance ||
+                e.CurrentState is EnemyIdleState
+            )
+            {
+                int side = (i % 2 == 0) ? -1 : 1;
+
+                e.transform.position =
+                    RecoverPosition(side);
+
+                Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
+
+                if (rb != null)
+                    rb.linearVelocity = Vector2.zero;
+
+                e.alwaysHunt = true;
+
+                moved++;
+            }
+        }
+
+        Debug.LogWarning(
+            "RunManager: " + stuckTimeout.ToString("0") +
+            " sn'dir ilerleme yok → kurtarma. Taşınan: " + moved +
+            ", silinen: " + removed + ". Canlı düşmanlar:" + report
+        );
+    }
+
+    // Oyuncunun yanında, oyuncunun durduğu (ulaşılabilir) zeminde bir nokta.
+    private Vector3 RecoverPosition(int side)
+    {
+        Vector3 playerPosition = player.transform.position;
+
+        float x =
+            playerPosition.x +
+            side * Random.Range(6f, 9f);
+
+        float y = playerPosition.y;
+
+        RaycastHit2D hit =
+            Physics2D.Raycast(
+                new Vector2(x, playerPosition.y + 1.5f),
+                Vector2.down,
+                10f,
+                player.Movement.groundMask
+            );
+
+        if (hit.collider != null)
+            y = hit.point.y + spawnHeightOffset;
+
+        return new Vector3(x, y, playerPosition.z);
     }
 
     private void RefreshAlive()

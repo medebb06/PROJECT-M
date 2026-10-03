@@ -76,7 +76,7 @@ public class EnemyChaseState : IEnemyState
                 )
                 : enemy.chaseRange * 1.5f;
 
-        if (dist > leash)
+        if (!enemy.alwaysHunt && dist > leash)
         {
             enemy.ChangeState(
                 new EnemyIdleState(enemy)

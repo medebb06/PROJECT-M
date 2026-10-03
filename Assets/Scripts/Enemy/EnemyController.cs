@@ -19,6 +19,12 @@ public class EnemyController : MonoBehaviour
     public float chaseStopDistance = 1.8f;
     public float chaseSpeed = 4f;
 
+    [Tooltip(
+        "Açıkken düşman oyuncuyu HER MESAFEDEN kovalar, Idle'a düşmez. " +
+        "(Koşu modunda doğan düşmanlar bunu açar: uzakta takılı kalan " +
+        "düşman bölümü kilitlemesin.)")]
+    public bool alwaysHunt = false;
+
     [Header("Standby (sıra bekleme / dağılma)")]
     [Tooltip(
         "Açıkken: saldırıya hazır düşmanlar sıraya girer. Sıradaki oyuncuya " +

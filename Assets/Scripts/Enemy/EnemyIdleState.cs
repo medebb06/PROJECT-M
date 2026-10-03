@@ -24,7 +24,7 @@ public class EnemyIdleState : IEnemyState
 
         float dist = Vector2.Distance(enemy.transform.position, enemy.target.position);
 
-        if (dist < enemy.chaseRange)
+        if (enemy.alwaysHunt || dist < enemy.chaseRange)
         {
             enemy.ChangeState(new EnemyChaseState(enemy));
         }
