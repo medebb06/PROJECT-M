@@ -842,7 +842,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 6.675
+  orthographic size: 6.325
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1031,11 +1031,11 @@ MonoBehaviour:
   maxWavesPerStage: 4
   nextWaveAliveThreshold: 1
   timeBetweenWaves: 1
-  speedBonusPerStage: 0.02
+  speedBonusPerStage: 0.01
   unblockableBonusPerStage: 0.02
   unblockableChanceCap: 0.6
   maxSpeedBonus: 0.6
-  healthBonusPerStage: 0.05
+  healthBonusPerStage: 0.02
   offerAtRunStart: 1
   firstOfferStage: 1
   offerEveryNStages: 1
