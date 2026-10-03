@@ -55,11 +55,28 @@ public class EnemyChaseState : IEnemyState
             enemy.target.position
         );
 
+        bool standbyActive = enemy.useStandby;
+
+        bool queued =
+            standbyActive &&
+            EnemyAttackCoordinator.IsQueued(enemy);
+
         // -----------------------------------------
         // TOO FAR
+        // Sıradaki düşman geride beklerken Idle'a düşüp
+        // tekrar Chase'e dönmesin (salınım): sıradakilere
+        // standbyMaxDistance'a kadar daha geniş bir bağ tanınır.
         // -----------------------------------------
 
-        if (dist > enemy.chaseRange * 1.5f)
+        float leash =
+            queued
+                ? Mathf.Max(
+                    enemy.chaseRange * 1.5f,
+                    enemy.standbyMaxDistance + 1f
+                )
+                : enemy.chaseRange * 1.5f;
+
+        if (dist > leash)
         {
             enemy.ChangeState(
                 new EnemyIdleState(enemy)
@@ -71,15 +88,14 @@ public class EnemyChaseState : IEnemyState
         // -----------------------------------------
         // STANDBY (SIRA BEKLEME / DAĞILMA)
         // Saldırıya hazır düşmanlar sıraya girer.
-        // Sıradaki (rank 0) oyuncuya yaklaşır, diğerleri
-        // sıra numaralarına göre kademeli geride bekler.
-        // Böylece kalabalık üst üste yığılmaz, okunur.
+        //  - rank 0: oyuncuya yaklaşır, halka slotunda bekler/saldırır
+        //  - rank 1, 2, ...: sıra numarasına göre geride kademeli bekler
         // -----------------------------------------
 
         if (
-            enemy.useStandby &&
+            standbyActive &&
             enemy.CanAttack &&
-            dist <= enemy.chaseRange * 1.3f
+            (dist <= enemy.chaseRange * 1.3f || queued)
         )
         {
             EnemyAttackCoordinator.JoinQueue(enemy);
@@ -94,12 +110,13 @@ public class EnemyChaseState : IEnemyState
                 return;
             }
 
-            // rank 0: aşağıdaki normal akış
-            // (yaklaş + saldırı sırası iste).
+            FrontOfQueue(dist);
+
+            return;
         }
 
         // -----------------------------------------
-        // STOP DISTANCE
+        // STOP DISTANCE  (standby kapalıysa / hazır değilse eski akış)
         // -----------------------------------------
 
         if (dist <= enemy.chaseStopDistance)
@@ -129,7 +146,7 @@ public class EnemyChaseState : IEnemyState
                 if (
                     !EnemyAttackCoordinator.TryRequestAttack(
                         enemy,
-                        enemy.attackWarningTime
+                        enemy.PlannedWindup
                     )
                 )
                 {
@@ -168,27 +185,169 @@ public class EnemyChaseState : IEnemyState
     }
 
     // =========================================================
-    // STANDBY HAREKETİ
+    // SIRANIN ÖNÜ (rank 0)
+    // =========================================================
+
+    private void FrontOfQueue(float dist)
+    {
+        // Menzildeyse hemen saldırı sırası iste.
+        if (dist <= enemy.attackRange)
+        {
+            if (
+                EnemyAttackCoordinator.TryRequestAttack(
+                    enemy,
+                    enemy.PlannedWindup
+                )
+            )
+            {
+                enemy.ChangeState(
+                    new EnemyAttackState(enemy)
+                );
+
+                return;
+            }
+        }
+
+        UpdateSide();
+
+        float slot =
+            ChooseRingSlot();
+
+        MoveToRingSlot(slot);
+    }
+
+    // Halkada (saldırı menzili) iki kademe var:
+    //  dış slot: menzilin sınırı (tek düşmanın klasik duruşu)
+    //  iç slot : bir adım daha yakın
+    // Ritim gereği iki düşman aynı anda uyarıda olabiliyor; ikincisi
+    // iç slota geçerek birincinin üstüne binmez.
+    // İkisi de doluysa halkanın hemen arkasında bekler.
+    private float ChooseRingSlot()
+    {
+        float spacing = enemy.SlotSpacing;
+        float outer = enemy.RingOuter;
+        float inner = outer - spacing;
+
+        if (!IsSlotTaken(outer, spacing))
+            return outer;
+
+        if (
+            inner >= enemy.ringInnerMinDistance &&
+            !IsSlotTaken(inner, spacing)
+        )
+        {
+            return inner;
+        }
+
+        return outer + spacing;
+    }
+
+    // Aynı tarafta, bu slotta duran (saldırı state'indeki)
+    // başka düşman var mı?
+    private bool IsSlotTaken(float slotDistance, float spacing)
+    {
+        float targetX =
+            enemy.target.position.x;
+
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            EnemyController other = EnemyController.All[i];
+
+            if (
+                other == null ||
+                other == enemy ||
+                other.IsDead ||
+                !(other.CurrentState is EnemyAttackState)
+            )
+            {
+                continue;
+            }
+
+            float otherDelta =
+                other.transform.position.x - targetX;
+
+            if (
+                Mathf.Sign(otherDelta) != standbySide &&
+                Mathf.Abs(otherDelta) > 0.1f
+            )
+            {
+                continue;
+            }
+
+            if (
+                Mathf.Abs(Mathf.Abs(otherDelta) - slotDistance) <
+                spacing * 0.6f
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Slota yaklaşır (tam slotta durur), fazla yakınsa geri çekilir.
+    private void MoveToRingSlot(float slotDistance)
+    {
+        float horizontal =
+            Mathf.Abs(
+                enemy.target.position.x -
+                enemy.transform.position.x
+            );
+
+        float velocityX;
+
+        if (horizontal > slotDistance + 0.001f)
+        {
+            // Yaklaş (hedef yönünde).
+            velocityX =
+                -standbySide * enemy.chaseSpeed;
+        }
+        else if (
+            horizontal <
+            slotDistance - enemy.standbyArrivalTolerance * 1.5f
+        )
+        {
+            // Çok yakın: temkinli geri çekil.
+            velocityX =
+                standbySide *
+                enemy.chaseSpeed *
+                enemy.standbySpeedMultiplier;
+        }
+        else
+        {
+            velocityX = 0f;
+        }
+
+        rb.linearVelocity = new Vector2(
+            velocityX,
+            rb.linearVelocity.y
+        );
+    }
+
+    // =========================================================
+    // STANDBY HAREKETİ (rank >= 1)
     // =========================================================
 
     private void MoveToStandby(int rank)
     {
-        float deltaToPlayer =
-            enemy.transform.position.x -
-            enemy.target.position.x;
+        UpdateSide();
 
-        // Oyuncunun tam üstündeyken önceki tarafı koru.
-        if (Mathf.Abs(deltaToPlayer) > 0.1f)
-            standbySide = Mathf.Sign(deltaToPlayer);
+        // Aralık, düşmanın gerçek genişliğinden küçük olamaz;
+        // aksi halde sabit 1.5 geniş sprite'larda üst üste biner.
+        float spacing = enemy.SlotSpacing;
 
-        // rank 1 -> standbyDistance, rank 2 -> +spacing, ...
-        // ChaseState'in "too far" sınırının (chaseRange * 1.5) içinde kal;
-        // yoksa düşman Idle'a düşüp tekrar Chase'e dönerdi (salınım).
+        // rank 1 -> halkanın hemen arkası, rank 2 -> +spacing, ...
+        float baseDistance =
+            Mathf.Max(
+                enemy.standbyDistance,
+                enemy.RingOuter + spacing
+            );
+
         float desiredDistance =
             Mathf.Min(
-                enemy.standbyDistance +
-                (rank - 1) * enemy.standbySpacing,
-                enemy.chaseRange * 1.3f
+                baseDistance + (rank - 1) * spacing,
+                enemy.standbyMaxDistance
             );
 
         float desiredX =
@@ -217,6 +376,17 @@ public class EnemyChaseState : IEnemyState
             enemy.standbySpeedMultiplier,
             rb.linearVelocity.y
         );
+    }
+
+    private void UpdateSide()
+    {
+        float deltaToPlayer =
+            enemy.transform.position.x -
+            enemy.target.position.x;
+
+        // Oyuncunun tam üstündeyken önceki tarafı koru.
+        if (Mathf.Abs(deltaToPlayer) > 0.1f)
+            standbySide = Mathf.Sign(deltaToPlayer);
     }
 
     public void Exit()

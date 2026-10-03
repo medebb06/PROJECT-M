@@ -8,6 +8,13 @@ public class EnemyAttackAudio : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float warningVolume = 1f;
 
+    [Header("Unblockable Warning")]
+    [Tooltip("Engellenemez vuruşun uyarı sesi. Boşsa normal uyarı sesi çalar.")]
+    [SerializeField] private AudioClip unblockableWarningSound;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float unblockableWarningVolume = 1f;
+
     [Header("Attack Commit")]
     [Tooltip("Saldırı kesilemez hale geçtiğinde çalar. Boşsa sessiz.")]
     [SerializeField] private AudioClip commitSound;
@@ -37,6 +44,20 @@ public class EnemyAttackAudio : MonoBehaviour
         audioSource.PlayOneShot(
             warningSound,
             warningVolume
+        );
+    }
+
+    public void PlayUnblockableWarning()
+    {
+        if (unblockableWarningSound == null)
+        {
+            PlayWarning();
+            return;
+        }
+
+        audioSource.PlayOneShot(
+            unblockableWarningSound,
+            unblockableWarningVolume
         );
     }
 

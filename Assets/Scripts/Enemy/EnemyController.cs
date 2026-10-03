@@ -1,7 +1,17 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
+    // Sahnedeki tüm aktif düşmanlar (halka slotu doluluk kontrolü için).
+    public static readonly List<EnemyController> All =
+        new List<EnemyController>();
+
+    private static int nextSpawnIndex;
+
+    // Her düşmana benzersiz, artan numara (eşitlik bozmak için).
+    public int SpawnIndex { get; private set; }
+
     [Header("Attack")]
     public float attackRange = 1.5f;
 
@@ -31,6 +41,35 @@ public class EnemyController : MonoBehaviour
     [Tooltip("Hedef konuma bu kadar yaklaşınca durur (titremeyi önler).")]
     public float standbyArrivalTolerance = 0.2f;
 
+    [Tooltip(
+        "Sıradaki düşmanların oyuncudan en fazla ne kadar uzakta " +
+        "bekleyebileceği. Kalabalık için artır.")]
+    public float standbyMaxDistance = 9f;
+
+    [Tooltip(
+        "Düşman genişliğine eklenen boşluk. Slot aralığı hiçbir zaman " +
+        "'genişlik + bu değer'den küçük olmaz.")]
+    public float ringSlotPadding = 0.15f;
+
+    [Tooltip(
+        "Saldırı halkasının iç slotunun oyuncuya en fazla ne kadar " +
+        "yaklaşabileceği. İç slot bundan yakına düşüyorsa kullanılmaz " +
+        "(ikinci düşman halkanın arkasında bekler).")]
+    public float ringInnerMinDistance = 1.3f;
+
+    [Header("Depth Layering (görsel katman)")]
+    [Tooltip(
+        "Düşmanlar üst üste binince ön/arka düzeni verir (fiziksel değil, " +
+        "sadece çizim sırası). Saldırıya hazırlananlar en önde, " +
+        "geri kalanlar oyuncuya yakınlığa göre sıralanır.")]
+    public bool useDepthSorting = true;
+
+    [Tooltip(
+        "En arkadaki düşman en fazla kaç kademe geriye gider. " +
+        "Düşmanlar zemin/arka plan arkasına düşerse azalt.")]
+    [Range(0, 8)]
+    public int depthMaxLevels = 4;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
 
@@ -57,6 +96,48 @@ public class EnemyController : MonoBehaviour
 
     [Tooltip("Kararlı saldırı vurulduğunda ek çalan ses (boşsa sessiz).")]
     public AudioClip committedHitClip;
+
+    [Header("Unblockable Attack (engellenemez vuruş)")]
+    [Tooltip(
+        "Açıkken: bu düşman ara sıra ENGELLENEMEZ bir vuruş yapar. " +
+        "Parry ve block işe yaramaz; tek cevap dash (i-frame) veya geri " +
+        "çekilmektir. Uyarısı sarı ve hızlı yanıp söner.")]
+    public bool useUnblockableAttacks = true;
+
+    [Tooltip("Her saldırıda engellenemez olma olasılığı.")]
+    [Range(0f, 1f)]
+    public float unblockableChance = 0.25f;
+
+    [Tooltip(
+        "İki engellenemez vuruş arasında en az kaç normal saldırı olsun. " +
+        "(Peş peşe gelmesin.)")]
+    [Min(0)]
+    public int unblockableMinNormalAttacksBetween = 2;
+
+    [Tooltip("Uyarı süresi çarpanı. Uzun uyarı = dash için okunur zaman.")]
+    [Min(1f)]
+    public float unblockableWindupMultiplier = 1.3f;
+
+    [Tooltip(
+        "Uyarının bu oranından sonra hasar alınca kesilmez. " +
+        "0 = baştan itibaren, 1 = hiç. Normal saldırıdan daha erken " +
+        "kararlı olması önerilir.")]
+    [Range(0f, 1f)]
+    public float unblockableCommitPoint = 0.15f;
+
+    [Tooltip("Oyuncunun can birimine verdiği hasar.")]
+    [Min(1)]
+    public int unblockableDamage = 2;
+
+    [Tooltip("Oyuncuya uygulanan savrulma çarpanı.")]
+    [Min(0f)]
+    public float unblockableKnockbackMultiplier = 1.4f;
+
+    [Tooltip(
+        "Vuruş sonrası recovery çarpanı. Boşa giden (dash ile kaçılan) " +
+        "engellenemez vuruş düşmanı uzun süre açıkta bırakır.")]
+    [Min(1f)]
+    public float unblockableRecoveryMultiplier = 1.6f;
 
     [Header("Hit Deceleration")]
     public float knockbackDeceleration = 45f;
@@ -166,6 +247,14 @@ public class EnemyController : MonoBehaviour
     private Health targetHealth;
     private FinisherTargetHighlight finisherHighlight;
     private EnemyAttackTelegraph telegraph;
+    private Collider2D bodyCollider;
+
+    // Derinlik katmanı
+    private int[] baseSortingOrders;
+    private int baseMinSortingOrder;
+    private int depthSpan = 1;
+    private int currentDepthLevel;
+    private SpriteRenderer targetSprite;
 
     private bool deathHandled;
     private float nextTargetSearchTime;
@@ -239,6 +328,8 @@ public class EnemyController : MonoBehaviour
 
     private void Awake()
     {
+        SpawnIndex = nextSpawnIndex++;
+
         if (hitAudioSource == null)
         {
             hitAudioSource =
@@ -261,6 +352,9 @@ public class EnemyController : MonoBehaviour
 
         telegraph =
             GetComponent<EnemyAttackTelegraph>();
+
+        bodyCollider =
+            GetComponent<Collider2D>();
 
         enemyBalance =
             GetComponent<EnemyBalance>();
@@ -300,6 +394,211 @@ public class EnemyController : MonoBehaviour
 
             originalMaterials[i] =
                 spriteRenderers[i].sharedMaterial;
+        }
+
+        // Derinlik katmanı için temel sorting order'lar.
+        // Bir düşmanın çocuk sprite'ları (varsa) birbirine göre
+        // sırasını korusun diye kayma miktarı = iç aralığı kadar.
+        baseSortingOrders =
+            new int[spriteRenderers.Length];
+
+        int minOrder = int.MaxValue;
+        int maxOrder = int.MinValue;
+
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            int order =
+                spriteRenderers[i].sortingOrder;
+
+            baseSortingOrders[i] = order;
+
+            if (order < minOrder) minOrder = order;
+            if (order > maxOrder) maxOrder = order;
+        }
+
+        if (minOrder != int.MaxValue)
+        {
+            baseMinSortingOrder = minOrder;
+            depthSpan = Mathf.Max(1, maxOrder - minOrder + 1);
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (!All.Contains(this))
+            All.Add(this);
+
+        if (useDepthSorting)
+            EnemyDepthSorter.EnsureExists();
+    }
+
+    private void OnDisable()
+    {
+        All.Remove(this);
+
+        SetDepthLevel(0);
+    }
+
+    // =========================================================
+    // DERİNLİK KATMANI (görsel ön/arka sıra)
+    // level 0 = en önde (orijinal sorting order),
+    // her seviye düşmanı bir kademe geriye alır.
+    // =========================================================
+
+    public void SetDepthLevel(int level)
+    {
+        if (
+            spriteRenderers == null ||
+            baseSortingOrders == null
+        )
+        {
+            return;
+        }
+
+        level = Mathf.Max(0, level);
+
+        if (level == currentDepthLevel)
+            return;
+
+        currentDepthLevel = level;
+
+        // Oyuncuyla olan sıralama ilişkisini bozma: düşman oyuncunun
+        // ÖNÜNDE çiziliyorsa, geriye kaydırırken oyuncunun arkasına geçmesin.
+        int shift =
+            Mathf.Min(
+                level * depthSpan,
+                GetMaxDepthShift()
+            );
+
+        for (int i = 0; i < spriteRenderers.Length; i++)
+        {
+            if (spriteRenderers[i] == null)
+                continue;
+
+            spriteRenderers[i].sortingOrder =
+                baseSortingOrders[i] - shift;
+        }
+    }
+
+    private int GetMaxDepthShift()
+    {
+        if (target == null)
+            return int.MaxValue;
+
+        if (targetSprite == null)
+        {
+            targetSprite =
+                target.GetComponentInChildren<SpriteRenderer>();
+        }
+
+        if (
+            targetSprite == null ||
+            spriteRenderers.Length == 0 ||
+            spriteRenderers[0] == null ||
+            targetSprite.sortingLayerID !=
+            spriteRenderers[0].sortingLayerID
+        )
+        {
+            return int.MaxValue;
+        }
+
+        // Düşman oyuncunun önünde çiziliyorsa (order daha büyük),
+        // en fazla oyuncunun hemen üstüne kadar inebilir.
+        if (baseMinSortingOrder > targetSprite.sortingOrder)
+        {
+            return
+                baseMinSortingOrder -
+                targetSprite.sortingOrder -
+                1;
+        }
+
+        return int.MaxValue;
+    }
+
+    // =========================================================
+    // SLOT GEOMETRİSİ (standby / saldırı halkası)
+    // =========================================================
+
+    // Düşmanın yatay genişliği (collider'dan). Bulunamazsa 1.
+    public float BodyWidth
+    {
+        get
+        {
+            if (bodyCollider == null)
+                return 1f;
+
+            float width =
+                bodyCollider.bounds.size.x;
+
+            return width > 0.05f
+                ? width
+                : 1f;
+        }
+    }
+
+    // Slotlar arası mesafe: ayarlanan aralık ya da gerçek genişlik
+    // (hangisi büyükse). Geniş sprite'larda üst üste binmeyi önler.
+    public float SlotSpacing =>
+        Mathf.Max(
+            standbySpacing,
+            BodyWidth + ringSlotPadding
+        );
+
+    // Saldırı halkasının dış slotu: menzilin hemen içi.
+    public float RingOuter =>
+        Mathf.Min(chaseStopDistance, attackRange) - 0.05f;
+
+    public float RingInner =>
+        RingOuter - SlotSpacing;
+
+    private void OnDrawGizmosSelected()
+    {
+        // Seçili düşmanın hedefi etrafındaki slotları gösterir
+        // (Scene görünümünde): kırmızı = halka, sarı = bekleme sırası.
+        if (target == null)
+            return;
+
+        Vector3 center = target.position;
+        float spacing = SlotSpacing;
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Gizmos.color = Color.red;
+
+            Gizmos.DrawWireSphere(
+                center + Vector3.right * side * RingOuter,
+                0.25f
+            );
+
+            if (RingInner >= ringInnerMinDistance)
+            {
+                Gizmos.DrawWireSphere(
+                    center + Vector3.right * side * RingInner,
+                    0.2f
+                );
+            }
+
+            Gizmos.color = Color.yellow;
+
+            float baseDistance =
+                Mathf.Max(standbyDistance, RingOuter + spacing);
+
+            for (int rank = 1; rank <= 5; rank++)
+            {
+                float d =
+                    Mathf.Min(
+                        baseDistance + (rank - 1) * spacing,
+                        standbyMaxDistance
+                    );
+
+                Gizmos.DrawWireSphere(
+                    center + Vector3.right * side * d,
+                    0.15f
+                );
+            }
         }
     }
 
@@ -463,6 +762,145 @@ public class EnemyController : MonoBehaviour
     {
         attackRecoveryTimer =
             attackRecoveryTime;
+    }
+
+    public void StartAttackRecovery(float duration)
+    {
+        attackRecoveryTimer =
+            Mathf.Max(0f, duration);
+    }
+
+    // =========================================================
+    // SALDIRI PLANI (normal / engellenemez)
+    // Karar, saldırı BAŞLAMADAN verilir ki ritim koordinatörü
+    // doğru uyarı süresiyle vuruş anını hesaplayabilsin.
+    // =========================================================
+
+    private bool attackPlanned;
+    private bool plannedUnblockable;
+    private int normalAttacksSinceUnblockable;
+
+    public float WindupFor(bool unblockable)
+    {
+        return unblockable
+            ? attackWarningTime * unblockableWindupMultiplier
+            : attackWarningTime;
+    }
+
+    // Sıradaki saldırının uyarı süresi. ChaseState bunu koordinatöre verir.
+    public float PlannedWindup
+    {
+        get
+        {
+            EnsureAttackPlanned();
+
+            // Beklerken başka bir düşman engellenemez vuruşa başladıysa
+            // bunu normale çevir: aynı anda iki engellenemez vuruş olmasın.
+            if (
+                plannedUnblockable &&
+                AnotherUnblockableIsWindingUp()
+            )
+            {
+                plannedUnblockable = false;
+            }
+
+            return WindupFor(plannedUnblockable);
+        }
+    }
+
+    // Saldırı başlarken çağrılır: planı tüketir, engellenemez mi söyler.
+    public bool ConsumePlannedAttack()
+    {
+        EnsureAttackPlanned();
+
+        bool unblockable =
+            plannedUnblockable &&
+            !AnotherUnblockableIsWindingUp();
+
+        attackPlanned = false;
+
+        if (unblockable)
+            normalAttacksSinceUnblockable = 0;
+        else
+            normalAttacksSinceUnblockable++;
+
+        return unblockable;
+    }
+
+    private void EnsureAttackPlanned()
+    {
+        if (attackPlanned)
+            return;
+
+        plannedUnblockable =
+            RollUnblockable();
+
+        attackPlanned = true;
+    }
+
+    private bool RollUnblockable()
+    {
+        if (
+            !useUnblockableAttacks ||
+            unblockableChance <= 0f
+        )
+        {
+            return false;
+        }
+
+        if (
+            normalAttacksSinceUnblockable <
+            unblockableMinNormalAttacksBetween
+        )
+        {
+            return false;
+        }
+
+        if (AnotherUnblockableIsWindingUp())
+            return false;
+
+        return Random.value < unblockableChance;
+    }
+
+    private bool AnotherUnblockableIsWindingUp()
+    {
+        for (int i = 0; i < All.Count; i++)
+        {
+            EnemyController other = All[i];
+
+            if (other == null || other == this || other.IsDead)
+                continue;
+
+            EnemyAttackState attack =
+                other.CurrentState as EnemyAttackState;
+
+            if (
+                attack != null &&
+                attack.IsUnblockable &&
+                attack.IsWindingUp
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Engellenemez vuruşun başlangıcında net bir "dikkat!" işareti.
+    public void PlayAlertFlash()
+    {
+        const float duration = 0.15f;
+
+        // Telegraph rengi her karede sprite'ı ezdiği için kısa süre sustur.
+        if (telegraph != null)
+            telegraph.Suppress(duration);
+
+        PlayFlash(
+            Color.white,
+            duration,
+            solidWhiteFlash
+        );
     }
 
     // =========================================================

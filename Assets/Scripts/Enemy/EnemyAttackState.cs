@@ -17,6 +17,9 @@ public class EnemyAttackState : IEnemyState
     private float warningDuration;
     private bool commitTriggered;
 
+    // Engellenemez vuruş: parry/block işe yaramaz, dash/geri çekilme gerekir.
+    private bool isUnblockable;
+
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -45,17 +48,31 @@ public class EnemyAttackState : IEnemyState
             if (attackDone)
                 return false;
 
+            float commitPoint =
+                isUnblockable
+                    ? enemy.unblockableCommitPoint
+                    : enemy.attackCommitPoint;
+
             // 1 = kararlı aşama yok (eski davranış)
-            if (enemy.attackCommitPoint >= 1f)
+            if (commitPoint >= 1f)
                 return false;
 
             float progress =
                 1f -
                 (warningTimer / warningDuration);
 
-            return progress >= enemy.attackCommitPoint;
+            return progress >= commitPoint;
         }
     }
+
+    // Derinlik sıralaması (EnemyDepthSorter) için:
+    // uyarı (wind-up) aşamasında mı, vuruşa ne kadar kaldı?
+    public bool IsWindingUp => !attackDone;
+
+    public bool IsUnblockable => isUnblockable;
+
+    public float RemainingWindup =>
+        Mathf.Max(0f, warningTimer);
 
     private void TriggerCommit()
     {
@@ -64,20 +81,28 @@ public class EnemyAttackState : IEnemyState
         if (telegraph != null)
             telegraph.SetCommitted();
 
-        if (attackAudio != null)
+        if (attackAudio != null && !isUnblockable)
             attackAudio.PlayCommit();
     }
 
     public void Enter()
     {
         enemy.PlayAttackAnimation();
-        warningTimer =
-            enemy.attackWarningTime;
+
+        // Planlanan saldırı engellenemez mi? (ChaseState koordinatöre
+        // aynı uyarı süresini bildirdi; tutarlı kalsın.)
+        isUnblockable =
+            enemy.ConsumePlannedAttack();
+
+        float windup =
+            enemy.WindupFor(isUnblockable);
+
+        warningTimer = windup;
 
         warningDuration =
             Mathf.Max(
                 0.0001f,
-                enemy.attackWarningTime
+                windup
             );
 
         commitTriggered = false;
@@ -92,7 +117,18 @@ public class EnemyAttackState : IEnemyState
         PlayWarning();
 
         if (telegraph != null)
-            telegraph.StartWarning();
+            telegraph.StartWarning(isUnblockable);
+
+        // StartWarning flaş bastırmasını sıfırladığı için SONRA çağrılır.
+        if (isUnblockable)
+            enemy.PlayAlertFlash();
+
+        if (isUnblockable)
+        {
+            Debug.Log(
+                "ENEMY UNBLOCKABLE ATTACK STARTED"
+            );
+        }
     }
 
     public void Tick()
@@ -151,10 +187,17 @@ public class EnemyAttackState : IEnemyState
 
             // Normal attack / block / normal parry
             // sonrası recovery başlat.
-            enemy.StartAttackRecovery();
+            // Engellenemez vuruşun recovery'si uzun: kaçınılan (dash)
+            // vuruş düşmanı uzun süre açık hedef bırakır.
+            float recovery =
+                isUnblockable
+                    ? enemy.attackRecoveryTime *
+                      enemy.unblockableRecoveryMultiplier
+                    : enemy.attackRecoveryTime;
 
-            recoveryTimer =
-                enemy.attackRecoveryTime;
+            enemy.StartAttackRecovery(recovery);
+
+            recoveryTimer = recovery;
 
             isRecovering = true;
 
@@ -227,7 +270,10 @@ public class EnemyAttackState : IEnemyState
         if (attackAudio == null)
             return;
 
-        attackAudio.PlayWarning();
+        if (isUnblockable)
+            attackAudio.PlayUnblockableWarning();
+        else
+            attackAudio.PlayWarning();
     }
 
     // =========================================================
@@ -293,6 +339,21 @@ public class EnemyAttackState : IEnemyState
             enemy.target.GetComponent<
                 PlayerDefenseController
             >();
+
+        // =====================================================
+        // ENGELLENEMEZ VURUŞ
+        // Parry ve block bu vuruşu durduramaz.
+        // Cevap: dash (i-frame, yukarıda kontrol edildi) ya da menzil dışı.
+        // =====================================================
+
+        if (isUnblockable)
+        {
+            Debug.Log(
+                "UNBLOCKABLE HIT → PARRY/BLOCK IGNORED"
+            );
+
+            return DealDirectHit(hitDirection);
+        }
 
         // =====================================================
         // PARRY
@@ -384,6 +445,12 @@ public class EnemyAttackState : IEnemyState
         // NORMAL HIT
         // =====================================================
 
+        return DealDirectHit(hitDirection);
+    }
+
+    // Hasar + knockback tek çağrıda (normal ve engellenemez vuruş ortak).
+    private bool DealDirectHit(Vector2 hitDirection)
+    {
         PlayerDamageReceiver damageReceiver =
             enemy.target.GetComponent<
                 PlayerDamageReceiver
@@ -404,15 +471,21 @@ public class EnemyAttackState : IEnemyState
             "ENEMY HIT PLAYER"
         );
 
-        // FIX: Hasar + knockback tek çağrıda.
-        // Eskiden TakeDamage (HurtState knockback'i) ve
-        // ApplyKnockback (PlayerKnockback) ayrı ayrı çağrılıp
-        // birbirinin hızını eziyordu.
+        int damage =
+            isUnblockable
+                ? enemy.unblockableDamage
+                : enemy.attackDamage;
+
+        float knockbackMultiplier =
+            isUnblockable
+                ? enemy.unblockableKnockbackMultiplier
+                : 1f;
+
         damageReceiver.TakeDamage(
-            enemy.attackDamage,
+            damage,
             hitDirection,
-            enemy.attackKnockbackForce,
-            enemy.attackKnockbackVerticalForce,
+            enemy.attackKnockbackForce * knockbackMultiplier,
+            enemy.attackKnockbackVerticalForce * knockbackMultiplier,
             enemy.attackKnockbackDuration,
             enemy.attackKnockbackDeceleration
         );

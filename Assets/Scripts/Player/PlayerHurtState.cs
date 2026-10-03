@@ -92,6 +92,14 @@ public class PlayerHurtState : IPlayerState
         if (combat != null)
             combat.CancelAttack();
 
+        // Vurulunca guard düşer. (Engellenemez vuruş, block/parry
+        // sırasında da vurabilir; savunma state'i açık kalmasın.)
+        PlayerDefenseController defense =
+            player.GetComponent<PlayerDefenseController>();
+
+        if (defense != null)
+            defense.ChangeState(null);
+
         ApplyKnockback();
     }
 

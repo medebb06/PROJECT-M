@@ -156,6 +156,21 @@ public class EnemyAttackCoordinator : MonoBehaviour
     }
 
     /// <summary>
+    /// Düşman şu an sırada mı (yakın zamanda JoinQueue / TryRequestAttack
+    /// çağırdı mı)?
+    /// </summary>
+    public static bool IsQueued(EnemyController enemy)
+    {
+        if (instance == null || enemy == null)
+            return false;
+
+        return
+            instance.firstAsk.ContainsKey(enemy) &&
+            instance.lastAsk.TryGetValue(enemy, out float last) &&
+            Time.time - last <= instance.queueMemory;
+    }
+
+    /// <summary>
     /// Düşmanın bulunduğu taraftaki sıra numarası.
     /// 0 = o tarafın en önündeki (oyuncuya yaklaşıp saldırı bekler),
     /// 1, 2, ... = geride kademeli bekler.
