@@ -169,6 +169,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // --------------------------------------------------
     // Hasar + knockback TEK yerden.
     // Knockback'i PlayerHurtState uygular.
+    // source / kind: istatistik ve ölüm nedeni için (isteğe bağlı).
     // --------------------------------------------------
 
     public void TakeDamage(
@@ -177,7 +178,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         float knockbackForce,
         float knockbackVerticalForce,
         float knockbackDuration,
-        float knockbackDeceleration = -1f
+        float knockbackDeceleration = -1f,
+        EnemyController source = null,
+        PlayerHitKind kind = PlayerHitKind.Other
     )
     {
         if (health == null)
@@ -197,9 +200,24 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         // DAMAGE
         // --------------------------------
 
+        int healthBefore = health.CurrentHealth;
+
         health.TakeDamage(damage);
 
         CombatEvents.RaisePlayerHurt(damage, hitDirection);
+
+        CombatEvents.RaisePlayerDamaged(
+            new PlayerDamageReport
+            {
+                amount = Mathf.Max(0, healthBefore - health.CurrentHealth),
+                healthAfter = health.CurrentHealth,
+                maxHealth = health.MaxHealth,
+                lethal = health.IsDead,
+                kind = kind,
+                source = source,
+                direction = hitDirection
+            }
+        );
 
         // Vurulma flaşı (ölümcül vuruşta da oynar).
         if (blink != null)

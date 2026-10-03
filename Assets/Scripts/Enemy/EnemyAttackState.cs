@@ -13,6 +13,10 @@ public class EnemyAttackState : IEnemyState
     private bool attackDone;
     private bool isRecovering;
 
+    // Vuruş anı çözülürken (DoAttack) state değişirse (ör. parry dengeyi
+    // kırıp stagger başlatırsa) bu "kesilme" sayılmasın.
+    private bool resolvingHit;
+
     // Kararlı aşama (super armor) takibi
     private float warningDuration;
     private bool commitTriggered;
@@ -256,6 +260,7 @@ public class EnemyAttackState : IEnemyState
 
         attackDone = false;
         isRecovering = false;
+        resolvingHit = false;
 
         // YÖN KİLİDİ: saldırı başladığı anda baktığı yönü sabitle ve
         // saldırı bitene kadar oyuncuya dönme. Dash ile arkasına geçen
@@ -362,8 +367,12 @@ public class EnemyAttackState : IEnemyState
             if (telegraph != null)
                 telegraph.StopWarning();
 
+            resolvingHit = true;
+
             bool enemyStaggered =
                 DoAttack();
+
+            resolvingHit = false;
 
             attackDone = true;
 
@@ -436,6 +445,19 @@ public class EnemyAttackState : IEnemyState
 
     public void Exit()
     {
+        // İSTATİSTİK: saldırı vuruş anına ulaşmadan bitti mi?
+        // (Oyuncu vurdu / denge kırıldı / zehir.) Düşman öldüyse ya da
+        // oyuncu öldüğü için Idle'a dönüldüyse sayılmaz.
+        if (
+            !attackDone &&
+            !resolvingHit &&
+            !enemy.IsDead &&
+            !enemy.IsTargetDead
+        )
+        {
+            CombatEvents.RaiseAttackInterrupted(enemy, isUnblockable);
+        }
+
         // Saldırı herhangi bir sebeple yarıda kesilirse
         // (stagger, oyuncu öldü vb.) slotu serbest bırak.
         EnemyAttackCoordinator.ReleaseAttack(enemy);
@@ -550,6 +572,8 @@ public class EnemyAttackState : IEnemyState
             Debug.Log(
                 "ENEMY ATTACK MISSED!"
             );
+
+            CombatEvents.RaiseAttackMissed(enemy, isUnblockable);
 
             return false;
         }
@@ -713,7 +737,11 @@ public class EnemyAttackState : IEnemyState
             enemy.attackKnockbackForce * knockbackMultiplier,
             enemy.attackKnockbackVerticalForce * knockbackMultiplier,
             enemy.attackKnockbackDuration,
-            enemy.attackKnockbackDeceleration
+            enemy.attackKnockbackDeceleration,
+            enemy,
+            isUnblockable
+                ? PlayerHitKind.Unblockable
+                : PlayerHitKind.Normal
         );
 
         // Oyuncu vuruldu: ardışık vuruş yağmurunu kes.
@@ -749,6 +777,14 @@ public class EnemyAttackState : IEnemyState
                 enemy.blockPostureDamage
             );
         }
+
+        PlayerPosture posture =
+            enemy.target.GetComponent<PlayerPosture>();
+
+        CombatEvents.RaisePlayerBlocked(
+            enemy,
+            posture != null && posture.IsBroken
+        );
 
         Debug.Log(
             "PLAYER BLOCK → " +

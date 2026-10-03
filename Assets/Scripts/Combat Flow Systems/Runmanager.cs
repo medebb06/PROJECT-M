@@ -194,6 +194,7 @@ public class RunManager : MonoBehaviour
     public float WaveBannerUntil { get; private set; }
     public bool IsStartOffer { get; private set; }
     public CharmInventory Inventory { get; private set; }
+    public RunStats Stats { get; private set; }
     public IReadOnlyList<CharmDefinition> Offers => offers;
 
     private List<CharmDefinition> offers = new List<CharmDefinition>();
@@ -260,6 +261,14 @@ public class RunManager : MonoBehaviour
 
         Inventory = new CharmInventory(player.gameObject);
 
+        // Koşu istatistikleri (CombatEvents'i dinler).
+        Stats = GetComponent<RunStats>();
+
+        if (Stats == null)
+            Stats = gameObject.AddComponent<RunStats>();
+
+        Stats.Init(player, playerHealth);
+
         // Koşuda bedava can yenilenmesi kapalı.
         if (disablePlayerHealthRecovery)
             playerHealth.SetRecoveryEnabled(false);
@@ -322,12 +331,16 @@ public class RunManager : MonoBehaviour
             Stage = 0;
             State = RunState.Starting;
 
+            Stats.BeginRun();
+
             if (offerAtRunStart)
                 yield return OfferRoutine(true);
 
             while (!playerHealth.IsDead)
             {
                 Stage++;
+
+                Stats.BeginStage(Stage);
 
                 spawned.Clear();
 
@@ -338,6 +351,8 @@ public class RunManager : MonoBehaviour
                 for (Wave = 1; Wave <= WaveCount; Wave++)
                 {
                     State = RunState.Fighting;
+
+                    Stats.SetWave(Wave, WaveCount);
 
                     WaveBannerText =
                         Wave == 1
@@ -415,6 +430,8 @@ public class RunManager : MonoBehaviour
 
                 State = RunState.Cleared;
 
+                Stats.EndStage(true);
+
                 yield return new WaitForSecondsRealtime(1.2f);
 
                 if (healBetweenStagesPercent > 0f)
@@ -438,6 +455,12 @@ public class RunManager : MonoBehaviour
             }
 
             // ---------- ÖLDÜ ----------
+
+            // Dalga döngüsünden çıkarken Wave bir artmış olabilir.
+            Wave = Mathf.Clamp(Wave, 0, WaveCount);
+
+            Stats.EndStage(false);
+            Stats.EndRun(this);
 
             State = RunState.Dead;
 
