@@ -1111,6 +1111,12 @@ public class EnemyController : MonoBehaviour
             ? bodyCollider.bounds.min.y
             : transform.position.y;
 
+    // Durum etkileri (zehir vb.) için kısa renk tonu flaşı.
+    public void PlayTintFlash(Color color, float duration)
+    {
+        PlayFlash(color, duration, false);
+    }
+
     // Düşman zamanına göre ölçeklenmiş koşma hızı.
     public float ScaledChaseSpeed =>
         chaseSpeed * EnemyTime.Scale;

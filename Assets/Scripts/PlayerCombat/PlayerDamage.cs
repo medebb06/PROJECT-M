@@ -174,9 +174,18 @@ public static class PlayerDamage
 
         value *= critMultiplier;
 
-        int amount = Mathf.RoundToInt(value);
+        // OLASILIKSAL YUVARLAMA: hasar tam sayı (1 gibi) olduğu için
+        // %25'lik bir bonus düz yuvarlamada hiç görünmezdi. Kesirli kısım
+        // ihtimal olarak uygulanır: 1.25 -> %25 ihtimalle 2, aksi halde 1.
+        // Uzun vadede beklenen hasar tam olarak 1.25 olur.
+        int amount = Mathf.FloorToInt(value);
 
-        // Taban hasar varsa en az 1 vursun (yuvarlama sıfıra düşürmesin).
+        float fraction = value - amount;
+
+        if (fraction > 0f && Random.value < fraction)
+            amount++;
+
+        // Taban hasar varsa en az 1 vursun.
         if (baseAmount > 0 && amount < 1)
             amount = 1;
 
