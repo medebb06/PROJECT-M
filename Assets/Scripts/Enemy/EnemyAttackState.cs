@@ -524,6 +524,8 @@ public class EnemyAttackState : IEnemyState
                 "ENEMY ATTACK CANCELLED → PLAYER DODGED"
             );
 
+            CombatEvents.RaiseDodge(enemy, isUnblockable);
+
             return false;
         }
 
@@ -792,6 +794,8 @@ public class EnemyAttackState : IEnemyState
         // Parry DÜŞMANLAR için zamanı yavaşlatır (oyuncu için değil):
         // karşı saldırı için zaman. Animasyon ve ses de yavaşlar.
         enemy.PlayParrySlowMotion(balance.IsBroken);
+
+        CombatEvents.RaiseParry(enemy, balance.IsBroken);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()

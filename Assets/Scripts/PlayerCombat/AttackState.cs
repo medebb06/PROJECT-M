@@ -411,157 +411,23 @@ public class AttackState : ICombatState
                 combat.HitVFXForwardOffset;
 
             // =================================================
-            // BALANCE
+            // HASAR: tek akış (PlayerDamage)
+            // Stat'lar, kritik ve CombatEvents buradan geçer.
+            // Denge kırık değilse denge, kırıksa can hasarı verir.
             // =================================================
 
-            EnemyBalance balance =
-                enemy.GetComponentInParent<
-                    EnemyBalance
-                >();
-
-            // =================================================
-            // HEALTH
-            // =================================================
-
-            Health health =
-                enemy.GetComponentInParent<
-                    Health
-                >();
-
-            // =================================================
-            // HIT FEEDBACK
-            // =================================================
-
-            EnemyHitFeedback hitFeedback =
-                enemy.GetComponentInParent<
-                    EnemyHitFeedback
-                >();
-
-            // =================================================
-            // NORMAL BALANCE HIT
-            // =================================================
-
-            if (
-                balance != null &&
-                !balance.IsBroken
-            )
-            {
-                // Her kombo adımının denge hasarı artık
-                // PlayerCombatController Inspector'ından ayarlanıyor.
-                bool balanceDamaged =
-                    balance.AddBalanceDamage(
-                        combat.GetBalanceDamage(step)
-                    );
-
-                if (!balanceDamaged)
-                    continue;
-
-                if (hitFeedback != null)
+            PlayerDamage.HitEnemy(
+                enemy,
+                new DamageInfo
                 {
-                    hitFeedback.PlayBalanceHit(
-                        hitPosition,
-                        dir
-                    );
+                    source = DamageSource.Attack,
+                    comboStep = step,
+                    balanceDamage = combat.GetBalanceDamage(step),
+                    healthDamage = 1,
+                    direction = dir,
+                    hitPosition = hitPosition
                 }
-
-                enemy.PlayPostureHitSound();
-
-                // =================================================
-                // BALANCE DID NOT BREAK
-                // =================================================
-
-                if (!balance.IsBroken)
-                {
-                    enemy.ApplyBalanceHit(
-                        dir
-                    );
-                }
-
-                // =================================================
-                // BALANCE BROKE ON THIS HIT
-                // =================================================
-
-                else
-                {
-                    Debug.Log(
-                        "ATTACK → BALANCE BROKEN → " +
-                        "NO HEALTH DAMAGE"
-                    );
-
-                    enemy.ApplyAttackHit(
-                        dir,
-                        false
-                    );
-                }
-
-                // =================================================
-                // IMPORTANT
-                // =================================================
-
-                continue;
-            }
-
-            // =====================================================
-            // BALANCE ALREADY BROKEN → HEALTH
-            // =====================================================
-
-            if (
-                balance != null &&
-                balance.IsBroken
-            )
-            {
-                if (health != null)
-                {
-                    health.TakeDamage(1);
-
-                    if (hitFeedback != null)
-                    {
-                        hitFeedback.PlayHealthHit(
-                            dir
-                        );
-                    }
-
-                    enemy.PlayHealthHitSound();
-
-                    // FIX: Kombo adımı artık iletiliyor.
-                    // Eskiden attack1-4 KnockbackForce değerleri
-                    // hiç kullanılmıyordu (hep 1. adım).
-                    enemy.ApplyAttackHit(
-                        dir,
-                        true,
-                        step
-                    );
-                }
-
-                continue;
-            }
-
-            // =====================================================
-            // NO BALANCE → HEALTH
-            // =====================================================
-
-            if (
-                balance == null &&
-                health != null
-            )
-            {
-                health.TakeDamage(1);
-
-                if (hitFeedback != null)
-                {
-                    hitFeedback.PlayHealthHit(
-                        dir
-                    );
-                }
-
-                enemy.PlayHealthHitSound();
-
-                enemy.ApplyAttackHit(
-                    dir,
-                    true,
-                    step
-                );
-            }
+            );
         }
 
         // =====================================================

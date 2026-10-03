@@ -21,6 +21,8 @@ public class DashState : IPlayerState
 
     public void Enter()
     {
+        CombatEvents.RaisePlayerDash();
+
         float speedFactor = Mathf.InverseLerp(0f, 20f, player.rb.linearVelocity.magnitude);
 
         // FIX: audioPlayer atanmamışsa NullReferenceException atıyordu.

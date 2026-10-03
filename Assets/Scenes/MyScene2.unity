@@ -9560,6 +9560,7 @@ GameObject:
   - component: {fileID: 2122615061}
   - component: {fileID: 2122615064}
   - component: {fileID: 2122615065}
+  - component: {fileID: 2122615066}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -10261,6 +10262,22 @@ MonoBehaviour:
   flashDuration: 0.1
   blinkInterval: 0.1
   dimmedAlpha: 0
+--- !u!114 &2122615066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 864a9420142c50f4799b554046413939, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
+  baseCritChance: 0
+  baseCritMultiplier: 2
+  debugLog: 0
+  activeModifiers: []
 --- !u!1001 &2131245513
 PrefabInstance:
   m_ObjectHideFlags: 0

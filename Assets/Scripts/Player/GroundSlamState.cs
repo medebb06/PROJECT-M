@@ -229,23 +229,6 @@ public class GroundSlamState : IPlayerState
 
     void DamageEnemy(EnemyController enemy)
     {
-        Health health =
-            enemy.GetComponent<Health>();
-
-        if (
-            health != null &&
-            health.IsDead
-        )
-        {
-            return;
-        }
-
-        EnemyBalance balance =
-            enemy.GetComponent<EnemyBalance>();
-
-        EnemyHitFeedback feedback =
-            enemy.GetComponent<EnemyHitFeedback>();
-
         // Slam yönü: düşman oyuncunun neresindeyse o tarafa.
         float deltaX =
             enemy.transform.position.x -
@@ -256,88 +239,18 @@ public class GroundSlamState : IPlayerState
                 ? Mathf.Sign(deltaX)
                 : (player.facingDir >= 0f ? 1f : -1f);
 
-        Vector2 hitDirection =
-            new Vector2(
-                directionX,
-                0f
-            );
-
-        Vector3 hitPosition =
-            enemy.transform.position;
-
-        // -----------------------------------------------------
-        // BALANCE HASARI
-        // -----------------------------------------------------
-
-        if (
-            balance != null &&
-            !balance.IsBroken
-        )
-        {
-            bool balanceChanged =
-                balance.AddBalanceDamage(
-                    enemy.slamBalanceDamage
-                );
-
-            if (!balanceChanged)
-                return;
-
-            if (feedback != null)
+        // Aynı kural (denge kırık değilse denge, kırıksa can) ve aynı
+        // stat/kritik/olay akışı: PlayerDamage.
+        PlayerDamage.HitEnemy(
+            enemy,
+            new DamageInfo
             {
-                feedback.PlayBalanceHit(
-                    hitPosition,
-                    hitDirection
-                );
+                source = DamageSource.Slam,
+                balanceDamage = enemy.slamBalanceDamage,
+                healthDamage = player.impactSettings.slamDamage,
+                direction = new Vector2(directionX, 0f),
+                hitPosition = enemy.transform.position
             }
-
-            enemy.PlayPostureHitSound();
-
-            if (balance.IsBroken)
-            {
-                // Denge bu vuruşta kırıldı.
-                // Stagger EnemyBalance event'i ile zaten başladı.
-                enemy.ApplyAttackHit(
-                    hitDirection,
-                    false
-                );
-            }
-            else
-            {
-                enemy.ApplyBalanceHit(
-                    hitDirection
-                );
-            }
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // HEALTH HASARI
-        // (denge kırık ya da düşmanda EnemyBalance yok)
-        // -----------------------------------------------------
-
-        if (health == null)
-            return;
-
-        health.TakeDamage(
-            player.impactSettings.slamDamage
-        );
-
-        if (feedback != null)
-        {
-            feedback.PlayHealthHit(
-                hitDirection
-            );
-        }
-
-        enemy.PlayHealthHitSound();
-
-        if (health.IsDead)
-            return;
-
-        enemy.ApplyAttackHit(
-            hitDirection,
-            true
         );
     }
 }

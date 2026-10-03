@@ -199,6 +199,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         health.TakeDamage(damage);
 
+        CombatEvents.RaisePlayerHurt(damage, hitDirection);
+
         // Vurulma flaşı (ölümcül vuruşta da oynar).
         if (blink != null)
             blink.PlayHitFlash();

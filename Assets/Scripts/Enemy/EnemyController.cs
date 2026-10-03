@@ -830,6 +830,9 @@ public class EnemyController : MonoBehaviour
     {
         deathHandled = true;
 
+        // Kaynak ne olursa olsun (vuruş, slam, execute, zehir) tek yerden.
+        CombatEvents.RaiseEnemyKilled(this);
+
         // Telegraph kapatılmazsa her karede rengi ezip
         // fade-out'u bozar.
         EnemyAttackTelegraph telegraph =
@@ -1729,5 +1732,7 @@ public class EnemyController : MonoBehaviour
     private void HandleBalanceBroken()
     {
         ForceStagger();
+
+        CombatEvents.RaiseBalanceBroken(this);
     }
 }
