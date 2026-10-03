@@ -167,7 +167,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         return
             instance.firstAsk.ContainsKey(enemy) &&
             instance.lastAsk.TryGetValue(enemy, out float last) &&
-            Time.time - last <= instance.queueMemory;
+            EnemyTime.Now - last <= instance.queueMemory;
     }
 
     /// <summary>
@@ -207,7 +207,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         instance.nextAllowedHitTime =
             Mathf.Max(
                 instance.nextAllowedHitTime,
-                Time.time + instance.postHitGrace
+                EnemyTime.Now + instance.postHitGrace
             );
     }
 
@@ -240,7 +240,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         float windupTime
     )
     {
-        float now = Time.time;
+        float now = EnemyTime.Now;
 
         PurgeStale(now);
 
@@ -333,7 +333,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     private void JoinInternal(EnemyController enemy)
     {
-        float now = Time.time;
+        float now = EnemyTime.Now;
 
         PurgeStale(now);
 
@@ -411,7 +411,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
             // kuyruğu kilitlemesin.
             if (
                 !lastRangeAsk.TryGetValue(pair.Key, out float rangeTime) ||
-                Time.time - rangeTime > queueMemory
+                EnemyTime.Now - rangeTime > queueMemory
             )
             {
                 continue;
@@ -490,7 +490,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
             return;
 
         float untilNext =
-            nextAllowedHitTime - Time.time;
+            nextAllowedHitTime - EnemyTime.Now;
 
         GUI.Label(
             new Rect(10, 10, 420, 60),

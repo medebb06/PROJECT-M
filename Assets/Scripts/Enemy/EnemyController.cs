@@ -211,6 +211,26 @@ public class EnemyController : MonoBehaviour
     [Min(0.2f)]
     public float normalAttackHitHeight = 2.2f;
 
+    [Header("Parry Slow-Mo (sadece düşmanlar)")]
+    [Tooltip(
+        "Bu düşman parry edilince TÜM düşmanların zamanı yavaşlar " +
+        "(oyuncu ve dünya normal). Animasyonlar yavaşlar, sesler normal. " +
+        "Ağır başlar, zamanla normale döner. Süre GERÇEK saniye. " +
+        "Karşı saldırı için zaman kazandırır.")]
+    public HitSlowMotion parrySlowMo =
+        new HitSlowMotion(1.6f, 0.25f, 1.5f);
+
+    [Tooltip(
+        "Parry bu düşmanın dengesini KIRDIYSA (stagger, execute fırsatı).")]
+    public HitSlowMotion parryBreakSlowMo =
+        new HitSlowMotion(2.2f, 0.2f, 1.5f);
+
+    [Tooltip(
+        "İki normal parry slow-mo'su arasındaki en az süre (gerçek sn). " +
+        "0 = her parry yavaşlatır. Dengeyi kıran parry bundan etkilenmez.")]
+    [Min(0f)]
+    public float parrySlowMoCooldown = 0f;
+
     [Header("Danger Indicator (okunurluk)")]
     [Tooltip("Engellenemez vuruşta düşmanın başının üstünde '!' simgesi.")]
     public bool showDangerIcon = true;
@@ -757,6 +777,9 @@ public class EnemyController : MonoBehaviour
 
     private void Update()
     {
+        // Düşman zamanı: Animator ve ses aynı ölçekle akar.
+        ApplyEnemyTimeScale();
+
         // =====================================================
         // ÖLÜ DÜŞMAN
         // Health fade-out sırasında düşman hâlâ Update
@@ -774,7 +797,7 @@ public class EnemyController : MonoBehaviour
         if (attackRecoveryTimer > 0f)
         {
             attackRecoveryTimer -=
-                Time.deltaTime;
+                EnemyTime.DeltaTime;
 
             if (attackRecoveryTimer < 0f)
                 attackRecoveryTimer = 0f;
@@ -783,7 +806,7 @@ public class EnemyController : MonoBehaviour
         if (movementLockTimer > 0f)
         {
             movementLockTimer -=
-                Time.deltaTime;
+                EnemyTime.DeltaTime;
 
             if (movementLockTimer < 0f)
                 movementLockTimer = 0f;
@@ -855,7 +878,7 @@ public class EnemyController : MonoBehaviour
         );
 
         staggerTintEndTime =
-            Time.time + staggerFlashDuration;
+            EnemyTime.Now + staggerFlashDuration;
 
         ChangeState(
             new EnemyStaggerState(this)
@@ -1078,6 +1101,46 @@ public class EnemyController : MonoBehaviour
             ? bodyCollider.bounds.min.y
             : transform.position.y;
 
+    // Düşman zamanına göre ölçeklenmiş koşma hızı.
+    public float ScaledChaseSpeed =>
+        chaseSpeed * EnemyTime.Scale;
+
+    // Düşman zaman ölçeğini Animator'a uygular (animasyon sayaçlarla
+    // senkron kalsın). Sesler yavaşlamaz: pitch'e dokunulmaz.
+    private void ApplyEnemyTimeScale()
+    {
+        if (animator != null)
+            animator.speed = EnemyTime.Scale;
+    }
+
+    // Parry sonrası: tüm düşmanlar yavaşlar, oyuncu normal kalır.
+    public void PlayParrySlowMotion(bool brokeBalance)
+    {
+        HitSlowMotion profile =
+            brokeBalance
+                ? parryBreakSlowMo
+                : parrySlowMo;
+
+        if (profile == null || !profile.enabled)
+            return;
+
+        // Dengeyi kıran parry (execute fırsatı) cooldown'a takılmaz.
+        if (
+            !brokeBalance &&
+            Time.unscaledTime - EnemyTime.LastRequestTime <
+            parrySlowMoCooldown
+        )
+        {
+            return;
+        }
+
+        EnemyTime.RequestRamp(
+            profile.duration,
+            profile.startTimeScale,
+            profile.rampPower
+        );
+    }
+
     // Engellenemez vuruşun başlangıcında net bir "dikkat!" işareti.
     public void PlayAlertFlash()
     {
@@ -1156,8 +1219,12 @@ public class EnemyController : MonoBehaviour
             );
         }
 
+        // Yavaşlama sırasında savrulma da yavaş (yatay).
         rb.linearVelocity =
-            knockback;
+            new Vector2(
+                knockback.x * EnemyTime.Scale,
+                knockback.y
+            );
     }
 
     // =========================================================
@@ -1261,8 +1328,12 @@ public class EnemyController : MonoBehaviour
             );
         }
 
+        // Yavaşlama sırasında savrulma da yavaş (yatay).
         rb.linearVelocity =
-            knockback;
+            new Vector2(
+                knockback.x * EnemyTime.Scale,
+                knockback.y
+            );
 
         PlayKnockbackSound();
     }
@@ -1422,7 +1493,7 @@ public class EnemyController : MonoBehaviour
 
         bool staggerTinted =
             IsStaggered &&
-            Time.time < staggerTintEndTime;
+            EnemyTime.Now < staggerTintEndTime;
 
         for (int i = 0; i < spriteRenderers.Length; i++)
         {
@@ -1464,7 +1535,7 @@ public class EnemyController : MonoBehaviour
         if (staggerTintEndTime <= 0f)
             return;
 
-        if (Time.time < staggerTintEndTime)
+        if (EnemyTime.Now < staggerTintEndTime)
             return;
 
         staggerTintEndTime = 0f;
@@ -1617,8 +1688,12 @@ public class EnemyController : MonoBehaviour
             );
         }
 
+        // Yavaşlama sırasında savrulma da yavaş (yatay).
         rb.linearVelocity =
-            knockback;
+            new Vector2(
+                knockback.x * EnemyTime.Scale,
+                knockback.y
+            );
     }
 
     // =========================================================

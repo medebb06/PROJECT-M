@@ -50,7 +50,7 @@ public class EnemyStaggerState : IEnemyState
                     rb.linearVelocity.x,
                     0f,
                     enemy.knockbackDeceleration *
-                    Time.deltaTime
+                    EnemyTime.DeltaTime
                 );
 
             rb.linearVelocity =
@@ -65,7 +65,7 @@ public class EnemyStaggerState : IEnemyState
         // ==========================================
 
         staggerTimer -=
-            Time.deltaTime;
+            EnemyTime.DeltaTime;
 
         if (staggerTimer <= 0f)
         {

@@ -42,7 +42,7 @@ public class EnemyHitState : IEnemyState
         if (rb == null)
             return;
 
-        timer -= Time.deltaTime;
+        timer -= EnemyTime.DeltaTime;
 
         // =====================================================
         // SMOOTH KNOCKBACK DECELERATION
@@ -60,7 +60,7 @@ public class EnemyHitState : IEnemyState
                 currentX,
                 0f,
                 deceleration *
-                Time.deltaTime
+                EnemyTime.DeltaTime
             );
 
         rb.linearVelocity =

@@ -80,7 +80,7 @@ public class EnemyAttackTelegraph : MonoBehaviour
                     unblockableProgress
                 );
 
-            unblockablePhase += Time.deltaTime * speed;
+            unblockablePhase += EnemyTime.DeltaTime * speed;
 
             pulse =
                 (Mathf.Sin(unblockablePhase) + 1f) * 0.5f;

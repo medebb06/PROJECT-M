@@ -340,7 +340,9 @@ public class EnemyAttackState : IEnemyState
         {
             StopMovement();
 
-            warningTimer -= Time.deltaTime;
+            // Düşman zamanıyla ilerler: parry slow-mo'sunda animasyon ve
+            // ses ile birlikte yavaşlar.
+            warningTimer -= EnemyTime.DeltaTime;
 
             // Geciktirilmiş animasyonu zamanı gelince başlat.
             if (
@@ -418,7 +420,7 @@ public class EnemyAttackState : IEnemyState
         {
             StopMovement();
 
-            recoveryTimer -= Time.deltaTime;
+            recoveryTimer -= EnemyTime.DeltaTime;
 
             if (recoveryTimer > 0f)
                 return;
@@ -791,6 +793,10 @@ public class EnemyAttackState : IEnemyState
 
         // Parry de düşmanın dengesine vuruyor: beyaz flaş.
         enemy.PlayBalanceDamageFlash();
+
+        // Parry DÜŞMANLAR için zamanı yavaşlatır (oyuncu için değil):
+        // karşı saldırı için zaman. Animasyon ve ses de yavaşlar.
+        enemy.PlayParrySlowMotion(balance.IsBroken);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()

@@ -52,14 +52,14 @@ public class EnemyBalance : MonoBehaviour
 
         // Oyuncu baskıyı bıraktıktan sonra
         // recovery delay bekle.
-        recoveryTimer -= Time.deltaTime;
+        recoveryTimer -= EnemyTime.DeltaTime;
 
         if (recoveryTimer > 0f)
             return;
 
         // Frame-rate bağımsız recovery.
         recoveryAccumulator +=
-            recoverySpeed * Time.deltaTime;
+            recoverySpeed * EnemyTime.DeltaTime;
 
         int recoveryAmount =
             Mathf.FloorToInt(recoveryAccumulator);

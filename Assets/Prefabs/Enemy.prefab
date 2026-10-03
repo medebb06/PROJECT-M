@@ -660,7 +660,7 @@ MonoBehaviour:
   unblockableHitOffset: 0
   attackAnimationHitTime: 0
   unblockableCommitPoint: 0.15
-  unblockableDamage: 2
+  unblockableDamage: 75
   unblockableKnockbackMultiplier: 4
   unblockableDodgeGrace: 0.12
   unblockableReachMultiplier: 0.9
@@ -672,6 +672,17 @@ MonoBehaviour:
   attackBackTolerance: 0.4
   normalAttackFrontOnly: 0
   normalAttackHitHeight: 2.2
+  parrySlowMo:
+    enabled: 1
+    duration: 0.8
+    startTimeScale: 0.25
+    rampPower: 2
+  parryBreakSlowMo:
+    enabled: 1
+    duration: 1.8
+    startTimeScale: 0.2
+    rampPower: 2
+  parrySlowMoCooldown: 0
   showDangerIcon: 1
   showDangerZone: 1
   dangerColor: {r: 1, g: 0.85, b: 0.1, a: 1}

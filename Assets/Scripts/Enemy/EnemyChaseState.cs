@@ -167,7 +167,7 @@ public class EnemyChaseState : IEnemyState
         // CHASE
         // -----------------------------------------
         // Sadece yatay yön kullanılıyor (oyuncu yukarıdaysa
-        // düşman yavaşlamasın). Hız enemy.chaseSpeed.
+        // düşman yavaşlamasın). Hız enemy.ScaledChaseSpeed.
 
         float deltaX =
             enemy.target.position.x -
@@ -179,7 +179,7 @@ public class EnemyChaseState : IEnemyState
                 : 0f;
 
         rb.linearVelocity = new Vector2(
-            dirX * enemy.chaseSpeed,
+            dirX * enemy.ScaledChaseSpeed,
             rb.linearVelocity.y
         );
     }
@@ -301,7 +301,7 @@ public class EnemyChaseState : IEnemyState
         {
             // Yaklaş (hedef yönünde).
             velocityX =
-                -standbySide * enemy.chaseSpeed;
+                -standbySide * enemy.ScaledChaseSpeed;
         }
         else if (
             horizontal <
@@ -311,7 +311,7 @@ public class EnemyChaseState : IEnemyState
             // Çok yakın: temkinli geri çekil.
             velocityX =
                 standbySide *
-                enemy.chaseSpeed *
+                enemy.ScaledChaseSpeed *
                 enemy.standbySpeedMultiplier;
         }
         else
@@ -372,7 +372,7 @@ public class EnemyChaseState : IEnemyState
         // (EnemyController.FaceTarget).
         rb.linearVelocity = new Vector2(
             Mathf.Sign(deltaX) *
-            enemy.chaseSpeed *
+            enemy.ScaledChaseSpeed *
             enemy.standbySpeedMultiplier,
             rb.linearVelocity.y
         );
