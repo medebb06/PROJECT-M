@@ -83,6 +83,9 @@ public class EnemyAttackState : IEnemyState
 
             attackDone = true;
 
+            // Vuruş anı geçti: ritim koordinatörüne bildir.
+            EnemyAttackCoordinator.ReleaseAttack(enemy);
+
             // Parry sonucu BALANCE KIRILDIYSA
             // EnemyController zaten stagger state'e geçti.
             if (enemyStaggered)
@@ -137,6 +140,10 @@ public class EnemyAttackState : IEnemyState
 
     public void Exit()
     {
+        // Saldırı herhangi bir sebeple yarıda kesilirse
+        // (stagger, oyuncu öldü vb.) slotu serbest bırak.
+        EnemyAttackCoordinator.ReleaseAttack(enemy);
+
         if (telegraph != null)
             telegraph.StopWarning();
 
@@ -356,6 +363,9 @@ public class EnemyAttackState : IEnemyState
             enemy.attackKnockbackVerticalForce,
             enemy.attackKnockbackDuration
         );
+
+        // Oyuncu vuruldu: ardışık vuruş yağmurunu kes.
+        EnemyAttackCoordinator.NotifyPlayerHit();
 
         return false;
     }

@@ -82,6 +82,19 @@ public class EnemyChaseState : IEnemyState
                     return;
                 }
 
+                // RİTİM: Kalabalıkta herkes aynı anda saldırmasın.
+                // Koordinatör sıra gelene kadar false döner;
+                // düşman yerinde bekler ve tekrar sorar.
+                if (
+                    !EnemyAttackCoordinator.TryRequestAttack(
+                        enemy,
+                        enemy.attackWarningTime
+                    )
+                )
+                {
+                    return;
+                }
+
                 enemy.ChangeState(
                     new EnemyAttackState(enemy)
                 );
