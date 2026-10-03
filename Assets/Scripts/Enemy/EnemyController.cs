@@ -119,6 +119,21 @@ public class EnemyController : MonoBehaviour
     public float unblockableWindupMultiplier = 1.6f;
 
     [Tooltip(
+        "Engellenemez vuruşun hasar anına bu kadar saniye EKLENİR. " +
+        "Negatif = hasar daha erken gelir. (Uyarı süresini ve ritim " +
+        "koordinatörünü de etkiler.)")]
+    public float unblockableHitOffset = 0f;
+
+    [Tooltip(
+        "Saldırı animasyonunun BAŞLANGICINDAN hasar (vuruş) karesine kadar " +
+        "geçen süre (saniye). Engellenemez vuruşun uzun uyarısında animasyon " +
+        "bu kadar süre kala başlatılır, böylece vuruş karesi hasarla aynı " +
+        "ana denk gelir. 0 = animasyon klibinin uzunluğu kullanılır " +
+        "(bulunamazsa Attack Warning Time).")]
+    [Min(0f)]
+    public float attackAnimationHitTime = 0f;
+
+    [Tooltip(
         "Uyarının bu oranından sonra hasar alınca kesilmez. " +
         "0 = baştan itibaren, 1 = hiç. Normal saldırıdan daha erken " +
         "kararlı olması önerilir.")]
@@ -865,10 +880,73 @@ public class EnemyController : MonoBehaviour
     private bool plannedUnblockable;
     private int normalAttacksSinceUnblockable;
 
+    // Animasyonun başlangıcından vuruş karesine kadar süre.
+    // Elle verilmediyse Attack klibinin uzunluğu otomatik bulunur.
+    private float detectedAttackClipLength = -1f;
+
+    public float AttackAnimationHitTime
+    {
+        get
+        {
+            if (attackAnimationHitTime > 0f)
+                return attackAnimationHitTime;
+
+            if (detectedAttackClipLength < 0f)
+                detectedAttackClipLength = DetectAttackClipLength();
+
+            return detectedAttackClipLength > 0f
+                ? detectedAttackClipLength
+                : attackWarningTime;
+        }
+    }
+
+    private float DetectAttackClipLength()
+    {
+        if (
+            animator == null ||
+            animator.runtimeAnimatorController == null
+        )
+        {
+            return 0f;
+        }
+
+        AnimationClip[] clips =
+            animator.runtimeAnimatorController.animationClips;
+
+        for (int i = 0; i < clips.Length; i++)
+        {
+            AnimationClip clip = clips[i];
+
+            if (
+                clip != null &&
+                clip.name.IndexOf(
+                    "attack",
+                    System.StringComparison.OrdinalIgnoreCase
+                ) >= 0
+            )
+            {
+                Debug.Log(
+                    "EnemyController: saldırı klibi '" + clip.name +
+                    "' uzunluğu " + clip.length.ToString("0.00") +
+                    " sn bulundu (Attack Animation Hit Time = 0 iken " +
+                    "vuruş anı olarak kullanılır)."
+                );
+
+                return clip.length;
+            }
+        }
+
+        return 0f;
+    }
+
     public float WindupFor(bool unblockable)
     {
         return unblockable
-            ? attackWarningTime * unblockableWindupMultiplier
+            ? Mathf.Max(
+                0.1f,
+                attackWarningTime * unblockableWindupMultiplier +
+                unblockableHitOffset
+            )
             : attackWarningTime;
     }
 

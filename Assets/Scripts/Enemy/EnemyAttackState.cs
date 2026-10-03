@@ -20,6 +20,11 @@ public class EnemyAttackState : IEnemyState
     // Engellenemez vuruş: parry/block işe yaramaz, dash/geri çekilme gerekir.
     private bool isUnblockable;
 
+    // Saldırı animasyonu zamanlaması: uzun uyarıda animasyon geç başlatılır,
+    // vuruş karesi hasar anına denk gelsin.
+    private bool animationStarted;
+    private float animationDelay;
+
     // Engellenemez vuruş okunurluğu + kaçış payı
     private EnemyDangerIndicator indicator;
     private PlayerController playerRef;
@@ -207,7 +212,7 @@ public class EnemyAttackState : IEnemyState
 
     public void Enter()
     {
-        enemy.PlayAttackAnimation();
+        // Animasyon aşağıda, uyarı süresi bilindikten sonra başlatılır.
 
         // Planlanan saldırı engellenemez mi? (ChaseState koordinatöre
         // aynı uyarı süresini bildirdi; tutarlı kalsın.)
@@ -232,6 +237,27 @@ public class EnemyAttackState : IEnemyState
                 0.0001f,
                 windup
             );
+
+        // Animasyon zamanlaması:
+        // Normal saldırı: animasyon hemen başlar (eskisi gibi).
+        // Engellenemez: uyarı uzun olduğu için animasyon, vuruş karesi
+        // hasar anına gelecek şekilde GEÇ başlatılır; önce sarı uyarı
+        // (flaş, "!", kutu), sonra vuruş animasyonu.
+        animationStarted = false;
+
+        animationDelay =
+            isUnblockable
+                ? Mathf.Max(
+                    0f,
+                    windup - enemy.AttackAnimationHitTime
+                )
+                : 0f;
+
+        if (animationDelay <= 0f)
+        {
+            enemy.PlayAttackAnimation();
+            animationStarted = true;
+        }
 
         commitTriggered = false;
 
@@ -315,6 +341,16 @@ public class EnemyAttackState : IEnemyState
             StopMovement();
 
             warningTimer -= Time.deltaTime;
+
+            // Geciktirilmiş animasyonu zamanı gelince başlat.
+            if (
+                !animationStarted &&
+                warningDuration - warningTimer >= animationDelay
+            )
+            {
+                enemy.PlayAttackAnimation();
+                animationStarted = true;
+            }
 
             if (!commitTriggered && IsCommitted)
                 TriggerCommit();
