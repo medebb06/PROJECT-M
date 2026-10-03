@@ -9559,6 +9559,7 @@ GameObject:
   - component: {fileID: 2122615052}
   - component: {fileID: 2122615061}
   - component: {fileID: 2122615064}
+  - component: {fileID: 2122615065}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -9951,6 +9952,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDamageReceiver
   health: {fileID: 2122615054}
   player: {fileID: 0}
+  blink: {fileID: 0}
+  hurtLockDuration: 0.22
+  invincibilityDuration: 0.7
   defaultKnockbackForce: 8
   defaultKnockbackVerticalForce: 4.8
   defaultKnockbackDuration: 0.1
@@ -10139,14 +10143,14 @@ MonoBehaviour:
   afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
   afterImageSpacing: 0.05
   stepTimer: 0
-  inputLockDuration: 0.12
+  inputLockDuration: 0.3
   postureBreakDuration: 1
   postureBreakKnockback: 5
   slamLockDuration: 0.12
   slamFreezeTime: 0.04
   canControl: 1
   isDashing: 0
-  isInvincible: 0
+  hitInvincibilityTimer: 0
   isAttackLocked: 0
   slamGroundLock: 0
   slamLockTimer: 0
@@ -10223,6 +10227,81 @@ MonoBehaviour:
   finisherRange: 3
   forwardPriority: 1.5
   executeKey: 101
+--- !u!114 &2122615065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2122615041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc9b77c610048e14bbf877f64c420a84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInvincibilityBlink
+  blinkInterval: 0.1
+  dimmedAlpha: 0
+--- !u!1001 &2131245513
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2938970184769658100, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4745338656465375485, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_Name
+      value: Enemy (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 26.02287
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.1738353
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5951146257160834191, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 7bd1b5ce361539041bb217d31e3909dd, type: 3}
 --- !u!1001 &3087399739372231210
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10299,6 +10378,7 @@ SceneRoots:
   - {fileID: 1003360551}
   - {fileID: 192061305}
   - {fileID: 3087399739372231210}
+  - {fileID: 2131245513}
   - {fileID: 1636781114}
   - {fileID: 576347940}
   - {fileID: 462546105}

@@ -5,6 +5,19 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [Header("References")]
     [SerializeField] private Health health;
     [SerializeField] private PlayerController player;
+    [SerializeField] private PlayerInvincibilityBlink blink;
+
+    [Header("Hit Reaction")]
+    [Tooltip(
+        "Hasar alınca TAM kontrol kaybı (sersemleme) süresi. " +
+        "Hareket, zıplama, dash, saldırı ve savunma kapalı.")]
+    [SerializeField] private float hurtLockDuration = 0.22f;
+
+    [Tooltip(
+        "Hasar alınınca TOPLAM dokunulmazlık süresi (sersemleme dahil). " +
+        "Sersemleme bitince kontrol geri gelir ama oyuncu bu süre " +
+        "dolana kadar hâlâ korumalıdır ve sprite yanıp söner.")]
+    [SerializeField] private float invincibilityDuration = 0.7f;
 
     [Header("Default Knockback")]
     [SerializeField] private float defaultKnockbackForce = 8f;
@@ -18,6 +31,22 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         if (player == null)
             player = GetComponent<PlayerController>();
+
+        // Yanıp sönme bileşeni yoksa kendiliğinden eklenir.
+        if (blink == null)
+            blink = GetComponent<PlayerInvincibilityBlink>();
+
+        if (blink == null)
+            blink = gameObject.AddComponent<PlayerInvincibilityBlink>();
+    }
+
+    private void OnValidate()
+    {
+        hurtLockDuration =
+            Mathf.Max(0.01f, hurtLockDuration);
+
+        invincibilityDuration =
+            Mathf.Max(hurtLockDuration, invincibilityDuration);
     }
 
     // --------------------------------------------------
@@ -39,8 +68,6 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // --------------------------------------------------
     // Hasar + knockback TEK yerden.
     // Knockback'i PlayerHurtState uygular.
-    // (Eskiden hem HurtState hem PlayerKnockback aynı anda
-    // hızı eziyordu ve birbirini bozuyordu.)
     // --------------------------------------------------
 
     public void TakeDamage(
@@ -57,7 +84,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         if (player == null)
             return;
 
-        // Player zaten dokunulmazsa yeni damage alma.
+        // Dash i-frame'i VEYA hasar sonrası korumalı dönem.
         if (player.isInvincible)
             return;
 
@@ -76,6 +103,13 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
         if (health.IsDead)
         {
+            // Yanıp sönme alfa'yı düşük bırakmasın:
+            // ölüm fade'i bu değerden başlar.
+            player.hitInvincibilityTimer = 0f;
+
+            if (blink != null)
+                blink.ResetVisuals();
+
             player.stateMachine.ChangeState(
                 new PlayerDeathState(
                     player,
@@ -97,7 +131,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
                 hitDirection,
                 knockbackForce,
                 knockbackVerticalForce,
-                knockbackDuration
+                knockbackDuration,
+                hurtLockDuration,
+                invincibilityDuration
             )
         );
     }

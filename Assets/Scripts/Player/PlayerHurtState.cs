@@ -5,9 +5,12 @@ public class PlayerHurtState : IPlayerState
     private PlayerController player;
     private PlayerStateMachine sm;
 
-    // Hurt state'in toplam süresi (bu sürede dokunulmaz + kontrolsüz)
+    // SERSEMLEME: Bu süre boyunca tam kontrol kaybı.
+    // Sonrasında kontrol geri gelir ama korumalı dönem (i-frame)
+    // PlayerController.hitInvincibilityTimer ile devam eder.
     private float timer;
-    private readonly float duration = 0.35f;
+    private readonly float lockDuration;
+    private readonly float invincibleDuration;
 
     // Knockback hızının uygulandığı süre.
     // Süre bitince yatay hız sıfırlanır.
@@ -25,7 +28,9 @@ public class PlayerHurtState : IPlayerState
         Vector2 hitDirection,
         float force = 8f,
         float verticalForce = -1f,
-        float knockbackDuration = 0.1f)
+        float knockbackDuration = 0.1f,
+        float lockDuration = 0.22f,
+        float invincibleDuration = 0.7f)
     {
         this.player = player;
         this.sm = sm;
@@ -41,19 +46,39 @@ public class PlayerHurtState : IPlayerState
                 : force * 0.6f;
 
         this.knockbackDuration = knockbackDuration;
+
+        this.lockDuration =
+            Mathf.Max(0.01f, lockDuration);
+
+        // Korumalı dönem sersemlemeden kısa olamaz.
+        this.invincibleDuration =
+            Mathf.Max(this.lockDuration, invincibleDuration);
     }
 
     public void Enter()
     {
-        timer = duration;
+        timer = lockDuration;
         knockbackTimer = knockbackDuration;
         knockbackEnded = false;
 
-        player.isInvincible = true;
+        // Korumalı dönem: sersemleme + sonrası.
+        // (Ayrı sayaç; Dash gibi state'ler isInvincible'ı kapatınca
+        // bu koruma silinmez.)
+        player.hitInvincibilityTimer =
+            Mathf.Max(
+                player.hitInvincibilityTimer,
+                invincibleDuration
+            );
+
         player.canControl = false;
 
         // Hurt sırasında saldırı yapılamasın.
         player.isAttackLocked = true;
+
+        // Savunma (sağ tık) da başlatılamasın:
+        // PlayerDefenseController.StartDefense inputLocked'a bakıyor.
+        player.inputLocked = true;
+        player.inputLockTimer = lockDuration + 0.1f;
 
         // Devam eden saldırı varsa iptal et.
         // (AttackState.Exit yatay hızı sıfırladığı için
@@ -69,9 +94,11 @@ public class PlayerHurtState : IPlayerState
 
     public void Exit()
     {
-        player.isInvincible = false;
         player.canControl = true;
         player.isAttackLocked = false;
+
+        player.inputLocked = false;
+        player.inputLockTimer = 0f;
     }
 
     public void Update()
@@ -100,9 +127,8 @@ public class PlayerHurtState : IPlayerState
 
         if (timer <= 0f)
         {
-            // FIX: Eskiden her zaman GroundedState'e dönüyordu.
-            // Havadaysan GroundedState.Enter coyote time'ı yeniliyor
-            // ve havada bedava zıplama hakkı veriyordu.
+            // Havadaysan GroundedState'e dönmek bedava coyote jump
+            // verirdi; bu yüzden zemine göre seç.
             if (player.IsGrounded())
             {
                 sm.ChangeState(

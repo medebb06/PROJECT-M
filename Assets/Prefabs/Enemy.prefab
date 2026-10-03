@@ -651,9 +651,9 @@ MonoBehaviour:
   balanceHitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   balanceHitFlashDuration: 0.09
   attackDamage: 30
-  attackKnockbackForce: 1.2
-  attackKnockbackVerticalForce: 1
-  attackKnockbackDuration: 0.2
+  attackKnockbackForce: 5
+  attackKnockbackVerticalForce: 2
+  attackKnockbackDuration: 0.4
   balanceHitKnockbackForce: 2
   balanceHitKnockbackVerticalForce: 2
   balanceHitKnockbackDuration: 0.2

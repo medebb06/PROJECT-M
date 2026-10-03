@@ -87,7 +87,19 @@ public class PlayerController : MonoBehaviour
 
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
-    [HideInInspector] public bool isInvincible;
+    // Dokunulmazlık iki kaynaktan beslenir:
+    //  - State kaynaklı (Dash, Death...): player.isInvincible = true/false
+    //  - Hasar sonrası korumalı dönem: hitInvincibilityTimer
+    // Ayrı tutuldu ki Dash çıkışta "false" yapınca hasar korumasını silmesin.
+    private bool stateInvincible;
+
+    [HideInInspector] public float hitInvincibilityTimer;
+
+    public bool isInvincible
+    {
+        get { return stateInvincible || hitInvincibilityTimer > 0f; }
+        set { stateInvincible = value; }
+    }
     [HideInInspector] public bool isAttackLocked;
     [HideInInspector] public bool slamGroundLock;
     [HideInInspector] public float slamLockTimer;
@@ -254,6 +266,14 @@ public class PlayerController : MonoBehaviour
     private void HandleTimers()
     {
         movement.UpdateTimers();
+
+        if (hitInvincibilityTimer > 0f)
+        {
+            hitInvincibilityTimer -= Time.deltaTime;
+
+            if (hitInvincibilityTimer < 0f)
+                hitInvincibilityTimer = 0f;
+        }
 
         if (inputLocked)
         {
