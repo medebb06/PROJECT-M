@@ -188,9 +188,9 @@ GameObject:
   - component: {fileID: 1634934014537030282}
   - component: {fileID: 2707043965123876500}
   - component: {fileID: 4706036756625254638}
-  - component: {fileID: 8107113071688138068}
+  - component: {fileID: 7502996902466412553}
   m_Layer: 10
-  m_Name: Enemy
+  m_Name: Duelist
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -740,7 +740,7 @@ MonoBehaviour:
   hurtDuringStagger: 1
   hurtOnDeath: 1
   restartHurtOnNewHit: 1
---- !u!114 &8107113071688138068
+--- !u!114 &7502996902466412553
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

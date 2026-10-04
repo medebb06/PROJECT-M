@@ -77,6 +77,49 @@ public class RunManager : MonoBehaviour
 
     [SerializeField] private float spawnInterval = 0.35f;
 
+    [Header("DÜELLO PROFİLİ (Düellocu gibi güçlü düşmanlar için)")]
+    [Tooltip(
+        "AÇIK: aşağıdaki Stage / Waves ayarları yerine düello ayarları " +
+        "kullanılır: az düşman, yavaş zorluk artışı, bol iyileşme. " +
+        "Kapalı: eski kalabalık mod.")]
+    [SerializeField] private bool duelMode = true;
+
+    [Tooltip("Bölüm 1'deki düşman sayısı.")]
+    [Min(1)]
+    [SerializeField] private int duelBaseEnemies = 1;
+
+    [Tooltip("Kaç bölümde bir +1 düşman eklenir. 0 = hiç eklenmez.")]
+    [Min(0)]
+    [SerializeField] private int duelExtraEnemyEveryNStages = 4;
+
+    [Tooltip("Bir bölümdeki en fazla TOPLAM düşman.")]
+    [Min(1)]
+    [SerializeField] private int duelMaxEnemies = 3;
+
+    [Tooltip(
+        "Aynı anda en fazla kaç düşman. Fazlası, öncekiler ölünce " +
+        "sıradaki dalgada gelir.")]
+    [Min(1)]
+    [SerializeField] private int duelMaxSimultaneous = 2;
+
+    [Tooltip(
+        "Bölüm başına düşman güçlenmesinin (hız, hasar, can, engellenemez " +
+        "ihtimali) çarpanı. 1 = kalabalık modla aynı, 0.4 = %40'ı kadar.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float duelScalingMultiplier = 0.4f;
+
+    [Tooltip("Düelloda bölüm temizlenince iyileşme (max canın yüzdesi).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float duelHealBetweenStagesPercent = 0.25f;
+
+    [Header("Execute Gelişimi")]
+    [Tooltip(
+        "Her bölümde düşmanın Execute Damage değerine eklenen oran " +
+        "(0.35 = bölüm başına +%35). Düşman canından HIZLI büyümeli ki " +
+        "execute ölümcül kalsın. 0 = kapalı.")]
+    [Min(0f)]
+    [SerializeField] private float executeGrowthPerStage = 0.35f;
+
     [Header("Stage")]
     [SerializeField] private int baseEnemyCount = 2;
 
@@ -427,8 +470,9 @@ public class RunManager : MonoBehaviour
                     }
 
                     // Sıradaki dalga için eşik; son dalga hepsinin ölmesini bekler.
+                    // Düelloda her dalga tamamen bitince sıradaki gelir.
                     int target =
-                        Wave < WaveCount
+                        Wave < WaveCount && !duelMode
                             ? Mathf.Max(0, nextWaveAliveThreshold)
                             : 0;
 
@@ -482,14 +526,19 @@ public class RunManager : MonoBehaviour
 
                 yield return new WaitForSecondsRealtime(1.2f);
 
-                if (healBetweenStagesPercent > 0f)
+                float healPercent =
+                    duelMode
+                        ? duelHealBetweenStagesPercent
+                        : healBetweenStagesPercent;
+
+                if (healPercent > 0f)
                 {
                     int heal =
                         Mathf.Max(
                             1,
                             Mathf.RoundToInt(
                                 playerHealth.MaxHealth *
-                                healBetweenStagesPercent
+                                healPercent
                             )
                         );
 
@@ -601,6 +650,19 @@ public class RunManager : MonoBehaviour
     // Bölümdeki dalga sayısı: taban + her N bölümde +1 (üst sınırlı).
     private int WavesForStage()
     {
+        // Düello: aynı anda en fazla duelMaxSimultaneous düşman; fazlası
+        // ayrı dalgada.
+        if (duelMode)
+        {
+            return Mathf.Max(
+                1,
+                Mathf.CeilToInt(
+                    TotalEnemiesForStage() /
+                    (float)Mathf.Max(1, duelMaxSimultaneous)
+                )
+            );
+        }
+
         int extra =
             extraWaveEveryNStages > 0
                 ? (Stage - 1) / extraWaveEveryNStages
@@ -616,6 +678,20 @@ public class RunManager : MonoBehaviour
     // Bölümün TOPLAM düşman sayısı: (taban + bölüm artışı) × uzunluk çarpanı.
     private int TotalEnemiesForStage()
     {
+        if (duelMode)
+        {
+            int extra =
+                duelExtraEnemyEveryNStages > 0
+                    ? (Stage - 1) / duelExtraEnemyEveryNStages
+                    : 0;
+
+            return Mathf.Clamp(
+                duelBaseEnemies + extra,
+                1,
+                Mathf.Max(1, duelMaxEnemies)
+            );
+        }
+
         float baseCount =
             baseEnemyCount +
             Mathf.FloorToInt((Stage - 1) * enemiesPerStage);
@@ -640,7 +716,12 @@ public class RunManager : MonoBehaviour
 
         int count = total / waves + (wave <= total % waves ? 1 : 0);
 
-        return Mathf.Clamp(count, 1, Mathf.Max(1, maxEnemiesPerWave));
+        int cap =
+            duelMode
+                ? duelMaxSimultaneous
+                : maxEnemiesPerWave;
+
+        return Mathf.Clamp(count, 1, Mathf.Max(1, cap));
     }
 
     // Bir dalgayı doğurur. Önceki dalgaların düşmanları listede kalır.
@@ -732,7 +813,10 @@ public class RunManager : MonoBehaviour
     // Bölüm zorluğu + doğan düşman oyuncuyu hemen fark etsin.
     private void ConfigureEnemy(EnemyController enemy)
     {
-        float t = Stage - 1;
+        // Bölüm ilerlemesi. Düelloda güçlenme yavaş (çarpanla küçülür).
+        float t =
+            (Stage - 1) *
+            (duelMode ? duelScalingMultiplier : 1f);
 
         enemy.chaseRange = aggroRange;
 
@@ -778,6 +862,20 @@ public class RunManager : MonoBehaviour
                 );
 
             health.SetMaxHealth(scaled, true);
+        }
+
+        // Execute: düşman canından HIZLI büyür (düello çarpanından
+        // etkilenmez), böylece sersemletilen düşman execute ile ölür.
+        if (executeGrowthPerStage > 0f)
+        {
+            enemy.executeDamage =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        enemy.executeDamage *
+                        (1f + executeGrowthPerStage * (Stage - 1))
+                    )
+                );
         }
     }
 

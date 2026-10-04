@@ -10,7 +10,7 @@ using UnityEngine;
 ///            Parry Şifası, Hasat
 ///   PARRY  : Yankı, Kusursuz Zamanlama, Kesintisiz Ritim, Ezici Parry
 ///   DASH   : Gölge Adım, Rüzgar Kesiği, Fırsat Penceresi
-///   RİSK   : Cam Top, Son Nefes, Kan Bedeli, Kusursuzluk
+///   RİSK   : Cam Top, Son Nefes, Kan Bedeli, Kusursuzluk, Odak
 ///   ZEHİR  : Salgın*, Zehirli Parry, Felç Edici Zehir*
 ///   (* bir zehir kaynağı gerektirir: Zehir ya da Zehirli Parry)
 /// </summary>
@@ -245,6 +245,16 @@ public static class CharmCatalog
                 "ve ekstra charm seçimi kazanırsın.",
                 3,
                 ScriptableObject.CreateInstance<PerfectionEffect>()
+            )
+        );
+
+        list.Add(
+            Make(
+                "Odak",
+                "Hasar yemeden vurdukça vuruşların keskinleşir: kritik " +
+                "şansın birikir. Bir darbe yersen odağın dağılır.",
+                3,
+                ScriptableObject.CreateInstance<FocusCritEffect>()
             )
         );
 

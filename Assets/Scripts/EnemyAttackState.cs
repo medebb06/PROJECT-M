@@ -1,5 +1,17 @@
 using UnityEngine;
 
+/// <summary>
+/// Düşman saldırısı. İki mod:
+///
+///  KLASİK (EnemyMoveset yok): tek vuruş, normal ya da engellenemez
+///  (eski davranışın aynısı).
+///
+///  HAMLE (EnemyMoveset var): seçilen hamlenin vuruşlarını SIRAYLA oynar
+///  (kombo). Her vuruşun türü farklı cevap ister:
+///    Normal → parry/block, Sweep → zıpla, Grab → dash/kaç.
+///  Kombonun 2.+ vuruşları kesilemez; block'lanan ara vuruşlar düşmanı
+///  geri itmez.
+/// </summary>
 public class EnemyAttackState : IEnemyState
 {
     private EnemyController enemy;
@@ -21,19 +33,35 @@ public class EnemyAttackState : IEnemyState
     private float warningDuration;
     private bool commitTriggered;
 
-    // Engellenemez vuruş: parry/block işe yaramaz, dash/geri çekilme gerekir.
+    // Parry/block işe yaramayan vuruş (Grab ya da Sweep).
     private bool isUnblockable;
 
     // Saldırı animasyonu zamanlaması: uzun uyarıda animasyon geç başlatılır,
     // vuruş karesi hasar anına denk gelsin.
     private bool animationStarted;
     private float animationDelay;
+    private float baseWindup;
 
     // Engellenemez vuruş okunurluğu + kaçış payı
     private EnemyDangerIndicator indicator;
     private PlayerController playerRef;
     private bool dodgeCueTriggered;
     private float lastDashSeenTime;
+
+    // Hamle (kombo)
+    private EnemyMoveset moveset;
+    private AttackMove move;
+    private int stepIndex;
+    private MoveHitType hitType = MoveHitType.Normal;
+    private float stepDamageMultiplier = 1f;
+    private float stepReachMultiplier = 1f;
+
+    // Kombo okunurluğu: başın üstünde vuruş noktaları.
+    private EnemyComboIndicator comboIndicator;
+
+    // Süpürme uyarısında kutunun rengini geçici değiştiririz.
+    private Color originalDangerColor;
+    private bool dangerColorChanged;
 
     public EnemyAttackState(EnemyController enemy)
     {
@@ -50,18 +78,20 @@ public class EnemyAttackState : IEnemyState
     }
 
     // =========================================================
-    // COMMIT (KARARLI AŞAMA)
-    // Uyarının attackCommitPoint oranından sonra saldırı artık
-    // hasar alınca kesilmez. Cevap: parry, dash veya geri çekilme.
-    // Vuruş anından sonraki recovery'de düşman yine açık hedeftir.
+    // DIŞARIYA AÇIK BİLGİ (animasyon, derinlik sıralaması, istatistik)
     // =========================================================
 
+    // Uyarının attackCommitPoint oranından sonra saldırı hasar alınca
+    // kesilmez. Kombonun 2.+ vuruşları her zaman kesilmez.
     public bool IsCommitted
     {
         get
         {
             if (attackDone)
                 return false;
+
+            if (stepIndex > 0)
+                return true;
 
             float commitPoint =
                 isUnblockable
@@ -80,8 +110,6 @@ public class EnemyAttackState : IEnemyState
         }
     }
 
-    // Derinlik sıralaması (EnemyDepthSorter) için:
-    // uyarı (wind-up) aşamasında mı, vuruşa ne kadar kaldı?
     public bool IsWindingUp => !attackDone;
 
     public bool IsUnblockable => isUnblockable;
@@ -89,8 +117,288 @@ public class EnemyAttackState : IEnemyState
     public float RemainingWindup =>
         Mathf.Max(0f, warningTimer);
 
-    // Engellenemez vuruşun uyarı aşaması her karede:
-    // işaretleri ilerlet, dash'i takip et, "ŞİMDİ KAÇ" zamanını yakala.
+    // Kombo içinde kaçıncı vuruş (animasyon her vuruşta baştan başlar).
+    public int StepIndex => stepIndex;
+
+    public MoveHitType CurrentHitType => hitType;
+
+    public string MoveName => move != null ? move.name : "";
+
+    public bool HasMoreSteps =>
+        move != null &&
+        move.hits != null &&
+        stepIndex < move.hits.Count - 1;
+
+    private bool IsSweep => hitType == MoveHitType.Sweep;
+
+    private bool IsCombo =>
+        move != null &&
+        move.hits != null &&
+        move.hits.Count > 1;
+
+    private void ShowCombo()
+    {
+        if (!IsCombo || moveset == null || !moveset.showComboIndicator)
+            return;
+
+        comboIndicator = enemy.GetComponent<EnemyComboIndicator>();
+
+        if (comboIndicator == null)
+        {
+            comboIndicator =
+                enemy.gameObject.AddComponent<EnemyComboIndicator>();
+        }
+
+        comboIndicator.Show(move.hits, moveset.sweepColor);
+    }
+
+    private void HideCombo()
+    {
+        if (comboIndicator != null)
+            comboIndicator.Hide();
+    }
+
+    // =========================================================
+    // ENTER
+    // =========================================================
+
+    public void Enter()
+    {
+        playerRef =
+            enemy.target != null
+                ? enemy.target.GetComponent<PlayerController>()
+                : null;
+
+        lastDashSeenTime = -999f;
+        stepIndex = 0;
+
+        originalDangerColor = enemy.dangerColor;
+        dangerColorChanged = false;
+
+        moveset = enemy.GetComponent<EnemyMoveset>();
+
+        move =
+            moveset != null && moveset.enabled
+                ? moveset.PickMove(DistanceToTarget())
+                : null;
+
+        // Planlanan normal/engellenemez zarı her durumda tüket
+        // (EnemyController'ın sayaçları bozulmasın).
+        bool plannedUnblockable =
+            enemy.ConsumePlannedAttack();
+
+        // YÖN KİLİDİ: saldırı başladığı anda baktığı yönü sabitle ve
+        // saldırı bitene kadar oyuncuya dönme. Dash ile arkasına geçen
+        // oyuncu vurulmaz (vuruş sadece ön alana isabet eder).
+        if (enemy.lockFacingDuringAttack)
+            enemy.LockFacing(true);
+
+        if (move != null)
+        {
+            Debug.Log("ENEMY MOVE: " + move.name);
+
+            ShowCombo();
+
+            BeginStep(move.hits[0]);
+            return;
+        }
+
+        // ---------------- KLASİK TEK VURUŞ ----------------
+
+        hitType =
+            plannedUnblockable
+                ? MoveHitType.Grab
+                : MoveHitType.Normal;
+
+        stepDamageMultiplier = 1f;
+        stepReachMultiplier = 1f;
+
+        baseWindup =
+            enemy.WindupFor(plannedUnblockable);
+
+        // Felç Edici Zehir: zehirli düşmanın uyarısı uzar.
+        BeginWindup(
+            baseWindup * EnemyStatus.WindupMultiplierFor(enemy)
+        );
+    }
+
+    private void BeginStep(MoveHit hit)
+    {
+        hitType = hit.type;
+        stepDamageMultiplier = hit.damageMultiplier;
+        stepReachMultiplier = hit.reachMultiplier;
+
+        baseWindup =
+            hit.windup +
+            (hit.windupRandom > 0f ? Random.Range(0f, hit.windupRandom) : 0f);
+
+        // Kombonun İLK vuruşu biraz daha uzun hazırlanır: noktaları okuyacak zaman.
+        if (stepIndex == 0 && IsCombo && moveset != null)
+            baseWindup += moveset.comboFirstWindupBonus;
+
+        if (comboIndicator != null)
+            comboIndicator.SetCurrent(stepIndex);
+
+        BeginWindup(
+            baseWindup * EnemyStatus.WindupMultiplierFor(enemy)
+        );
+    }
+
+    // Bir vuruşun uyarı aşamasını başlatır (ilk vuruş ya da kombo adımı).
+    private void BeginWindup(float windup)
+    {
+        isUnblockable = hitType != MoveHitType.Normal;
+
+        dodgeCueTriggered = false;
+
+        warningTimer = windup;
+
+        warningDuration =
+            Mathf.Max(
+                0.0001f,
+                windup
+            );
+
+        // Animasyon zamanlaması:
+        // Normal: hemen başlar (zehirle uzadıysa uzama kadar gecikir).
+        // Engellenemez: vuruş karesi hasar anına gelecek şekilde GEÇ başlar.
+        // (EnemyAnimationDriver varsa hizalamayı o yapar.)
+        animationStarted = false;
+
+        animationDelay =
+            isUnblockable
+                ? Mathf.Max(
+                    0f,
+                    windup - enemy.AttackAnimationHitTime
+                )
+                : Mathf.Max(0f, windup - baseWindup);
+
+        if (animationDelay <= 0f)
+        {
+            enemy.PlayAttackAnimation();
+            animationStarted = true;
+        }
+
+        commitTriggered = false;
+
+        recoveryTimer = 0f;
+
+        attackDone = false;
+        isRecovering = false;
+        resolvingHit = false;
+
+        StopMovement();
+
+        PlayWarning();
+
+        if (telegraph != null)
+            telegraph.StartWarning(isUnblockable);
+
+        if (isUnblockable)
+        {
+            // StartWarning flaş bastırmasını sıfırladığı için SONRA çağrılır.
+            enemy.PlayAlertFlash();
+
+            ShowIndicator();
+
+            Debug.Log(
+                IsSweep
+                    ? "ENEMY SWEEP STARTED (ZIPLA)"
+                    : "ENEMY UNBLOCKABLE ATTACK STARTED"
+            );
+        }
+        else
+        {
+            HideIndicator();
+        }
+    }
+
+    private void ShowIndicator()
+    {
+        indicator =
+            enemy.GetComponent<EnemyDangerIndicator>();
+
+        if (indicator == null)
+        {
+            indicator =
+                enemy.gameObject
+                    .AddComponent<EnemyDangerIndicator>();
+        }
+
+        if (IsSweep)
+        {
+            // Alçak, renkli kutu: "üstünden zıpla".
+            if (moveset != null)
+            {
+                enemy.dangerColor = moveset.sweepColor;
+                dangerColorChanged = true;
+            }
+
+            indicator.Show(SweepReach, SweepHeight, true);
+            return;
+        }
+
+        RestoreDangerColor();
+
+        if (enemy.unblockableFrontOnly)
+        {
+            // Düşmanın baktığı yöne doğru uzun kutu.
+            indicator.Show(
+                enemy.unblockableForwardReach * stepReachMultiplier,
+                enemy.unblockableHitHeight,
+                true
+            );
+        }
+        else
+        {
+            indicator.Show(
+                enemy.attackRange *
+                enemy.unblockableReachMultiplier *
+                stepReachMultiplier
+            );
+        }
+    }
+
+    private void HideIndicator()
+    {
+        if (indicator != null)
+            indicator.Hide();
+
+        RestoreDangerColor();
+    }
+
+    private void RestoreDangerColor()
+    {
+        if (!dangerColorChanged)
+            return;
+
+        enemy.dangerColor = originalDangerColor;
+        dangerColorChanged = false;
+    }
+
+    private float SweepReach =>
+        enemy.attackRange *
+        (moveset != null ? moveset.sweepReachMultiplier : 1.4f) *
+        stepReachMultiplier;
+
+    private float SweepHeight =>
+        moveset != null ? moveset.sweepHitHeight : 0.6f;
+
+    private float DistanceToTarget()
+    {
+        return enemy.target != null
+            ? Vector2.Distance(
+                enemy.transform.position,
+                enemy.target.position
+            )
+            : 0f;
+    }
+
+    // =========================================================
+    // ENGELLENEMEZ UYARI AŞAMASI
+    // =========================================================
+
+    // Her karede: işaretleri ilerlet, dash'i takip et, "ŞİMDİ KAÇ" zamanını yakala.
     private void UpdateUnblockableWindup()
     {
         float progress =
@@ -119,34 +427,45 @@ public class EnemyAttackState : IEnemyState
     }
 
     // Vuruş isabet alanında mı?
-    //  - Engellenemez + yönlü: baktığı yönde uzun kutu (arkaya ve yüksekliğe duyarlı)
-    //  - Normal + yönlü (isteğe bağlı): aynı kutu, menzil = attackRange
-    //  - Diğer: eski dairesel erişim
     private bool IsInReach(
         PlayerController player,
-        float distance,
-        float circularReach
+        float distance
     )
     {
-        if (isUnblockable && enemy.unblockableFrontOnly)
+        if (IsSweep)
         {
-            return IsInFrontArea(
-                player,
-                enemy.unblockableForwardReach,
-                enemy.unblockableHitHeight
-            );
+            // Alçak kutu: yeterince zıplayan oyuncu üstünden geçer.
+            return IsInFrontArea(player, SweepReach, SweepHeight);
         }
 
-        if (!isUnblockable && enemy.normalAttackFrontOnly)
+        if (isUnblockable)
+        {
+            if (enemy.unblockableFrontOnly)
+            {
+                return IsInFrontArea(
+                    player,
+                    enemy.unblockableForwardReach * stepReachMultiplier,
+                    enemy.unblockableHitHeight
+                );
+            }
+
+            return
+                distance <=
+                enemy.attackRange *
+                enemy.unblockableReachMultiplier *
+                stepReachMultiplier;
+        }
+
+        if (enemy.normalAttackFrontOnly)
         {
             return IsInFrontArea(
                 player,
-                enemy.attackRange,
+                enemy.attackRange * stepReachMultiplier,
                 enemy.normalAttackHitHeight
             );
         }
 
-        return distance <= circularReach;
+        return distance <= enemy.attackRange * stepReachMultiplier;
     }
 
     private bool IsInFrontArea(
@@ -205,119 +524,9 @@ public class EnemyAttackState : IEnemyState
             attackAudio.PlayCommit();
     }
 
-    public void Enter()
-    {
-        // Animasyon aşağıda, uyarı süresi bilindikten sonra başlatılır.
-
-        // Planlanan saldırı engellenemez mi? (ChaseState koordinatöre
-        // aynı uyarı süresini bildirdi; tutarlı kalsın.)
-        isUnblockable =
-            enemy.ConsumePlannedAttack();
-
-        dodgeCueTriggered = false;
-        lastDashSeenTime = -999f;
-
-        playerRef =
-            enemy.target != null
-                ? enemy.target.GetComponent<PlayerController>()
-                : null;
-
-        float baseWindup =
-            enemy.WindupFor(isUnblockable);
-
-        // Felç Edici Zehir: zehirli düşmanın uyarısı uzar.
-        float windup =
-            baseWindup * EnemyStatus.WindupMultiplierFor(enemy);
-
-        warningTimer = windup;
-
-        warningDuration =
-            Mathf.Max(
-                0.0001f,
-                windup
-            );
-
-        // Animasyon zamanlaması:
-        // Normal saldırı: animasyon hemen başlar (eskisi gibi); zehirle uyarı
-        // uzadıysa uzama kadar gecikir, vuruş karesi hasar anına denk gelir.
-        // Engellenemez: uyarı uzun olduğu için animasyon, vuruş karesi
-        // hasar anına gelecek şekilde GEÇ başlatılır; önce sarı uyarı
-        // (flaş, "!", kutu), sonra vuruş animasyonu.
-        animationStarted = false;
-
-        animationDelay =
-            isUnblockable
-                ? Mathf.Max(
-                    0f,
-                    windup - enemy.AttackAnimationHitTime
-                )
-                : Mathf.Max(0f, windup - baseWindup);
-
-        if (animationDelay <= 0f)
-        {
-            enemy.PlayAttackAnimation();
-            animationStarted = true;
-        }
-
-        commitTriggered = false;
-
-        recoveryTimer = 0f;
-
-        attackDone = false;
-        isRecovering = false;
-        resolvingHit = false;
-
-        // YÖN KİLİDİ: saldırı başladığı anda baktığı yönü sabitle ve
-        // saldırı bitene kadar oyuncuya dönme. Dash ile arkasına geçen
-        // oyuncu vurulmaz (vuruş sadece ön alana isabet eder).
-        if (enemy.lockFacingDuringAttack)
-            enemy.LockFacing(true);
-
-        StopMovement();
-
-        PlayWarning();
-
-        if (telegraph != null)
-            telegraph.StartWarning(isUnblockable);
-
-        // StartWarning flaş bastırmasını sıfırladığı için SONRA çağrılır.
-        if (isUnblockable)
-        {
-            enemy.PlayAlertFlash();
-
-            // Başın üstünde "!" ve zeminde erişim bandı.
-            indicator =
-                enemy.GetComponent<EnemyDangerIndicator>();
-
-            if (indicator == null)
-            {
-                indicator =
-                    enemy.gameObject
-                        .AddComponent<EnemyDangerIndicator>();
-            }
-
-            if (enemy.unblockableFrontOnly)
-            {
-                // Düşmanın baktığı yöne doğru uzun kutu.
-                indicator.Show(
-                    enemy.unblockableForwardReach,
-                    enemy.unblockableHitHeight,
-                    true
-                );
-            }
-            else
-            {
-                indicator.Show(
-                    enemy.attackRange *
-                    enemy.unblockableReachMultiplier
-                );
-            }
-
-            Debug.Log(
-                "ENEMY UNBLOCKABLE ATTACK STARTED"
-            );
-        }
-    }
+    // =========================================================
+    // TICK
+    // =========================================================
 
     public void Tick()
     {
@@ -366,8 +575,7 @@ public class EnemyAttackState : IEnemyState
             if (warningTimer > 0f)
                 return;
 
-            if (indicator != null)
-                indicator.Hide();
+            HideIndicator();
 
             if (telegraph != null)
                 telegraph.StopWarning();
@@ -379,7 +587,41 @@ public class EnemyAttackState : IEnemyState
 
             resolvingHit = false;
 
+            // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
+            // savrulması...) bu saldırı bitti; Exit zaten temizledi.
+            if (
+                enemyStaggered ||
+                !ReferenceEquals(enemy.CurrentState, this)
+            )
+            {
+                attackDone = true;
+
+                EnemyAttackCoordinator.ReleaseAttack(enemy);
+
+                if (enemyStaggered)
+                {
+                    Debug.Log(
+                        "ENEMY ATTACK → PARRY BROKE BALANCE → STAGGER"
+                    );
+                }
+
+                return;
+            }
+
+            // ---------------- KOMBO: SIRADAKİ VURUŞ ----------------
+
+            if (HasMoreSteps && !enemy.IsTargetDead)
+            {
+                stepIndex++;
+
+                BeginStep(move.hits[stepIndex]);
+
+                return;
+            }
+
             attackDone = true;
+
+            HideCombo();
 
             // Varsayılan: kilit saldırı bitene (recovery dahil) kadar sürer;
             // Exit'te açılır. İstenirse vuruş anında açılır.
@@ -389,26 +631,16 @@ public class EnemyAttackState : IEnemyState
             // Vuruş anı geçti: ritim koordinatörüne bildir.
             EnemyAttackCoordinator.ReleaseAttack(enemy);
 
-            // Parry sonucu BALANCE KIRILDIYSA
-            // EnemyController zaten stagger state'e geçti.
-            if (enemyStaggered)
-            {
-                Debug.Log(
-                    "ENEMY ATTACK → PARRY BROKE BALANCE → STAGGER"
-                );
-
-                return;
-            }
-
-            // Normal attack / block / normal parry
-            // sonrası recovery başlat.
-            // Engellenemez vuruşun recovery'si uzun: kaçınılan (dash)
-            // vuruş düşmanı uzun süre açık hedef bırakır.
+            // Engellenemez/süpürme recovery'si uzun: kaçılan vuruş
+            // düşmanı uzun süre açık hedef bırakır. Uzun kombo da öyle.
             float recovery =
                 isUnblockable
                     ? enemy.attackRecoveryTime *
                       enemy.unblockableRecoveryMultiplier
                     : enemy.attackRecoveryTime;
+
+            if (move != null)
+                recovery *= move.recoveryMultiplier;
 
             enemy.StartAttackRecovery(recovery);
 
@@ -470,8 +702,9 @@ public class EnemyAttackState : IEnemyState
         // Yarıda kesilirse yön kilidi asla açık kalmasın.
         enemy.LockFacing(false);
 
-        if (indicator != null)
-            indicator.Hide();
+        HideIndicator();
+
+        HideCombo();
 
         if (telegraph != null)
             telegraph.StopWarning();
@@ -535,15 +768,28 @@ public class EnemyAttackState : IEnemyState
         // PLAYER INVINCIBLE
         // -----------------------------------------------------
 
-        // Dash i-frame'i VEYA (engellenemez vuruşta) dash'in hemen
-        // ardından gelen kısa kaçış payı.
-        bool dodged =
-            player.isInvincible ||
-            (
-                isUnblockable &&
-                Time.time - lastDashSeenTime <=
-                enemy.unblockableDodgeGrace
-            );
+        bool dodged;
+
+        if (IsSweep && SweepIgnoresDash)
+        {
+            // Süpürme: dash'in dokunulmazlığı işe yaramaz (zıplamak gerekir).
+            // Hasar sonrası korumalı dönem yine korur.
+            dodged =
+                player.hitInvincibilityTimer > 0f ||
+                (player.isInvincible && !player.isDashing);
+        }
+        else
+        {
+            // Dash i-frame'i VEYA (engellenemez vuruşta) dash'in hemen
+            // ardından gelen kısa kaçış payı.
+            dodged =
+                player.isInvincible ||
+                (
+                    isUnblockable &&
+                    Time.time - lastDashSeenTime <=
+                    enemy.unblockableDodgeGrace
+                );
+        }
 
         if (dodged)
         {
@@ -566,16 +812,12 @@ public class EnemyAttackState : IEnemyState
                 enemy.target.position
             );
 
-        // Engellenemez vuruşta erişim biraz kısalır: geri çekilmek kolaylaşır.
-        float reach =
-            isUnblockable
-                ? enemy.attackRange * enemy.unblockableReachMultiplier
-                : enemy.attackRange;
-
-        if (!IsInReach(player, distance, reach))
+        if (!IsInReach(player, distance))
         {
             Debug.Log(
-                "ENEMY ATTACK MISSED!"
+                IsSweep
+                    ? "ENEMY SWEEP MISSED (ZIPLADI / MENZİL DIŞI)"
+                    : "ENEMY ATTACK MISSED!"
             );
 
             CombatEvents.RaiseAttackMissed(enemy, isUnblockable);
@@ -595,10 +837,8 @@ public class EnemyAttackState : IEnemyState
             >();
 
         // =====================================================
-        // ENGELLENEMEZ VURUŞ
-        // Parry ve block TAMAMEN etkisiz: hasar direkt can birimine gider.
-        // Tek cevap: dash (i-frame, yukarıda kontrol edildi), zıplama,
-        // arkaya geçme ya da kutunun dışına çıkma.
+        // ENGELLENEMEZ / SÜPÜRME
+        // Parry ve block TAMAMEN etkisiz: hasar direkt cana gider.
         // =====================================================
 
         if (isUnblockable)
@@ -640,18 +880,11 @@ public class EnemyAttackState : IEnemyState
                     hitDirection
                 );
 
-            if (enemyStaggered)
-            {
-                Debug.Log(
-                    "PARRY → ENEMY BALANCE BROKEN → STAGGER"
-                );
-            }
-            else
-            {
-                Debug.Log(
-                    "PARRY → ENEMY BALANCE DAMAGED → RECOVERY"
-                );
-            }
+            Debug.Log(
+                enemyStaggered
+                    ? "PARRY → ENEMY BALANCE BROKEN → STAGGER"
+                    : "PARRY → ENEMY BALANCE DAMAGED"
+            );
 
             return enemyStaggered;
         }
@@ -703,7 +936,10 @@ public class EnemyAttackState : IEnemyState
         return DealDirectHit(hitDirection);
     }
 
-    // Hasar + knockback tek çağrıda (normal ve engellenemez vuruş ortak).
+    private bool SweepIgnoresDash =>
+        moveset == null || moveset.sweepIgnoresDash;
+
+    // Hasar + knockback tek çağrıda (normal, süpürme ve engellenemez ortak).
     private bool DealDirectHit(Vector2 hitDirection)
     {
         PlayerDamageReceiver damageReceiver =
@@ -726,10 +962,16 @@ public class EnemyAttackState : IEnemyState
             "ENEMY HIT PLAYER"
         );
 
-        int damage =
-            isUnblockable
+        int baseDamage =
+            hitType == MoveHitType.Grab
                 ? enemy.unblockableDamage
                 : enemy.attackDamage;
+
+        int damage =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(baseDamage * stepDamageMultiplier)
+            );
 
         float knockbackMultiplier =
             isUnblockable
@@ -746,7 +988,8 @@ public class EnemyAttackState : IEnemyState
             enemy,
             isUnblockable
                 ? PlayerHitKind.Unblockable
-                : PlayerHitKind.Normal
+                : PlayerHitKind.Normal,
+            IsSweep && SweepIgnoresDash
         );
 
         // Oyuncu vuruldu: ardışık vuruş yağmurunu kes.
@@ -763,9 +1006,14 @@ public class EnemyAttackState : IEnemyState
         Vector2 hitDirection
     )
     {
-        enemy.ApplyBlockKnockback(
-            hitDirection
-        );
+        // Kombonun ara vuruşu block'lanınca düşman geri itilmez:
+        // kombo sürer, her vuruş posture yer (parry'e teşvik).
+        if (!HasMoreSteps)
+        {
+            enemy.ApplyBlockKnockback(
+                hitDirection
+            );
+        }
 
         PlayerDefenseController defense =
             enemy.target.GetComponent<
@@ -777,9 +1025,21 @@ public class EnemyAttackState : IEnemyState
             // FIX: PlayerPosture max 100 iken block başına
             // sadece 1 hasar (blockBalanceDamage) veriliyordu;
             // posture neredeyse hiç kırılmıyordu.
+            // Kombo vuruşları block'ta daha az posture yer: kombo boyunca
+            // block'ta durmak YAPILABİLİR olsun (ama parry daha kârlı).
+            float postureMultiplier =
+                IsCombo && moveset != null
+                    ? moveset.comboBlockPostureMultiplier
+                    : 1f;
+
             defense.HandleBlockHit(
                 hitDirection,
-                enemy.blockPostureDamage
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        enemy.blockPostureDamage * postureMultiplier
+                    )
+                )
             );
         }
 
@@ -834,24 +1094,20 @@ public class EnemyAttackState : IEnemyState
 
         // Parry DÜŞMANLAR için zamanı yavaşlatır (oyuncu için değil):
         // karşı saldırı için zaman. Animasyon ve ses de yavaşlar.
-        enemy.PlayParrySlowMotion(balance.IsBroken);
+        // Kombo ORTASINDA yavaşlatmaz (ritim bozulmasın, sonraki vuruşlar
+        // okunabilsin); son vuruşta ya da denge kırılınca yavaşlatır.
+        bool midCombo =
+            HasMoreSteps &&
+            (moveset == null || moveset.noParrySlowMoMidCombo);
+
+        if (!midCombo || balance.IsBroken)
+            enemy.PlayParrySlowMotion(balance.IsBroken);
 
         CombatEvents.RaiseParry(enemy, balance.IsBroken);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()
         // zaten ForceStagger() çağırıyor.
-        if (balance.IsBroken)
-        {
-            Debug.Log(
-                "PARRY → ENEMY BALANCE BROKEN → STAGGER"
-            );
-
-            return true;
-        }
-
-        // Balance kırılmadıysa enemy stagger'a girmez.
-        // AttackState recovery'ye devam eder.
-        return false;
+        return balance.IsBroken;
     }
 }

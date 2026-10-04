@@ -7,6 +7,14 @@ public class PlayerAnimationController : MonoBehaviour
     [Header("Animator")]
     [SerializeField] private Animator animator;
 
+    [Header("Parry Sonrası")]
+    [Tooltip(
+        "Parry animasyonu en az bu kadar oynadıktan sonra (normalize, 0..1) " +
+        "yön tuşuna basılırsa hemen koşu/idle'a dönülür. Parry pozunda " +
+        "takılı kalmayı önler.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float parryCancelableAfter = 0.25f;
+
     public void Initialize(PlayerController controller)
     {
         player = controller;
@@ -70,7 +78,10 @@ public class PlayerAnimationController : MonoBehaviour
     // =========================================================
 
     // Parry'nin Animator'daki tek çıkışı "Speed < 0.1 ve Grounded".
-    // Savunma bittiğinde tuşa basılıysa animasyon takılı kalıyordu.
+    // Yön tuşuna basılıyken bu koşul sağlanmadığı için karakter parry
+    // pozunda animasyon bitene kadar (~1 sn) takılı kalıyordu.
+    // Artık: savunma bittiyse ve oyuncu hareket etmek istiyorsa (ya da
+    // havadaysa) kısa bir oynatmadan sonra hemen locomotion'a döner.
     private void RecoverStuckStates()
     {
         if (animator.IsInTransition(0))
@@ -79,10 +90,23 @@ public class PlayerAnimationController : MonoBehaviour
         AnimatorStateInfo info =
             animator.GetCurrentAnimatorStateInfo(0);
 
+        if (!info.IsName("Parry"))
+            return;
+
+        if (player.IsDefending())
+            return;
+
+        bool finished =
+            info.normalizedTime >= 1f;
+
+        bool wantsToMove =
+            Mathf.Abs(player.moveInput) > 0.1f ||
+            !player.isGrounded ||
+            player.isDashing;
+
         if (
-            info.IsName("Parry") &&
-            info.normalizedTime >= 1f &&
-            !player.IsDefending()
+            finished ||
+            (wantsToMove && info.normalizedTime >= parryCancelableAfter)
         )
         {
             ResetToLocomotion(0.05f);
@@ -205,9 +229,10 @@ public class PlayerAnimationController : MonoBehaviour
 
         animator.ResetTrigger("Land");
 
-        animator.CrossFadeInFixedTime(
+        // Komboda arka arkaya parry: her seferinde baştan oynasın
+        // (aynı state'e crossfade bazen yeniden başlatmıyordu).
+        animator.PlayInFixedTime(
             "Parry",
-            0.03f,
             0,
             0f
         );

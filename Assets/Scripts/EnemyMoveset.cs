@@ -1,0 +1,295 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+// Bir vuruşun türü: oyuncudan hangi cevabı istediğini belirler.
+public enum MoveHitType
+{
+    Normal, // kırmızı uyarı: parry / block
+    Sweep,  // sarı uyarı + ALÇAK mavi kutu: ZIPLA (dash işe yaramaz)
+    Grab    // sarı uyarı + "!" + UZUN sarı kutu: KAÇ (dash / geri çekil)
+}
+
+// Bir hamledeki tek vuruş.
+[Serializable]
+public class MoveHit
+{
+    public MoveHitType type = MoveHitType.Normal;
+
+    [Tooltip(
+        "Bu vuruştan önceki uyarı (sn, düşman zamanı). İlk vuruşta hazırlık, " +
+        "sonrakilerde kombo arası.")]
+    [Min(0.05f)]
+    public float windup = 0.8f;
+
+    [Tooltip(
+        "Uyarıya eklenen RASTGELE süre (0..bu). Gecikmeli vuruş: ezbere " +
+        "parry'i cezalandırır.")]
+    [Min(0f)]
+    public float windupRandom = 0f;
+
+    [Tooltip("Hasar çarpanı (Normal/Sweep: Attack Damage, Grab: Unblockable Damage).")]
+    [Min(0f)]
+    public float damageMultiplier = 1f;
+
+    [Tooltip("Menzil çarpanı.")]
+    [Min(0.1f)]
+    public float reachMultiplier = 1f;
+
+    public MoveHit() { }
+
+    public MoveHit(
+        MoveHitType type,
+        float windup,
+        float windupRandom = 0f,
+        float damageMultiplier = 1f,
+        float reachMultiplier = 1f
+    )
+    {
+        this.type = type;
+        this.windup = windup;
+        this.windupRandom = windupRandom;
+        this.damageMultiplier = damageMultiplier;
+        this.reachMultiplier = reachMultiplier;
+    }
+}
+
+// Bir hamle: bir ya da birkaç vuruşun dizisi (kombo).
+[Serializable]
+public class AttackMove
+{
+    public string name = "Hamle";
+
+    [Min(0f)]
+    public float weight = 1f;
+
+    [Tooltip("Oyuncu bu mesafeden YAKINSA seçilmez (ör. uzun menzilli hamle).")]
+    [Min(0f)]
+    public float minDistance = 0f;
+
+    [Tooltip("Oyuncu bu mesafeden UZAKSA seçilmez.")]
+    [Min(0f)]
+    public float maxDistance = 99f;
+
+    [Tooltip("Kullanıldıktan sonra bu kadar süre (düşman sn) tekrar seçilmez.")]
+    [Min(0f)]
+    public float cooldown = 0f;
+
+    [Tooltip("Hamle bitince recovery (açık kalma) çarpanı. Uzun kombo = uzun açıklık.")]
+    [Min(0.1f)]
+    public float recoveryMultiplier = 1f;
+
+    public List<MoveHit> hits = new List<MoveHit>();
+
+    [NonSerialized] public float lastUsedTime = -999f;
+}
+
+/// <summary>
+/// DÜŞMAN HAMLE SETİ. Bir düşmana eklenince EnemyAttackState tek vuruş yerine
+/// buradaki hamlelerden birini seçer: kombo, gecikmeli vuruş, süpürme,
+/// yakalama... Her vuruş türü oyuncudan FARKLI bir cevap ister:
+///
+///   Normal  (kırmızı)             → parry / block
+///   Sweep   (sarı + alçak kutu)   → zıpla
+///   Grab    (sarı + "!" + kutu)   → dash / geri çekil
+///
+/// Kombonun 2. ve sonraki vuruşları KESİLEMEZ (vurarak bozamazsın) ve
+/// block'lanan ara vuruşlar düşmanı geri itmez: her vuruşu karşılaman gerekir.
+///
+/// KURULUM: Düşman prefab'ına ekle. 'Moves' boşsa Düellocu'nun varsayılan
+/// hamleleri yüklenir (Inspector'da sağ tık > "Varsayılan Düellocu Hamleleri"
+/// ile de doldurulup düzenlenebilir).
+/// </summary>
+[RequireComponent(typeof(EnemyController))]
+public class EnemyMoveset : MonoBehaviour
+{
+    [Header("Hamleler (boşsa varsayılan Düellocu seti)")]
+    public List<AttackMove> moves = new List<AttackMove>();
+
+    [Tooltip("Az önce kullanılan hamlenin tekrar seçilme ağırlığı çarpanı.")]
+    [Range(0f, 1f)]
+    public float repeatPenalty = 0.35f;
+
+    [Header("Kombo")]
+    [Tooltip(
+        "Açık: kombonun ARA vuruşlarında parry slow-mo yok (ritim bozulmaz). " +
+        "Slow-mo son vuruşta ya da denge kırılınca gelir.")]
+    public bool noParrySlowMoMidCombo = true;
+
+    [Tooltip("Kombo başlarken başın üstünde vuruş noktaları göster.")]
+    public bool showComboIndicator = true;
+
+    [Tooltip(
+        "Kombo vuruşları block'lanınca yenen posture çarpanı " +
+        "(0.6 = %60). 3 vuruşluk kombo tam block'la posture'ı kırmasın.")]
+    [Range(0.1f, 1f)]
+    public float comboBlockPostureMultiplier = 0.6f;
+
+    [Tooltip("Kombonun İLK vuruşunun uyarısına eklenen süre: noktaları okuma zamanı.")]
+    [Min(0f)]
+    public float comboFirstWindupBonus = 0.25f;
+
+    [Header("Süpürme (Sweep)")]
+    [Tooltip("Vuruş kutusunun yüksekliği: oyuncunun ayakları bunun üstündeyse ıskalar.")]
+    [Min(0.1f)]
+    public float sweepHitHeight = 0.6f;
+
+    [Tooltip("Süpürmenin ileri menzili = Attack Range × bu.")]
+    [Min(0.5f)]
+    public float sweepReachMultiplier = 1.4f;
+
+    [Tooltip("Açık: dash'in dokunulmazlığı süpürmeyi geçemez, ZIPLAMAK gerekir.")]
+    public bool sweepIgnoresDash = true;
+
+    [Tooltip("Süpürme uyarısında zemindeki kutunun rengi.")]
+    public Color sweepColor = new Color(0.3f, 0.75f, 1f);
+
+    private AttackMove lastMove;
+
+    private void Awake()
+    {
+        if (moves == null || moves.Count == 0)
+            moves = CreateDuelistMoves();
+    }
+
+    [ContextMenu("Varsayılan Düellocu Hamleleri")]
+    private void FillDefaults()
+    {
+        moves = CreateDuelistMoves();
+    }
+
+    // Oyuncu uzaklığına göre ağırlıklı rastgele hamle. Uygun yoksa null
+    // (EnemyAttackState klasik tek vuruşa döner).
+    public AttackMove PickMove(float distance)
+    {
+        float now = EnemyTime.Now;
+        float total = 0f;
+
+        for (int i = 0; i < moves.Count; i++)
+            total += WeightOf(moves[i], distance, now);
+
+        if (total <= 0f)
+            return null;
+
+        float roll = UnityEngine.Random.value * total;
+
+        for (int i = 0; i < moves.Count; i++)
+        {
+            float w = WeightOf(moves[i], distance, now);
+
+            if (w <= 0f)
+                continue;
+
+            roll -= w;
+
+            if (roll <= 0f)
+                return Use(moves[i], now);
+        }
+
+        // Kayan nokta payı: son uygun hamle.
+        for (int i = moves.Count - 1; i >= 0; i--)
+        {
+            if (WeightOf(moves[i], distance, now) > 0f)
+                return Use(moves[i], now);
+        }
+
+        return null;
+    }
+
+    private AttackMove Use(AttackMove move, float now)
+    {
+        move.lastUsedTime = now;
+        lastMove = move;
+        return move;
+    }
+
+    private float WeightOf(AttackMove move, float distance, float now)
+    {
+        if (
+            move == null ||
+            move.hits == null ||
+            move.hits.Count == 0 ||
+            move.weight <= 0f
+        )
+        {
+            return 0f;
+        }
+
+        if (distance < move.minDistance || distance > move.maxDistance)
+            return 0f;
+
+        if (now - move.lastUsedTime < move.cooldown)
+            return 0f;
+
+        return move == lastMove
+            ? move.weight * repeatPenalty
+            : move.weight;
+    }
+
+    // =========================================================
+    // VARSAYILAN: DÜELLOCU
+    // =========================================================
+
+    public static List<AttackMove> CreateDuelistMoves()
+    {
+        return new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Tek Vuruş",
+                weight = 1f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.8f) }
+            },
+
+            new AttackMove
+            {
+                name = "Üçlü Kombo",
+                weight = 1.2f,
+                recoveryMultiplier = 1.4f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.7f),
+                    new MoveHit(MoveHitType.Normal, 0.45f),
+                    new MoveHit(MoveHitType.Normal, 0.6f, 0f, 1.3f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Gecikmeli Vuruş",
+                weight = 0.9f,
+                hits = { new MoveHit(MoveHitType.Normal, 1.0f, 0.8f, 1.2f) }
+            },
+
+            new AttackMove
+            {
+                name = "Süpürme",
+                weight = 0.8f,
+                cooldown = 2.5f,
+                hits = { new MoveHit(MoveHitType.Sweep, 1.0f, 0f, 1.5f) }
+            },
+
+            new AttackMove
+            {
+                name = "Kombo + Süpürme",
+                weight = 0.7f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.7f),
+                    new MoveHit(MoveHitType.Normal, 0.45f),
+                    new MoveHit(MoveHitType.Sweep, 0.6f, 0f, 1.5f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Yakalama",
+                weight = 0.6f,
+                cooldown = 6f,
+                hits = { new MoveHit(MoveHitType.Grab, 1.2f) }
+            }
+        };
+    }
+}

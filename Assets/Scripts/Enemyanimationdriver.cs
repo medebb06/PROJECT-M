@@ -2,32 +2,31 @@ using UnityEngine;
 
 /// <summary>
 /// DÜŞMAN ANİMASYON SÜRÜCÜSÜ. Animator'da geçiş (ok) ÇİZMEDEN Idle / Walk /
-/// Attack / Hurt animasyonlarını düşmanın o anki durumuna göre oynatır.
+/// Attack / Hurt (ve isteğe bağlı Sweep / Grab) animasyonlarını düşmanın o
+/// anki durumuna göre oynatır.
 ///
-/// Mantık (öncelik sırasıyla, her karede):
+/// Öncelik (her karede):
 ///   Ölü                      → Hurt (son karede kalır)
 ///   Stagger / Execute        → Hurt (son karede kalır = sersem duruş)
 ///   Hit (vurulup savruldu)   → Hurt (her YENİ vuruşta baştan)
-///   Attack                   → Attack (vuruş karesi HASAR anına hizalanır)
+///   Attack                   → vuruş türüne göre Attack / Sweep / Grab
+///                              (komboda HER vuruşta baştan)
 ///   Hareket ediyor           → Walk
 ///   Duruyor                  → Idle
 ///
-/// VURUŞ HİZALAMA: Saldırı başlayınca Attack'in İLK karesi (hazırlık pozu)
-/// tutulur; vuruşa 'Attack Animation Hit Time' kadar kala animasyon
-/// akmaya başlar. Böylece vuruş karesi hasarla tam aynı anda gelir
-/// (uyarı süresi, engellenemez vuruş, zehir uzatması fark etmez).
+/// VURUŞ HİZALAMA: Uyarı sırasında saldırı animasyonu 'Hold Pose Time'
+/// anındaki karede (hazırlık/kalkmış silah pozu) DONAR; vuruşa tam
+/// 'hit time − hold pose time' kala akmaya başlar. Vuruş karesi hasarla
+/// aynı anda gelir: gecikmeli vuruş = silah havada bekler.
+/// Uyarı, hit time'dan kısaysa (hızlı kombo) animasyon ortasından başlar.
 ///
 /// KURULUM:
-///  1) Düşman prefab'ına bu bileşeni ekle.
-///  2) Animator Controller'da 4 state: Idle, Walk, Attack, Hurt
-///     (isimler aşağıdaki alanlarla AYNI). Default = Idle. OK ÇİZME.
-///  3) Parameters'a 'Attack' adında bir Trigger ekle (EnemyController
-///     hâlâ onu çağırıyor; hiçbir geçişte kullanılmaz, sadece uyarıyı susturur).
-///  4) EnemyController > Attack Animation Hit Time = animasyonun başından
-///     vuruş karesine kadar geçen süre (ör. 12 fps'de 5. kare → 5/12 = 0.42).
-///
-/// Düşman zamanı (parry slow-mo) EnemyController'ın animator.speed
-/// ayarıyla zaten uygulanır; bu bileşen hıza dokunmaz.
+///  1) Düşman prefab'ına ekle.
+///  2) Animator'da state'ler: Idle, Walk, Attack, Hurt (+ isteğe bağlı
+///     Sweep, Grab; yoksa Attack kullanılır). Default = Idle. OK ÇİZME.
+///  3) Parameters'a 'Attack' adında Trigger ekle (sadece uyarı susturur).
+///  4) EnemyController > Attack Animation Hit Time = klibin başından vuruş
+///     karesine kadar süre (12 fps'de 5. kare → 5/12 = 0.42).
 /// </summary>
 [RequireComponent(typeof(EnemyController))]
 public class EnemyAnimationDriver : MonoBehaviour
@@ -38,8 +37,29 @@ public class EnemyAnimationDriver : MonoBehaviour
     [SerializeField] private string attackState = "Attack";
     [SerializeField] private string hurtState = "Hurt";
 
+    [Tooltip("Süpürme animasyonu. Animator'da yoksa Attack oynar.")]
+    [SerializeField] private string sweepState = "Sweep";
+
+    [Tooltip("Yakalama/engellenemez animasyonu. Animator'da yoksa Attack oynar.")]
+    [SerializeField] private string grabState = "Grab";
+
+    [Header("Vuruş zamanlaması")]
+    [Tooltip(
+        "Uyarı sırasında saldırı klibinin donduğu an (sn). 0 = ilk kare. " +
+        "Silahın havada olduğu kareyi seç (ör. 12 fps'de 3. kare → 0.25).")]
+    [Min(0f)]
+    [SerializeField] private float holdPoseTime = 0f;
+
+    [Tooltip("Sweep klibinin vuruş karesi (sn). 0 = Attack Animation Hit Time.")]
+    [Min(0f)]
+    [SerializeField] private float sweepHitTime = 0f;
+
+    [Tooltip("Grab klibinin vuruş karesi (sn). 0 = Attack Animation Hit Time.")]
+    [Min(0f)]
+    [SerializeField] private float grabHitTime = 0f;
+
     [Header("Geçişler")]
-    [Tooltip("Idle ↔ Walk ↔ Idle yumuşak geçiş süresi (sn). Pixel art için 0.")]
+    [Tooltip("Idle ↔ Walk yumuşak geçiş süresi (sn). Pixel art için 0.")]
     [Min(0f)]
     [SerializeField] private float locomotionBlend = 0f;
 
@@ -49,9 +69,8 @@ public class EnemyAnimationDriver : MonoBehaviour
 
     [Header("Davranış")]
     [Tooltip(
-        "Saldırı başında Attack'in ilk karesini (hazırlık pozu) tut, vuruş " +
-        "karesi hasar anına denk gelecek şekilde bırak. Kapalı: saldırı " +
-        "animasyonu EnemyController'ın çağırdığı anda başlar.")]
+        "Vuruş karesini hasar anına hizala (önerilen). Kapalı: animasyon " +
+        "EnemyController'ın çağırdığı anda baştan oynar.")]
     [SerializeField] private bool alignHitFrameToDamage = true;
 
     [Tooltip("Sersemleme ve execute sırasında Hurt oynasın (son karede kalır).")]
@@ -60,7 +79,7 @@ public class EnemyAnimationDriver : MonoBehaviour
     [Tooltip("Ölünce Hurt oynasın (fade-out bitene kadar).")]
     [SerializeField] private bool hurtOnDeath = true;
 
-    [Tooltip("Kombo vuruşlarında her yeni darbe Hurt'ü baştan başlatsın.")]
+    [Tooltip("Her yeni darbe Hurt'ü baştan başlatsın.")]
     [SerializeField] private bool restartHurtOnNewHit = true;
 
     private EnemyController enemy;
@@ -71,13 +90,22 @@ public class EnemyAnimationDriver : MonoBehaviour
     private int walkHash;
     private int attackHash;
     private int hurtHash;
+    private int sweepHash;
+    private int grabHash;
 
-    private int current;            // şu an oynattığımız state
-    private object lastStateObject; // yeni state örneği tespiti
-    private object hurtSource;      // Hurt'ü başlatan state örneği
+    private bool hasSweep;
+    private bool hasGrab;
 
+    private int current;
+    private object lastStateObject;
+    private object hurtSource;
+
+    // Saldırı
     private bool attackActive;
-    private bool holdingWindup;
+    private bool holding;
+    private int attackClipHash;
+    private float attackHitTime;
+    private int lastStep = -1;
     private int attackStartFrame;
 
     private void Awake()
@@ -90,6 +118,8 @@ public class EnemyAnimationDriver : MonoBehaviour
         walkHash = Animator.StringToHash(walkState);
         attackHash = Animator.StringToHash(attackState);
         hurtHash = Animator.StringToHash(hurtState);
+        sweepHash = Animator.StringToHash(sweepState);
+        grabHash = Animator.StringToHash(grabState);
 
         if (animator == null)
         {
@@ -102,10 +132,13 @@ public class EnemyAnimationDriver : MonoBehaviour
             return;
         }
 
-        CheckState(idleState, idleHash);
-        CheckState(walkState, walkHash);
-        CheckState(attackState, attackHash);
-        CheckState(hurtState, hurtHash);
+        CheckState(idleState, idleHash, true);
+        CheckState(walkState, walkHash, true);
+        CheckState(attackState, attackHash, true);
+        CheckState(hurtState, hurtHash, true);
+
+        hasSweep = CheckState(sweepState, sweepHash, false);
+        hasGrab = CheckState(grabState, grabHash, false);
     }
 
     private void OnEnable()
@@ -114,7 +147,8 @@ public class EnemyAnimationDriver : MonoBehaviour
         lastStateObject = null;
         hurtSource = null;
         attackActive = false;
-        holdingWindup = false;
+        holding = false;
+        lastStep = -1;
     }
 
     // Durumlar EnemyController.Update'te değişir; biz ondan SONRA bakarız.
@@ -149,8 +183,6 @@ public class EnemyAnimationDriver : MonoBehaviour
         )
         {
             attackActive = false;
-
-            // Aynı sersemleme boyunca baştan başlamaz, son karede kalır.
             PlayHurt(state, false);
             return;
         }
@@ -160,7 +192,6 @@ public class EnemyAnimationDriver : MonoBehaviour
         if (state is EnemyHitState)
         {
             attackActive = false;
-
             PlayHurt(state, restartHurtOnNewHit && newState);
             return;
         }
@@ -169,22 +200,21 @@ public class EnemyAnimationDriver : MonoBehaviour
 
         if (state is EnemyAttackState attack)
         {
-            if (newState)
+            // Yeni saldırı ya da kombonun yeni vuruşu: baştan.
+            if (newState || attack.StepIndex != lastStep)
                 BeginAttack(attack);
 
-            if (attackActive)
-            {
-                if (UpdateAttack(attack))
-                    return;
-            }
+            if (attackActive && UpdateAttack(attack))
+                return;
 
-            // Saldırı animasyonu bitti (recovery) ya da hiç başlamadı.
+            // Vuruş bitti (recovery) ya da animasyon kapalı.
             Play(idleHash, locomotionBlend);
             return;
         }
 
         attackActive = false;
-        holdingWindup = false;
+        holding = false;
+        lastStep = -1;
 
         // ---------------- HAREKET ----------------
 
@@ -203,39 +233,73 @@ public class EnemyAnimationDriver : MonoBehaviour
 
     private void BeginAttack(EnemyAttackState attack)
     {
+        lastStep = attack.StepIndex;
         attackActive = true;
-        attackStartFrame = Time.frameCount;
 
         // EnemyController'ın tetiklediği trigger birikmesin.
         animator.ResetTrigger(attackState);
 
-        holdingWindup =
-            alignHitFrameToDamage &&
-            attack.IsWindingUp &&
-            attack.RemainingWindup > enemy.AttackAnimationHitTime;
+        SelectClip(attack.CurrentHitType);
 
-        PlayFromStart(attackHash);
+        if (!alignHitFrameToDamage)
+        {
+            holding = false;
+            attackStartFrame = Time.frameCount;
+            PlayAt(attackClipHash, 0f);
+            return;
+        }
+
+        holding = true;
+        UpdateAttack(attack);
     }
 
-    // true: Attack animasyonu hâlâ sürüyor (dokunma).
+    private void SelectClip(MoveHitType type)
+    {
+        float baseHit = enemy.AttackAnimationHitTime;
+
+        switch (type)
+        {
+            case MoveHitType.Sweep when hasSweep:
+                attackClipHash = sweepHash;
+                attackHitTime = sweepHitTime > 0f ? sweepHitTime : baseHit;
+                break;
+
+            case MoveHitType.Grab when hasGrab:
+                attackClipHash = grabHash;
+                attackHitTime = grabHitTime > 0f ? grabHitTime : baseHit;
+                break;
+
+            default:
+                attackClipHash = attackHash;
+                attackHitTime = baseHit;
+                break;
+        }
+    }
+
+    // true: saldırı animasyonu hâlâ sürüyor (dokunma).
     private bool UpdateAttack(EnemyAttackState attack)
     {
-        // Hazırlık pozunu tut: vuruşa 'hit time' kalana kadar ilk kare.
-        if (holdingWindup)
+        if (holding)
         {
-            if (
-                attack.IsWindingUp &&
-                attack.RemainingWindup > enemy.AttackAnimationHitTime
-            )
+            float hold = Mathf.Min(holdPoseTime, attackHitTime);
+
+            // Vuruşa kalan süreye göre klipte olması gereken an.
+            float clipTime =
+                attack.IsWindingUp
+                    ? attackHitTime - attack.RemainingWindup
+                    : attackHitTime;
+
+            if (clipTime < hold)
             {
-                animator.Play(attackHash, 0, 0f);
+                // Hazırlık pozunda bekle.
+                PlayAt(attackClipHash, hold);
                 return true;
             }
 
-            // Bırak: animasyon şimdi akmaya başlar, vuruş karesi hasarla gelir.
-            holdingWindup = false;
+            // Bırak: tam olması gereken yerden akmaya başlar.
+            holding = false;
             attackStartFrame = Time.frameCount;
-            animator.Play(attackHash, 0, 0f);
+            PlayAt(attackClipHash, clipTime);
             return true;
         }
 
@@ -248,7 +312,7 @@ public class EnemyAnimationDriver : MonoBehaviour
 
         AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
 
-        if (info.shortNameHash == attackHash && info.normalizedTime < 1f)
+        if (info.shortNameHash == attackClipHash && info.normalizedTime < 1f)
             return true;
 
         attackActive = false;
@@ -264,20 +328,10 @@ public class EnemyAnimationDriver : MonoBehaviour
         if (current == hurtHash && !restart)
             return;
 
-        if (
-            current == hurtHash &&
-            restart &&
-            ReferenceEquals(source, hurtSource) &&
-            source != null
-        )
-        {
-            return;
-        }
-
         hurtSource = source;
 
         // Darbe tepkisi anında başlasın (geçiş yok).
-        PlayFromStart(hurtHash);
+        PlayAt(hurtHash, 0f);
     }
 
     private void Play(int hash, float blend)
@@ -290,30 +344,34 @@ public class EnemyAnimationDriver : MonoBehaviour
         if (blend > 0f)
             animator.CrossFadeInFixedTime(hash, blend, 0, 0f);
         else
-            animator.Play(hash, 0, 0f);
+            animator.PlayInFixedTime(hash, 0, 0f);
     }
 
-    private void PlayFromStart(int hash)
+    // Klibin belirli SANİYESİNDEN oynat (anında).
+    private void PlayAt(int hash, float seconds)
     {
         current = hash;
-        animator.Play(hash, 0, 0f);
+        animator.PlayInFixedTime(hash, 0, Mathf.Max(0f, seconds));
     }
 
-    private void CheckState(string stateName, int hash)
+    private bool CheckState(string stateName, int hash, bool required)
     {
-        if (
-            animator.runtimeAnimatorController == null ||
+        if (animator.runtimeAnimatorController == null)
+            return false;
+
+        bool exists =
             animator.HasState(0, hash) ||
-            animator.HasState(0, Animator.StringToHash("Base Layer." + stateName))
-        )
+            animator.HasState(0, Animator.StringToHash("Base Layer." + stateName));
+
+        if (!exists && required)
         {
-            return;
+            Debug.LogWarning(
+                "EnemyAnimationDriver: Animator'da '" + stateName + "' adında " +
+                "bir state yok (" + name + "). State adını ya da bu bileşendeki " +
+                "alanı düzelt."
+            );
         }
 
-        Debug.LogWarning(
-            "EnemyAnimationDriver: Animator'da '" + stateName + "' adında " +
-            "bir state yok (" + name + "). State adını ya da bu bileşendeki " +
-            "alanı düzelt."
-        );
+        return exists;
     }
 }

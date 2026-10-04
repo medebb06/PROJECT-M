@@ -180,7 +180,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         float knockbackDuration,
         float knockbackDeceleration = -1f,
         EnemyController source = null,
-        PlayerHitKind kind = PlayerHitKind.Other
+        PlayerHitKind kind = PlayerHitKind.Other,
+        bool ignoreDashIFrames = false
     )
     {
         if (health == null)
@@ -190,7 +191,13 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             return;
 
         // Dash i-frame'i VEYA hasar sonrası korumalı dönem.
-        if (player.isInvincible)
+        // ignoreDashIFrames (süpürme): dash korumaz, korumalı dönem yine korur.
+        bool dashOnly =
+            ignoreDashIFrames &&
+            player.isDashing &&
+            player.hitInvincibilityTimer <= 0f;
+
+        if (player.isInvincible && !dashOnly)
             return;
 
         if (health.IsDead)

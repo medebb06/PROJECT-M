@@ -1,5 +1,22 @@
 using UnityEngine;
 
+/// <summary>
+/// Oyuncu savunması: parry (bas) ve block (basılı tut).
+///
+/// AKIŞ (parry + parry + parry):
+///  - Parry penceresi tuşu bıraksan da tam süre açık kalır.
+///  - Giriş tamponu: kilitliyken (hasar sersemlemesi, saldırı...) basılan
+///    parry kaybolmaz, kısa süre içinde ilk fırsatta başlar.
+///  - Havada da savunma yapılabilir (vuruş seni hafif kaldırınca parry
+///    yutulmasın).
+///  - Saldırı sırasında basınca saldırı iptal olur, parry hemen başlar.
+///  - ZİNCİR: ilk parry ZAMANLAMALI; başarılı olunca zincir başlar.
+///    Zincir boyunca sağ tıka ABANMAK da, BASILI TUTMAK da kombonun
+///    kalan vuruşlarını parry'ler (2D pixel'de Sekiro okunurluğu yok;
+///    ilk vuruşu okumak yeter).
+///  - SPAM CEZASI (sadece zincir DIŞINDA, hafif): boşa giden parry'nin
+///    hemen ardından basılan pencere biraz daralır.
+/// </summary>
 public class PlayerDefenseController : MonoBehaviour
 {
     [Header("References")]
@@ -11,8 +28,52 @@ public class PlayerDefenseController : MonoBehaviour
     [SerializeField] private float parryWindow = 0.12f;
     [SerializeField] private GameObject parryVisual;
 
+    [Header("Akış")]
+    [Tooltip("Savunma tuşu bu kadar süre 'hatırlanır' (kilit bitince parry başlar).")]
+    [Min(0f)]
+    [SerializeField] private float inputBuffer = 0.15f;
+
+    [Tooltip("Havadayken de parry/block yapılabilsin.")]
+    [SerializeField] private bool allowAirDefense = true;
+
+    [Tooltip("Saldırı sırasında savunmaya basınca saldırı iptal olsun.")]
+    [SerializeField] private bool cancelAttackOnDefense = true;
+
+    [Header("Parry Zinciri (kombo akışı)")]
+    [Tooltip(
+        "Son başarılı parry'den sonra zincir bu kadar sürer (sn). Her başarılı " +
+        "parry zinciri tazeler; kombo arası boşluktan uzun olmalı.")]
+    [Min(0f)]
+    [SerializeField] private float chainDuration = 1.0f;
+
+    [Tooltip("Zincirdeki parry penceresinin çarpanı (abanırken boşluk kalmasın).")]
+    [Min(1f)]
+    [SerializeField] private float chainWindowMultiplier = 2.5f;
+
+    [Tooltip(
+        "Açık: zincir sırasında BLOCK'ta (sağ tık basılı) kalmak da parry " +
+        "sayılır. İlk parry'den sonra basılı tutarak komboyu parry'lersin.")]
+    [SerializeField] private bool holdToParryInChain = true;
+
+    [Header("Spam Cezası")]
+    [Tooltip("Boşa giden parry'den sonra bu süre içinde tekrar basılırsa ceza uygulanır.")]
+    [Min(0f)]
+    [SerializeField] private float spamPenaltyTime = 0.25f;
+
+    [Tooltip("Cezalı parry penceresinin çarpanı. 1 = ceza yok.")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float spamWindowMultiplier = 0.75f;
+
+    [Header("Debug")]
+    [Tooltip("Ekranda savunma durumunu gösterir (takılma teşhisi için).")]
+    [SerializeField] private bool showDebug = false;
+
     private IPlayerDefenseState currentState;
-    private float blockInputTimer;
+    private PlayerCombatController combat;
+
+    private float bufferTimer;
+    private float lastSuccessTime = -99f;
+    private float lastFailTime = -99f;
 
     public bool IsBlocking { get; private set; }
     public bool IsParrying { get; private set; }
@@ -34,6 +95,10 @@ public class PlayerDefenseController : MonoBehaviour
             PlayerStats.GetOr(StatType.ParryWindow, parryWindow)
         );
 
+    // Zincirde mi? (Arayüz / efekt için.)
+    public bool InParryChain =>
+        Time.time - lastSuccessTime <= chainDuration;
+
     void Awake()
     {
         if (player == null)
@@ -43,11 +108,23 @@ public class PlayerDefenseController : MonoBehaviour
             combatFeedback =
                 GetComponent<CombatImpactFeedback>();
 
+        combat = GetComponent<PlayerCombatController>();
+
         if (defenseVisual != null)
             defenseVisual.SetActive(false);
 
         if (parryVisual != null)
             parryVisual.SetActive(false);
+    }
+
+    private void OnEnable()
+    {
+        CombatEvents.ParrySucceeded += OnParrySucceeded;
+    }
+
+    private void OnDisable()
+    {
+        CombatEvents.ParrySucceeded -= OnParrySucceeded;
     }
 
     void Update()
@@ -56,32 +133,69 @@ public class PlayerDefenseController : MonoBehaviour
         currentState?.Tick();
     }
 
+    // =========================================================
+    // GİRİŞ
+    // =========================================================
+
     private void HandleInput()
     {
         if (Input.GetMouseButtonDown(1))
-            StartDefense();
+            bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
 
-        if (Input.GetMouseButtonUp(1))
-            StopDefense();
+        if (bufferTimer > 0f)
+        {
+            if (TryStartParry())
+                bufferTimer = 0f;
+            else
+                bufferTimer -= Time.unscaledDeltaTime;
+        }
+
+        // Block bırakılınca savunma biter. (Parry penceresi bırakınca
+        // KAPANMAZ; süresi dolunca kendisi karar verir.)
+        if (
+            Input.GetMouseButtonUp(1) &&
+            currentState is PlayerBlockState
+        )
+        {
+            ChangeState(null);
+        }
     }
 
-    private void StartDefense()
+    private bool CanStartDefense()
     {
         if (player == null)
-            return;
+            return false;
 
-        // Posture break sırasında yeni
-        // block/parry başlatılamaz.
+        // Posture break / hasar sersemlemesi / ölüm sırasında başlatılamaz
+        // (tampon bekler).
         if (!player.canControl)
-            return;
+            return false;
 
         if (player.inputLocked)
-            return;
+            return false;
 
-        if (!player.IsGrounded())
-            return;
+        if (player.isDashing)
+            return false;
 
-        if (player.rb != null)
+        if (!allowAirDefense && !player.IsGrounded())
+            return false;
+
+        return true;
+    }
+
+    private bool TryStartParry()
+    {
+        if (!CanStartDefense())
+            return false;
+
+        // Zaten açık bir parry penceresi varsa ona dokunma.
+        if (currentState is PlayerParryState)
+            return true;
+
+        if (cancelAttackOnDefense && combat != null)
+            combat.CancelAttack();
+
+        if (player.rb != null && player.IsGrounded())
         {
             player.rb.linearVelocity =
                 new Vector2(
@@ -93,18 +207,46 @@ public class PlayerDefenseController : MonoBehaviour
         ChangeState(
             new PlayerParryState(
                 this,
-                player
+                player,
+                CurrentParryWindow()
             )
         );
+
+        return true;
     }
 
-    private void StopDefense()
+    private float CurrentParryWindow()
     {
-        if (currentState == null)
-            return;
+        float window = ParryWindow;
 
-        ChangeState(null);
+        if (Time.time - lastSuccessTime <= chainDuration)
+            window *= chainWindowMultiplier;
+        else if (Time.time - lastFailTime <= spamPenaltyTime)
+            window *= spamWindowMultiplier;
+
+        return window;
     }
+
+    // =========================================================
+    // PARRY SONUCU
+    // =========================================================
+
+    private void OnParrySucceeded(EnemyController enemy, bool brokeBalance)
+    {
+        lastSuccessTime = Time.time;
+    }
+
+    // PlayerParryState pencere bitince çağırır.
+    public void NotifyParryWindowEnded(float windowStartTime)
+    {
+        // Pencere süresince hiç başarılı parry olmadıysa: boşa gitti.
+        if (lastSuccessTime < windowStartTime)
+            lastFailTime = Time.time;
+    }
+
+    // =========================================================
+    // STATE
+    // =========================================================
 
     public void ChangeState(
         IPlayerDefenseState newState
@@ -139,7 +281,11 @@ public class PlayerDefenseController : MonoBehaviour
 
     public bool CanParry()
     {
-        return IsParrying;
+        if (IsParrying)
+            return true;
+
+        // Zincirde basılı tutmak (block) da parry sayılır.
+        return holdToParryInChain && IsBlocking && InParryChain;
     }
 
     public bool CanBlock()
@@ -155,6 +301,10 @@ public class PlayerDefenseController : MonoBehaviour
         if (combatFeedback != null)
             combatFeedback.PlayParryImpact();
     }
+
+    // =========================================================
+    // BLOCK
+    // =========================================================
 
     public void HandleBlockHit(
         Vector2 hitDirection,
@@ -206,6 +356,8 @@ public class PlayerDefenseController : MonoBehaviour
             // Önce mevcut block/parry'yi kapat.
             ChangeState(null);
 
+            bufferTimer = 0f;
+
             if (player != null)
             {
                 player.ApplyPostureBreak(
@@ -213,6 +365,33 @@ public class PlayerDefenseController : MonoBehaviour
                 );
             }
         }
+    }
+
+    // =========================================================
+    // DEBUG
+    // =========================================================
+
+    private void OnGUI()
+    {
+        if (!showDebug || player == null)
+            return;
+
+        GUI.Label(
+            new Rect(10, 120, 520, 90),
+            "SAVUNMA  state: " +
+            (currentState != null ? currentState.GetType().Name : "-") +
+            "  parry: " + IsParrying +
+            "  block: " + IsBlocking +
+            "  zincir: " + InParryChain +
+            "\ncanControl: " + player.canControl +
+            "  inputLocked: " + player.inputLocked +
+            "  grounded: " + player.IsGrounded() +
+            "  tampon: " + (bufferTimer > 0f) +
+            "\nplayer state: " +
+            (player.stateMachine != null && player.stateMachine.CurrentState != null
+                ? player.stateMachine.CurrentState.GetType().Name
+                : "-")
+        );
     }
 
     // Block bedeli candan ödenir. ÖLDÜRMEZ: en az 1 can bırakır
