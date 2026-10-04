@@ -9946,14 +9946,14 @@ MonoBehaviour:
   defenseController: {fileID: 2122615058}
   inputBufferTime: 0.2
   comboResetTime: 0.4
-  comboCancelPoint: 0.6
+  comboCancelPoint: 0.8
   hitBoxSize: {x: 3, y: 2}
   hitVFXInsideAmount: 1.32
   hitVFXForwardOffset: 0.56
-  attack1BalanceDamage: 5
-  attack2BalanceDamage: 5
-  attack3BalanceDamage: 5
-  attack4BalanceDamage: 10
+  attack1BalanceDamage: 2
+  attack2BalanceDamage: 2
+  attack3BalanceDamage: 3
+  attack4BalanceDamage: 5
   attackHealthDamage: 1
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
