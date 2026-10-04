@@ -108,6 +108,16 @@ public class RunManager : MonoBehaviour
     [Tooltip("Son arenadan sonra çıkışa yürümek için en uzun süre (sn), sonra otomatik geçilir.")]
     [SerializeField] private float exitWalkTimeout = 60f;
 
+    [Tooltip(
+        "Haritadaki nöbetçi düşmanların seni fark etme mesafesi (dünya birimi). " +
+        "Bundan uzaktayken yerlerinde beklerler.")]
+    [SerializeField] private float postAggroRange = 13f;
+
+    [Tooltip(
+        "Düşmanlar ölmeden çıkışa geldiysen, bu kadar sn sonra kalanlar sana gelir " +
+        "(takılan / ulaşılamayan düşman bölümü kilitlemesin).")]
+    [SerializeField] private float exitPullDelay = 8f;
+
     public int RunSeed { get; private set; }
 
     private LevelGenerator level;
@@ -929,6 +939,13 @@ public class RunManager : MonoBehaviour
 
                 RoomInAct = roomsPerAct + 1;
 
+                // Haritada: çıkışta tek kapı, BOSS.
+                if (LevelActive && level.HasLevel)
+                    yield return PhysicalDoors(new List<RoomType> { RoomType.Boss });
+
+                if (playerHealth.IsDead)
+                    break;
+
                 yield return RunRoom(RoomType.Boss);
 
                 if (playerHealth.IsDead)
@@ -1063,6 +1080,13 @@ public class RunManager : MonoBehaviour
 
         chosenDoor = -1;
 
+        // Haritada: kapılar çıkış alanında, fiziksel.
+        if (LevelActive && level.HasLevel)
+        {
+            yield return PhysicalDoors(doorOptions);
+            yield break;
+        }
+
         State = RunState.ChoosingRoom;
 
         yield return PausedWait(() => chosenDoor >= 0);
@@ -1179,12 +1203,22 @@ public class RunManager : MonoBehaviour
         {
             case RoomType.Shop:
                 shopUsedThisAct = true;
-                yield return ShopRoutine();
+
+                if (LevelActive)
+                    yield return TransitionRoom(RoomType.Shop);
+                else
+                    yield return ShopRoutine();
+
                 break;
 
             case RoomType.Rest:
                 restUsedThisAct = true;
-                yield return RestRoutine();
+
+                if (LevelActive)
+                    yield return TransitionRoom(RoomType.Rest);
+                else
+                    yield return RestRoutine();
+
                 break;
 
             default:
@@ -1232,7 +1266,15 @@ public class RunManager : MonoBehaviour
             yield return WaitUntilCleared(0);
 
             if (useLevel)
+            {
                 ReleaseArena(0);
+                level.ClearDoors();
+            }
+        }
+        else if (useLevel)
+        {
+            // Haritada: düşmanlar noktalarında bekler, hepsi ölünce çıkış açılır.
+            yield return LevelCombat(type);
         }
         else
         {
@@ -1308,12 +1350,7 @@ public class RunManager : MonoBehaviour
         if (playerHealth.IsDead)
             yield break;
 
-        // Haritada: odanın sonu çıkış kapısı.
-        if (useLevel)
-            yield return WalkToExit();
-
-        if (playerHealth.IsDead)
-            yield break;
+        // Haritada: çıkış kapıları (oda seçimi) ödüllerden sonra çıkışta açılır.
 
         // ---------------- TEMİZLENDİ ----------------
 
@@ -1395,7 +1432,289 @@ public class RunManager : MonoBehaviour
 
         level.TeleportPlayer(level.PlayerStart);
 
+        // Düşmanlar ölmeden çıkış kilitli.
+        level.SetExitDoors(
+            new[] { "ÇIKIŞ" },
+            new[] { new Color(0.9f, 0.85f, 0.7f) },
+            true
+        );
+
+        level.SetLockedText("KİLİTLİ");
+
         return true;
+    }
+
+    // Haritada dövüş odası: her arena bir NÖBET noktası. Düşmanlar orada
+    // bekler (yakına gelince saldırır). Hepsi ölünce çıkış açılır.
+    private IEnumerator LevelCombat(RoomType type)
+    {
+        RoomArchetype = PickArchetype(true);
+
+        EnemyArchetypeType roomType = RoomArchetype;
+
+        WaveCount = Mathf.Max(1, level.ArenaCount);
+
+        State = RunState.Fighting;
+
+        string typeName =
+            useArchetypes
+                ? "  •  " + EnemyArchetype.NameOf(roomType).ToUpperInvariant()
+                : "";
+
+        ShowBanner(
+            type == RoomType.Elite
+                ? "ELİT" + typeName
+                : "PERDE " + Act + "  •  ODA " + RoomInAct + typeName,
+            1.6f
+        );
+
+        for (int i = 0; i < level.ArenaCount; i++)
+        {
+            Wave = i + 1;
+
+            // İlk nöbet odanın tipi; sonrakiler karışık.
+            RoomArchetype = i == 0 ? roomType : PickArchetype(false);
+
+            levelSpawnPoints = level.ArenaSpawnPoints(i);
+            levelSpawnCursor = 0;
+
+            int before = spawned.Count;
+
+            yield return SpawnWave(EnemiesForWave(i + 1), type == RoomType.Elite);
+
+            for (int k = before; k < spawned.Count; k++)
+                MakeGuard(spawned[k]);
+
+            if (playerHealth.IsDead)
+                yield break;
+        }
+
+        RoomArchetype = roomType;
+        levelSpawnPoints = null;
+
+        if (spawned.Count == 0)
+        {
+            Debug.LogError("RunManager: haritaya düşman doğurulamadı! 'Enemy Prefab' alanını kontrol et.");
+            level.ClearDoors();
+            yield break;
+        }
+
+        yield return WaitLevelCleared();
+
+        level.ClearDoors();
+    }
+
+    private void MakeGuard(EnemyController enemy)
+    {
+        if (enemy == null)
+            return;
+
+        enemy.alwaysHunt = false;
+        enemy.chaseRange = postAggroRange;
+    }
+
+    private IEnumerator WaitLevelCleared()
+    {
+        float nearExitSince = -1f;
+        float nextInfo = 0f;
+        int lastShown = -1;
+
+        while (!playerHealth.IsDead)
+        {
+            RefreshAlive();
+
+            if (AliveEnemies <= 0)
+                break;
+
+            if (AliveEnemies != lastShown)
+            {
+                lastShown = AliveEnemies;
+                level.SetLockedText("KİLİTLİ  •  " + AliveEnemies + " düşman");
+            }
+
+            if (level.NearExit(player.transform.position))
+            {
+                if (nearExitSince < 0f)
+                    nearExitSince = Time.time;
+
+                if (Time.time >= nextInfo)
+                {
+                    ShowBanner("KALAN DÜŞMAN: " + AliveEnemies, 1.4f);
+                    nextInfo = Time.time + 3f;
+                }
+
+                if (exitPullDelay > 0f && Time.time - nearExitSince > exitPullDelay)
+                {
+                    PullRemainingEnemies();
+                    nearExitSince = Time.time;
+                }
+            }
+            else
+            {
+                nearExitSince = -1f;
+            }
+
+            yield return null;
+        }
+    }
+
+    // Çıkışta bekleyen oyuncuya kalan (uzaktaki) düşmanları getir.
+    private void PullRemainingEnemies()
+    {
+        int pulled = 0;
+
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            EnemyController e = spawned[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            e.alwaysHunt = true;
+
+            if (Vector2.Distance(e.transform.position, player.transform.position) > postAggroRange)
+            {
+                e.transform.position = RecoverPosition(-1);
+
+                Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
+
+                if (rb != null)
+                    rb.linearVelocity = Vector2.zero;
+
+                pulled++;
+            }
+        }
+
+        if (pulled > 0)
+            ShowBanner("KALANLAR GELİYOR!", 1.4f);
+    }
+
+    // =========================================================
+    // FİZİKSEL KAPILAR / GEÇİŞ ALANLARI
+    // =========================================================
+
+    private static bool InteractPressed()
+    {
+        return
+            Input.GetKeyDown(KeyCode.W) ||
+            Input.GetKeyDown(KeyCode.UpArrow) ||
+            Input.GetKeyDown(KeyCode.F);
+    }
+
+    private static string DoorLabel(RoomType type)
+    {
+        switch (type)
+        {
+            case RoomType.Elite: return "ELİT";
+            case RoomType.Shop: return "DÜKKAN";
+            case RoomType.Rest: return "DİNLENME";
+            case RoomType.Boss: return "BOSS";
+            default: return "DÖVÜŞ";
+        }
+    }
+
+    private static Color DoorColor(RoomType type)
+    {
+        switch (type)
+        {
+            case RoomType.Elite: return new Color(0.75f, 0.45f, 1f);
+            case RoomType.Shop: return new Color(1f, 0.82f, 0.3f);
+            case RoomType.Rest: return new Color(0.45f, 0.95f, 0.55f);
+            case RoomType.Boss: return new Color(1f, 0.3f, 0.25f);
+            default: return new Color(1f, 0.55f, 0.45f);
+        }
+    }
+
+    // Çıkış alanında her seçenek için bir kapı; içine girip [W] ile seç.
+    private IEnumerator PhysicalDoors(List<RoomType> options)
+    {
+        chosenDoor = -1;
+
+        State = RunState.Fighting;
+
+        string[] labels = new string[options.Count];
+        Color[] colors = new Color[options.Count];
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            labels[i] = DoorLabel(options[i]);
+            colors[i] = DoorColor(options[i]);
+        }
+
+        level.SetExitDoors(labels, colors, false);
+
+        ShowBanner(options.Count > 1 ? "ÇIKIŞTA BİR KAPI SEÇ  →" : "ÇIKIŞA İLERLE  →", 2f);
+
+        while (chosenDoor < 0 && !playerHealth.IsDead)
+        {
+            int door = level.DoorAt(player.transform.position);
+
+            if (door >= 0 && InteractPressed())
+                chosenDoor = door;
+
+            yield return null;
+        }
+
+        level.ClearDoors();
+    }
+
+    // Dükkan / dinlenme: küçük bir geçiş alanı. Tezgaha / ateşe gelip [W]
+    // ile açılır (bir kez). Çıkışta sonraki odanın kapıları çıkar.
+    private IEnumerator TransitionRoom(RoomType type)
+    {
+        bool shop = type == RoomType.Shop;
+
+        bool built = false;
+
+        try
+        {
+            level.Generate(
+                RunSeed + Stage * 7919 + Act * 977 + RoomInAct * 31 + (shop ? 101 : 202),
+                0,
+                false,
+                shop ? ChunkKind.Shop : ChunkKind.Rest
+            );
+
+            built = level.HasLevel;
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+
+        if (!built)
+        {
+            yield return shop ? ShopRoutine() : RestRoutine();
+            yield break;
+        }
+
+        level.TeleportPlayer(level.PlayerStart);
+        level.CreateStand(shop ? "DÜKKAN" : "DİNLENME", DoorColor(type));
+
+        State = RunState.Fighting;
+
+        ShowBanner(shop ? "DÜKKAN" : "DİNLENME ALANI", 1.6f);
+
+        bool used = false;
+
+        while (!playerHealth.IsDead)
+        {
+            if (!used && level.PlayerAtStand(player.transform.position) && InteractPressed())
+            {
+                used = true;
+                level.SetStandUsed();
+
+                yield return shop ? ShopRoutine() : RestRoutine();
+
+                State = RunState.Fighting;
+                ShowBanner("ÇIKIŞA İLERLE  →", 1.6f);
+            }
+
+            if (level.NearExit(player.transform.position))
+                break;
+
+            yield return null;
+        }
     }
 
     // Oyuncu arenaya girene kadar bekler, sonra kapıları kapatır ve

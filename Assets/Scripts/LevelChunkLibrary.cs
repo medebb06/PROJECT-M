@@ -9,7 +9,11 @@ using System.Collections.Generic;
 ///   .  boşluk
 ///   E  düşman doğma noktası (arenada)
 ///   P  oyuncu başlangıcı (başlangıç parçasında)
-///   X  çıkış (çıkış parçasında)
+///   X  çıkış (çıkış parçasında; oda seçimi kapıları burada çıkar)
+///   S  dükkan tezgahı (geçiş parçası)
+///   R  kamp ateşi / dinlenme (geçiş parçası)
+///   =  tek yönlü platform (alttan geçilir, üstüne basılır). İki yanında
+///      zemin varsa ip köprü, yoksa uçan tahta olarak çizilir.
 ///
 /// KURALLAR (oynanabilirlik için):
 ///  - İlk ve son sütunun en alt satırı zemin olmalı (bağlantı yüksekliği
@@ -28,7 +32,9 @@ public enum ChunkKind
     Filler,
     Arena,
     BossArena,
-    Exit
+    Exit,
+    Shop,
+    Rest
 }
 
 public class LevelChunk
@@ -251,6 +257,30 @@ public static class LevelChunkLibrary
                 "####...#######",
                 "####...#######"),
 
+            // '=' : tek yönlü platform. İki yanı zemin = ip köprü.
+            new LevelChunk("Köprü", ChunkKind.Filler, 0.8f,
+                "..............",
+                "..............",
+                "..............",
+                "..............",
+                "..............",
+                "..............",
+                "..............",
+                "#####====#####",
+                "#####....#####"),
+
+            // Geniş çukur, üstünde iki uçan tahta (2 kare yukarıda).
+            new LevelChunk("Platformlu Çukur", ChunkKind.Filler, 0.6f,
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "....===..===....",
+                "................",
+                "####........####",
+                "####........####"),
+
             // =================================================
             // ARENALAR (dövüş: girince iki yan kapanır)
             // =================================================
@@ -306,19 +336,45 @@ public static class LevelChunkLibrary
                 "##################################"),
 
             // =================================================
-            // ÇIKIŞ
+            // GEÇİŞ ALANLARI (dükkan / dinlenme)
+            // =================================================
+
+            new LevelChunk("Dükkan", ChunkKind.Shop, 1f,
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "........S.......",
+                "################",
+                "################"),
+
+            new LevelChunk("Kamp", ChunkKind.Rest, 1f,
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "........R.......",
+                "################",
+                "################"),
+
+            // =================================================
+            // ÇIKIŞ (oda seçimi kapıları burada)
             // =================================================
 
             new LevelChunk("Çıkış", ChunkKind.Exit, 1f,
-                "............",
-                "............",
-                "............",
-                "............",
-                "............",
-                "............",
-                "........X...",
-                "############",
-                "############")
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "................",
+                "............X...",
+                "################",
+                "################")
         };
     }
 }

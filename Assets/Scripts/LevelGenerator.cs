@@ -26,6 +26,12 @@ using UnityEngine.Tilemaps;
 /// </summary>
 public class LevelGenerator : MonoBehaviour
 {
+    [Header("Tema")]
+    [Tooltip(
+        "Orman teması (JungleTheme). Boşsa aynı objede / sahnede aranır. " +
+        "Varsa zemin onunla boyanır ve harita süslenir; yoksa aşağıdaki tile'lar kullanılır.")]
+    public JungleTheme theme;
+
     [Header("Tile'lar (boşsa sahnedeki Tilemap'ten otomatik)")]
     [Tooltip("Ayarların kopyalanacağı Tilemap. Boşsa sahnedeki en dolu Tilemap.")]
     public Tilemap templateTilemap;
@@ -96,6 +102,15 @@ public class LevelGenerator : MonoBehaviour
     }
 
     public bool HasLevel { get; private set; }
+
+    // Geçiş alanındaki dükkan tezgahı / kamp ateşi.
+    public bool HasSpecial { get; private set; }
+    public Vector3 SpecialPosition { get; private set; }
+
+    // Çıkış parçasının dünya x aralığı (kapılar buraya dizilir).
+    private float exitZoneLeft;
+    private float exitZoneRight;
+    private float exitFloorY;
     public int Seed { get; private set; }
     public Vector3 PlayerStart { get; private set; }
     public Vector3 ExitPosition { get; private set; }
@@ -134,7 +149,25 @@ public class LevelGenerator : MonoBehaviour
             DetectTiles(templateTilemap);
         }
 
-        if (topTiles == null || topTiles.Length == 0)
+        if (theme == null)
+            theme = GetComponent<JungleTheme>();
+
+        if (theme == null)
+            theme = FindFirstObjectByType<JungleTheme>();
+
+        if (ThemeOn)
+        {
+            Debug.Log("LevelGenerator: ORMAN teması aktif (" + theme.groundStyle + ").");
+        }
+        else if (theme != null)
+        {
+            Debug.LogWarning(
+                "LevelGenerator: JungleTheme var ama sprite'ları yok/tanınmadı. " +
+                "'Sheet' alanına Tiles.png'yi sürükle (bileşende sağ tık → Kontrol)."
+            );
+        }
+
+        if ((topTiles == null || topTiles.Length == 0) && !ThemeOn)
         {
             Debug.LogWarning(
                 "LevelGenerator: tile bulunamadı. Sahnede tile'lı bir Tilemap olmalı " +
@@ -144,7 +177,10 @@ public class LevelGenerator : MonoBehaviour
     }
 
     public bool IsReady =>
-        topTiles != null && topTiles.Length > 0;
+        ThemeOn || (topTiles != null && topTiles.Length > 0);
+
+    private bool ThemeOn =>
+        theme != null && theme.enabled && theme.Ready;
 
     private Tilemap FindTemplateTilemap()
     {
@@ -359,6 +395,14 @@ public class LevelGenerator : MonoBehaviour
     /// </summary>
     public void Generate(int seed, int arenaCount, bool boss)
     {
+        Generate(seed, arenaCount, boss, ChunkKind.Filler);
+    }
+
+    /// <summary>
+    /// special = Shop / Rest: arenasız GEÇİŞ alanı (ortada tezgah / kamp ateşi).
+    /// </summary>
+    public void Generate(int seed, int arenaCount, bool boss, ChunkKind special)
+    {
         Clear();
 
         if (!IsReady)
@@ -371,6 +415,7 @@ public class LevelGenerator : MonoBehaviour
         System.Random rng = new System.Random(seed);
 
         HashSet<Vector2Int> solids = new HashSet<Vector2Int>();
+        HashSet<Vector2Int> platforms = new HashSet<Vector2Int>();   // '=' tek yönlü
         List<Marker> markers = new List<Marker>();
         List<Vector2Int> arenaSpans = new List<Vector2Int>();   // x başı, x sonu
         List<int> arenaFloors = new List<int>();
@@ -404,7 +449,9 @@ public class LevelGenerator : MonoBehaviour
 
                         if (c == '#')
                             solids.Add(cell);
-                        else if (r == 0 && (c == 'E' || c == 'P' || c == 'X'))
+                        else if (c == '=')
+                            platforms.Add(cell);
+                        else if (r == 0 && (c == 'E' || c == 'P' || c == 'X' || c == 'S' || c == 'R'))
                             markers.Add(new Marker { kind = c, cell = cell, arenaIndex = arenaIndex });
                     }
 
@@ -432,9 +479,19 @@ public class LevelGenerator : MonoBehaviour
 
         Place(Pick(rng, LevelChunkLibrary.OfKind(ChunkKind.Start)), -1);
 
+        // ---------------- GEÇİŞ ALANI ----------------
+
+        bool transition = special == ChunkKind.Shop || special == ChunkKind.Rest;
+
+        if (transition)
+        {
+            PlaceFillers(1);
+            Place(Pick(rng, LevelChunkLibrary.OfKind(special)), -1);
+        }
+
         // ---------------- ARENALAR ----------------
 
-        int total = boss ? 1 : Mathf.Max(1, arenaCount);
+        int total = transition ? 0 : (boss ? 1 : Mathf.Max(1, arenaCount));
 
         for (int a = 0; a < total; a++)
         {
@@ -471,7 +528,12 @@ public class LevelGenerator : MonoBehaviour
                 )
         );
 
+        int exitStartCell = cursorX;
+        int exitFloorCell = surface;
+
         Place(Pick(rng, LevelChunkLibrary.OfKind(ChunkKind.Exit)), -1);
+
+        int exitEndCell = cursorX;
 
         int width = cursorX;
 
@@ -536,6 +598,8 @@ public class LevelGenerator : MonoBehaviour
 
         Paint(solids);
 
+        PaintPlatforms(platforms, solids);
+
         // ---------------- İŞARETLER ----------------
 
         Vector3 cellSize = CellWorldSize();
@@ -565,6 +629,11 @@ public class LevelGenerator : MonoBehaviour
             if (m.kind == 'P')
             {
                 PlayerStart = world;
+            }
+            else if (m.kind == 'S' || m.kind == 'R')
+            {
+                SpecialPosition = world;
+                HasSpecial = true;
             }
             else if (m.kind == 'X')
             {
@@ -601,6 +670,58 @@ public class LevelGenerator : MonoBehaviour
                     new Vector3(Mathf.Lerp(info.leftX, info.rightX, 0.75f), info.floorY + 0.1f, 0f);
 
                 info.spawns.Add(point.transform);
+            }
+        }
+
+        exitZoneLeft = CellLeftWorld(exitStartCell);
+        exitZoneRight = CellLeftWorld(exitEndCell);
+        exitFloorY = CellToWorld(new Vector2Int(exitStartCell, exitFloorCell)).y;
+
+        // ---------------- ORMAN SÜSLERİ ----------------
+
+        if (ThemeOn)
+        {
+            bool[] reserved = new bool[width];
+
+            // Çıkış (kapılar) alanı boş kalsın.
+            for (int x = Mathf.Max(0, exitStartCell); x < Mathf.Min(width, exitEndCell); x++)
+                reserved[x] = true;
+
+            for (int i = 0; i < markers.Count; i++)
+            {
+                Marker m = markers[i];
+
+                int pad = m.kind == 'S' || m.kind == 'R' ? 3 : (m.kind == 'P' ? 1 : -1);
+
+                for (int x = m.cell.x - pad; x <= m.cell.x + pad; x++)
+                {
+                    if (x >= 0 && x < width)
+                        reserved[x] = true;
+                }
+            }
+
+            try
+            {
+                theme.Decorate(
+                    new JungleTheme.BuildInfo
+                    {
+                        solids = solids,
+                        platforms = platforms,
+                        width = width,
+                        bottom = bottom,
+                        top = wallTop,
+                        origin = origin,
+                        reserved = reserved,
+                        seed = seed
+                    },
+                    root.transform,
+                    tilemap
+                );
+            }
+            catch (System.Exception ex)
+            {
+                // Süs hatası haritayı/koşuyu bozmasın.
+                Debug.LogException(ex);
             }
         }
 
@@ -688,25 +809,118 @@ public class LevelGenerator : MonoBehaviour
 
         int i = 0;
 
+        bool themed = ThemeOn;
+
         foreach (Vector2Int c in solids)
         {
             bool up = solids.Contains(c + Vector2Int.up);
+            bool down = solids.Contains(c + Vector2Int.down);
             bool left = solids.Contains(c + Vector2Int.left);
             bool right = solids.Contains(c + Vector2Int.right);
 
-            TileBase[] set = TilesFor(up, left, right);
-
-            // Konuma bağlı (tohumla tutarlı) varyasyon.
-            int hash = Mathf.Abs(c.x * 73856093 ^ c.y * 19349663);
-
             positions[i] = new Vector3Int(origin.x + c.x, origin.y + c.y, 0);
-            tiles[i] = set[hash % set.Length];
+
+            if (themed)
+            {
+                tiles[i] = theme.GroundTile(up, down, left, right, c.x, c.y);
+            }
+            else
+            {
+                TileBase[] set = TilesFor(up, left, right);
+
+                // Konuma bağlı (tohumla tutarlı) varyasyon.
+                int hash = (c.x * 73856093 ^ c.y * 19349663) & 0x7fffffff;
+
+                tiles[i] = set[hash % set.Length];
+            }
 
             i++;
         }
 
         tilemap.SetTiles(positions, tiles);
         tilemap.CompressBounds();
+    }
+
+    // '=' hücreleri: TEK YÖNLÜ platform (alttan zıplanıp üstüne çıkılır).
+    // İki yanı zemin olan dizi = ip köprü; havada olan = tahta platform.
+    private void PaintPlatforms(HashSet<Vector2Int> platforms, HashSet<Vector2Int> solids)
+    {
+        if (platforms.Count == 0)
+            return;
+
+        Tilemap map = CreatePlatformLayer();
+
+        bool themed = ThemeOn;
+
+        List<JungleTheme.Run> runs = JungleTheme.FindRuns(platforms, solids);
+
+        for (int r = 0; r < runs.Count; r++)
+        {
+            JungleTheme.Run run = runs[r];
+
+            for (int x = run.x0; x <= run.x1; x++)
+            {
+                TileBase t =
+                    themed
+                        ? theme.PlatformTile(run, x)
+                        : (Has(topTiles) ? topTiles[0] : null);
+
+                if (t != null)
+                    map.SetTile(new Vector3Int(origin.x + x, origin.y + run.y, 0), t);
+            }
+        }
+    }
+
+    private Tilemap CreatePlatformLayer()
+    {
+        GameObject obj = new GameObject("Platformlar (tek yönlü)");
+
+        obj.transform.SetParent(root.transform, false);
+        obj.transform.localPosition = tilemap.transform.localPosition;
+        obj.layer = tilemap.gameObject.layer;
+
+        try
+        {
+            obj.tag = tilemap.gameObject.tag;
+        }
+        catch
+        {
+            // Etiket tanımlı değilse geç.
+        }
+
+        Tilemap map = obj.AddComponent<Tilemap>();
+        TilemapRenderer r = obj.AddComponent<TilemapRenderer>();
+
+        map.tileAnchor = tilemap.tileAnchor;
+        map.color = tilemap.color;
+
+        TilemapRenderer src = tilemap.GetComponent<TilemapRenderer>();
+
+        if (src != null)
+        {
+            r.sortingLayerID = src.sortingLayerID;
+            r.sortingOrder = src.sortingOrder;
+            r.sharedMaterial = src.sharedMaterial;
+        }
+
+        TilemapCollider2D col = obj.AddComponent<TilemapCollider2D>();
+
+        Rigidbody2D rb = obj.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
+
+        CompositeCollider2D composite = obj.AddComponent<CompositeCollider2D>();
+
+        col.compositeOperation = Collider2D.CompositeOperation.Merge;
+        col.usedByEffector = true;
+        composite.usedByEffector = true;
+
+        PlatformEffector2D effector = obj.AddComponent<PlatformEffector2D>();
+        effector.useOneWay = true;
+        effector.surfaceArc = 170f;
+        effector.useSideFriction = false;
+        effector.useSideBounce = false;
+
+        return map;
     }
 
     // Komşulara göre doğru rol; o rolde tile yoksa ortaya düşer.
@@ -738,6 +952,269 @@ public class LevelGenerator : MonoBehaviour
     private static bool Has(TileBase[] set)
     {
         return set != null && set.Length > 0;
+    }
+
+    // =========================================================
+    // ÇIKIŞ KAPILARI (fiziksel oda seçimi)
+    // =========================================================
+
+    private class Door
+    {
+        public GameObject root;
+        public SpriteRenderer frame;
+        public TextMesh label;
+        public TextMesh prompt;
+        public float x;
+        public bool locked;
+        public Color color;
+    }
+
+    private readonly List<Door> doors = new List<Door>();
+
+    private class Stand
+    {
+        public GameObject root;
+        public SpriteRenderer frame;
+        public TextMesh prompt;
+        public bool used;
+        public Color color;
+    }
+
+    private Stand stand;
+
+    [Header("Kapılar")]
+    [Tooltip("Kapı yazılarının boyutu.")]
+    public float labelScale = 1.4f;
+
+    public Color lockedDoorColor = new Color(0.45f, 0.45f, 0.5f, 0.6f);
+
+    /// <summary>Çıkış alanına kapıları dizer (varsa eskileri siler).</summary>
+    public void SetExitDoors(string[] labels, Color[] colors, bool locked)
+    {
+        ClearDoors();
+
+        if (!HasLevel || labels == null || labels.Length == 0)
+            return;
+
+        Vector3 cell = CellWorldSize();
+
+        int n = labels.Length;
+
+        for (int i = 0; i < n; i++)
+        {
+            float x = Mathf.Lerp(exitZoneLeft, exitZoneRight, (i + 1f) / (n + 1f));
+
+            Color color = colors != null && i < colors.Length ? colors[i] : Color.white;
+
+            doors.Add(CreateDoor(labels[i], color, x, cell));
+        }
+
+        SetDoorsLocked(locked, null);
+    }
+
+    public void SetDoorsLocked(bool locked, string lockedLabel)
+    {
+        for (int i = 0; i < doors.Count; i++)
+        {
+            Door d = doors[i];
+
+            d.locked = locked;
+
+            if (d.frame != null)
+                d.frame.color = locked ? lockedDoorColor : WithAlpha(d.color, 0.55f);
+
+            if (locked && lockedLabel != null && d.prompt != null)
+                d.prompt.text = lockedLabel;
+        }
+    }
+
+    public void SetLockedText(string text)
+    {
+        for (int i = 0; i < doors.Count; i++)
+        {
+            if (doors[i].locked && doors[i].prompt != null)
+                doors[i].prompt.text = text;
+        }
+    }
+
+    // Oyuncunun içinde durduğu (kilitsiz) kapı; yoksa -1.
+    public int DoorAt(Vector3 position)
+    {
+        float half = CellWorldSize().x * 1.3f;
+
+        for (int i = 0; i < doors.Count; i++)
+        {
+            if (!doors[i].locked && Mathf.Abs(position.x - doors[i].x) <= half)
+                return i;
+        }
+
+        return -1;
+    }
+
+    public bool NearExit(Vector3 position)
+    {
+        return HasLevel && position.x >= exitZoneLeft;
+    }
+
+    public void ClearDoors()
+    {
+        for (int i = 0; i < doors.Count; i++)
+        {
+            if (doors[i].root != null)
+                Destroy(doors[i].root);
+        }
+
+        doors.Clear();
+    }
+
+    private Door CreateDoor(string text, Color color, float x, Vector3 cell)
+    {
+        Door d = new Door { x = x, color = color };
+
+        d.root = new GameObject("Kapı: " + text);
+        d.root.transform.SetParent(root.transform, true);
+        d.root.transform.position = new Vector3(x, exitFloorY, 0f);
+
+        float w = cell.x * 2.2f;
+        float h = cell.y * 4f;
+
+        d.frame = CreateRect(d.root.transform, w, h, WithAlpha(color, 0.55f), 0);
+
+        d.label = CreateLabel(d.root.transform, text, color, h + cell.y * 0.8f, 1f);
+        d.prompt = CreateLabel(d.root.transform, "[W] GİR", Color.white, h * 0.5f, 0.75f);
+
+        d.prompt.gameObject.SetActive(false);
+
+        return d;
+    }
+
+    // =========================================================
+    // TEZGAH / KAMP ATEŞİ (geçiş alanı)
+    // =========================================================
+
+    public void CreateStand(string text, Color color)
+    {
+        if (!HasLevel || !HasSpecial)
+            return;
+
+        Vector3 cell = CellWorldSize();
+
+        stand = new Stand { color = color };
+
+        stand.root = new GameObject("Tezgah: " + text);
+        stand.root.transform.SetParent(root.transform, true);
+        stand.root.transform.position = SpecialPosition;
+
+        float w = cell.x * 3f;
+        float h = cell.y * 2.5f;
+
+        stand.frame = CreateRect(stand.root.transform, w, h, WithAlpha(color, 0.6f), 0);
+
+        CreateLabel(stand.root.transform, text, color, h + cell.y * 0.8f, 1f);
+
+        stand.prompt = CreateLabel(stand.root.transform, "[W] " + text, Color.white, h + cell.y * 2f, 0.75f);
+        stand.prompt.gameObject.SetActive(false);
+    }
+
+    public bool PlayerAtStand(Vector3 position)
+    {
+        if (stand == null || stand.used)
+            return false;
+
+        return Mathf.Abs(position.x - SpecialPosition.x) <= CellWorldSize().x * 2.5f;
+    }
+
+    public void SetStandUsed()
+    {
+        if (stand == null)
+            return;
+
+        stand.used = true;
+
+        if (stand.frame != null)
+            stand.frame.color = lockedDoorColor;
+
+        if (stand.prompt != null)
+            stand.prompt.gameObject.SetActive(false);
+    }
+
+    // Kapı / tezgah yanındayken "[W]" ipucu.
+    private void UpdatePrompts()
+    {
+        if (player == null)
+            return;
+
+        Vector3 p = player.transform.position;
+        float half = CellWorldSize().x * 1.3f;
+
+        for (int i = 0; i < doors.Count; i++)
+        {
+            Door d = doors[i];
+
+            bool inside = Mathf.Abs(p.x - d.x) <= half;
+
+            if (d.prompt != null)
+                d.prompt.gameObject.SetActive(inside || d.locked);
+
+            if (d.frame != null && !d.locked)
+                d.frame.color = WithAlpha(d.color, inside ? 0.85f : 0.55f);
+        }
+
+        if (stand != null && stand.prompt != null)
+            stand.prompt.gameObject.SetActive(PlayerAtStand(p));
+    }
+
+    private SpriteRenderer CreateRect(Transform parent, float w, float h, Color color, int orderOffset)
+    {
+        GameObject obj = new GameObject("Çerçeve");
+
+        obj.transform.SetParent(parent, false);
+        obj.transform.localPosition = new Vector3(0f, h * 0.5f, 0f);
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = GetWhiteSprite();
+        sr.drawMode = SpriteDrawMode.Sliced;
+        sr.size = new Vector2(w, h);
+        sr.color = color;
+
+        TilemapRenderer tr = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
+
+        if (tr != null)
+        {
+            sr.sortingLayerID = tr.sortingLayerID;
+            sr.sortingOrder = tr.sortingOrder + orderOffset;
+        }
+
+        return sr;
+    }
+
+    private TextMesh CreateLabel(Transform parent, string text, Color color, float height, float scale)
+    {
+        TilemapRenderer tr = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
+
+        int layer = tr != null ? tr.sortingLayerID : 0;
+        int order = (tr != null ? tr.sortingOrder : 0) + 20;
+
+        GameObject holder = new GameObject("Yazı");
+        holder.transform.SetParent(parent, false);
+        holder.transform.localPosition = new Vector3(0f, height, 0f);
+        holder.transform.localScale = Vector3.one * labelScale * scale;
+
+        TextMesh shadow = CombatCallout.CreateText(holder.transform, text, new Color(0f, 0f, 0f, 0.8f), 0.05f, layer, order);
+        shadow.transform.localPosition = new Vector3(0.04f, -0.04f, 0f);
+
+        TextMesh label = CombatCallout.CreateText(holder.transform, text, color, 0.05f, layer, order + 1);
+
+        // Yazı değişince gölge de değişsin.
+        holder.AddComponent<TextShadowSync>().Bind(label, shadow);
+
+        return label;
+    }
+
+    private static Color WithAlpha(Color c, float a)
+    {
+        c.a = a;
+        return c;
     }
 
     // =========================================================
@@ -834,6 +1311,8 @@ public class LevelGenerator : MonoBehaviour
         if (!HasLevel || player == null)
             return;
 
+        UpdatePrompts();
+
         if (playerHealth != null && playerHealth.IsDead)
             return;
 
@@ -913,6 +1392,9 @@ public class LevelGenerator : MonoBehaviour
     public void Clear()
     {
         arenas.Clear();
+        doors.Clear();
+        stand = null;
+        HasSpecial = false;
 
         if (root != null)
         {
@@ -1018,5 +1500,24 @@ public class LevelGenerator : MonoBehaviour
             );
 
         return whiteSprite;
+    }
+}
+
+// Kapı yazısının gölgesi, yazı değişince onu takip eder.
+public class TextShadowSync : MonoBehaviour
+{
+    private TextMesh label;
+    private TextMesh shadow;
+
+    public void Bind(TextMesh label, TextMesh shadow)
+    {
+        this.label = label;
+        this.shadow = shadow;
+    }
+
+    private void LateUpdate()
+    {
+        if (label != null && shadow != null && shadow.text != label.text)
+            shadow.text = label.text;
     }
 }
