@@ -758,7 +758,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 9.1875
+  orthographic size: 16
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -11212,7 +11212,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1942622292}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25b44a1230126044b9a864b7b7167f81, type: 3}
+  m_Script: {fileID: 11500000, guid: d8200a9339a145e42a262edc3ffa725e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JungleTheme
   sheet: {fileID: 2800000, guid: 2cf8dd3142c5dbc43baeecc6aedaf64d, type: 3}
@@ -11251,15 +11251,26 @@ MonoBehaviour:
     order: -12
   verticalSameAsHorizontal: 1
   bushColorVariation: 0
+  bushRowsPerBand: 2
+  bandHeightShift: -1
+  foreground: 1
+  foregroundFactor: -0.35
+  foregroundVertical: -0.08
+  foregroundTint: {r: 0.12, g: 0.14, b: 0.12, a: 1}
+  foregroundOrder: 100
+  foregroundBushBase: -2
+  foregroundGapMin: 16
+  foregroundGapMax: 34
+  foregroundTreeChance: 0.35
   trees: 1
   treeParallax: 0.1
   treeVerticalFactor: 0.88
   treeBase: -2
   treeExtraHeight: 40
   maxBranches: 2
-  treeSpacingMin: 9
-  treeSpacingMax: 16
-  treeTint: {r: 0.45, g: 0.5, b: 0.45, a: 1}
+  treeSpacingMin: 8
+  treeSpacingMax: 14
+  treeTint: {r: 0.4, g: 0.48, b: 0.45, a: 1}
   treeLayerOrder: -25
   water: 1
   waterDrop: 3

@@ -118,20 +118,40 @@ public class RunManager : MonoBehaviour
         "(takılan / ulaşılamayan düşman bölümü kilitlemesin).")]
     [SerializeField] private float exitPullDelay = 8f;
 
+    // DENGE (35. adım): alan adları bilerek yeni; sahnedeki eski (zor) değerler ezmesin.
     [Header("Harita düşman sayısı")]
     [Tooltip("İlk bölümdeki toplam düşman (haritada; eski dalga ayarlarından bağımsız).")]
-    [SerializeField] private int levelEnemiesBase = 6;
+    [SerializeField] private int mapEnemiesStart = 4;
 
     [Tooltip("Her bölümde eklenen düşman.")]
-    [SerializeField] private float levelEnemiesPerStage = 1f;
+    [SerializeField] private float mapEnemiesPerStage = 0.75f;
 
-    [SerializeField] private int levelEnemiesMax = 16;
+    [SerializeField] private int mapEnemiesMax = 12;
 
-    [Tooltip("Bir nöbet noktasındaki (arena) düşman sayısı hedefi. Nokta sayısı = toplam / bu.")]
-    [SerializeField] private int levelEnemiesPerPost = 3;
+    [Tooltip(
+        "Bir nöbet noktasındaki düşman sayısı hedefi (aynı anda gelenler). " +
+        "Nokta sayısı = toplam / bu.")]
+    [SerializeField] private int mapEnemiesPerPost = 2;
 
-    [SerializeField] private int levelMinPosts = 2;
-    [SerializeField] private int levelMaxPosts = 5;
+    [SerializeField] private int mapMinPosts = 2;
+    [SerializeField] private int mapMaxPosts = 6;
+
+    [Header("Harita dengesi")]
+    [Tooltip(
+        "Haritadaki düşmanların hasar çarpanı PERDEYE göre (1, 2, 3). Normal ve " +
+        "engellenemez vuruşa uygulanır.")]
+    [SerializeField] private float[] mapDamageByAct = { 0.7f, 0.85f, 1f };
+
+    [Tooltip(
+        "Engellenemez vuruşa EK çarpan (prefab'da 75: tek vuruş canın %40'ını " +
+        "götürüyordu).")]
+    [SerializeField] private float mapUnblockableDamageMultiplier = 0.6f;
+
+    [Tooltip("Engellenemez saldırı ihtimalinin bölümle artışı bu kadarla çarpılır (haritada).")]
+    [SerializeField] private float mapUnblockableGrowthMultiplier = 0.5f;
+
+    [Tooltip("Bir nöbet noktasındaki düşmanların HEPSİ ölünce iyileşme (azami canın oranı).")]
+    [SerializeField] private float mapHealOnPostCleared = 0.12f;
 
     [Tooltip("Elit odada düşman sayısı çarpanı (daha az ama güçlü).")]
     [SerializeField] private float levelEliteCountMultiplier = 0.6f;
@@ -1523,6 +1543,8 @@ public class RunManager : MonoBehaviour
             1.6f
         );
 
+        postGroups.Clear();
+
         int totalEnemies = LevelEnemyTotal(type);
         int posts = Mathf.Max(1, level.ArenaCount);
 
@@ -1542,6 +1564,14 @@ public class RunManager : MonoBehaviour
             int count = totalEnemies / posts + (i < totalEnemies % posts ? 1 : 0);
 
             yield return SpawnWave(Mathf.Max(1, count), type == RoomType.Elite, 0f);
+
+            // Nöbet noktası grubu (hepsi ölünce iyileşme).
+            List<EnemyController> group = new List<EnemyController>();
+
+            for (int k = before; k < spawned.Count; k++)
+                group.Add(spawned[k]);
+
+            postGroups.Add(group);
 
             for (int k = before; k < spawned.Count; k++)
                 MakeGuard(spawned[k]);
@@ -1574,6 +1604,55 @@ public class RunManager : MonoBehaviour
         enemy.chaseRange = postAggroRange;
     }
 
+    // Haritadaki nöbet noktası grupları (LevelCombat doldurur).
+    private readonly List<List<EnemyController>> postGroups = new List<List<EnemyController>>();
+
+    private static bool GroupDead(List<EnemyController> group)
+    {
+        for (int i = 0; i < group.Count; i++)
+        {
+            EnemyController e = group[i];
+
+            if (e == null || e.IsDead || !e.gameObject.activeInHierarchy)
+                continue;
+
+            Health h = e.GetComponent<Health>();
+
+            if (h != null && (h.IsDead || h.CurrentHealth <= 0))
+                continue;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Temizlenen nöbet noktası → iyileş.
+    private void CheckPostsCleared()
+    {
+        for (int i = postGroups.Count - 1; i >= 0; i--)
+        {
+            List<EnemyController> group = postGroups[i];
+
+            if (group.Count == 0 || !GroupDead(group))
+                continue;
+
+            postGroups.RemoveAt(i);
+
+            if (mapHealOnPostCleared > 0f && playerHealth != null && !playerHealth.IsDead)
+            {
+                HealPercent(mapHealOnPostCleared);
+
+                CombatCallout.Popup(
+                    player.transform.position + Vector3.up * 2.2f,
+                    "+" + Mathf.RoundToInt(mapHealOnPostCleared * 100f) + "% CAN",
+                    new Color(0.5f, 1f, 0.55f),
+                    1f
+                );
+            }
+        }
+    }
+
     private IEnumerator WaitLevelCleared()
     {
         float nearExitSince = -1f;
@@ -1583,6 +1662,8 @@ public class RunManager : MonoBehaviour
         while (!playerHealth.IsDead)
         {
             RefreshAlive();
+
+            CheckPostsCleared();
 
             if (AliveEnemies <= 0)
                 break;
@@ -2215,12 +2296,12 @@ public class RunManager : MonoBehaviour
     private int LevelEnemyTotal(RoomType type)
     {
         float count =
-            levelEnemiesBase + Mathf.Max(0, Stage - 1) * levelEnemiesPerStage;
+            mapEnemiesStart + Mathf.Max(0, Stage - 1) * mapEnemiesPerStage;
 
         if (type == RoomType.Elite)
             count *= levelEliteCountMultiplier;
 
-        return Mathf.Clamp(Mathf.RoundToInt(count), 1, Mathf.Max(1, levelEnemiesMax));
+        return Mathf.Clamp(Mathf.RoundToInt(count), 1, Mathf.Max(1, mapEnemiesMax));
     }
 
     // HARİTA: nöbet noktası (arena) sayısı.
@@ -2229,9 +2310,9 @@ public class RunManager : MonoBehaviour
         int total = LevelEnemyTotal(type);
 
         int posts =
-            Mathf.CeilToInt(total / (float)Mathf.Max(1, levelEnemiesPerPost));
+            Mathf.CeilToInt(total / (float)Mathf.Max(1, mapEnemiesPerPost));
 
-        return Mathf.Clamp(posts, Mathf.Max(1, levelMinPosts), Mathf.Max(levelMinPosts, levelMaxPosts));
+        return Mathf.Clamp(posts, Mathf.Max(1, mapMinPosts), Mathf.Max(mapMinPosts, mapMaxPosts));
     }
 
     private static Transform[] Shuffled(Transform[] points)
@@ -2554,11 +2635,32 @@ public class RunManager : MonoBehaviour
         enemy.chaseSpeed *=
             1f + Mathf.Min(maxSpeedBonus, speedBonusPerStage * t);
 
+        bool onMap = LevelActive && level != null && level.HasLevel;
+
         enemy.unblockableChance =
             Mathf.Min(
                 unblockableChanceCap,
-                enemy.unblockableChance + unblockableBonusPerStage * t
+                enemy.unblockableChance +
+                unblockableBonusPerStage * t * (onMap ? mapUnblockableGrowthMultiplier : 1f)
             );
+
+        // Harita dengesi: perdeye göre hasar, engellenemez vuruş ayrıca hafif.
+        if (onMap)
+        {
+            float actMul =
+                mapDamageByAct != null && mapDamageByAct.Length > 0
+                    ? mapDamageByAct[Mathf.Clamp(Act - 1, 0, mapDamageByAct.Length - 1)]
+                    : 1f;
+
+            enemy.attackDamage =
+                Mathf.Max(1, Mathf.RoundToInt(enemy.attackDamage * actMul));
+
+            enemy.unblockableDamage =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(enemy.unblockableDamage * actMul * mapUnblockableDamageMultiplier)
+                );
+        }
 
         Health health = enemy.GetComponent<Health>();
 

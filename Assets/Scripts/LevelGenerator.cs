@@ -699,6 +699,30 @@ public class LevelGenerator : MonoBehaviour
             }
         }
 
+        // Demirci: dövüş bölümlerinin başında (selam verir).
+        if (!transition && blacksmithAtLevelStart)
+        {
+            Vector3 at =
+                PlayerStart + new Vector3(blacksmithStartOffset * cellSize.x, -0.1f, 0f);
+
+            greeter = SpawnBlacksmith(at);
+
+            if (greeter != null)
+            {
+                greeterText =
+                    CreateLabel(
+                        greeter.transform.parent,
+                        PickGreeting(seed),
+                        new Color(1f, 0.9f, 0.7f),
+                        0f,
+                        0.7f
+                    );
+
+                PlaceAbove(greeterText.transform.parent, greeter, 0.6f);
+                greeterText.transform.parent.gameObject.SetActive(false);
+            }
+        }
+
         exitZoneLeft = CellLeftWorld(exitStartCell);
         exitZoneRight = CellLeftWorld(exitEndCell);
         exitFloorY = CellToWorld(new Vector2Int(exitStartCell, exitFloorCell)).y;
@@ -1008,6 +1032,156 @@ public class LevelGenerator : MonoBehaviour
 
     private Stand stand;
 
+    // =========================================================
+    // DEMİRCİ (NPC)
+    // =========================================================
+
+    [Header("Demirci (NPC)")]
+    [Tooltip(
+        "Şablon. Boşsa sahnede adı 'Blacksmith Name' olan obje kullanılır " +
+        "(kopyası doğar; fizik bileşenleri kaldırılır).")]
+    public GameObject blacksmith;
+
+    public string blacksmithName = "Demirci";
+
+    [Tooltip("Dükkan geçişinde tezgah yerine demirci durur.")]
+    public bool blacksmithAtShop = true;
+
+    [Tooltip("Her dövüş bölümünün başında demirci durur ve selam verir.")]
+    public bool blacksmithAtLevelStart = true;
+
+    [Tooltip("Bölüm başında oyuncunun kaç kare sağında durur.")]
+    public float blacksmithStartOffset = 7f;
+
+    [Tooltip("Sprite'ı varsayılan olarak SAĞA mı bakıyor? (oyuncuya dönmesi için)")]
+    public bool blacksmithFacesRight = true;
+
+    public string[] blacksmithGreetings =
+    {
+        "Kılıcın keskin olsun!",
+        "Ormanda dikkatli ol, savaşçı.",
+        "Dönüşte uğra, malım bol.",
+        "Parry'yi unutma!",
+        "Yine mi sen? Hâlâ hayattasın demek."
+    };
+
+    private GameObject greeter;
+    private TextMesh greeterText;
+
+    private GameObject FindBlacksmithTemplate()
+    {
+        if (blacksmith != null)
+            return blacksmith;
+
+        if (string.IsNullOrEmpty(blacksmithName))
+            return null;
+
+        Transform[] all =
+            FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            Transform t = all[i];
+
+            if (t == null || t.name != blacksmithName)
+                continue;
+
+            if (root != null && t.IsChildOf(root.transform))
+                continue;
+
+            blacksmith = t.gameObject;
+
+            return blacksmith;
+        }
+
+        return null;
+    }
+
+    // Zemine (ayakları 'groundPoint'e) oturan bir demirci kopyası.
+    private GameObject SpawnBlacksmith(Vector3 groundPoint)
+    {
+        GameObject template = FindBlacksmithTemplate();
+
+        if (template == null)
+            return null;
+
+        GameObject holder = new GameObject("Demirci (NPC)");
+        holder.transform.SetParent(root.transform, true);
+        holder.transform.position = groundPoint;
+        holder.transform.localScale = Vector3.one;
+
+        GameObject npc = Instantiate(template, groundPoint, Quaternion.identity);
+
+        npc.name = "Demirci";
+        npc.SetActive(true);
+
+        // Fizik yok: oyuncuyu itmesin, düşmesin, vurulmasın.
+        foreach (Rigidbody2D rb in npc.GetComponentsInChildren<Rigidbody2D>(true))
+            Destroy(rb);
+
+        foreach (Collider2D c in npc.GetComponentsInChildren<Collider2D>(true))
+            Destroy(c);
+
+        npc.transform.SetParent(holder.transform, true);
+
+        // Ayakları zemine oturt.
+        Bounds b;
+
+        if (TryRendererBounds(npc, out b))
+            npc.transform.position += new Vector3(0f, groundPoint.y - b.min.y, 0f);
+
+        NpcFacePlayer face = npc.AddComponent<NpcFacePlayer>();
+        face.Bind(player != null ? player.transform : null, blacksmithFacesRight);
+
+        return npc;
+    }
+
+    private static bool TryRendererBounds(GameObject obj, out Bounds bounds)
+    {
+        bounds = new Bounds(obj.transform.position, Vector3.zero);
+
+        bool any = false;
+
+        foreach (SpriteRenderer sr in obj.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (!sr.enabled || sr.sprite == null)
+                continue;
+
+            if (!any)
+                bounds = sr.bounds;
+            else
+                bounds.Encapsulate(sr.bounds);
+
+            any = true;
+        }
+
+        return any;
+    }
+
+    // Yazı tutucusunu NPC'nin başının üstüne taşır.
+    private static void PlaceAbove(Transform label, GameObject npc, float extra)
+    {
+        if (label == null || npc == null)
+            return;
+
+        Bounds b;
+
+        float top =
+            TryRendererBounds(npc, out b)
+                ? b.max.y
+                : npc.transform.position.y + 2f;
+
+        label.position = new Vector3(npc.transform.position.x, top + extra, label.position.z);
+    }
+
+    private string PickGreeting(int seed)
+    {
+        if (blacksmithGreetings == null || blacksmithGreetings.Length == 0)
+            return "";
+
+        return blacksmithGreetings[Mathf.Abs(seed) % blacksmithGreetings.Length];
+    }
+
     [Header("Kapılar")]
     [Tooltip("Kapı yazılarının boyutu.")]
     public float labelScale = 1.4f;
@@ -1134,7 +1308,23 @@ public class LevelGenerator : MonoBehaviour
         float w = cell.x * 3f;
         float h = cell.y * 2.5f;
 
-        stand.frame = CreateRect(stand.root.transform, w, h, WithAlpha(color, 0.6f), 0);
+        GameObject npc =
+            blacksmithAtShop && text == "DÜKKAN"
+                ? SpawnBlacksmith(SpecialPosition)
+                : null;
+
+        if (npc != null)
+        {
+            // Tezgah yerine demirci: yazılar başının üstünde.
+            Bounds nb;
+
+            if (TryRendererBounds(npc, out nb))
+                h = Mathf.Max(h, nb.max.y - SpecialPosition.y);
+        }
+        else
+        {
+            stand.frame = CreateRect(stand.root.transform, w, h, WithAlpha(color, 0.6f), 0);
+        }
 
         CreateLabel(stand.root.transform, text, color, h + cell.y * 0.8f, 1f);
 
@@ -1184,6 +1374,17 @@ public class LevelGenerator : MonoBehaviour
 
             if (d.frame != null && !d.locked)
                 d.frame.color = WithAlpha(d.color, inside ? 0.85f : 0.55f);
+        }
+
+        // Demirci selamı: yakındayken.
+        if (greeter != null && greeterText != null)
+        {
+            bool near = Mathf.Abs(p.x - greeter.transform.position.x) <= CellWorldSize().x * 4f;
+
+            GameObject holder = greeterText.transform.parent.gameObject;
+
+            if (holder.activeSelf != near)
+                holder.SetActive(near);
         }
 
         if (stand != null && stand.prompt != null)
@@ -1436,6 +1637,8 @@ public class LevelGenerator : MonoBehaviour
     public void Clear()
     {
         seenOnMap.Clear();
+        greeter = null;
+        greeterText = null;
         arenas.Clear();
         doors.Clear();
         stand = null;
@@ -1586,5 +1789,38 @@ public class TextShadowSync : MonoBehaviour
     {
         if (label != null && shadow != null && shadow.text != label.text)
             shadow.text = label.text;
+    }
+}
+
+// NPC oyuncuya döner (kökün x ölçeğini çevirerek).
+public class NpcFacePlayer : MonoBehaviour
+{
+    private Transform target;
+    private bool facesRight = true;
+    private float baseScaleX = 1f;
+
+    public void Bind(Transform target, bool facesRight)
+    {
+        this.target = target;
+        this.facesRight = facesRight;
+        baseScaleX = Mathf.Abs(transform.localScale.x);
+    }
+
+    private void LateUpdate()
+    {
+        if (target == null)
+            return;
+
+        float dx = target.position.x - transform.position.x;
+
+        if (Mathf.Abs(dx) < 0.2f)
+            return;
+
+        bool wantRight = dx > 0f;
+        float sign = wantRight == facesRight ? 1f : -1f;
+
+        Vector3 s = transform.localScale;
+        s.x = baseScaleX * sign;
+        transform.localScale = s;
     }
 }

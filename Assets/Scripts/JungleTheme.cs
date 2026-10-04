@@ -113,11 +113,14 @@ public class JungleTheme : MonoBehaviour
 
     [Tooltip("Uzaktan yakına. Sıra / renk / hız buradan ayarlanır.")]
     // Hafif parallax: sadece derinlik hissi (yatay %4–12).
-    public ParallaxBand[] backgroundBands =
+    // 4 kat orman: uzaktan yakına renk tonu açılır, aralarında boşluk kalmaz
+    // (her bandın altı kendi düz koyu rengiyle dolu, bir sonraki bant onun önünde).
+    public ParallaxBand[] forestBands =
     {
-        new ParallaxBand("Uzak çalılar", 0.12f, 0.92f, 4, 5, false, new Color(0.55f, 0.68f, 0.68f, 1f), -30),
-        new ParallaxBand("Orta çalılar", 0.08f, 0.85f, 3, 3, false, new Color(0.72f, 0.82f, 0.78f, 1f), -20),
-        new ParallaxBand("Yakın çalılar", 0.04f, 0.7f, 2, 1, false, new Color(0.88f, 0.95f, 0.88f, 1f), -12)
+        new ParallaxBand("Uzak çalılar", 0.16f, 0.92f, 4, 6, false, new Color(0.5f, 0.62f, 0.64f, 1f), -40),
+        new ParallaxBand("Uzak-orta çalılar", 0.12f, 0.9f, 3, 4, false, new Color(0.62f, 0.72f, 0.7f, 1f), -32),
+        new ParallaxBand("Orta çalılar", 0.08f, 0.85f, 2, 2, false, new Color(0.74f, 0.82f, 0.76f, 1f), -22),
+        new ParallaxBand("Yakın çalılar", 0.04f, 0.7f, 0, 0, false, new Color(0.62f, 0.72f, 0.6f, 1f), -14)
     };
 
     [Tooltip(
@@ -128,6 +131,36 @@ public class JungleTheme : MonoBehaviour
     [Tooltip("Komşu bant renginin araya karışma olasılığı. 0 = her bant tek renk.")]
     [Range(0f, 1f)] public float bushColorVariation = 0f;
 
+
+    [Tooltip(
+        "Her bant kaç sıra çalıdan oluşsun (2 kare aşağı kaydırılmış, iç içe). " +
+        "2+ = bant diplerinde düz koyu şerit görünmez, orman sıklaşır.")]
+    [Range(1, 3)] public int bushRowsPerBand = 2;
+
+    [Tooltip("Tüm bantları bu kadar kare yukarı (+) / aşağı (−) kaydır.")]
+    public int bandHeightShift = -1;
+
+    [Header("Ön plan (kamerayla karakter arası)")]
+    [Tooltip("Şimdilik kullanılmıyor (ön plan kapalı).")]
+    public bool foreground = false;
+
+    [Tooltip("Negatif = dünyadan hızlı kayar (kameraya yakın). −0.35 iyi bir başlangıç.")]
+    [Range(-1f, 0f)] public float foregroundFactor = -0.35f;
+
+    [Tooltip(
+        "Ön plan ekranın ALT KENARINA kilitlidir. Bu kadar birim aşağı (−) / yukarı (+): " +
+        "çalı tepeleri ekrana ne kadar girsin.")]
+    public float foregroundScreenOffset = -1f;
+
+    public Color foregroundTint = new Color(0.07f, 0.08f, 0.08f, 1f);
+
+    [Tooltip("Karakterlerin ÖNÜNDE olmalı (zemine göre büyük sayı).")]
+    public int foregroundOrder = 100;
+
+    [Min(4)] public int foregroundGapMin = 16;
+    [Min(4)] public int foregroundGapMax = 34;
+
+    [Range(0f, 1f)] public float foregroundTreeChance = 0.25f;
 
     [Header("Ağaçlar (parallax)")]
     public bool trees = true;
@@ -622,11 +655,11 @@ public class JungleTheme : MonoBehaviour
 
         // ---------------- ÇALI BANTLARI ----------------
 
-        if (backgroundBands != null)
+        if (forestBands != null)
         {
-            for (int b = 0; b < backgroundBands.Length; b++)
+            for (int b = 0; b < forestBands.Length; b++)
             {
-                ParallaxBand band = backgroundBands[b];
+                ParallaxBand band = forestBands[b];
 
                 if (band == null)
                     continue;
@@ -658,6 +691,8 @@ public class JungleTheme : MonoBehaviour
                 x += rng.Next(Mathf.Min(treeSpacingMin, treeSpacingMax), Mathf.Max(treeSpacingMin, treeSpacingMax) + 1);
             }
         }
+
+        // ÖN PLAN şimdilik KAPALI (kullanıcı istedi; kod duruyor, ileride açılır).
     }
 
     // Bir çalı bandı: iki sıra (A/B) 8 genişlikte çalı tepesi, 6'şar kare
@@ -665,54 +700,151 @@ public class JungleTheme : MonoBehaviour
     // alt satırıyla dolu (zemin alçalınca boşluk görünmesin).
     private void BuildBand(BuildInfo info, System.Random rng, ParallaxBand band, int baseY, Vector3 anchor)
     {
-        Tilemap a = Layer(band.name + " A", band.order, band.tint);
-        Tilemap b = Layer(band.name + " B", band.order + 1, band.tint);
-
         float vertical = verticalSameAsHorizontal ? band.factor : band.verticalFactor;
 
-        AddParallax(a, band.factor, vertical, anchor);
-        AddParallax(b, band.factor, vertical, anchor);
-
         int color = Mathf.Clamp(band.bushColor, 0, 4);
+        int rows = Mathf.Max(1, bushRowsPerBand);
 
-        int x = -BandMargin + rng.Next(0, 6);
+        baseY += bandHeightShift;
+
+        Tilemap lowest = null;
+        int lowestBase = baseY;
+
+        // Üst üste kaydırılmış sıralar: alttaki sıranın tepeleri üsttekinin
+        // diplerindeki boşlukları kapatır (düz dolgu görünmez, sık orman).
+        for (int r = 0; r < rows; r++)
+        {
+            int y0 = baseY - r * 2;
+
+            Tilemap a = Layer(band.name + " " + (r + 1) + "A", band.order + r * 2, band.tint);
+            Tilemap b = Layer(band.name + " " + (r + 1) + "B", band.order + r * 2 + 1, band.tint);
+
+            AddParallax(a, band.factor, vertical, anchor);
+            AddParallax(b, band.factor, vertical, anchor);
+
+            // En üst sıra kaldırılmaz (kaldırılan tepenin alt köşeleri gökyüzü gösteriyordu).
+            PlaceBushRow(info, rng, a, b, color, y0, -BandMargin + rng.Next(0, 6) + r * 3, info.width + BandMargin, 6, r > 0);
+
+            lowest = a;
+            lowestBase = y0;
+        }
+
+        // Dolgu: AYRI katmanda, çalıların ARKASINDA; en alt sıranın alt satırını
+        // da kapsar (çalı tabanlarının köşelerindeki üçgen boşluklar kapanır).
+        Tilemap fillMap = Layer(band.name + " Dolgu", band.order - 1, band.tint);
+
+        AddParallax(fillMap, band.factor, vertical, anchor);
+
+        TileBase fill = FillTile(color);
+
+        for (int fx = -BandMargin; fx < info.width + BandMargin + 8; fx++)
+        {
+            // En ÜST sıranın tabanına kadar: tüm sıraların alt köşe boşlukları kapanır.
+            for (int y = info.bottom - 12; y <= baseY; y++)
+                SetTile(fillMap, info, new Vector2Int(fx, y), fill);
+        }
+    }
+
+    // Bir sıra çalı tepesi (8 genişlik), 'step' aralıkla A/B'ye dönüşümlü.
+    private void PlaceBushRow(BuildInfo info, System.Random rng, Tilemap a, Tilemap b, int color, int baseY, int xFrom, int xTo, int step, bool allowLift)
+    {
+        int x = xFrom;
         int i = 0;
 
-        while (x < info.width + BandMargin)
+        while (x < xTo)
         {
             int c = color;
 
             if (rng.NextDouble() < bushColorVariation)
                 c = Mathf.Clamp(color + (rng.Next(0, 2) == 0 ? -1 : 1), 0, 4);
 
-            Tilemap target = i % 2 == 0 ? a : b;
-
-            // Tepeler biraz inip çıksın.
             int lift = rng.Next(0, 3) == 0 ? 1 : 0;
 
-            for (int col = 0; col < 8; col++)
-            {
-                for (int row = 0; row < 3; row++)
-                    Set(target, info, new Vector2Int(x + col, baseY + lift + 2 - row), 17 + col, c * 3 + row);
+            PlaceBush(info, i % 2 == 0 ? a : b, c, x, baseY, allowLift ? lift : 0);
 
-                // Kaldırılan tepenin altı boş kalmasın.
-                if (lift > 0)
-                    Set(target, info, new Vector2Int(x + col, baseY), 19 + (col % 4), c * 3 + 2);
-            }
-
-            x += 6;
+            x += step;
             i++;
         }
+    }
 
-        // Dolgu: bandın altından haritanın dibine kadar DÜZ koyu renk.
-        // (Eskiden çalının alt satırı tekrarlanıyordu → dama tahtası görünümü.)
-        TileBase fill = FillTile(color);
-
-        for (int fx = -BandMargin; fx < info.width + BandMargin + 8; fx++)
+    // Tek çalı tepesi (8x3). lift: 1 kare yukarı (altı doldurulur).
+    private void PlaceBush(BuildInfo info, Tilemap target, int color, int x, int baseY, int lift)
+    {
+        for (int col = 0; col < 8; col++)
         {
-            for (int y = info.bottom - 12; y < baseY; y++)
-                SetTile(a, info, new Vector2Int(fx, y), fill);
+            for (int row = 0; row < 3; row++)
+                Set(target, info, new Vector2Int(x + col, baseY + lift + 2 - row), 17 + col, color * 3 + row);
+
+            if (lift > 0)
+                Set(target, info, new Vector2Int(x + col, baseY), 19 + (col % 4), color * 3 + 2);
         }
+    }
+
+    // ÖN PLAN (Hollow Knight tarzı): kameraya en yakın koyu siluetler.
+    // Ekranın ALT KENARINA kilitli (dikeyde kamerayla gider), yatayda
+    // dünyadan HIZLI kayar. Dolgu yok: sadece alttan yükselen çalı tepeleri
+    // ve arada ekranı boydan geçen gövdeler.
+    private void BuildForeground(BuildInfo info, System.Random rng, Vector3 anchor, int average)
+    {
+        Tilemap back = Layer("Ön Plan Çalı (arka)", foregroundOrder, foregroundTint);
+        Tilemap front = Layer("Ön Plan Çalı (ön)", foregroundOrder + 2, foregroundTint);
+        Tilemap trunks = Layer("Ön Plan Ağaç", foregroundOrder + 1, foregroundTint);
+
+        // Tasarım tabanı: haritanın 'average' satırı; çalışırken ekranın altına taşınır.
+        float designBase =
+            groundMap != null
+                ? groundMap.CellToWorld(new Vector3Int(0, info.origin.y + average, 0)).y
+                : 0f;
+
+        AddScreenBottom(back, foregroundFactor, anchor, designBase, foregroundScreenOffset);
+        AddScreenBottom(front, foregroundFactor, anchor, designBase, foregroundScreenOffset);
+        AddScreenBottom(trunks, foregroundFactor, anchor, designBase, foregroundScreenOffset);
+
+        int xEnd = Mathf.CeilToInt(info.width * (1f + Mathf.Abs(foregroundFactor))) + BandMargin;
+
+        int x = -BandMargin + rng.Next(4, 16);
+
+        while (x < xEnd)
+        {
+            int bushes = rng.Next(1, 4);
+            int width = 8 + (bushes - 1) * 5;
+
+            for (int k = 0; k < bushes; k++)
+            {
+                // Arka sıra biraz yüksek, ön sıra alçak: tepeler iç içe.
+                PlaceBush(info, back, 4, x + k * 5, average + 1 + rng.Next(0, 2), 0);
+                PlaceBush(info, front, 4, x + k * 5 + 2, average - 1, 0);
+            }
+
+            if (rng.NextDouble() < foregroundTreeChance)
+            {
+                int tx = x + width / 2 - 1;
+
+                for (int y = average - 3; y < average + 30; y++)
+                {
+                    int row = 4 + ((y % 5) + 5) % 5;
+
+                    Set(trunks, info, new Vector2Int(tx, y), 10, row);
+                    Set(trunks, info, new Vector2Int(tx + 1, y), 11, row);
+                }
+            }
+
+            x += width + rng.Next(Mathf.Min(foregroundGapMin, foregroundGapMax), Mathf.Max(foregroundGapMin, foregroundGapMax) + 1);
+        }
+    }
+
+    private void AddScreenBottom(Tilemap map, float factor, Vector3 anchor, float designBase, float screenOffset)
+    {
+        if (map == null)
+            return;
+
+        JungleParallax p = map.GetComponent<JungleParallax>();
+
+        if (p == null)
+            p = map.gameObject.AddComponent<JungleParallax>();
+
+        p.Init(factor, 0f, anchor, pixelsPerUnit);
+        p.LockToScreenBottom(designBase, screenOffset);
     }
 
     // Çalı renklerinin en koyu (gölge) tonu: sayfadan ölçüldü.
@@ -922,6 +1054,20 @@ public class JungleParallax : MonoBehaviour
 
     private float pixelsPerUnit = 16f;
 
+    // Ekranın altına kilitli mod (ön plan).
+    private bool screenBottom;
+    private float designBase;
+    private float screenOffset;
+
+    public void LockToScreenBottom(float designBaseWorldY, float offset)
+    {
+        screenBottom = true;
+        designBase = designBaseWorldY;
+        screenOffset = offset;
+
+        Apply(Camera.main);
+    }
+
     public void Init(float factorX, float factorY, Vector3 anchor, float pixelsPerUnit)
     {
         this.pixelsPerUnit = Mathf.Max(1f, pixelsPerUnit);
@@ -964,6 +1110,19 @@ public class JungleParallax : MonoBehaviour
             return;
 
         Vector3 c = cam.transform.position;
+
+        if (screenBottom)
+        {
+            float halfH = cam.orthographic ? cam.orthographicSize : 6f;
+            float screenBottomY = c.y - halfH + screenOffset;
+
+            float x = (c.x - anchor.x) * factorX;
+
+            transform.position =
+                new Vector3(basePosition.x + x, basePosition.y + (screenBottomY - designBase), basePosition.z);
+
+            return;
+        }
 
         // Dikey çapa: kamera haritaya geldiği ilk kare (ışınlanma sonrası).
         if (!anchorYSet)
