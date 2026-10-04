@@ -10478,7 +10478,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 864a9420142c50f4799b554046413939, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
-  baseCritChance: 1
+  baseCritChance: 0
   baseCritMultiplier: 2
   debugLog: 0
   activeModifiers: []
