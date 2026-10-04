@@ -1023,6 +1023,9 @@ MonoBehaviour:
   - {x: 0.5, y: 0.2, z: 0.15, w: 0.15}
   - {x: 0.3, y: 0.25, z: 0.25, w: 0.2}
   - {x: 0.25, y: 0.25, z: 0.25, w: 0.25}
+  useLevelGenerator: 1
+  fixedSeed: 0
+  exitWalkTimeout: 60
   acts: 3
   roomsPerAct: 4
   doorCount: 3
@@ -9417,6 +9420,7 @@ GameObject:
   - component: {fileID: 1942622300}
   - component: {fileID: 1942622301}
   - component: {fileID: 1942622302}
+  - component: {fileID: 1942622303}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -9731,6 +9735,31 @@ MonoBehaviour:
     scale: 1
     attackRangeOverride: 0
     chaseStopOverride: 0
+--- !u!114 &1942622303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44897eb6cf41a51488d42c34155f103a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LevelGenerator
+  templateTilemap: {fileID: 330698416}
+  topTiles: []
+  fillTiles: []
+  origin: {x: 0, y: 300}
+  minFillers: 1
+  maxFillers: 3
+  maxDrift: 5
+  groundDepth: 6
+  wallHeight: 16
+  arenaEnterMargin: 3
+  lockColor: {r: 1, g: 0.35, b: 0.25, a: 0.35}
+  pitDamagePercent: 0.1
+  pitFallDepth: 3
 --- !u!1 &2024794329
 GameObject:
   m_ObjectHideFlags: 0

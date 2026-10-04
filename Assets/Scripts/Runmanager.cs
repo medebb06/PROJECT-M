@@ -91,6 +91,32 @@ public class RunManager : MonoBehaviour
         new Vector4(0.25f, 0.25f, 0.25f, 0.25f)
     };
 
+    // =========================================================
+    // RASTGELE HARİTA
+    // =========================================================
+
+    [Header("Rastgele Harita (Dead Cells tarzı)")]
+    [Tooltip(
+        "Açık: her dövüş odası rastgele parçalardan kurulan bir haritada geçer " +
+        "(arenaya girince kapılar kapanır, düşmanlar orada doğar, sonunda " +
+        "çıkışa yürürsün). Kapalı: eski tek zemin.")]
+    [SerializeField] private bool useLevelGenerator = true;
+
+    [Tooltip("0 = her koşu rastgele. Başka sayı = her koşu aynı harita dizisi (test).")]
+    [SerializeField] private int fixedSeed = 0;
+
+    [Tooltip("Son arenadan sonra çıkışa yürümek için en uzun süre (sn), sonra otomatik geçilir.")]
+    [SerializeField] private float exitWalkTimeout = 60f;
+
+    public int RunSeed { get; private set; }
+
+    private LevelGenerator level;
+    private Transform[] levelSpawnPoints;
+    private int levelSpawnCursor;
+
+    private bool LevelActive =>
+        useLevelGenerator && level != null && level.IsReady;
+
     // Odanın ana tipi (banner bunu yazar). Arayüz de okuyabilir.
     public EnemyArchetypeType RoomArchetype { get; private set; }
 
@@ -500,6 +526,16 @@ public class RunManager : MonoBehaviour
 
         BuildArchetypeTemplates();
 
+        if (useLevelGenerator)
+        {
+            level = FindFirstObjectByType<LevelGenerator>();
+
+            if (level == null)
+                level = gameObject.AddComponent<LevelGenerator>();
+
+            level.Init(player);
+        }
+
         EnemyController misplaced = GetComponentInParent<EnemyController>();
 
         if (misplaced != null)
@@ -630,11 +666,11 @@ public class RunManager : MonoBehaviour
                 : "-";
 
         GUI.color = new Color(0f, 0f, 0f, 0.7f);
-        GUI.DrawTexture(new Rect(8, 200, 430, 92), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(8, 200, 560, 130), Texture2D.whiteTexture);
         GUI.color = Color.white;
 
         GUI.Label(
-            new Rect(14, 204, 420, 90),
+            new Rect(14, 204, 550, 126),
             "KOŞU [F2]  durum: " + State +
             "  perde " + Act + " oda " + RoomInAct + "  dövüş " + Stage +
             "\ntimeScale: " + Time.timeScale.ToString("0.00") +
@@ -645,7 +681,10 @@ public class RunManager : MonoBehaviour
             "\noyuncu: " + playerState +
             "  canControl: " + player.canControl +
             "  inputLocked: " + player.inputLocked +
-            "  ölü: " + (playerHealth != null && playerHealth.IsDead)
+            "  ölü: " + (playerHealth != null && playerHealth.IsDead) +
+            (level != null && level.HasLevel
+                ? "\nharita tohum " + level.Seed + ": " + level.LastLayout
+                : "")
         );
     }
 
@@ -974,6 +1013,11 @@ public class RunManager : MonoBehaviour
 
         Heat = MetaProgress.SelectedHeat;
 
+        RunSeed =
+            fixedSeed != 0
+                ? fixedSeed
+                : UnityEngine.Random.Range(1, int.MaxValue);
+
         State = RunState.Starting;
 
         Stats.BeginRun();
@@ -1163,6 +1207,8 @@ public class RunManager : MonoBehaviour
         eliteEnemies.Clear();
         currentBoss = null;
 
+        bool useLevel = PrepareLevel(type);
+
         if (type == RoomType.Boss)
         {
             WaveCount = 1;
@@ -1172,11 +1218,21 @@ public class RunManager : MonoBehaviour
 
             string bossName = BossNameForAct();
 
+            if (useLevel)
+            {
+                ShowBanner("BOSS ARENASI  →", 1.6f);
+
+                yield return EnterArena(0);
+            }
+
             ShowBanner(bossName.ToUpperInvariant(), 2f);
 
             SpawnBoss(bossName);
 
             yield return WaitUntilCleared(0);
+
+            if (useLevel)
+                ReleaseArena(0);
         }
         else
         {
@@ -1207,6 +1263,13 @@ public class RunManager : MonoBehaviour
                     ShowBanner("DALGA " + Wave + " / " + WaveCount, 1.2f);
                 }
 
+                // Haritada: dalga = arena. Oyuncu arenaya girince kapanır.
+                if (useLevel)
+                    yield return EnterArena(Wave - 1);
+
+                if (playerHealth.IsDead)
+                    yield break;
+
                 int spawnedBefore = spawned.Count;
 
                 yield return SpawnWave(
@@ -1231,13 +1294,23 @@ public class RunManager : MonoBehaviour
 
                 yield return WaitUntilCleared(target);
 
+                if (useLevel)
+                    ReleaseArena(Wave - 1);
+
                 if (playerHealth.IsDead)
                     yield break;
 
-                if (Wave < WaveCount)
+                if (Wave < WaveCount && !useLevel)
                     yield return new WaitForSeconds(timeBetweenWaves);
             }
         }
+
+        if (playerHealth.IsDead)
+            yield break;
+
+        // Haritada: odanın sonu çıkış kapısı.
+        if (useLevel)
+            yield return WalkToExit();
 
         if (playerHealth.IsDead)
             yield break;
@@ -1287,6 +1360,92 @@ public class RunManager : MonoBehaviour
         }
 
         yield return new WaitForSecondsRealtime(0.3f);
+    }
+
+    // =========================================================
+    // RASTGELE HARİTA AKIŞI
+    // =========================================================
+
+    // Odanın haritasını kurar ve oyuncuyu başlangıca ışınlar.
+    private bool PrepareLevel(RoomType type)
+    {
+        levelSpawnPoints = null;
+        levelSpawnCursor = 0;
+
+        if (!LevelActive)
+            return false;
+
+        bool boss = type == RoomType.Boss;
+
+        int arenaCount = boss ? 1 : WavesForStage();
+
+        try
+        {
+            level.Generate(RunSeed + Stage * 7919, arenaCount, boss);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            level.Clear();
+            return false;
+        }
+
+        if (!level.HasLevel)
+            return false;
+
+        level.TeleportPlayer(level.PlayerStart);
+
+        return true;
+    }
+
+    // Oyuncu arenaya girene kadar bekler, sonra kapıları kapatır ve
+    // düşmanların arenada doğmasını sağlar.
+    private IEnumerator EnterArena(int index)
+    {
+        State = RunState.Fighting;
+
+        if (index > 0 || !level.PlayerInArena(index, player.transform.position))
+            ShowBanner("İLERLE  →", 1.4f);
+
+        while (
+            !playerHealth.IsDead &&
+            !level.PlayerInArena(index, player.transform.position)
+        )
+        {
+            yield return null;
+        }
+
+        if (playerHealth.IsDead)
+            yield break;
+
+        level.SetArenaLocked(index, true);
+
+        levelSpawnPoints = level.ArenaSpawnPoints(index);
+        levelSpawnCursor = 0;
+    }
+
+    private void ReleaseArena(int index)
+    {
+        if (level != null)
+            level.SetArenaLocked(index, false);
+
+        levelSpawnPoints = null;
+    }
+
+    private IEnumerator WalkToExit()
+    {
+        ShowBanner("ÇIKIŞA İLERLE  →", 2f);
+
+        float start = Time.time;
+
+        while (
+            !playerHealth.IsDead &&
+            !level.PlayerAtExit(player.transform.position) &&
+            Time.time - start < exitWalkTimeout
+        )
+        {
+            yield return null;
+        }
     }
 
     private IEnumerator WaitUntilCleared(int target)
@@ -1842,7 +2001,17 @@ public class RunManager : MonoBehaviour
 
         Vector3 position;
 
-        if (spawnPoints != null && spawnPoints.Length > 0)
+        if (levelSpawnPoints != null && levelSpawnPoints.Length > 0)
+        {
+            // Arena noktaları sırayla (iki düşman üst üste doğmasın).
+            Transform point =
+                levelSpawnPoints[levelSpawnCursor % levelSpawnPoints.Length];
+
+            levelSpawnCursor++;
+
+            position = point.position;
+        }
+        else if (spawnPoints != null && spawnPoints.Length > 0)
         {
             Transform point =
                 spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)];
@@ -2354,6 +2523,11 @@ public class RunManager : MonoBehaviour
             posture.ResetPosture();
 
         player.hitInvincibilityTimer = 0f;
+
+        if (level != null)
+            level.Clear();
+
+        levelSpawnPoints = null;
 
         player.transform.position = playerStartPosition;
 
