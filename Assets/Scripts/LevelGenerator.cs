@@ -131,6 +131,9 @@ public class LevelGenerator : MonoBehaviour
 
     private static Sprite whiteSprite;
 
+    // Haritada (düşme çizgisinin üstünde) görülmüş düşmanlar.
+    private readonly HashSet<EnemyController> seenOnMap = new HashSet<EnemyController>();
+
     // =========================================================
     // KURULUM
     // =========================================================
@@ -162,8 +165,8 @@ public class LevelGenerator : MonoBehaviour
         else if (theme != null)
         {
             Debug.LogWarning(
-                "LevelGenerator: JungleTheme var ama sprite'ları yok/tanınmadı. " +
-                "'Sheet' alanına Tiles.png'yi sürükle (bileşende sağ tık → Kontrol)."
+                "LevelGenerator: JungleTheme kapalı/hazır değil → eski tile'lar kullanılıyor. " +
+                "'Sheet' alanına Tiles.png'yi sürükle."
             );
         }
 
@@ -407,6 +410,10 @@ public class LevelGenerator : MonoBehaviour
 
         if (!IsReady)
             return;
+
+        // Düşman çubukları yöneticisi bir şekilde silindiyse yeniden kur.
+        if (FindFirstObjectByType<EnemyOverheadBars>() == null)
+            new GameObject("EnemyOverheadBars").AddComponent<EnemyOverheadBars>();
 
         EnsureRoot();
 
@@ -1331,12 +1338,30 @@ public class LevelGenerator : MonoBehaviour
             OnPlayerFell();
 
         // Düşen düşmanlar ölür (oda kilitlenmesin).
+        // Sadece daha önce HARİTADA (düşme çizgisinin üstünde) görülmüş
+        // düşmanlar sayılır: lobideki / sahnedeki başka objeler (ör. yanlışlıkla
+        // EnemyController eklenmiş 'Managers') "düştü" sanılıp yok edilmesin.
         for (int i = EnemyController.All.Count - 1; i >= 0; i--)
         {
             EnemyController e = EnemyController.All[i];
 
-            if (e == null || e.IsDead || e.transform.position.y >= fallLine)
+            if (e == null || e.IsDead)
                 continue;
+
+            // Bu üreticiyi (ve RunManager'ı) taşıyan obje asla düşman değildir.
+            if (transform.IsChildOf(e.transform))
+                continue;
+
+            if (e.transform.position.y >= fallLine)
+            {
+                seenOnMap.Add(e);
+                continue;
+            }
+
+            if (!seenOnMap.Contains(e))
+                continue;
+
+            seenOnMap.Remove(e);
 
             Health h = e.GetComponent<Health>();
 
@@ -1391,6 +1416,7 @@ public class LevelGenerator : MonoBehaviour
 
     public void Clear()
     {
+        seenOnMap.Clear();
         arenas.Clear();
         doors.Clear();
         stand = null;

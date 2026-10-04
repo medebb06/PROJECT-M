@@ -1537,6 +1537,18 @@ public class RunManager : MonoBehaviour
                 if (nearExitSince < 0f)
                     nearExitSince = Time.time;
 
+                // Kilitli kapıda [W]: kalanları HEMEN getir + kim kaldığını yaz.
+                if (InteractPressed())
+                {
+                    Debug.Log(
+                        "RunManager: çıkış kilitli, kalan " + AliveEnemies + " düşman:\n" +
+                        DescribeAliveEnemies()
+                    );
+
+                    PullRemainingEnemies();
+                    nearExitSince = Time.time;
+                }
+
                 if (Time.time >= nextInfo)
                 {
                     ShowBanner("KALAN DÜŞMAN: " + AliveEnemies, 1.4f);
@@ -2776,8 +2788,16 @@ public class RunManager : MonoBehaviour
         {
             EnemyController e = spawned[i];
 
-            if (e != null && !e.IsDead)
-                alive++;
+            if (e == null || e.IsDead || !e.gameObject.activeInHierarchy)
+                continue;
+
+            // Canı bitmiş ama ölüm state'ine geçememiş düşman da ölü sayılır.
+            Health h = e.GetComponent<Health>();
+
+            if (h != null && (h.IsDead || h.CurrentHealth <= 0))
+                continue;
+
+            alive++;
         }
 
         AliveEnemies = Mathf.Max(alive, 0);
