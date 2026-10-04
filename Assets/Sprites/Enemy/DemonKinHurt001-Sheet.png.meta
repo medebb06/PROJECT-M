@@ -1,25 +1,28 @@
 fileFormatVersion: 2
-guid: 1af81da97bc0db943a04a3fc2412b8ee
+guid: fb0ae5e2c047992439bb51deeef88f73
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -897651763409453156
-    second: lizard_attack-Sheet_0
+      213: -9088040108030019158
+    second: DemonKinHurt001-Sheet_0
   - first:
-      213: -1381248134562994653
-    second: lizard_attack-Sheet_1
+      213: -5596479173145458520
+    second: DemonKinHurt001-Sheet_1
   - first:
-      213: -5919465588358539523
-    second: lizard_attack-Sheet_2
+      213: -1828563362231321097
+    second: DemonKinHurt001-Sheet_2
   - first:
-      213: 3850814358203715211
-    second: lizard_attack-Sheet_3
+      213: 7715381684088573855
+    second: DemonKinHurt001-Sheet_3
   - first:
-      213: 7683986267016025791
-    second: lizard_attack-Sheet_4
+      213: -320023591325446102
+    second: DemonKinHurt001-Sheet_4
   - first:
-      213: -4850206261715414679
-    second: lizard_attack-Sheet_5
+      213: -9041476000143037688
+    second: DemonKinHurt001-Sheet_5
+  - first:
+      213: -5715579131493488401
+    second: DemonKinHurt001-Sheet_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -66,7 +69,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 16
+  spritePixelsToUnits: 24
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -90,7 +93,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -128,133 +131,155 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: lizard_attack-Sheet_0
+      name: DemonKinHurt001-Sheet_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 29
-        height: 21
+        x: 41
+        y: 48
+        width: 39
+        height: 48
       alignment: 7
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c9ff9f52a76ea83f0800000000000000
-      internalID: -897651763409453156
+      spriteID: aa93e581cabc0e180800000000000000
+      internalID: -9088040108030019158
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: lizard_attack-Sheet_1
+      name: DemonKinHurt001-Sheet_1
       rect:
         serializedVersion: 2
-        x: 32
-        y: 0
-        width: 29
-        height: 22
+        x: 78
+        y: 81
+        width: 4
+        height: 4
       alignment: 7
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 326a3b8c322d4dce0800000000000000
-      internalID: -1381248134562994653
+      spriteID: 8a80bcbe7df4552b0800000000000000
+      internalID: -5596479173145458520
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: lizard_attack-Sheet_2
-      rect:
-        serializedVersion: 2
-        x: 65
-        y: 0
-        width: 28
-        height: 22
-      alignment: 7
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: df69db9f865d9dda0800000000000000
-      internalID: -5919465588358539523
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: lizard_attack-Sheet_3
-      rect:
-        serializedVersion: 2
-        x: 97
-        y: 0
-        width: 27
-        height: 25
-      alignment: 7
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b8ec4bc9147d07530800000000000000
-      internalID: 3850814358203715211
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: lizard_attack-Sheet_4
-      rect:
-        serializedVersion: 2
-        x: 130
-        y: 0
-        width: 30
-        height: 23
-      alignment: 7
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: fb658706cc003aa60800000000000000
-      internalID: 7683986267016025791
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: lizard_attack-Sheet_5
+      name: DemonKinHurt001-Sheet_2
       rect:
         serializedVersion: 2
         x: 164
-        y: 0
-        width: 27
-        height: 19
-      alignment: 7
-      pivot: {x: 0, y: 0}
+        y: 48
+        width: 55
+        height: 48
+      alignment: 9
+      pivot: {x: 0.4564947, y: 0.0062315464}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 961d31b3a1b90bcb0800000000000000
-      internalID: -4850206261715414679
+      spriteID: 7fd78e86f43af96e0800000000000000
+      internalID: -1828563362231321097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DemonKinHurt001-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 48
+        width: 63
+        height: 48
+      alignment: 9
+      pivot: {x: 0.46676734, y: 0.00000023841858}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f9f87aa83ca821b60800000000000000
+      internalID: 7715381684088573855
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DemonKinHurt001-Sheet_4
+      rect:
+        serializedVersion: 2
+        x: 425
+        y: 48
+        width: 39
+        height: 48
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a205d4f3d3c0f8bf0800000000000000
+      internalID: -320023591325446102
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DemonKinHurt001-Sheet_5
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 68
+        width: 4
+        height: 4
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80b214e4b79368280800000000000000
+      internalID: -9041476000143037688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DemonKinHurt001-Sheet_6
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 57
+        width: 4
+        height: 4
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe8e1b5ff0f2ea0b0800000000000000
+      internalID: -5715579131493488401
       vertices: []
       indices: 
       edges: []
@@ -263,7 +288,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 0ab15634710cd644c84e0085635b3589
+    spriteID: 3ec23317127fcff42947f63d97db44ee
     internalID: 0
     vertices: []
     indices: 
@@ -275,12 +300,13 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.0},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":1,"spriteAlignment":7,"pivotUnitMode":1,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      lizard_attack-Sheet_0: -897651763409453156
-      lizard_attack-Sheet_1: -1381248134562994653
-      lizard_attack-Sheet_2: -5919465588358539523
-      lizard_attack-Sheet_3: 3850814358203715211
-      lizard_attack-Sheet_4: 7683986267016025791
-      lizard_attack-Sheet_5: -4850206261715414679
+      DemonKinHurt001-Sheet_0: -9088040108030019158
+      DemonKinHurt001-Sheet_1: -5596479173145458520
+      DemonKinHurt001-Sheet_2: -1828563362231321097
+      DemonKinHurt001-Sheet_3: 7715381684088573855
+      DemonKinHurt001-Sheet_4: -320023591325446102
+      DemonKinHurt001-Sheet_5: -9041476000143037688
+      DemonKinHurt001-Sheet_6: -5715579131493488401
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
