@@ -206,7 +206,7 @@ Transform:
   m_GameObject: {fileID: 3597890912437742849}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 9.315802, y: -4.395547, z: 0}
+  m_LocalPosition: {x: 12.8, y: -3.74, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -353,7 +353,7 @@ MonoBehaviour:
   unblockableMinNormalAttacksBetween: 2
   unblockableWindupMultiplier: 1
   unblockableHitOffset: 0
-  attackAnimationHitTime: 0.01
+  attackAnimationHitTime: 0.5
   unblockableCommitPoint: 0.15
   unblockableDamage: 75
   unblockableKnockbackMultiplier: 4
@@ -734,7 +734,8 @@ MonoBehaviour:
   grabState: Grab
   shootState: Shoot
   windupStyle: 0
-  maxWindupSlowdown: 3
+  maxWindupSlowdown: 1.5
+  maxWindupSpeedup: 3
   minHurtTime: 0.25
   holdPoseTime: 0.05
   sweepHitTime: 0
