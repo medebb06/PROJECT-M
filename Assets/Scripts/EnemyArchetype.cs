@@ -98,7 +98,7 @@ public class EnemyArchetype : MonoBehaviour
                     maxBalance = 1.4f,
                     chaseSpeed = 0.75f,
                     attackDamage = 1.5f,
-                    unblockableDamage = 1.15f,
+                    unblockableDamage = 0.85f,   // 1.15 idi: Perde 3'te tek vuruşta çok götürüyordu
                     attackRecovery = 1.35f,
                     parryBalanceDamage = 1.4f,
                     blockPostureDamage = 1.8f,

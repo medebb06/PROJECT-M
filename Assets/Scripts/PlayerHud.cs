@@ -163,6 +163,32 @@ public class PlayerHud : MonoBehaviour
         GUI.color = new Color(0f, 0f, 0f, 0.35f);
         GUI.DrawTexture(new Rect(x - 6f, y - 6f, barWidth + 12f, total + 12f), Texture2D.whiteTexture);
 
+        // ---------------- SERİ ----------------
+
+        KillStreak streak = KillStreak.Instance;
+
+        if (streak != null && streak.Count >= 2)
+        {
+            float sy = y - 30f;
+            float pop = Mathf.Clamp01(streak.TimeLeft01);
+
+            string st = "SERİ ×" + streak.Count;
+
+            if (streak.DamageBonus > 0f)
+                st += "   +" + Mathf.RoundToInt(streak.DamageBonus * 100f) + "% HASAR";
+
+            GUI.color = new Color(0f, 0f, 0f, 0.8f);
+            GUI.Label(new Rect(x + 1f, sy + 1f, barWidth + 120f, 16f), st, labelStyle);
+            GUI.color = Color.Lerp(new Color(1f, 0.55f, 0.25f), new Color(1f, 0.9f, 0.4f), pop);
+            GUI.Label(new Rect(x, sy, barWidth + 120f, 16f), st, labelStyle);
+
+            // Kalan süre çizgisi.
+            GUI.color = new Color(0f, 0f, 0f, 0.5f);
+            GUI.DrawTexture(new Rect(x, sy + 16f, barWidth * 0.5f, 3f), Texture2D.whiteTexture);
+            GUI.color = new Color(1f, 0.75f, 0.3f, 0.9f);
+            GUI.DrawTexture(new Rect(x, sy + 16f, barWidth * 0.5f * pop, 3f), Texture2D.whiteTexture);
+        }
+
         // ---------------- CAN ----------------
 
         GUI.color = backColor;

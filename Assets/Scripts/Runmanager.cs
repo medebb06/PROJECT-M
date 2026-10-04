@@ -157,9 +157,22 @@ public class RunManager : MonoBehaviour
     [SerializeField] private float mapHealOnPostCleared = 0.12f;
 
     [Header("Kalabalık + öldürme kolaylığı")]
+    // 37. adım: alan adları yeni (sahnedeki eski 1–3 değeri ezmesin).
     [Tooltip("Her nöbet noktasına ayrıca bu kadar KALABALIK (zayıf) düşman (en az / en çok).")]
-    [SerializeField] private int mapSwarmPerPostMin = 1;
-    [SerializeField] private int mapSwarmPerPostMax = 3;
+    [SerializeField] private int mapSwarmMin = 2;
+    [SerializeField] private int mapSwarmMax = 4;
+
+    [Tooltip("Bir noktanın SÜRÜ olma ihtimali: 1 güçlü düşman + 5–6 kalabalık.")]
+    [Range(0f, 1f)] [SerializeField] private float mapHordeChance = 0.25f;
+
+    [Tooltip("Ara parçalardaki tek tük devriye noktası sayısı (1–2 kalabalık).")]
+    [SerializeField] private int mapPatrolsBase = 1;
+
+    [Tooltip("Her bu kadar bölümde +1 devriye (en çok 4).")]
+    [SerializeField] private int mapPatrolGrowthEveryStages = 2;
+
+    [Tooltip("Nöbetçilerin seni fark etme mesafesi (eski Post Aggro Range yerine).")]
+    [SerializeField] private float mapAggroRange = 17f;
 
     [Tooltip("Her bu kadar bölümde nokta başına +1 kalabalık (0 = artmaz).")]
     [SerializeField] private int mapSwarmGrowthEveryStages = 3;
@@ -1118,6 +1131,7 @@ public class RunManager : MonoBehaviour
         State = RunState.Starting;
 
         ExecuteMeter.ResetForRun();
+        KillStreak.ResetForRun();
 
         Stats.BeginRun();
     }
@@ -1582,6 +1596,13 @@ public class RunManager : MonoBehaviour
             // Toplamı noktalara eşit dağıt (ilk noktalar +1 alır).
             int count = totalEnemies / posts + (i < totalEnemies % posts ? 1 : 0);
 
+            // SÜRÜ noktası: 1 güçlü düşman + bol kalabalık (ilk nokta hariç).
+            bool horde =
+                useArchetypes && i > 0 && UnityEngine.Random.value < mapHordeChance;
+
+            if (horde)
+                count = 1;
+
             yield return SpawnWave(Mathf.Max(1, count), type == RoomType.Elite, 0f);
 
             // Kalabalık: noktayı doldurur (zayıf, çabuk ölür, infaz barını doldurur).
@@ -1593,10 +1614,12 @@ public class RunManager : MonoBehaviour
                         : 0;
 
                 int swarm =
-                    UnityEngine.Random.Range(
-                        Mathf.Min(mapSwarmPerPostMin, mapSwarmPerPostMax),
-                        Mathf.Max(mapSwarmPerPostMin, mapSwarmPerPostMax) + 1
-                    ) + extra;
+                    horde
+                        ? UnityEngine.Random.Range(5, 7) + extra
+                        : UnityEngine.Random.Range(
+                            Mathf.Min(mapSwarmMin, mapSwarmMax),
+                            Mathf.Max(mapSwarmMin, mapSwarmMax) + 1
+                        ) + extra;
 
                 if (swarm > 0)
                     yield return SpawnWave(swarm, false, 0f, EnemyArchetypeType.Swarm);
@@ -1615,6 +1638,39 @@ public class RunManager : MonoBehaviour
 
             if (playerHealth.IsDead)
                 yield break;
+        }
+
+        // DEVRİYELER: noktalar arasındaki yürüme boş geçmesin.
+        if (useArchetypes)
+        {
+            int patrols =
+                Mathf.Min(
+                    4,
+                    mapPatrolsBase +
+                    (mapPatrolGrowthEveryStages > 0 ? (Stage - 1) / mapPatrolGrowthEveryStages : 0)
+                );
+
+            Transform[] patrolPoints = level.CreatePatrolPoints(patrols);
+
+            for (int p = 0; p < patrolPoints.Length; p++)
+            {
+                levelSpawnPoints = new[] { patrolPoints[p] };
+                levelSpawnCursor = 0;
+
+                int before = spawned.Count;
+
+                yield return SpawnWave(UnityEngine.Random.Range(1, 3), false, 0f, EnemyArchetypeType.Swarm);
+
+                List<EnemyController> group = new List<EnemyController>();
+
+                for (int k = before; k < spawned.Count; k++)
+                {
+                    group.Add(spawned[k]);
+                    MakeGuard(spawned[k]);
+                }
+
+                postGroups.Add(group);
+            }
         }
 
         RoomArchetype = roomType;
@@ -1638,7 +1694,7 @@ public class RunManager : MonoBehaviour
             return;
 
         enemy.alwaysHunt = false;
-        enemy.chaseRange = postAggroRange;
+        enemy.chaseRange = mapAggroRange;
     }
 
     // Haritadaki nöbet noktası grupları (LevelCombat doldurur).

@@ -141,6 +141,66 @@ public class LevelGenerator : MonoBehaviour
 
     private static Sprite whiteSprite;
 
+    // Devriye (ara parçalardaki tek tük düşman) aday sütunları ve yüzeyleri.
+    private readonly List<int> patrolCandidates = new List<int>();
+    private readonly List<int> patrolSurface = new List<int>();
+
+    /// <summary>
+    /// Arena dışındaki düz zeminde, birbirinden en az 'minGap' kare uzak,
+    /// en çok 'count' devriye noktası (RunManager düşman doğurur).
+    /// </summary>
+    public Transform[] CreatePatrolPoints(int count, int minGap = 10)
+    {
+        List<Transform> points = new List<Transform>();
+
+        if (!HasLevel || count <= 0 || patrolCandidates.Count == 0)
+            return points.ToArray();
+
+        List<int> order = new List<int>();
+
+        for (int i = 0; i < patrolCandidates.Count; i++)
+            order.Add(i);
+
+        for (int i = order.Count - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            int t = order[i];
+            order[i] = order[j];
+            order[j] = t;
+        }
+
+        List<int> used = new List<int>();
+
+        for (int k = 0; k < order.Count && points.Count < count; k++)
+        {
+            int x = patrolCandidates[order[k]];
+
+            bool tooClose = false;
+
+            for (int u = 0; u < used.Count; u++)
+            {
+                if (Mathf.Abs(used[u] - x) < minGap)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose)
+                continue;
+
+            used.Add(x);
+
+            GameObject p = new GameObject("Devriye Noktası");
+            p.transform.SetParent(root.transform, true);
+            p.transform.position = CellToWorld(new Vector2Int(x, patrolSurface[order[k]])) + Vector3.up * 0.1f;
+
+            points.Add(p.transform);
+        }
+
+        return points.ToArray();
+    }
+
     // Haritada (düşme çizgisinin üstünde) görülmüş düşmanlar.
     private readonly HashSet<EnemyController> seenOnMap = new HashSet<EnemyController>();
 
@@ -496,6 +556,8 @@ public class LevelGenerator : MonoBehaviour
 
         Place(Pick(rng, LevelChunkLibrary.OfKind(ChunkKind.Start)), -1);
 
+        int startEndCell = cursorX;
+
         // ---------------- GEÇİŞ ALANI ----------------
 
         bool transition = special == ChunkKind.Shop || special == ChunkKind.Rest;
@@ -721,6 +783,42 @@ public class LevelGenerator : MonoBehaviour
                 PlaceAbove(greeterText.transform.parent, greeter, 0.6f);
                 greeterText.transform.parent.gameObject.SetActive(false);
             }
+        }
+
+        // Devriye adayları: başlangıç / çıkış / arenalar dışındaki DÜZ zemin.
+        patrolCandidates.Clear();
+
+        if (!transition)
+        {
+            for (int x = startEndCell + 4; x < exitStartCell - 4; x++)
+            {
+                if (x <= 0 || x >= width - 1)
+                    continue;
+
+                int h = highest[x];
+
+                if (h == int.MinValue || highest[x - 1] != h || highest[x + 1] != h)
+                    continue;
+
+                bool inArena = false;
+
+                for (int a = 0; a < arenaSpans.Count; a++)
+                {
+                    if (x >= arenaSpans[a].x - 3 && x <= arenaSpans[a].y + 3)
+                    {
+                        inArena = true;
+                        break;
+                    }
+                }
+
+                if (!inArena)
+                    patrolCandidates.Add(x);
+            }
+
+            patrolSurface.Clear();
+
+            for (int i = 0; i < patrolCandidates.Count; i++)
+                patrolSurface.Add(highest[patrolCandidates[i]] + 1);
         }
 
         exitZoneLeft = CellLeftWorld(exitStartCell);
