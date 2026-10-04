@@ -32,6 +32,11 @@ public class EnemyArchetype : MonoBehaviour
     [Tooltip("Açık: hamle setini tipe göre değiştir (EnemyMoveset yoksa ekler).")]
     public bool applyMoveset = true;
 
+    [Tooltip(
+        "Açık: tipin boyut çarpanı uygulanır. Kendi sprite'lı prefab'da " +
+        "RunManager bunu kapatır (boyutu prefab belirler).")]
+    public bool applyScale = true;
+
     [Tooltip("Açık: aşağıdaki 'Custom' değerleri kullanılır. Kapalı: koddaki varsayılanlar.")]
     public bool overrideProfile = false;
 
@@ -115,8 +120,9 @@ public class EnemyArchetype : MonoBehaviour
                     scale = 0.95f,
 
                     // Mesafe: bu uzaklıkta durur, yaklaşınca geri çekilir.
-                    attackRangeOverride = 7f,
-                    chaseStopOverride = 7f
+                    // (Karakter ölçeği 2 olan sahneye göre: ~3 gövde boyu.)
+                    attackRangeOverride = 12f,
+                    chaseStopOverride = 11f
                 };
 
             default:
@@ -197,11 +203,27 @@ public class EnemyArchetype : MonoBehaviour
         // ChaseState, düşmanı min(Chase Stop, Attack Range) uzaklığında
         // tutar; oyuncu yaklaşınca geri çekilir.
 
-        if (p.attackRangeOverride > 0f)
-            enemy.attackRange = p.attackRangeOverride;
+        float rangeOverride = p.attackRangeOverride;
+        float stopOverride = p.chaseStopOverride;
 
-        if (p.chaseStopOverride > 0f)
-            enemy.chaseStopDistance = p.chaseStopOverride;
+        // Okçu menzilsiz kalmasın: Override Profile açık ama mesafe 0
+        // bırakıldıysa tipin varsayılan mesafesi kullanılır.
+        if (type == EnemyArchetypeType.Archer)
+        {
+            ArchetypeProfile def = DefaultProfile(type);
+
+            if (rangeOverride <= 0f)
+                rangeOverride = def.attackRangeOverride;
+
+            if (stopOverride <= 0f)
+                stopOverride = def.chaseStopOverride;
+        }
+
+        if (rangeOverride > 0f)
+            enemy.attackRange = rangeOverride;
+
+        if (stopOverride > 0f)
+            enemy.chaseStopDistance = stopOverride;
 
         if (type == EnemyArchetypeType.Archer)
         {
@@ -226,7 +248,7 @@ public class EnemyArchetype : MonoBehaviour
 
         // ---------------- BOYUT ----------------
 
-        if (!Mathf.Approximately(p.scale, 1f))
+        if (applyScale && !Mathf.Approximately(p.scale, 1f))
             transform.localScale *= p.scale;
 
         // ---------------- HAMLE SETİ ----------------

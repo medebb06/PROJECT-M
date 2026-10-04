@@ -540,8 +540,8 @@ public class EnemyMoveset : MonoBehaviour
 
     // =========================================================
     // OKÇU: mesafeden ok (Shot). Yakına gelinirse hançer / tekme.
-    // Okçunun Attack Range'i büyük (EnemyArchetype: 7); yakın dövüş
-    // vuruşlarının menzili bu yüzden küçük çarpanla (0.25 × 7 ≈ 1.75).
+    // Okçunun Attack Range'i büyük (EnemyArchetype: 12); yakın dövüş
+    // vuruşlarının menzili bu yüzden küçük çarpanla (0.4 × 12 ≈ 4.8).
     // =========================================================
 
     public static List<AttackMove> CreateArcherMoves()
@@ -552,7 +552,7 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Tek Ok",
                 weight = 1.2f,
-                minDistance = 2.5f,
+                minDistance = 4.5f,
                 hits = { new MoveHit(MoveHitType.Shot, 0.9f) }
             },
 
@@ -560,7 +560,7 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Çifte Ok",
                 weight = 0.9f,
-                minDistance = 2.5f,
+                minDistance = 4.5f,
                 recoveryMultiplier = 1.3f,
                 hits =
                 {
@@ -573,7 +573,7 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Gecikmeli Ok",
                 weight = 0.8f,
-                minDistance = 2.5f,
+                minDistance = 4.5f,
                 hits = { new MoveHit(MoveHitType.Shot, 1.0f, 0.6f, 1.2f) }
             },
 
@@ -581,7 +581,7 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Üçlü Yaylım",
                 weight = 0.6f,
-                minDistance = 3f,
+                minDistance = 5f,
                 cooldown = 4f,
                 recoveryMultiplier = 1.6f,
                 hits =
@@ -597,8 +597,8 @@ public class EnemyMoveset : MonoBehaviour
                 // Yakına gelen oyuncuya hızlı hançer.
                 name = "Hançer",
                 weight = 1.5f,
-                maxDistance = 2.5f,
-                hits = { new MoveHit(MoveHitType.Normal, 0.55f, 0f, 1f, 0.25f) }
+                maxDistance = 4.5f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.55f, 0f, 1f, 0.4f) }
             },
 
             new AttackMove
@@ -606,7 +606,7 @@ public class EnemyMoveset : MonoBehaviour
                 // Yakındaki oyuncuyu süpürüp geri itme: zıpla.
                 name = "Tekme Süpürme",
                 weight = 0.6f,
-                maxDistance = 2.5f,
+                maxDistance = 4.5f,
                 cooldown = 3f,
                 hits = { new MoveHit(MoveHitType.Sweep, 0.7f, 0f, 1f, 0.3f) }
             }

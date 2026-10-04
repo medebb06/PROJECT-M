@@ -360,6 +360,8 @@ public class RunManager : MonoBehaviour
 
     private bool startRequested;
     private bool restartRequested;
+    private float restartRequestTime;
+    private Coroutine loopRoutine;
 
     private int bonusOffers;
 
@@ -523,7 +525,57 @@ public class RunManager : MonoBehaviour
         if (GetComponent<RunUI>() == null)
             gameObject.AddComponent<RunUI>();
 
-        StartCoroutine(RunLoop());
+        loopRoutine = StartCoroutine(RunLoop());
+    }
+
+    // =========================================================
+    // YEDEK GİRİŞ + BEKÇİ
+    // Sonuç ekranında (ölüm / ZAFER) Enter, Space ya da R yeni koşu ister.
+    // Ana döngü bir hata yüzünden durmuşsa istek karşılanmaz: 2.5 sn
+    // sonra döngü zorla yeniden başlatılır (oyun kilitli kalmaz).
+    // =========================================================
+
+    private void Update()
+    {
+        if (State != RunState.Dead && State != RunState.Victory)
+            return;
+
+        if (
+            Input.GetKeyDown(KeyCode.Return) ||
+            Input.GetKeyDown(KeyCode.KeypadEnter) ||
+            Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetKeyDown(KeyCode.R)
+        )
+        {
+            RequestRestart();
+        }
+
+        if (restartRequested && Time.unscaledTime - restartRequestTime > 2.5f)
+            HardRestart();
+    }
+
+    private void HardRestart()
+    {
+        Debug.LogWarning(
+            "RunManager: koşu döngüsü yeni koşu isteğine cevap vermedi " +
+            "(büyük ihtimalle önceki bir hata). Döngü yeniden başlatılıyor."
+        );
+
+        if (loopRoutine != null)
+            StopCoroutine(loopRoutine);
+
+        restartRequested = false;
+
+        try
+        {
+            ResetRun();
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+
+        loopRoutine = StartCoroutine(RunLoop());
     }
 
     // =========================================================
@@ -569,8 +621,13 @@ public class RunManager : MonoBehaviour
 
     public void RequestRestart()
     {
-        if (State == RunState.Dead || State == RunState.Victory)
-            restartRequested = true;
+        if (State != RunState.Dead && State != RunState.Victory)
+            return;
+
+        if (!restartRequested)
+            restartRequestTime = Time.unscaledTime;
+
+        restartRequested = true;
     }
 
     public void QueueBonusOffer()
@@ -755,12 +812,9 @@ public class RunManager : MonoBehaviour
 
             Wave = Mathf.Clamp(Wave, 0, WaveCount);
 
-            if (!IsVictory)
-                Stats.EndStage(false);
-
-            Stats.EndRun(this, IsVictory);
-
-            RecordMeta();
+            // İstatistik / meta kaydı bir hata verse bile sonuç ekranı
+            // ve yeni koşu çalışsın.
+            FinishRunSafely();
 
             State = IsVictory ? RunState.Victory : RunState.Dead;
 
@@ -783,6 +837,30 @@ public class RunManager : MonoBehaviour
             }
 
             ResetRun();
+        }
+    }
+
+    private void FinishRunSafely()
+    {
+        try
+        {
+            if (!IsVictory)
+                Stats.EndStage(false);
+
+            Stats.EndRun(this, IsVictory);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+
+        try
+        {
+            RecordMeta();
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
         }
     }
 
@@ -1912,6 +1990,9 @@ public class RunManager : MonoBehaviour
         if (tint || archetype.type == EnemyArchetypeType.Duelist)
             archetype.type = type;
 
+        // Kendi sprite'lı prefab: boyutu prefab belirler (tip büyütmesin).
+        archetype.applyScale = tint;
+
         if (tint)
         {
             SpriteRenderer[] renderers =
@@ -2069,6 +2150,7 @@ public class RunManager : MonoBehaviour
             player.rb.linearVelocity = Vector2.zero;
 
         player.canControl = true;
+        player.inputLocked = false;
 
         player.stateMachine.ChangeState(
             new GroundedState(player, player.stateMachine)

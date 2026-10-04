@@ -14,11 +14,17 @@ using UnityEngine;
 ///   Hareket ediyor           → Walk
 ///   Duruyor                  → Idle
 ///
-/// VURUŞ HİZALAMA: Uyarı sırasında saldırı animasyonu 'Hold Pose Time'
-/// anındaki karede (hazırlık/kalkmış silah pozu) DONAR; vuruşa tam
-/// 'hit time − hold pose time' kala akmaya başlar. Vuruş karesi hasarla
-/// aynı anda gelir: gecikmeli vuruş = silah havada bekler.
+/// VURUŞ HİZALAMA (uyarı sırasında, 'Windup Style'):
+///   STRETCH (varsayılan): saldırı klibi uyarı süresine YAYILIR, yani yavaş
+///     oynar (en fazla 'Max Windup Slowdown' kat). Vuruş karesi tam hasar
+///     anına gelir. Sadece 'Attack Animation Hit Time' girmen yeter.
+///   HOLD POSE: klip 'Hold Pose Time' karesinde DONAR, vuruşa
+///     'hit time − hold pose time' kala akmaya başlar (gecikmeli vuruş =
+///     silah havada bekler).
 /// Uyarı, hit time'dan kısaysa (hızlı kombo) animasyon ortasından başlar.
+///
+/// HURT: kısa darbelerde de en az 'Min Hurt Time' görünür (tek karelik
+/// titreme olmaz).
 ///
 /// KURULUM:
 ///  1) Düşman prefab'ına ekle.
@@ -46,10 +52,38 @@ public class EnemyAnimationDriver : MonoBehaviour
     [Tooltip("Ok atma animasyonu (Okçu). Animator'da yoksa Attack oynar.")]
     [SerializeField] private string shootState = "Shoot";
 
+    public enum WindupStyle
+    {
+        Stretch,
+        HoldPose
+    }
+
+    [Header("Uyarı animasyonu")]
+    [Tooltip(
+        "Stretch: saldırı klibi uyarı boyunca yavaş oynar, vuruş karesi hasarla " +
+        "çakışır (önerilen). HoldPose: 'Hold Pose Time' karesinde donup bekler.")]
+    [SerializeField] private WindupStyle windupStyle = WindupStyle.Stretch;
+
+    [Tooltip("Stretch: klip en fazla bu kadar kat yavaşlatılır; uyarı daha uzunsa başta bekler.")]
+    [Min(1f)]
+    [SerializeField] private float maxWindupSlowdown = 3f;
+
+    [Tooltip(
+        "Stretch: uyarı kısaysa (seri vuruş / hızlı ok) klip en fazla bu kadar " +
+        "kat HIZLANDIRILIR; hazırlık yine baştan görünür. 1 = hızlanmaz " +
+        "(kısa uyarıda animasyon ortadan başlar).")]
+    [Min(1f)]
+    [SerializeField] private float maxWindupSpeedup = 3f;
+
+    [Tooltip("Hurt en az bu kadar (sn) görünür; çok kısa darbede tek kare titremesin.")]
+    [Min(0f)]
+    [SerializeField] private float minHurtTime = 0.25f;
+
     [Header("Vuruş zamanlaması")]
     [Tooltip(
-        "Uyarı sırasında saldırı klibinin donduğu an (sn). 0 = ilk kare. " +
-        "Silahın havada olduğu kareyi seç (ör. 12 fps'de 3. kare → 0.25).")]
+        "SADECE HoldPose stilinde: uyarı sırasında klibin donduğu an (sn). " +
+        "0 = ilk kare. Silahın havada olduğu kareyi seç (12 fps'de 3. kare → 0.25). " +
+        "Stretch'te kullanılmaz.")]
     [Min(0f)]
     [SerializeField] private float holdPoseTime = 0f;
 
@@ -89,6 +123,17 @@ public class EnemyAnimationDriver : MonoBehaviour
     [Tooltip("Her yeni darbe Hurt'ü baştan başlatsın.")]
     [SerializeField] private bool restartHurtOnNewHit = true;
 
+    [Tooltip(
+        "Idle / Walk klibi döngüsüz (Loop Time kapalı) olsa bile baştan " +
+        "oynat. (Klip ayarı unutulursa düşman donmasın.)")]
+    [SerializeField] private bool forceLoopLocomotion = true;
+
+    [Header("Debug")]
+    [Tooltip(
+        "Düşmanın üstünde o an oynayan state'i, klip zamanını ve klibin " +
+        "döngülü olup olmadığını yazar (animasyon sorunu teşhisi).")]
+    [SerializeField] private bool showDebug = false;
+
     private EnemyController enemy;
     private Animator animator;
     private Rigidbody2D rb;
@@ -116,6 +161,9 @@ public class EnemyAnimationDriver : MonoBehaviour
     private float attackHitTime;
     private int lastStep = -1;
     private int attackStartFrame;
+    private float windupTotal;
+    private float hurtUntil;
+    private bool warnedHitTime;
 
     private void Awake()
     {
@@ -227,6 +275,10 @@ public class EnemyAnimationDriver : MonoBehaviour
         holding = false;
         lastStep = -1;
 
+        // Kısa darbede Hurt hemen kesilmesin.
+        if (current == hurtHash && Time.time < hurtUntil)
+            return;
+
         // ---------------- HAREKET ----------------
 
         float speedX =
@@ -251,6 +303,9 @@ public class EnemyAnimationDriver : MonoBehaviour
         animator.ResetTrigger(attackState);
 
         SelectClip(attack.CurrentHitType);
+
+        // Bu vuruşun toplam uyarı süresi (Stretch hızı için).
+        windupTotal = Mathf.Max(0.01f, attack.RemainingWindup);
 
         if (!alignHitFrameToDamage)
         {
@@ -297,25 +352,64 @@ public class EnemyAnimationDriver : MonoBehaviour
     {
         if (holding)
         {
-            float hold = Mathf.Min(holdPoseTime, attackHitTime);
+            // Vuruş anı klipten uzun girildiyse (klip son karede donar):
+            // gerçek klip uzunluğuna kırp ve bir kez uyar.
+            AnimatorStateInfo st = animator.GetCurrentAnimatorStateInfo(0);
 
-            // Vuruşa kalan süreye göre klipte olması gereken an.
-            float clipTime =
-                attack.IsWindingUp
-                    ? attackHitTime - attack.RemainingWindup
-                    : attackHitTime;
-
-            if (clipTime < hold)
+            if (
+                st.shortNameHash == attackClipHash &&
+                st.length > 0.01f &&
+                attackHitTime >= st.length
+            )
             {
-                // Hazırlık pozunda bekle.
-                PlayAt(attackClipHash, hold);
+                if (!warnedHitTime)
+                {
+                    warnedHitTime = true;
+
+                    Debug.LogWarning(
+                        "EnemyAnimationDriver (" + name + "): vuruş anı (" +
+                        attackHitTime.ToString("0.00") + " sn) saldırı klibinden (" +
+                        st.length.ToString("0.00") + " sn) uzun. 'Attack Animation " +
+                        "Hit Time' değerini klipteki vuruş karesine göre düzelt."
+                    );
+                }
+
+                attackHitTime = st.length * 0.85f;
+            }
+
+            if (attack.IsWindingUp)
+            {
+                // Klip hızı: Stretch'te uyarıya yayılır (yavaş), HoldPose'ta normal.
+                // Stretch: hazırlık (klibin başından vuruş karesine) uyarıya
+                // tam sığar. Uzun uyarıda yavaşlar, kısa uyarıda (seri) hızlanır.
+                float rate = 1f;
+
+                if (windupStyle == WindupStyle.Stretch && attackHitTime > 0f)
+                {
+                    rate =
+                        Mathf.Clamp(
+                            attackHitTime / windupTotal,
+                            1f / Mathf.Max(1f, maxWindupSlowdown),
+                            Mathf.Max(1f, maxWindupSpeedup)
+                        );
+                }
+
+                // Vuruşa kalan süreye göre klipte olması gereken an.
+                float clipTime = attackHitTime - attack.RemainingWindup * rate;
+
+                float minTime =
+                    windupStyle == WindupStyle.HoldPose
+                        ? Mathf.Min(holdPoseTime, attackHitTime)
+                        : 0f;
+
+                PlayAt(attackClipHash, Mathf.Max(minTime, clipTime));
                 return true;
             }
 
-            // Bırak: tam olması gereken yerden akmaya başlar.
+            // Vuruş anı: vuruş karesinden normal hızla akmaya devam.
             holding = false;
             attackStartFrame = Time.frameCount;
-            PlayAt(attackClipHash, clipTime);
+            PlayAt(attackClipHash, attackHitTime);
             return true;
         }
 
@@ -345,6 +439,7 @@ public class EnemyAnimationDriver : MonoBehaviour
             return;
 
         hurtSource = source;
+        hurtUntil = Time.time + minHurtTime;
 
         // Darbe tepkisi anında başlasın (geçiş yok).
         PlayAt(hurtHash, 0f);
@@ -353,7 +448,24 @@ public class EnemyAnimationDriver : MonoBehaviour
     private void Play(int hash, float blend)
     {
         if (current == hash)
+        {
+            // Döngüsüz Idle/Walk bittiyse baştan al (zorunlu döngü).
+            if (forceLoopLocomotion && !animator.IsInTransition(0))
+            {
+                AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+
+                if (
+                    info.shortNameHash == hash &&
+                    !info.loop &&
+                    info.normalizedTime >= 1f
+                )
+                {
+                    animator.PlayInFixedTime(hash, 0, 0f);
+                }
+            }
+
             return;
+        }
 
         current = hash;
 
@@ -389,5 +501,52 @@ public class EnemyAnimationDriver : MonoBehaviour
         }
 
         return exists;
+    }
+
+    // =========================================================
+    // DEBUG
+    // =========================================================
+
+    private void OnGUI()
+    {
+        if (!showDebug || animator == null || Camera.main == null)
+            return;
+
+        Vector3 screen =
+            Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 0.2f);
+
+        if (screen.z < 0f)
+            return;
+
+        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+
+        string state =
+            info.shortNameHash == idleHash ? idleState :
+            info.shortNameHash == walkHash ? walkState :
+            info.shortNameHash == attackHash ? attackState :
+            info.shortNameHash == hurtHash ? hurtState :
+            info.shortNameHash == sweepHash ? sweepState :
+            info.shortNameHash == grabHash ? grabState :
+            info.shortNameHash == shootHash ? shootState :
+            "?";
+
+        string text =
+            state +
+            "  " + (info.normalizedTime * info.length).ToString("0.00") +
+            "/" + info.length.ToString("0.00") + " sn" +
+            (info.loop ? "  LOOP" : "  tek sefer") +
+            "\nhit " + attackHitTime.ToString("0.00") +
+            "  hız " + animator.speed.ToString("0.00") +
+            (enemy != null && enemy.CurrentState != null
+                ? "\n" + enemy.CurrentState.GetType().Name
+                : "");
+
+        Rect r = new Rect(screen.x - 90f, Screen.height - screen.y, 180f, 48f);
+
+        GUI.color = new Color(0f, 0f, 0f, 0.6f);
+        GUI.DrawTexture(r, Texture2D.whiteTexture);
+
+        GUI.color = Color.white;
+        GUI.Label(new Rect(r.x + 4f, r.y + 2f, r.width - 8f, r.height), text);
     }
 }

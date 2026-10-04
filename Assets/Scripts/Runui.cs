@@ -120,8 +120,14 @@ public class RunUI : MonoBehaviour
 
             case RunState.Dead:
             case RunState.Victory:
-                if (EnterPressed())
+                if (
+                    EnterPressed() ||
+                    Input.GetKeyDown(KeyCode.Space) ||
+                    Input.GetKeyDown(KeyCode.R)
+                )
+                {
                     run.RequestRestart();
+                }
                 break;
         }
     }
@@ -1096,13 +1102,27 @@ public class RunUI : MonoBehaviour
         DrawRestartHint(panel);
     }
 
+    // Tıklanabilir "YENİ KOŞU" düğmesi (Enter / Space / R de çalışır).
     private void DrawRestartHint(Rect panel)
     {
-        GUI.Label(
-            new Rect(panel.x, panel.yMax - 24f, panel.width, 18f),
-            "Lobiye dönmek için <b>ENTER</b>",
-            richCentered
-        );
+        const float buttonWidth = 220f;
+        const float buttonHeight = 24f;
+
+        Rect button =
+            new Rect(
+                panel.x + (panel.width - buttonWidth) * 0.5f,
+                panel.yMax - buttonHeight - 8f,
+                buttonWidth,
+                buttonHeight
+            );
+
+        if (GUI.Button(button, "YENİ KOŞU  <color=#888888>[Enter]</color>", buttonStyle))
+        {
+            RunManager run = RunManager.Instance;
+
+            if (run != null)
+                run.RequestRestart();
+        }
     }
 
     private float DrawOutcomeBlock(
