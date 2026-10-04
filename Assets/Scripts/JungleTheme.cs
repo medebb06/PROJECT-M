@@ -43,6 +43,10 @@ public class JungleTheme : MonoBehaviour
         [Tooltip("0 = zeminle aynı hızda (yakın), 1 = kamerayla sabit (sonsuz uzak).")]
         [Range(0f, 1f)] public float factor = 0.5f;
 
+        [Tooltip(
+            "DİKEY: 1 = zıplayınca hiç oynamaz (kamerayla gider), 0 = zeminle birlikte oynar.")]
+        [Range(0f, 1f)] public float verticalFactor = 0.8f;
+
         [Tooltip("Çalı rengi: 0 parlak yeşil, 1 zeytin, 2 koyu zeytin, 3 koyu, 4 en koyu.")]
         [Range(0, 4)] public int bushColor = 3;
 
@@ -61,10 +65,11 @@ public class JungleTheme : MonoBehaviour
         {
         }
 
-        public ParallaxBand(string name, float factor, int bushColor, int height, bool fromHighest, Color tint, int order)
+        public ParallaxBand(string name, float factor, float verticalFactor, int bushColor, int height, bool fromHighest, Color tint, int order)
         {
             this.name = name;
             this.factor = factor;
+            this.verticalFactor = verticalFactor;
             this.bushColor = bushColor;
             this.heightAboveGround = height;
             this.fromHighestGround = fromHighest;
@@ -85,6 +90,12 @@ public class JungleTheme : MonoBehaviour
         "(16 → bir tile bir Tilemap hücresini tam doldurur).")]
     [Min(1f)] public float pixelsPerUnit = 16f;
 
+    [Tooltip(
+        "Tile'lar bu oranda BÜYÜK çizilir ve komşularına çok az biner. Kamera yarım " +
+        "piksele denk geldiğinde tile sıraları arasında çıkan ince (gökyüzü renkli) " +
+        "çizgileri kapatır. 0 = kapalı.")]
+    [Range(0f, 0.05f)] public float seamOverlap = 0.02f;
+
     [Header("Zemin")]
     public GroundStyle groundStyle = GroundStyle.Grass;
 
@@ -101,31 +112,37 @@ public class JungleTheme : MonoBehaviour
     public bool parallax = true;
 
     [Tooltip("Uzaktan yakına. Sıra / renk / hız buradan ayarlanır.")]
-    public ParallaxBand[] bands =
+    // Hafif parallax: sadece derinlik hissi (yatay %4–12).
+    public ParallaxBand[] backgroundBands =
     {
-        new ParallaxBand("Uzak çalılar", 0.75f, 4, 6, true, new Color(0.55f, 0.68f, 0.68f, 1f), -30),
-        new ParallaxBand("Orta çalılar", 0.5f, 3, 3, false, new Color(0.72f, 0.82f, 0.78f, 1f), -20),
-        new ParallaxBand("Yakın çalılar", 0.25f, 2, 1, false, new Color(0.88f, 0.95f, 0.88f, 1f), -12)
+        new ParallaxBand("Uzak çalılar", 0.12f, 0.92f, 4, 5, false, new Color(0.55f, 0.68f, 0.68f, 1f), -30),
+        new ParallaxBand("Orta çalılar", 0.08f, 0.85f, 3, 3, false, new Color(0.72f, 0.82f, 0.78f, 1f), -20),
+        new ParallaxBand("Yakın çalılar", 0.04f, 0.7f, 2, 1, false, new Color(0.88f, 0.95f, 0.88f, 1f), -12)
     };
 
-    [Tooltip("Komşu bant renginin araya karışma olasılığı (çeşitlilik).")]
-    [Range(0f, 1f)] public float bushColorMix = 0.3f;
+    [Tooltip("Komşu bant renginin araya karışma olasılığı. 0 = her bant tek renk.")]
+    [Range(0f, 1f)] public float bushColorVariation = 0f;
 
-    [Tooltip("Dikey parallax (0 = bantlar dikeyde sabit; zeminle hizalı kalır).")]
-    [Range(0f, 0.5f)] public float verticalFactor = 0f;
 
     [Header("Ağaçlar (parallax)")]
     public bool trees = true;
 
-    [Range(0f, 1f)] public float treeFactor = 0.6f;
+    [Range(0f, 1f)] public float treeParallax = 0.1f;
 
-    [Tooltip("Ağaç dibi: ortalama zeminin bu kadar kare üstü (orta bantın arkasında kalsın).")]
-    public int treeBaseAboveGround = 2;
+    [Tooltip("Ağaçların dikey parallax'ı (bantlar gibi; 1 = zıplayınca oynamaz).")]
+    [Range(0f, 1f)] public float treeVerticalFactor = 0.88f;
+
+    [Tooltip("Ağaç dibi: ortalama zeminin bu kadar kare üstü (orta bandın arkasında kalsın).")]
+    public int treeBase = -2;
+
+    [Tooltip("Ağaç gövdeleri harita tepesinden bu kadar kare daha yukarı uzar (tepeleri görünmez).")]
+    [Min(0)] public int treeExtraHeight = 40;
+
+    [Tooltip("Ağaç başına sol dal sayısı (en çok).")]
+    [Range(0, 3)] public int maxBranches = 2;
 
     [Min(4)] public int treeSpacingMin = 8;
     [Min(4)] public int treeSpacingMax = 14;
-
-    [Range(0f, 1f)] public float beehiveChance = 0.2f;
 
     public Color treeTint = new Color(0.4f, 0.48f, 0.45f, 1f);
     public int treeLayerOrder = -25;
@@ -197,7 +214,7 @@ public class JungleTheme : MonoBehaviour
                 sheet,
                 r,
                 new Vector2(0.5f, 0.5f),
-                pixelsPerUnit,
+                pixelsPerUnit / (1f + seamOverlap),
                 0,
                 SpriteMeshType.FullRect
             );
@@ -530,6 +547,7 @@ public class JungleTheme : MonoBehaviour
         if (water)
         {
             Tilemap waterMap = null;
+            Tilemap sideWater = null;
 
             int x = 0;
 
@@ -560,18 +578,30 @@ public class JungleTheme : MonoBehaviour
                     continue;
 
                 if (waterMap == null)
+                {
                     waterMap = Layer("Su", waterOrder, waterColor);
+
+                    // Çukur duvarlarının yuvarlak kenarlarının ARKASINA da su:
+                    // zemin ile su arasında boşluk görünmesin.
+                    sideWater = Layer("Su (kenar arkası)", -1, Color.white);
+                }
 
                 int line = edge - 1 - waterDrop;
 
-                for (int px = x0; px <= x1; px++)
+                for (int px = x0 - 1; px <= x1 + 1; px++)
                 {
+                    bool side = px < x0 || px > x1;
+
+                    Tilemap target = side ? sideWater : waterMap;
+
                     int col = 6 + ((px % 4) + 4) % 4;
 
-                    Set(waterMap, info, new Vector2Int(px, line), col, 19);
+                    // Sayfada: 18 = köpük (hücrenin altında), 19 = köpük + su, 20 = derin su.
+                    Set(target, info, new Vector2Int(px, line), col, 18);
+                    Set(target, info, new Vector2Int(px, line - 1), col, 19);
 
-                    for (int y = info.bottom - 12; y < line; y++)
-                        Set(waterMap, info, new Vector2Int(px, y), col, 20);
+                    for (int y = info.bottom - 12; y < line - 1; y++)
+                        Set(target, info, new Vector2Int(px, y), col, 20);
                 }
             }
         }
@@ -587,11 +617,11 @@ public class JungleTheme : MonoBehaviour
 
         // ---------------- ÇALI BANTLARI ----------------
 
-        if (bands != null)
+        if (backgroundBands != null)
         {
-            for (int b = 0; b < bands.Length; b++)
+            for (int b = 0; b < backgroundBands.Length; b++)
             {
-                ParallaxBand band = bands[b];
+                ParallaxBand band = backgroundBands[b];
 
                 if (band == null)
                     continue;
@@ -609,10 +639,10 @@ public class JungleTheme : MonoBehaviour
         {
             Tilemap treeMap = Layer("Arka Ağaçlar", treeLayerOrder, treeTint);
 
-            AddParallax(treeMap, treeFactor, anchor);
+            AddParallax(treeMap, treeParallax, treeVerticalFactor, anchor);
 
-            int baseY = average + treeBaseAboveGround;
-            int top = Mathf.Max(info.top, baseY + 10);
+            int baseY = average + treeBase;
+            int top = Mathf.Max(info.top, baseY + 10) + treeExtraHeight;
 
             int x = -BandMargin + rng.Next(0, 6);
 
@@ -633,8 +663,8 @@ public class JungleTheme : MonoBehaviour
         Tilemap a = Layer(band.name + " A", band.order, band.tint);
         Tilemap b = Layer(band.name + " B", band.order + 1, band.tint);
 
-        AddParallax(a, band.factor, anchor);
-        AddParallax(b, band.factor, anchor);
+        AddParallax(a, band.factor, band.verticalFactor, anchor);
+        AddParallax(b, band.factor, band.verticalFactor, anchor);
 
         int color = Mathf.Clamp(band.bushColor, 0, 4);
 
@@ -645,7 +675,7 @@ public class JungleTheme : MonoBehaviour
         {
             int c = color;
 
-            if (rng.NextDouble() < bushColorMix)
+            if (rng.NextDouble() < bushColorVariation)
                 c = Mathf.Clamp(color + (rng.Next(0, 2) == 0 ? -1 : 1), 0, 4);
 
             Tilemap target = i % 2 == 0 ? a : b;
@@ -677,7 +707,7 @@ public class JungleTheme : MonoBehaviour
         }
     }
 
-    private void AddParallax(Tilemap map, float factor, Vector3 anchor)
+    private void AddParallax(Tilemap map, float factor, float vertical, Vector3 anchor)
     {
         if (map == null)
             return;
@@ -687,17 +717,23 @@ public class JungleTheme : MonoBehaviour
         if (p == null)
             p = map.gameObject.AddComponent<JungleParallax>();
 
-        p.Init(factor, verticalFactor, anchor);
+        p.Init(factor, vertical, anchor, pixelsPerUnit);
     }
 
-    // Ağaç: gövde (10-11), tepede yapraklar (9 ve 12), dallar, isteğe bağlı arı kovanı.
+    // Ağaç: gövde (10-11) + sol dal (9, 2-3). Sağdaki parçalar (12. sütun:
+    // yaprak, dal, kovan) gövdeye tam oturmadığı için KULLANILMAZ. Tepe
+    // görünmesin diye gövde harita tepesinin çok üstüne uzar.
     private void PlaceTree(Tilemap map, BuildInfo info, System.Random rng, int x, int baseY, int top)
     {
         int height = Mathf.Max(8, top - baseY + 1);
 
-        int branchK = 5 + rng.Next(0, Mathf.Max(1, height - 9));
-        bool hive = rng.NextDouble() < beehiveChance;
-        bool smallHive = !hive && rng.NextDouble() < beehiveChance;
+        // Sol dalların yükseklikleri (zeminden en az 6 kare yukarıda).
+        HashSet<int> branchAt = new HashSet<int>();
+
+        int branches = rng.Next(0, maxBranches + 1);
+
+        for (int b = 0; b < branches && height > 14; b++)
+            branchAt.Add(rng.Next(6, Mathf.Min(height - 4, 22)));
 
         for (int k = 0; k < height; k++)
         {
@@ -715,29 +751,16 @@ public class JungleTheme : MonoBehaviour
             Set(map, info, new Vector2Int(x, y), 10, row);
             Set(map, info, new Vector2Int(x + 1, y), 11, row);
 
-            if (k <= 3)
-            {
+            if (k <= 1)
                 Set(map, info, new Vector2Int(x - 1, y), 9, k);
+        }
 
-                if (k <= 1 || smallHive)
-                    Set(map, info, new Vector2Int(x + 2, y), 12, k);
-            }
+        foreach (int h in branchAt)
+        {
+            int y = baseY + h;
 
-            if (k == branchK)
-            {
-                if (hive)
-                {
-                    for (int j = 0; j < 3; j++)
-                    {
-                        Set(map, info, new Vector2Int(x + 2, y - j), 12, 6 + j);
-                        Set(map, info, new Vector2Int(x + 3, y - j), 13, 6 + j);
-                    }
-                }
-                else
-                {
-                    Set(map, info, new Vector2Int(x + 2, y), 12, 5);
-                }
-            }
+            Set(map, info, new Vector2Int(x - 1, y), 9, 3);
+            Set(map, info, new Vector2Int(x - 1, y + 1), 9, 2);
         }
     }
 
@@ -807,19 +830,33 @@ public class JungleTheme : MonoBehaviour
 /// <summary>
 /// Parallax katmanı: kamera çapadan ne kadar uzaklaştıysa katman onun
 /// 'factor' katı kadar kameranın peşinden gelir (uzak = daha yavaş görünür).
-/// Cinemachine kamerayı LateUpdate'te taşıdığı için en sonda çalışır.
+///
+/// TİTREME ÇÖZÜMÜ: konum, kamera ÇİZİLMEDEN HEMEN ÖNCE (URP
+/// beginCameraRendering) kameranın SON konumuna göre hesaplanır. LateUpdate'te
+/// hesaplanınca Cinemachine bazen bizden sonra çalışıyor, katman bir kare
+/// geriden geliyor ve kamera yavaşlarken titreyerek duruyordu.
+/// Piksel yuvarlama artık KAPALI (yavaş kayan katman 1 piksellik
+/// sıçramalarla 'tık tık' ilerliyordu).
 /// </summary>
 [DefaultExecutionOrder(10000)]
 public class JungleParallax : MonoBehaviour
 {
+    // İstersen açılabilir (Pixel Perfect Camera + Upscale Render Texture ile).
+    public static bool SnapToPixels = false;
+
     private float factorX;
     private float factorY;
     private Vector3 anchor;
     private Vector3 basePosition;
     private bool ready;
+    private bool anchorYSet;
 
-    public void Init(float factorX, float factorY, Vector3 anchor)
+    private float pixelsPerUnit = 16f;
+
+    public void Init(float factorX, float factorY, Vector3 anchor, float pixelsPerUnit)
     {
+        this.pixelsPerUnit = Mathf.Max(1f, pixelsPerUnit);
+
         this.factorX = factorX;
         this.factorY = factorY;
         this.anchor = anchor;
@@ -827,23 +864,61 @@ public class JungleParallax : MonoBehaviour
         basePosition = transform.position;
         ready = true;
 
-        LateUpdate();
+        Apply(Camera.main);
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+    }
+
+    private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
+    {
+        if (cam != null && cam == Camera.main)
+            Apply(cam);
+    }
+
+    // Yedek (URP dışı / ilk kare).
     private void LateUpdate()
     {
-        if (!ready)
-            return;
+        Apply(Camera.main);
+    }
 
-        Camera cam = Camera.main;
-
-        if (cam == null)
+    private void Apply(Camera cam)
+    {
+        if (!ready || cam == null)
             return;
 
         Vector3 c = cam.transform.position;
 
-        transform.position =
-            basePosition +
+        // Dikey çapa: kamera haritaya geldiği ilk kare (ışınlanma sonrası).
+        if (!anchorYSet)
+        {
+            // Kamera henüz haritaya gelmediyse (lobide / önceki bölümde) bekle.
+            if (Mathf.Abs(c.x - anchor.x) > 30f || Mathf.Abs(c.y - anchor.y) > 20f)
+            {
+                transform.position = basePosition + new Vector3((c.x - anchor.x) * factorX, 0f, 0f);
+                return;
+            }
+
+            anchor.y = c.y;
+            anchorYSet = true;
+        }
+
+        Vector3 offset =
             new Vector3((c.x - anchor.x) * factorX, (c.y - anchor.y) * factorY, 0f);
+
+        if (SnapToPixels)
+        {
+            offset.x = Mathf.Round(offset.x * pixelsPerUnit) / pixelsPerUnit;
+            offset.y = Mathf.Round(offset.y * pixelsPerUnit) / pixelsPerUnit;
+        }
+
+        transform.position = basePosition + offset;
     }
 }

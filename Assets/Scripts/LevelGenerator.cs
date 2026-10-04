@@ -62,6 +62,16 @@ public class LevelGenerator : MonoBehaviour
     [Tooltip("En alçak yüzeyin altındaki toprak kalınlığı (kare).")]
     [Min(1)] public int groundDepth = 6;
 
+    [Tooltip(
+        "Zemin GÖRSEL olarak bunun kadar daha aşağı uzar (kamera altını görmesin). " +
+        "Çukur düşme çizgisi değişmez.")]
+    [Min(0)] public int visualDepth = 30;
+
+    [Tooltip(
+        "Haritanın iki ucunda zemin bu kadar kare daha devam eder; geçişi görünmez " +
+        "bir duvar engeller (düz duvar yok).")]
+    [Min(0)] public int edgeExtension = 24;
+
     [Tooltip("Haritanın iki ucundaki duvarın yüksekliği (kare).")]
     [Min(4)] public int wallHeight = 16;
 
@@ -576,7 +586,9 @@ public class LevelGenerator : MonoBehaviour
             maxHighest = Mathf.Max(maxHighest, highest[x]);
         }
 
+        // 'bottom' = çukur düşme hesabının tabanı; zemin görselde daha da aşağı iner.
         int bottom = minLowest - groundDepth;
+        int paintBottom = bottom - visualDepth;
 
         for (int x = 0; x < width; x++)
         {
@@ -584,21 +596,25 @@ public class LevelGenerator : MonoBehaviour
             if (lowest[x] == int.MaxValue)
                 continue;
 
-            for (int y = bottom; y < lowest[x]; y++)
+            for (int y = paintBottom; y < lowest[x]; y++)
                 solids.Add(new Vector2Int(x, y));
         }
 
-        // ---------------- UÇ DUVARLARI ----------------
+        // ---------------- UÇLAR ----------------
+        // Duvar yerine zemin iki yanda düz devam eder; görünmez duvar keser.
 
         int wallTop = maxHighest + wallHeight;
 
-        for (int y = bottom; y <= wallTop; y++)
+        int leftTop = highest[0] != int.MinValue ? highest[0] : surface - 1;
+        int rightTop = highest[width - 1] != int.MinValue ? highest[width - 1] : surface - 1;
+
+        for (int k = 1; k <= Mathf.Max(1, edgeExtension); k++)
         {
-            for (int k = 1; k <= 2; k++)
-            {
+            for (int y = paintBottom; y <= leftTop; y++)
                 solids.Add(new Vector2Int(-k, y));
+
+            for (int y = paintBottom; y <= rightTop; y++)
                 solids.Add(new Vector2Int(width - 1 + k, y));
-            }
         }
 
         // ---------------- BOYA ----------------
@@ -610,6 +626,9 @@ public class LevelGenerator : MonoBehaviour
         // ---------------- İŞARETLER ----------------
 
         Vector3 cellSize = CellWorldSize();
+
+        CreateEdgeWall("Uç Engeli (sol)", -1, paintBottom, wallTop + 40);
+        CreateEdgeWall("Uç Engeli (sağ)", width, paintBottom, wallTop + 40);
 
         bottomWorldY = CellToWorld(new Vector2Int(0, bottom)).y;
 
@@ -715,7 +734,7 @@ public class LevelGenerator : MonoBehaviour
                         solids = solids,
                         platforms = platforms,
                         width = width,
-                        bottom = bottom,
+                        bottom = paintBottom,
                         top = wallTop,
                         origin = origin,
                         reserved = reserved,
@@ -1461,6 +1480,28 @@ public class LevelGenerator : MonoBehaviour
     private float CellLeftWorld(int cellX)
     {
         return tilemap.CellToWorld(new Vector3Int(origin.x + cellX, origin.y, 0)).x;
+    }
+
+    // Görünmez engel: bir hücre genişliğinde, zemin katmanında.
+    private void CreateEdgeWall(string wallName, int cellX, int fromCellY, int toCellY)
+    {
+        Vector3 cell = CellWorldSize();
+
+        float x = CellLeftWorld(cellX) + cell.x * 0.5f;
+        float y0 = CellToWorld(new Vector2Int(cellX, fromCellY)).y;
+        float y1 = CellToWorld(new Vector2Int(cellX, toCellY)).y;
+
+        GameObject wall = new GameObject(wallName);
+
+        wall.transform.SetParent(root.transform, true);
+        wall.transform.position = new Vector3(x, (y0 + y1) * 0.5f, 0f);
+        wall.transform.localScale = Vector3.one;
+
+        if (tilemap != null)
+            wall.layer = tilemap.gameObject.layer;
+
+        BoxCollider2D box = wall.AddComponent<BoxCollider2D>();
+        box.size = new Vector2(cell.x, Mathf.Abs(y1 - y0));
     }
 
     private GameObject CreateWall(string wallName, float x, float floorY, float height, float cellWidth)
