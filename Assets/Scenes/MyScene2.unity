@@ -842,7 +842,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 16
+  orthographic size: 6.35
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -9946,13 +9946,14 @@ MonoBehaviour:
   defenseController: {fileID: 2122615058}
   inputBufferTime: 0.2
   comboResetTime: 0.4
+  comboCancelPoint: 0.6
   hitBoxSize: {x: 3, y: 2}
   hitVFXInsideAmount: 1.32
   hitVFXForwardOffset: 0.56
-  attack1BalanceDamage: 10
-  attack2BalanceDamage: 10
-  attack3BalanceDamage: 10
-  attack4BalanceDamage: 20
+  attack1BalanceDamage: 5
+  attack2BalanceDamage: 5
+  attack3BalanceDamage: 5
+  attack4BalanceDamage: 10
   attackHealthDamage: 1
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
@@ -10362,6 +10363,7 @@ MonoBehaviour:
   dashDistance: 5
   dashTime: 0.15
   dashCooldown: 0.4
+  dashBufferTime: 0.15
   afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
   afterImageSpacing: 0.05
   stepTimer: 0
@@ -10378,6 +10380,7 @@ MonoBehaviour:
   slamLockTimer: 0
   dashCooldownTimer: 0
   dashPressed: 0
+  dashBufferTimer: 0
   jumpConsumed: 0
   inputLocked: 0
   inputLockTimer: 0
@@ -10449,6 +10452,7 @@ MonoBehaviour:
   finisherRange: 3
   forwardPriority: 1.5
   executeKey: 101
+  inputBuffer: 0.25
 --- !u!114 &2122615065
 MonoBehaviour:
   m_ObjectHideFlags: 0

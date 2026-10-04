@@ -21,6 +21,24 @@ public class DashState : IPlayerState
 
     public void Enter()
     {
+        // Tamponu tüket (dash bitince tekrar tetiklenmesin).
+        player.dashBufferTimer = 0f;
+        player.dashPressed = false;
+
+        // Dash HER ŞEYİ iptal eder: saldırı ve savunma.
+        // (Saldırı Exit'i hızı sıfırladığı için dash hızından ÖNCE.)
+        PlayerCombatController combat =
+            player.GetComponent<PlayerCombatController>();
+
+        if (combat != null)
+            combat.CancelAttack();
+
+        PlayerDefenseController defense =
+            player.GetComponent<PlayerDefenseController>();
+
+        if (defense != null)
+            defense.CancelDefense();
+
         CombatEvents.RaisePlayerDash();
 
         float speedFactor = Mathf.InverseLerp(0f, 20f, player.rb.linearVelocity.magnitude);

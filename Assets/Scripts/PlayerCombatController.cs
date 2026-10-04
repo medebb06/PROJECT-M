@@ -11,9 +11,22 @@ public class PlayerCombatController : MonoBehaviour
     public float inputBufferTime = 0.2f;
     public float comboResetTime = 0.45f;
 
+    [Header("Tepki (iptal penceresi)")]
+    [Tooltip(
+        "Saldırının bu oranından sonra (vuruş karesi geçmişse) tamponlu " +
+        "sonraki saldırı, animasyonun bitmesini beklemeden başlar. " +
+        "1 = eski davranış (sonuna kadar bekle).")]
+    [Range(0f, 1f)]
+    public float comboCancelPoint = 0.6f;
+
     private float bufferTimer;
     private float comboTimer;
     private int comboStep;
+
+    // Aktif saldırının zamanlaması (iptal / zıplama kuralları için).
+    private float attackStartTime;
+    private float attackDurationNow;
+    private float attackHitTimeNow;
 
     [Header("Attack Range")]
     public Vector2 hitBoxSize = new Vector2(1.5f, 1.2f);
@@ -121,6 +134,24 @@ public class PlayerCombatController : MonoBehaviour
 
     private ICombatState currentState;
 
+    // =========================================================
+    // DIŞARIYA AÇIK DURUM
+    // =========================================================
+
+    public bool IsAttacking => currentState != null;
+
+    // Saldırının ilerleme oranı (0..1). Saldırı yoksa 1.
+    public float AttackProgress =>
+        currentState != null && attackDurationNow > 0f
+            ? Mathf.Clamp01((Time.time - attackStartTime) / attackDurationNow)
+            : 1f;
+
+    // Vuruş karesi henüz gelmedi mi? (Bu aralıkta zıplama tampon bekler;
+    // dash ve parry yine de iptal eder.)
+    public bool IsAttackCommitted =>
+        currentState != null &&
+        AttackProgress < attackHitTimeNow;
+
     void Awake()
     {
         if (player == null)
@@ -160,47 +191,61 @@ public class PlayerCombatController : MonoBehaviour
         }
 
         // =====================================================
-        // ATTACK INPUT
+        // ATTACK INPUT (tampon)
+        // Havadayken basılan saldırı da tampona yazılır: yere
+        // inince (süre dolmadıysa) başlar.
         // =====================================================
-        // FIX: Havadayken tıklayınca eskiden Update'ten
-        // return ediliyordu ve o karede currentState.Tick()
-        // atlanıyordu. Artık sadece buffer'a yazılmıyor.
 
-        if (
-            Input.GetMouseButtonDown(0) &&
-            player.IsGrounded()
-        )
-        {
+        if (Input.GetMouseButtonDown(0))
             bufferTimer = inputBufferTime;
-        }
 
-        if (comboTimer <= 0f)
+        if (comboTimer <= 0f && currentState == null)
             comboStep = 0;
+
+        // =====================================================
+        // KOMBO İPTAL PENCERESİ
+        // Vuruş karesi geçtiyse ve saldırı yeterince ilerlediyse,
+        // sıradaki saldırı animasyonun sonunu beklemeden başlar.
+        // =====================================================
 
         if (
             bufferTimer > 0f &&
-            currentState == null
+            currentState != null &&
+            AttackProgress >= Mathf.Max(comboCancelPoint, attackHitTimeNow) &&
+            CanStartAttack()
         )
         {
-            if (!player.IsGrounded())
-            {
-                bufferTimer = 0f;
-            }
-            else if (
-                player.canControl &&
-                player.canAttack &&
-                !player.inputLocked
-            )
-            {
-                // Hurt / dash / slam / posture break sırasında
-                // buffer beklemeye devam eder, süresi dolarsa düşer.
-                // Dash biterken tıklarsan saldırı yine başlar.
-                bufferTimer = 0f;
-                StartAttack();
-            }
+            bufferTimer = 0f;
+
+            ICombatState old = currentState;
+            currentState = null;
+            old.Exit();
+
+            StartAttack();
+        }
+
+        if (
+            bufferTimer > 0f &&
+            currentState == null &&
+            CanStartAttack()
+        )
+        {
+            // Hurt / dash / slam / posture break sırasında
+            // tampon beklemeye devam eder, süresi dolarsa düşer.
+            bufferTimer = 0f;
+            StartAttack();
         }
 
         currentState?.Tick();
+    }
+
+    private bool CanStartAttack()
+    {
+        return
+            player.IsGrounded() &&
+            player.canControl &&
+            player.canAttack &&
+            !player.inputLocked;
     }
 
     // =========================================================
@@ -247,8 +292,6 @@ public class PlayerCombatController : MonoBehaviour
         if (!player.canAttack)
             return;
 
-        Debug.Log("ATTACK START");
-
         // =====================================================
         // COMBO STEP
         // =====================================================
@@ -263,34 +306,10 @@ public class PlayerCombatController : MonoBehaviour
         comboTimer = comboResetTime;
 
         // =====================================================
-        // ATTACK DURATION
+        // ATTACK DURATION / TIMING
         // =====================================================
 
         float attackDuration;
-
-        switch (comboStep)
-        {
-            case 1:
-                attackDuration = attack1Duration;
-                break;
-
-            case 2:
-                attackDuration = attack2Duration;
-                break;
-
-            case 3:
-                attackDuration = attack3Duration;
-                break;
-
-            default:
-                attackDuration = attack4Duration;
-                break;
-        }
-
-        // =====================================================
-        // ATTACK MOVEMENT TIMING
-        // =====================================================
-
         float moveStart;
         float moveEnd;
         float hitTime;
@@ -298,29 +317,37 @@ public class PlayerCombatController : MonoBehaviour
         switch (comboStep)
         {
             case 1:
+                attackDuration = attack1Duration;
                 moveStart = attack1MoveStart;
                 moveEnd = attack1MoveEnd;
                 hitTime = attack1HitTime;
                 break;
 
             case 2:
+                attackDuration = attack2Duration;
                 moveStart = attack2MoveStart;
                 moveEnd = attack2MoveEnd;
                 hitTime = attack2HitTime;
                 break;
 
             case 3:
+                attackDuration = attack3Duration;
                 moveStart = attack3MoveStart;
                 moveEnd = attack3MoveEnd;
                 hitTime = attack3HitTime;
                 break;
 
             default:
+                attackDuration = attack4Duration;
                 moveStart = attack4MoveStart;
                 moveEnd = attack4MoveEnd;
                 hitTime = attack4HitTime;
                 break;
         }
+
+        attackStartTime = Time.time;
+        attackDurationNow = attackDuration;
+        attackHitTimeNow = hitTime;
 
         // =====================================================
         // CREATE ATTACK STATE

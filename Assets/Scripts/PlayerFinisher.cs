@@ -1,5 +1,10 @@
 using UnityEngine;
 
+/// <summary>
+/// Execute (E). Tuş TAMPONLUDUR: düşman sersemlerken / saldırın sürerken /
+/// hasar kilidi biterken basılan E kaybolmaz, ilk fırsatta çalışır.
+/// Saldırı sırasında basılırsa saldırı iptal edilir.
+/// </summary>
 public class PlayerFinisher : MonoBehaviour
 {
     [Header("Finisher")]
@@ -9,12 +14,22 @@ public class PlayerFinisher : MonoBehaviour
     [Header("Input")]
     [SerializeField] private KeyCode executeKey = KeyCode.E;
 
+    [Tooltip("Execute tuşu bu kadar süre hatırlanır (sn).")]
+    [Min(0f)]
+    [SerializeField] private float inputBuffer = 0.25f;
+
     private PlayerController player;
+    private PlayerCombatController combat;
+
+    private float bufferTimer;
 
     private void Awake()
     {
         player =
             GetComponent<PlayerController>();
+
+        combat =
+            GetComponent<PlayerCombatController>();
 
         if (player == null)
         {
@@ -26,49 +41,42 @@ public class PlayerFinisher : MonoBehaviour
 
     private void Update()
     {
-        if (!Input.GetKeyDown(executeKey))
+        if (Input.GetKeyDown(executeKey))
+            bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
+
+        if (bufferTimer <= 0f)
             return;
 
-        // FIX: Hurt / dash / ölüm gibi kontrolsüz
-        // durumlarda finisher tetiklenmesin.
+        bufferTimer -= Time.unscaledDeltaTime;
+
+        // Hurt / dash / ölüm gibi kontrolsüz durumlarda bekle (tampon).
         if (
             player == null ||
-            !player.canControl
+            !player.canControl ||
+            player.inputLocked ||
+            player.isDashing
         )
         {
             return;
         }
 
-        TryExecute();
+        if (TryExecute())
+            bufferTimer = 0f;
     }
 
-    private void TryExecute()
+    private bool TryExecute()
     {
         EnemyController target =
             FindBestTarget();
 
-        if (target == null)
-        {
-            Debug.Log(
-                "FINISHER: NO TARGET"
-            );
+        // Hedef yoksa tampon beklemeye devam eder (denge tam o an
+        // kırılabilir).
+        if (target == null || !target.IsStaggered)
+            return false;
 
-            return;
-        }
-
-        if (!target.IsStaggered)
-        {
-            Debug.Log(
-                "FINISHER: TARGET NO LONGER STAGGERED"
-            );
-
-            return;
-        }
-
-        Debug.Log(
-            "FINISHER TARGET: " +
-            target.name
-        );
+        // Saldırı sürüyorsa iptal et: execute anında başlasın.
+        if (combat != null)
+            combat.CancelAttack();
 
         // =====================================================
         // EXECUTE
@@ -80,16 +88,12 @@ public class PlayerFinisher : MonoBehaviour
         // =====================================================
 
         target.Execute();
+
+        return true;
     }
 
     private EnemyController FindBestTarget()
     {
-        // FIX: FindObjectsOfType Unity 6'da obsolete.
-        EnemyController[] enemies =
-            FindObjectsByType<EnemyController>(
-                FindObjectsSortMode.None
-            );
-
         EnemyController bestTarget = null;
 
         float bestScore =
@@ -104,8 +108,11 @@ public class PlayerFinisher : MonoBehaviour
         Vector2 playerPosition =
             transform.position;
 
-        foreach (EnemyController enemy in enemies)
+        // Sahnedeki aktif düşmanlar (FindObjectsByType'tan ucuz).
+        for (int i = 0; i < EnemyController.All.Count; i++)
         {
+            EnemyController enemy = EnemyController.All[i];
+
             if (enemy == null)
                 continue;
 

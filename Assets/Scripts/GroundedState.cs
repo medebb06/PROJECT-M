@@ -44,23 +44,7 @@ public class GroundedState : IPlayerState
             return;
 
         // =====================================================
-        // DEFENSE
-        // =====================================================
-
-        if (player.IsDefending())
-        {
-            player.SetVelocity(
-                new Vector2(
-                    0f,
-                    player.rb.linearVelocity.y
-                )
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // DASH
+        // DASH (savunmadan ÖNCE: block/parry'den dash'le çıkılabilir)
         // =====================================================
 
         if (
@@ -72,6 +56,22 @@ public class GroundedState : IPlayerState
                 new DashState(
                     player,
                     sm
+                )
+            );
+
+            return;
+        }
+
+        // =====================================================
+        // DEFENSE
+        // =====================================================
+
+        if (player.IsDefending())
+        {
+            player.SetVelocity(
+                new Vector2(
+                    0f,
+                    player.rb.linearVelocity.y
                 )
             );
 

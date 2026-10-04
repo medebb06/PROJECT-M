@@ -65,6 +65,12 @@ public class PlayerController : MonoBehaviour
     public float dashTime = 0.15f;
     public float dashCooldown = 0.4f;
 
+    [Tooltip(
+        "Dash tuşu bu kadar süre hatırlanır (sn): saldırı, hasar ya da " +
+        "bekleme süresi bitmeden basılan dash kaybolmaz.")]
+    [Min(0f)]
+    public float dashBufferTime = 0.15f;
+
     [Header("Dash FX")]
     public GameObject afterImagePrefab;
     public float afterImageSpacing = 0.05f;
@@ -105,6 +111,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float slamLockTimer;
     [HideInInspector] public float dashCooldownTimer;
     [HideInInspector] public bool dashPressed;
+    [HideInInspector] public float dashBufferTimer;
     [HideInInspector] public bool jumpConsumed;
     [HideInInspector] public bool inputLocked;
     [HideInInspector] public float inputLockTimer;
@@ -133,6 +140,7 @@ public class PlayerController : MonoBehaviour
     private PlayerInputHandler inputHandler;
     private PlayerAnimationController animationController;
     private PlayerFeedback feedback;
+    private PlayerCombatController combat;
 
     public PlayerMovement Movement => movement;
 
@@ -199,6 +207,8 @@ public class PlayerController : MonoBehaviour
         if (defenseController == null)
             defenseController =
                 GetComponent<PlayerDefenseController>();
+
+        combat = GetComponent<PlayerCombatController>();
 
         SetupComponents();
 
@@ -298,13 +308,17 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ZIPLAMA. Tampon (jumpBufferCounter) kilitliyken de dolar; burada
+    // ilk uygun anda tüketilir. Block/parry'den zıplayarak çıkılabilir;
+    // saldırının vuruş karesinden SONRA zıplama saldırıyı iptal eder
+    // (öncesinde tampon bekler).
     private void HandleJump()
     {
         if (!canControl)
             return;
 
-        if (defenseController != null &&
-            defenseController.IsDefending)
+        // Kilitliyken tamponu harcama (JumpState açılıp kapanırdı).
+        if (inputLocked)
             return;
 
         if (movement.isWallSliding)
@@ -322,6 +336,20 @@ public class PlayerController : MonoBehaviour
 
         if (jumpConsumed)
             return;
+
+        // Saldırı vuruş karesine gelmeden zıplanmaz: tampon bekler.
+        if (combat != null && combat.IsAttackCommitted)
+            return;
+
+        // Savunmadan zıplayarak çık (ör. süpürmeye karşı).
+        if (defenseController != null &&
+            defenseController.IsDefending)
+        {
+            defenseController.CancelDefense();
+        }
+
+        if (combat != null)
+            combat.CancelAttack();
 
         movement.jumpBufferCounter = 0f;
         movement.coyoteCounter = 0f;
@@ -450,8 +478,18 @@ public class PlayerController : MonoBehaviour
         );
     }
 
+    // Yön tuşu basılıysa o yöne (block'tan / saldırıdan çıkarken de),
+    // değilse baktığın yöne. Yön değişirse sprite da döner.
     public float GetDashDirection()
     {
+        if (Mathf.Abs(moveInput) > 0.1f)
+        {
+            facingDir = Mathf.Sign(moveInput);
+
+            if (playerSprite != null)
+                playerSprite.flipX = facingDir < 0f;
+        }
+
         return facingDir == 0f
             ? 1f
             : facingDir;
@@ -465,6 +503,7 @@ public class PlayerController : MonoBehaviour
         moveInput = 0f;
         jumpHeld = false;
         dashPressed = false;
+        dashBufferTimer = 0f;
 
         // Posture kırıldığı anda mevcut
         // block / parry state'ini kapat.

@@ -72,6 +72,11 @@ public class PlayerDefenseController : MonoBehaviour
     private PlayerCombatController combat;
 
     private float bufferTimer;
+
+    // Zıplama/dash savunmayı iptal ettiyse, tuş bırakılana kadar
+    // 'basılı tutuluyor' savunma sayılmaz (hareket kilitlenmesin).
+    private bool suppressHeld;
+
     private float lastSuccessTime = -99f;
     private float lastFailTime = -99f;
 
@@ -84,7 +89,7 @@ public class PlayerDefenseController : MonoBehaviour
         {
             return IsParrying ||
                    IsBlocking ||
-                   Input.GetMouseButton(1);
+                   (Input.GetMouseButton(1) && !suppressHeld);
         }
     }
 
@@ -140,7 +145,13 @@ public class PlayerDefenseController : MonoBehaviour
     private void HandleInput()
     {
         if (Input.GetMouseButtonDown(1))
+        {
+            suppressHeld = false;
             bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
+        }
+
+        if (Input.GetMouseButtonUp(1))
+            suppressHeld = false;
 
         if (bufferTimer > 0f)
         {
@@ -242,6 +253,19 @@ public class PlayerDefenseController : MonoBehaviour
         // Pencere süresince hiç başarılı parry olmadıysa: boşa gitti.
         if (lastSuccessTime < windowStartTime)
             lastFailTime = Time.time;
+    }
+
+    // Zıplama / dash savunmayı keser. Tuş hâlâ basılıysa bırakılana
+    // kadar block'a geri düşülmez.
+    public void CancelDefense()
+    {
+        bufferTimer = 0f;
+
+        if (Input.GetMouseButton(1))
+            suppressHeld = true;
+
+        if (currentState != null)
+            ChangeState(null);
     }
 
     // =========================================================
