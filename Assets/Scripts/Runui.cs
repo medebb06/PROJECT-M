@@ -8,27 +8,48 @@ using UnityEngine;
 ///
 /// Seçim: 1/2/3 tuşları ya da tıklama.  Yeniden başla: Enter.
 /// TAB (basılı tut): canlı istatistik paneli.
-/// RunManager kendiliğinden ekler.
+/// Boyut: 'UI Scale' (Inspector). RunManager kendiliğinden ekler.
 /// </summary>
 public class RunUI : MonoBehaviour
 {
+    [Header("Boyut")]
+    [Tooltip("Tüm arayüzün boyutu. 1 = büyük, 0.7 = kompakt (önerilen).")]
+    [Range(0.4f, 1.5f)]
+    [SerializeField] private float uiScale = 0.7f;
+
+    [Header("Davranış")]
     [Tooltip("Basılı tutunca canlı istatistik paneli açılır.")]
     [SerializeField] private KeyCode liveStatsKey = KeyCode.Tab;
 
     [Tooltip("Koşu sonu tablosunda gösterilecek en fazla bölüm (sonuncular).")]
-    [SerializeField] private int maxStageRows = 9;
+    [SerializeField] private int maxStageRows = 8;
+
+    [Tooltip("Alttaki build satırı (kritik / denge / can çarpanları).")]
+    [SerializeField] private bool showBuildStats = true;
+
+    // ---------------------------------------------------------
+    // Stiller
+    // ---------------------------------------------------------
 
     private GUIStyle titleStyle;
     private GUIStyle labelStyle;
     private GUIStyle smallStyle;
+    private GUIStyle tinyStyle;
+    private GUIStyle charmStyle;
     private GUIStyle cardStyle;
     private GUIStyle bannerStyle;
     private GUIStyle riposteStyle;
     private GUIStyle richCentered;
-    private GUIStyle panelStyle;
     private GUIStyle legendStyle;
+    private GUIStyle panelStyle;
 
     private Texture2D dimTexture;
+    private Texture2D panelTexture;
+    private Texture2D cardTexture;
+    private Texture2D cardHoverTexture;
+
+    private static readonly Color Gold = new Color(1f, 0.82f, 0.3f);
+    private static readonly Color Soft = new Color(1f, 1f, 1f, 0.75f);
 
     // Saldırı sonucu renkleri (bar ve lejant).
     private static readonly Color ColParry = new Color(1f, 0.82f, 0.2f);
@@ -38,6 +59,12 @@ public class RunUI : MonoBehaviour
     private static readonly Color ColInterrupted = new Color(1f, 0.5f, 0.2f);
     private static readonly Color ColIFrame = new Color(0.72f, 0.5f, 1f);
     private static readonly Color ColHit = new Color(0.95f, 0.25f, 0.25f);
+
+    private const float Pad = 8f;
+
+    // =========================================================
+    // GİRİŞ
+    // =========================================================
 
     private void Update()
     {
@@ -66,6 +93,10 @@ public class RunUI : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // ÇİZİM
+    // =========================================================
+
     private void OnGUI()
     {
         RunManager run = RunManager.Instance;
@@ -73,18 +104,18 @@ public class RunUI : MonoBehaviour
         if (run == null || run.Inventory == null)
             return;
 
-        // Ekran boyutundan bağımsız: 720 piksel yüksekliğe göre ölçekle.
-        float scale = Screen.height / 720f;
+        // 720p referans × uiScale. Sanal ekran: width × height.
+        float scale = Screen.height / 720f * uiScale;
 
         GUI.matrix =
             Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
         float width = Screen.width / scale;
-        float height = 720f;
+        float height = Screen.height / scale;
 
         EnsureStyles();
 
-        DrawHud(run);
+        DrawHud(run, width, height);
 
         switch (run.State)
         {
@@ -93,15 +124,8 @@ public class RunUI : MonoBehaviour
                 break;
 
             case RunState.Fighting:
-                // Yeni dalga başlarken kısa duyuru.
                 if (Time.unscaledTime < run.WaveBannerUntil)
-                {
-                    DrawBanner(
-                        run.WaveBannerText,
-                        width,
-                        height
-                    );
-                }
+                    DrawBanner(run.WaveBannerText, width, height);
                 break;
 
             case RunState.Cleared:
@@ -117,7 +141,6 @@ public class RunUI : MonoBehaviour
                 break;
         }
 
-        // Canlı istatistik (ölüm ekranında zaten tam özet var).
         if (
             run.State != RunState.Dead &&
             run.State != RunState.Offer &&
@@ -129,63 +152,73 @@ public class RunUI : MonoBehaviour
     }
 
     // =========================================================
-    // HUD
+    // HUD (sol üst kompakt panel)
     // =========================================================
 
-    private void DrawHud(RunManager run)
+    private void DrawHud(RunManager run, float width, float height)
     {
+        IReadOnlyList<CharmInventory.Entry> entries =
+            run.Inventory.Entries;
+
+        float panelWidth = 210f;
+        float lineH = 15f;
+        float panelHeight = 44f + entries.Count * lineH + (entries.Count > 0 ? 6f : 0f);
+
+        Rect panel = new Rect(Pad, Pad, panelWidth, panelHeight);
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
         string stageText = "BÖLÜM " + run.Stage;
 
         if (run.WaveCount > 1)
-            stageText += "   •   DALGA " + run.Wave + "/" + run.WaveCount;
+            stageText += "  <size=11><color=#BBBBBB>dalga " + run.Wave + "/" + run.WaveCount + "</color></size>";
 
         GUI.Label(
-            new Rect(16, 12, 600, 30),
+            new Rect(panel.x + 8f, panel.y + 4f, panelWidth - 16f, 20f),
             stageText,
             titleStyle
         );
 
         GUI.Label(
-            new Rect(16, 44, 400, 24),
+            new Rect(panel.x + 8f, panel.y + 24f, panelWidth - 16f, 16f),
             "Düşman: " + run.AliveEnemies,
-            labelStyle
+            smallStyle
         );
 
-        IReadOnlyList<CharmInventory.Entry> entries =
-            run.Inventory.Entries;
-
-        float y = 78f;
+        float y = panel.y + 44f;
 
         for (int i = 0; i < entries.Count; i++)
         {
             CharmInventory.Entry e = entries[i];
 
-            string stacks =
-                e.stacks > 1 ? "  x" + e.stacks : "";
+            string line = "• " + e.definition.displayName;
 
-            // Davranış charm'larının anlık durumu (Ritim 3/5, AKTİF...).
+            if (e.stacks > 1)
+                line += " <color=#9AD1FF>x" + e.stacks + "</color>";
+
             string status =
                 e.effect != null ? e.effect.Status() : "";
 
             if (!string.IsNullOrEmpty(status))
-                stacks += "   [" + status + "]";
+                line += "  <color=#FFD54A>" + status + "</color>";
 
             GUI.Label(
-                new Rect(16, y, 520, 22),
-                e.definition.displayName + stacks,
-                smallStyle
+                new Rect(panel.x + 8f, y, panelWidth - 12f, lineH),
+                line,
+                charmStyle
             );
 
-            y += 20f;
+            y += lineH;
         }
 
-        DrawBuildStats(run);
+        if (showBuildStats)
+            DrawBuildStats(height);
 
-        DrawRiposte();
+        DrawRiposte(width);
     }
 
     // Build'in toplam etkisi: charm'ların ve riposte'un birleşik sonucu.
-    private void DrawBuildStats(RunManager run)
+    private void DrawBuildStats(float height)
     {
         PlayerStats stats = PlayerStats.Current;
 
@@ -195,30 +228,28 @@ public class RunUI : MonoBehaviour
         string text =
             "Kritik %" + Mathf.RoundToInt(stats.CritChance * 100f) +
             " (x" + stats.CritMultiplier.ToString("0.0") + ")" +
-            "    Denge x" +
+            "   Denge x" +
             stats.Get(StatType.BalanceDamage, 1f).ToString("0.00") +
-            "    Can x" +
+            "   Can x" +
             stats.Get(StatType.HealthDamage, 1f).ToString("0.00") +
-            "    [TAB] istatistik";
+            "   <color=#888888>[TAB] istatistik</color>";
 
         GUI.Label(
-            new Rect(16, 686, 900, 24),
+            new Rect(Pad + 2f, height - 20f, 600f, 16f),
             text,
-            smallStyle
+            tinyStyle
         );
     }
 
-    // Parry sonrası güçlenmiş vuruş hakları.
-    private void DrawRiposte()
+    // Parry sonrası güçlenmiş vuruş hakları (üst orta, küçük).
+    private void DrawRiposte(float width)
     {
         if (!ParryRiposte.IsActive)
             return;
 
-        float width = Screen.width / (Screen.height / 720f);
-
         GUI.Label(
-            new Rect(0, 96, width, 40),
-            "RİPOSTE  " + new string('●', Mathf.Max(0, ParryRiposte.HitsLeft)),
+            new Rect(0, 10f, width, 24f),
+            "RİPOSTE " + new string('●', Mathf.Max(0, ParryRiposte.HitsLeft)),
             riposteStyle
         );
     }
@@ -234,49 +265,38 @@ public class RunUI : MonoBehaviour
         if (s == null)
             return;
 
-        float panelWidth = 470f;
-        float x = width - panelWidth - 16f;
-        float y = 12f;
+        float panelWidth = 360f;
 
-        GUI.DrawTexture(
-            new Rect(x - 10f, y - 6f, panelWidth + 20f, 340f),
-            dimTexture
-        );
+        Rect panel =
+            new Rect(width - panelWidth - Pad, Pad, panelWidth, 220f);
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float x = panel.x + 10f;
+        float w = panelWidth - 20f;
+        float y = panel.y + 6f;
 
         GUI.Label(
-            new Rect(x, y, panelWidth, 26),
+            new Rect(x, y, w, 18f),
             s.HeaderLine() + "   " + s.KillsLine(),
-            panelStyle
+            smallStyle
         );
 
-        y += 34f;
+        y += 22f;
 
-        y = DrawOutcomeBlock(
-            new Rect(x, y, panelWidth, 0f),
-            "NORMAL SALDIRI",
-            s.Normal,
-            false
-        );
-
-        y += 6f;
-
-        y = DrawOutcomeBlock(
-            new Rect(x, y, panelWidth, 0f),
-            "ENGELLENEMEZ",
-            s.Unblockable,
-            true
-        );
-
-        y += 8f;
+        y = DrawOutcomeBlock(new Rect(x, y, w, 0f), "NORMAL SALDIRI", s.Normal, false);
+        y += 4f;
+        y = DrawOutcomeBlock(new Rect(x, y, w, 0f), "ENGELLENEMEZ", s.Unblockable, true);
+        y += 4f;
 
         GUI.Label(
-            new Rect(x, y, panelWidth, 40),
+            new Rect(x, y, w, 32f),
             s.DefenseLine() + "\n" +
             "Alınan " + s.DamageTotal +
             "  (normal " + s.DamageNormal +
             ", engellenemez " + s.DamageUnblockable + ")" +
             "   İyileşme " + s.Healed,
-            panelStyle
+            tinyStyle
         );
     }
 
@@ -286,10 +306,20 @@ public class RunUI : MonoBehaviour
 
     private void DrawOffer(RunManager run, float width, float height)
     {
-        GUI.DrawTexture(
-            new Rect(0, 0, width, height),
-            dimTexture
-        );
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        IReadOnlyList<CharmDefinition> offers = run.Offers;
+
+        float cardWidth = 220f;
+        float cardHeight = 190f;
+        float gap = 14f;
+
+        float total =
+            offers.Count * cardWidth +
+            Mathf.Max(0, offers.Count - 1) * gap;
+
+        float x = (width - total) * 0.5f;
+        float cardY = (height - cardHeight) * 0.5f;
 
         string heading =
             run.IsStartOffer
@@ -299,23 +329,10 @@ public class RunUI : MonoBehaviour
                     : "BİR CHARM SEÇ";
 
         GUI.Label(
-            new Rect(0, 90, width, 50),
+            new Rect(0, cardY - 46f, width, 34f),
             heading,
             bannerStyle
         );
-
-        IReadOnlyList<CharmDefinition> offers = run.Offers;
-
-        float cardWidth = 300f;
-        float cardHeight = 260f;
-        float gap = 24f;
-
-        float total =
-            offers.Count * cardWidth +
-            (offers.Count - 1) * gap;
-
-        float x = (width - total) * 0.5f;
-        float cardY = 190f;
 
         for (int i = 0; i < offers.Count; i++)
         {
@@ -335,10 +352,11 @@ public class RunUI : MonoBehaviour
                     : "";
 
             string text =
-                "<b>" + (i + 1) + ".  " + def.displayName + "</b>\n" +
-                "<size=14><color=#9AD1FF>" + level + "</color></size>\n\n" +
-                def.description + "\n\n" +
-                "<color=#FFD54A>" + effect + "</color>";
+                "<size=11><color=#888888>" + (i + 1) + "</color></size>  " +
+                "<b>" + def.displayName + "</b>\n" +
+                "<size=11><color=#9AD1FF>" + level + "</color></size>\n\n" +
+                "<size=12>" + def.description + "</size>\n\n" +
+                "<size=11><color=#FFD54A>" + effect + "</color></size>";
 
             if (
                 GUI.Button(
@@ -355,142 +373,121 @@ public class RunUI : MonoBehaviour
         }
 
         GUI.Label(
-            new Rect(0, cardY + cardHeight + 24f, width, 30),
-            "1 / 2 / 3 tuşları ya da tıkla",
-            smallStyleCentered()
+            new Rect(0, cardY + cardHeight + 10f, width, 18f),
+            "1 / 2 / 3 ya da tıkla",
+            Centered(tinyStyle)
         );
     }
 
     // =========================================================
-    // BANNER / ÖLÜM
+    // BANNER
     // =========================================================
 
     private void DrawBanner(string text, float width, float height)
     {
-        GUI.Label(
-            new Rect(0, height * 0.35f, width, 60),
-            text,
-            bannerStyle
-        );
+        float bannerH = 40f;
+        float y = height * 0.28f;
+
+        // İnce şerit arka plan.
+        Color old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.DrawTexture(new Rect(0, y, width, bannerH), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        GUI.Label(new Rect(0, y, width, bannerH), text, bannerStyle);
     }
+
+    // =========================================================
+    // KOŞU SONU
+    // =========================================================
 
     private void DrawDead(RunManager run, float width, float height)
     {
-        GUI.DrawTexture(
-            new Rect(0, 0, width, height),
-            dimTexture
-        );
-
-        GUI.Label(
-            new Rect(0, 30, width, 56),
-            "KOŞU BİTTİ",
-            bannerStyle
-        );
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
 
         RunStats s = run.Stats;
 
-        // İstatistik yoksa eski basit ekran.
+        float panelWidth = Mathf.Min(680f, width - 2f * Pad);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 560f);
+
+        Rect panel =
+            new Rect(
+                (width - panelWidth) * 0.5f,
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float x = panel.x + 16f;
+        float w = panelWidth - 32f;
+        float y = panel.y + 10f;
+
+        GUI.Label(new Rect(panel.x, y, panelWidth, 34f), "KOŞU BİTTİ", bannerStyle);
+
+        y += 38f;
+
         if (s == null || !s.HasResult)
         {
             GUI.Label(
-                new Rect(0, 100, width, 30),
+                new Rect(panel.x, y, panelWidth, 20f),
                 "Ulaştığın bölüm: " + run.Stage,
-                centered(labelStyle)
+                Centered(labelStyle)
             );
 
-            DrawRestartHint(width, height);
+            DrawRestartHint(panel);
             return;
         }
 
-        float contentWidth = Mathf.Min(900f, width - 32f);
-        float left = (width - contentWidth) * 0.5f;
-        float y = 92f;
-
-        // --- Başlık satırları ---
-
         GUI.Label(
-            new Rect(0, y, width, 26),
-            s.HeaderLine() + "      " + s.KillsLine(),
-            centered(labelStyle)
+            new Rect(panel.x, y, panelWidth, 18f),
+            s.HeaderLine() + "     " + s.KillsLine(),
+            Centered(smallStyle)
         );
 
-        y += 28f;
+        y += 18f;
 
         GUI.Label(
-            new Rect(0, y, width, 24),
+            new Rect(panel.x, y, panelWidth, 18f),
             "<color=#FF8A80>" + s.DeathText() + "</color>",
             richCentered
         );
 
-        y += 36f;
+        y += 26f;
 
-        // --- Saldırılara cevap ---
+        y = DrawOutcomeBlock(new Rect(x, y, w, 0f), "NORMAL SALDIRILARA CEVAP", s.Normal, false);
+        y += 4f;
+        y = DrawOutcomeBlock(new Rect(x, y, w, 0f), "ENGELLENEMEZ SALDIRILARA CEVAP", s.Unblockable, true);
+        y += 6f;
 
-        y = DrawOutcomeBlock(
-            new Rect(left, y, contentWidth, 0f),
-            "NORMAL SALDIRILARA CEVAP",
-            s.Normal,
-            false
-        );
+        GUIStyle line = Centered(tinyStyle);
 
-        y += 8f;
-
-        y = DrawOutcomeBlock(
-            new Rect(left, y, contentWidth, 0f),
-            "ENGELLENEMEZ SALDIRILARA CEVAP",
-            s.Unblockable,
-            true
-        );
-
-        y += 10f;
-
-        // --- Sayılar ---
-
+        GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.DefenseLine(), line);
+        y += 15f;
+        GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.DamageTakenLine(), line);
+        y += 15f;
+        GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.DamageDealtLine(), line);
+        y += 15f;
         GUI.Label(
-            new Rect(0, y, width, 22),
-            s.DefenseLine(),
-            smallStyleCentered()
-        );
-
-        y += 22f;
-
-        GUI.Label(
-            new Rect(0, y, width, 22),
-            s.DamageTakenLine(),
-            smallStyleCentered()
-        );
-
-        y += 22f;
-
-        GUI.Label(
-            new Rect(0, y, width, 22),
-            s.DamageDealtLine(),
-            smallStyleCentered()
-        );
-
-        y += 22f;
-
-        GUI.Label(
-            new Rect(0, y, width, 22),
+            new Rect(panel.x, y, panelWidth, 15f),
             "Build: " + (s.BuildText.Length > 0 ? s.BuildText : "(charm yok)"),
-            smallStyleCentered()
+            line
         );
 
-        y += 32f;
+        y += 24f;
 
-        // --- Bölüm tablosu ---
+        DrawStageTable(s, panel, y);
 
-        DrawStageTable(s, width, y);
-
-        DrawRestartHint(width, height);
+        DrawRestartHint(panel);
     }
 
-    private void DrawRestartHint(float width, float height)
+    private void DrawRestartHint(Rect panel)
     {
         GUI.Label(
-            new Rect(0, height - 44f, width, 34),
-            "Yeniden başlamak için ENTER",
-            centered(labelStyle)
+            new Rect(panel.x, panel.yMax - 24f, panel.width, 18f),
+            "Yeniden başlamak için <b>ENTER</b>",
+            richCentered
         );
     }
 
@@ -506,19 +503,18 @@ public class RunUI : MonoBehaviour
         int total = o.Total;
 
         GUI.Label(
-            new Rect(area.x, y, area.width, 22),
-            title + "  (" + total + ")",
-            labelStyle
+            new Rect(area.x, y, area.width, 16f),
+            title + "  <color=#888888>(" + total + ")</color>",
+            smallStyle
         );
 
-        y += 24f;
+        y += 17f;
 
-        Rect bar = new Rect(area.x, y, area.width, 16f);
+        Rect bar = new Rect(area.x, y, area.width, 8f);
 
         Color old = GUI.color;
 
-        // Arka plan
-        GUI.color = new Color(1f, 1f, 1f, 0.12f);
+        GUI.color = new Color(1f, 1f, 1f, 0.1f);
         GUI.DrawTexture(bar, Texture2D.whiteTexture);
 
         if (total > 0)
@@ -536,7 +532,7 @@ public class RunUI : MonoBehaviour
 
         GUI.color = old;
 
-        y += 20f;
+        y += 11f;
 
         string legend =
             (unblockable
@@ -549,7 +545,6 @@ public class RunUI : MonoBehaviour
             Legend("i-frame", o.iFrame, total, ColIFrame) +
             Legend("YENDİ", o.hit, total, ColHit);
 
-        // Dar alanda (TAB paneli) iki satıra kayar.
         float legendHeight =
             legendStyle.CalcHeight(new GUIContent(legend), area.width);
 
@@ -559,7 +554,7 @@ public class RunUI : MonoBehaviour
             legendStyle
         );
 
-        return y + legendHeight + 4f;
+        return y + legendHeight + 2f;
     }
 
     private static float Segment(
@@ -576,10 +571,7 @@ public class RunUI : MonoBehaviour
         float w = bar.width * count / total;
 
         GUI.color = color;
-        GUI.DrawTexture(
-            new Rect(x, bar.y, w, bar.height),
-            Texture2D.whiteTexture
-        );
+        GUI.DrawTexture(new Rect(x, bar.y, w, bar.height), Texture2D.whiteTexture);
 
         return x + w;
     }
@@ -594,38 +586,46 @@ public class RunUI : MonoBehaviour
         return
             "<color=#" + ColorUtility.ToHtmlStringRGB(color) + ">● " +
             name + " " + count + " " +
-            RunStats.Pct(count, total) + "</color>    ";
+            RunStats.Pct(count, total) + "</color>   ";
     }
 
-    private void DrawStageTable(RunStats s, float width, float y)
+    private void DrawStageTable(RunStats s, Rect panel, float y)
     {
         string[] headers =
         {
             "Bölüm", "Süre", "Öldürme", "Parry", "Block", "Yendi", "Hasar"
         };
 
-        float col = 90f;
+        float col = 70f;
         float tableWidth = col * headers.Length;
-        float left = (width - tableWidth) * 0.5f;
+        float left = panel.x + (panel.width - tableWidth) * 0.5f;
 
-        GUIStyle head = centered(labelStyle);
-        GUIStyle cell = centered(smallStyle);
+        GUIStyle head = Centered(smallStyle);
+        GUIStyle cell = Centered(tinyStyle);
 
         for (int c = 0; c < headers.Length; c++)
         {
-            GUI.Label(
-                new Rect(left + c * col, y, col, 22),
-                headers[c],
-                head
-            );
+            GUI.Label(new Rect(left + c * col, y, col, 16f), headers[c], head);
         }
 
-        y += 24f;
+        y += 17f;
+
+        // İnce ayırıcı çizgi.
+        Color old = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, 0.15f);
+        GUI.DrawTexture(new Rect(left, y, tableWidth, 1f), Texture2D.whiteTexture);
+        GUI.color = old;
+
+        y += 3f;
 
         IReadOnlyList<RunStats.StageRecord> stages = s.Stages;
 
-        int first =
-            Mathf.Max(0, stages.Count - Mathf.Max(1, maxStageRows));
+        float bottom = panel.yMax - 30f;
+
+        int maxRows =
+            Mathf.Max(1, Mathf.Min(maxStageRows, Mathf.FloorToInt((bottom - y) / 14f)));
+
+        int first = Mathf.Max(0, stages.Count - maxRows);
 
         for (int i = first; i < stages.Count; i++)
         {
@@ -644,14 +644,10 @@ public class RunUI : MonoBehaviour
 
             for (int c = 0; c < values.Length; c++)
             {
-                GUI.Label(
-                    new Rect(left + c * col, y, col, 20),
-                    values[c],
-                    cell
-                );
+                GUI.Label(new Rect(left + c * col, y, col, 14f), values[c], cell);
             }
 
-            y += 19f;
+            y += 14f;
         }
     }
 
@@ -661,96 +657,133 @@ public class RunUI : MonoBehaviour
 
     private void EnsureStyles()
     {
-        if (titleStyle != null)
+        if (titleStyle != null && panelTexture != null)
             return;
 
-        titleStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 26,
-            fontStyle = FontStyle.Bold
-        };
+        titleStyle = Make(16, FontStyle.Bold, Color.white);
+        titleStyle.richText = true;
 
-        titleStyle.normal.textColor = Color.white;
+        labelStyle = Make(14, FontStyle.Normal, Color.white);
+        labelStyle.richText = true;
 
-        labelStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 18
-        };
+        smallStyle = Make(12, FontStyle.Normal, Soft);
+        smallStyle.richText = true;
 
-        labelStyle.normal.textColor = Color.white;
+        tinyStyle = Make(11, FontStyle.Normal, new Color(1f, 0.93f, 0.7f, 0.85f));
+        tinyStyle.richText = true;
 
-        smallStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 15
-        };
+        charmStyle = Make(12, FontStyle.Normal, new Color(1f, 0.95f, 0.8f));
+        charmStyle.richText = true;
+        charmStyle.clipping = TextClipping.Clip;
 
-        smallStyle.normal.textColor = new Color(1f, 0.93f, 0.6f);
+        legendStyle = Make(11, FontStyle.Normal, Color.white);
+        legendStyle.richText = true;
+        legendStyle.wordWrap = true;
 
-        panelStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 14,
-            wordWrap = true
-        };
+        riposteStyle = Make(18, FontStyle.Bold, Gold);
+        riposteStyle.alignment = TextAnchor.MiddleCenter;
 
-        panelStyle.normal.textColor = Color.white;
+        bannerStyle = Make(24, FontStyle.Bold, Color.white);
+        bannerStyle.alignment = TextAnchor.MiddleCenter;
 
-        legendStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 15,
-            richText = true,
-            wordWrap = true
-        };
+        richCentered = Make(12, FontStyle.Normal, Color.white);
+        richCentered.richText = true;
+        richCentered.alignment = TextAnchor.MiddleCenter;
 
-        legendStyle.normal.textColor = Color.white;
+        // Arka planlar: 1px açık kenarlıklı koyu panel (9-slice).
+        dimTexture = Solid(new Color(0f, 0f, 0f, 0.6f));
 
-        richCentered = new GUIStyle(labelStyle)
-        {
-            richText = true,
-            alignment = TextAnchor.MiddleCenter
-        };
+        panelTexture =
+            Bordered(
+                new Color(0.06f, 0.06f, 0.08f, 0.72f),
+                new Color(1f, 1f, 1f, 0.18f)
+            );
+
+        cardTexture =
+            Bordered(
+                new Color(0.08f, 0.08f, 0.11f, 0.92f),
+                new Color(1f, 0.82f, 0.3f, 0.35f)
+            );
+
+        cardHoverTexture =
+            Bordered(
+                new Color(0.14f, 0.12f, 0.08f, 0.95f),
+                new Color(1f, 0.82f, 0.3f, 0.9f)
+            );
+
+        panelStyle = new GUIStyle();
+        panelStyle.normal.background = panelTexture;
+        panelStyle.border = new RectOffset(1, 1, 1, 1);
 
         cardStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 17,
+            fontSize = 14,
             alignment = TextAnchor.UpperLeft,
             wordWrap = true,
             richText = true,
-            padding = new RectOffset(16, 16, 14, 14)
+            padding = new RectOffset(12, 12, 10, 10),
+            border = new RectOffset(1, 1, 1, 1)
         };
 
-        riposteStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 30,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
-
-        riposteStyle.normal.textColor = new Color(1f, 0.82f, 0.2f);
-
-        bannerStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 40,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
-
-        bannerStyle.normal.textColor = Color.white;
-
-        dimTexture = new Texture2D(1, 1);
-        dimTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.72f));
-        dimTexture.Apply();
+        cardStyle.normal.background = cardTexture;
+        cardStyle.hover.background = cardHoverTexture;
+        cardStyle.active.background = cardHoverTexture;
+        cardStyle.focused.background = cardTexture;
+        cardStyle.normal.textColor = Color.white;
+        cardStyle.hover.textColor = Color.white;
+        cardStyle.active.textColor = Color.white;
     }
 
-    private GUIStyle smallStyleCentered()
+    private static GUIStyle Make(int size, FontStyle fontStyle, Color color)
     {
-        return centered(smallStyle);
+        GUIStyle style = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = size,
+            fontStyle = fontStyle
+        };
+
+        style.normal.textColor = color;
+
+        return style;
     }
 
-    private static GUIStyle centered(GUIStyle source)
+    private static Texture2D Solid(Color color)
     {
-        GUIStyle style = new GUIStyle(source);
+        Texture2D tex = new Texture2D(1, 1);
 
-        style.alignment = TextAnchor.MiddleCenter;
+        tex.SetPixel(0, 0, color);
+        tex.Apply();
+
+        return tex;
+    }
+
+    // 3x3: kenarlar 'border', orta 'fill' (GUIStyle.border = 1 ile 9-slice).
+    private static Texture2D Bordered(Color fill, Color border)
+    {
+        Texture2D tex = new Texture2D(3, 3);
+
+        tex.filterMode = FilterMode.Point;
+
+        for (int x = 0; x < 3; x++)
+        {
+            for (int y = 0; y < 3; y++)
+            {
+                bool edge = x == 0 || y == 0 || x == 2 || y == 2;
+                tex.SetPixel(x, y, edge ? border : fill);
+            }
+        }
+
+        tex.Apply();
+
+        return tex;
+    }
+
+    private static GUIStyle Centered(GUIStyle source)
+    {
+        GUIStyle style = new GUIStyle(source)
+        {
+            alignment = TextAnchor.MiddleCenter
+        };
 
         return style;
     }

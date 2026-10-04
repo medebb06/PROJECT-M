@@ -28,7 +28,7 @@ public class CritFeedback : MonoBehaviour
 
     [Tooltip("Patlamanın en büyük hali (dünya birimi çarpanı).")]
     [Min(0.1f)]
-    public float burstScale = 1.6f;
+    public float burstScale = 1.3f;
 
     [Min(0.05f)]
     public float burstDuration = 0.2f;
@@ -54,7 +54,7 @@ public class CritFeedback : MonoBehaviour
     public float textLife = 0.65f;
 
     [Tooltip("Yazı boyutu (dünya birimi). Büyük/küçük gelirse değiştir.")]
-    public float textSize = 0.06f;
+    public float textSize = 0.045f;
 
     [Header("His")]
     [Tooltip("Kritikte ek hit-stop süresi (gerçek sn). 0 = kapalı.")]
