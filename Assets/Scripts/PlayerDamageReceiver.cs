@@ -55,6 +55,14 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         "dolana kadar hâlâ korumalıdır ve sprite yanıp söner.")]
     [SerializeField] private float invincibilityDuration = 0.7f;
 
+    [Header("Tek Vuruş Tavanı")]
+    [Tooltip(
+        "Tek bir vuruş en fazla azami canın bu oranı kadar hasar verebilir " +
+        "(charm, ısı, elit çarpanları dahil, SONRA uygulanır). " +
+        "0.4 = %40: iki hatada ölmezsin, en az üç gerekir. 1 = tavan yok.")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float maxSingleHitPercent = 0.4f;
+
     [Header("Hit Slow-Mo")]
     [Tooltip(
         "Vurulduktan sonra kalan can bu değer veya altındaysa " +
@@ -217,6 +225,18 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
                         PlayerStats.GetOr(StatType.DamageTaken, damage)
                     )
                 );
+
+            // TEK VURUŞ TAVANI: hiçbir vuruş canın %X'inden fazlasını almasın.
+            if (maxSingleHitPercent < 1f && health.MaxHealth > 0)
+            {
+                int cap =
+                    Mathf.Max(
+                        1,
+                        Mathf.CeilToInt(health.MaxHealth * maxSingleHitPercent)
+                    );
+
+                damage = Mathf.Min(damage, cap);
+            }
         }
 
         int healthBefore = health.CurrentHealth;

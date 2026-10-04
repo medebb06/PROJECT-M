@@ -207,9 +207,11 @@ public static class CharmCatalog
             Make(
                 "Cam Top",
                 "Tüm hasarın artar, ama sen de daha çok hasar alırsın.",
-                2,
+                // Tek yığın: iki yığın (denge ×1.96, alınan ×1.69) baskındı;
+                // dövüşler ~10 sn'de bitiyor, iki engellenemez vuruş öldürüyordu.
+                1,
                 Stat(
-                    (StatType.BalanceDamage, 0f, 1.4f),
+                    (StatType.BalanceDamage, 0f, 1.25f),
                     (StatType.HealthDamage, 0f, 1.4f),
                     (StatType.DamageTaken, 0f, 1.3f)
                 )

@@ -817,7 +817,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.20363119, g: 0.21907829, b: 0.3018868, a: 0}
+  m_BackGroundColor: {r: 0.49092203, g: 0.49690282, b: 0.5283019, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -1023,13 +1023,13 @@ MonoBehaviour:
   - "K\u0131l\u0131\xE7 Ustas\u0131"
   - "K\u0131z\u0131l D\xFCellocu"
   - "G\xF6lge Efendisi"
-  bossHealthMultiplier: 6
+  bossHealthMultiplier: 10
   bossHealthPerAct: 1.5
   bossExecutePercent: 0.25
-  bossScale: 1.35
+  bossScale: 1.6
   bossPhase2At: 0.5
   bossHealPercent: 0.5
-  restHealPercent: 0.4
+  restHealPercent: 0.5
   goldPerKill: 8
   goldPerKillPerAct: 0.25
   executeKillBonus: 4
@@ -9583,6 +9583,7 @@ GameObject:
   - component: {fileID: 1942622295}
   - component: {fileID: 1942622298}
   - component: {fileID: 1942622299}
+  - component: {fileID: 1942622300}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -9725,6 +9726,121 @@ MonoBehaviour:
   enemyTintDuration: 0.1
   critClip: {fileID: 0}
   critVolume: 1
+--- !u!114 &1942622300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyController
+  attackRange: 1.5
+  chaseStopDistance: 1.8
+  chaseSpeed: 4
+  alwaysHunt: 0
+  useStandby: 1
+  standbyDistance: 4.5
+  standbySpacing: 1.5
+  standbySpeedMultiplier: 0.7
+  standbyArrivalTolerance: 0.2
+  standbyMaxDistance: 9
+  ringSlotPadding: 0.15
+  ringInnerMinDistance: 1.3
+  useDepthSorting: 1
+  depthMaxLevels: 4
+  animator: {fileID: 0}
+  staggerDuration: 1.2
+  attackWarningTime: 1
+  attackRecoveryTime: 0.8
+  attackCommitPoint: 0.4
+  committedHitFlashColor: {r: 1, g: 0.6, b: 0.1, a: 1}
+  committedFlashDuration: 0.1
+  committedHitClip: {fileID: 0}
+  useUnblockableAttacks: 1
+  unblockableChance: 0.25
+  unblockableMinNormalAttacksBetween: 2
+  unblockableWindupMultiplier: 1.6
+  unblockableHitOffset: 0
+  attackAnimationHitTime: 0
+  unblockableCommitPoint: 0.15
+  unblockableDamage: 75
+  unblockableKnockbackMultiplier: 1.4
+  unblockableDodgeGrace: 0.12
+  unblockableReachMultiplier: 0.9
+  unblockableDodgeCueLead: 0.4
+  unblockableFrontOnly: 1
+  unblockableForwardReach: 5.5
+  unblockableHitHeight: 2.2
+  lockFacingDuringAttack: 1
+  releaseFacingAtHit: 0
+  attackBackTolerance: 0.4
+  normalAttackFrontOnly: 1
+  normalAttackHitHeight: 2.2
+  parrySlowMo:
+    enabled: 1
+    duration: 1.6
+    startTimeScale: 0.25
+    rampPower: 1.5
+  parryBreakSlowMo:
+    enabled: 1
+    duration: 2.2
+    startTimeScale: 0.2
+    rampPower: 1.5
+  parrySlowMoCooldown: 0
+  showDangerIcon: 1
+  showDangerZone: 1
+  dangerColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  dangerIconScale: 1.2
+  dangerIconHeightOffset: 0.4
+  unblockableRecoveryMultiplier: 1.6
+  knockbackDeceleration: 45
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.06
+  staggerFlashColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  staggerFlashDuration: 0.15
+  solidWhiteFlash: 1
+  balanceHitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  balanceHitFlashDuration: 0.09
+  attackDamage: 1
+  attackKnockbackForce: 7
+  attackKnockbackVerticalForce: 3
+  attackKnockbackDuration: 0.12
+  attackKnockbackDeceleration: 40
+  balanceHitKnockbackForce: 1.5
+  balanceHitKnockbackVerticalForce: 0
+  balanceHitKnockbackDuration: 0.1
+  balanceHitKnockbackDeceleration: 15
+  postureKnockbackForce: 6
+  postureKnockbackVerticalForce: 1
+  postureKnockbackDuration: 0.12
+  healthKnockbackForce: 8
+  healthKnockbackVerticalForce: 1.5
+  healthKnockbackDuration: 0.12
+  attack1KnockbackForce: 4
+  attack2KnockbackForce: 5.5
+  attack3KnockbackForce: 7
+  attack4KnockbackForce: 9
+  blockKnockbackForce: 2.5
+  blockKnockbackVerticalForce: 0.2
+  blockKnockbackDuration: 0.15
+  blockKnockbackDeceleration: 12
+  parryBalanceDamage: 2
+  blockPostureDamage: 25
+  slamBalanceDamage: 3
+  executeDamage: 10
+  executeDistance: 1.2
+  executeDuration: 0.08
+  hitAudioSource: {fileID: 0}
+  healthHitClip: {fileID: 0}
+  postureHitClip: {fileID: 0}
+  knockbackClip: {fileID: 0}
+  target: {fileID: 0}
+  chaseRange: 5
+  enemySprite: {fileID: 0}
 --- !u!1 &2024794329
 GameObject:
   m_ObjectHideFlags: 0
@@ -10185,6 +10301,7 @@ MonoBehaviour:
   blink: {fileID: 0}
   hurtLockDuration: 0.22
   invincibilityDuration: 0.7
+  maxSingleHitPercent: 0.4
   lowHealthThreshold: 1
   normalHitSlowMo:
     enabled: 1
@@ -10241,10 +10358,9 @@ MonoBehaviour:
   allowAirDefense: 1
   cancelAttackOnDefense: 1
   chainDuration: 0.8
-  chainWindowMultiplier: 2
-  holdToParryInChain: 1
-  spamPenaltyTime: 0.25
-  spamWindowMultiplier: 0.5
+  chainParryWindowMultiplier: 1.5
+  whiffPenaltyTime: 0.3
+  whiffWindowMultiplier: 0.5
   showDebug: 0
 --- !u!114 &2122615059
 MonoBehaviour:
@@ -10482,7 +10598,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 169b8195ef3a6cd468b82d7f3ab6492e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFinisher
-  finisherRange: 3
+  finisherRange: 4
   forwardPriority: 1.5
   executeKey: 101
   inputBuffer: 0.25

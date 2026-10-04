@@ -34,7 +34,9 @@ public class RunStats : MonoBehaviour
         "(Application.persistentDataPath). Koşular arası karşılaştırma için.")]
     [SerializeField] private bool appendCsv = true;
 
-    [SerializeField] private string csvFileName = "run_stats_v3.csv";
+    // v4: kusursuz kaçış / atla-vur sütunları eklendi. (Alan adı değişti ki
+    // sahnede kayıtlı eski "v3" adı yeni sütunlarla karışmasın.)
+    [SerializeField] private string csvFile = "run_stats_v4.csv";
 
     [Tooltip(
         "Dash'ten sonra bu kadar saniye içinde kaçılan saldırı 'dash' " +
@@ -106,6 +108,8 @@ public class RunStats : MonoBehaviour
     public int ParryBreaks { get; private set; }     // dengeyi kıran parry
     public int PostureBreaks { get; private set; }   // block yüzünden kırılan posture
     public int Dashes { get; private set; }
+    public int DashCounters { get; private set; }    // kusursuz kaçış (yakalama)
+    public int JumpCounters { get; private set; }    // atla-vur (süpürme)
 
     // Alınan hasar
     public int DamageNormal { get; private set; }
@@ -204,6 +208,7 @@ public class RunStats : MonoBehaviour
         CombatEvents.AttackMissed += OnMissed;
         CombatEvents.AttackInterrupted += OnInterrupted;
         CombatEvents.PlayerDashed += OnDashed;
+        UnblockableCounter.CounterLanded += OnCounter;
     }
 
     private void OnDisable()
@@ -218,6 +223,7 @@ public class RunStats : MonoBehaviour
         CombatEvents.AttackMissed -= OnMissed;
         CombatEvents.AttackInterrupted -= OnInterrupted;
         CombatEvents.PlayerDashed -= OnDashed;
+        UnblockableCounter.CounterLanded -= OnCounter;
     }
 
     // Süre: sadece dövüş sırasında (charm seçimi ve ölüm ekranı sayılmaz).
@@ -265,6 +271,8 @@ public class RunStats : MonoBehaviour
         ParryBreaks = 0;
         PostureBreaks = 0;
         Dashes = 0;
+        DashCounters = 0;
+        JumpCounters = 0;
 
         DamageNormal = 0;
         DamageUnblockable = 0;
@@ -492,6 +500,20 @@ public class RunStats : MonoBehaviour
         (unblockable ? Unblockable : Normal).interrupted++;
     }
 
+    private void OnCounter(
+        EnemyController enemy,
+        UnblockableCounter.CounterKind kind
+    )
+    {
+        if (!Recording)
+            return;
+
+        if (kind == UnblockableCounter.CounterKind.Dash)
+            DashCounters++;
+        else
+            JumpCounters++;
+    }
+
     private void OnDashed()
     {
         lastDashTime = Time.time;
@@ -656,7 +678,9 @@ public class RunStats : MonoBehaviour
             " (dengeyi kıran " + ParryBreaks + ")   " +
             "Block " + Normal.blocked +
             " (posture kırıldı " + PostureBreaks + ")   " +
-            "Dash " + Dashes;
+            "Dash " + Dashes +
+            "   Kusursuz kaçış " + DashCounters +
+            "   Atla-vur " + JumpCounters;
     }
 
     public string DamageTakenLine()
@@ -764,14 +788,14 @@ public class RunStats : MonoBehaviour
         "parry_kiran;posture_kirildi;dash_sayisi;" +
         "hasar_normal;hasar_engellenemez;hasar_diger;hasar_block_bedeli;iyilesme;en_dusuk_can;" +
         "denge_verilen;can_verilen;isabet;kritik;" +
-        "olum_turu;olum_kaynak;build;zafer;perde;isi;altin";
+        "olum_turu;olum_kaynak;build;zafer;perde;isi;altin;kusursuz_kacis;atla_vur";
 
     private void WriteCsv()
     {
         try
         {
             string path =
-                Path.Combine(Application.persistentDataPath, csvFileName);
+                Path.Combine(Application.persistentDataPath, csvFile);
 
             bool newFile = !File.Exists(path);
 
@@ -825,7 +849,9 @@ public class RunStats : MonoBehaviour
                 Victory ? "1" : "0",
                 ActReached.ToString(inv),
                 Heat.ToString(inv),
-                GoldEarned.ToString(inv)
+                GoldEarned.ToString(inv),
+                DashCounters.ToString(inv),
+                JumpCounters.ToString(inv)
             };
 
             StringBuilder sb = new StringBuilder();

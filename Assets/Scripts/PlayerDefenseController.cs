@@ -10,12 +10,15 @@ using UnityEngine;
 ///  - Havada da savunma yapılabilir (vuruş seni hafif kaldırınca parry
 ///    yutulmasın).
 ///  - Saldırı sırasında basınca saldırı iptal olur, parry hemen başlar.
-///  - ZİNCİR: ilk parry ZAMANLAMALI; başarılı olunca zincir başlar.
-///    Zincir boyunca sağ tıka ABANMAK da, BASILI TUTMAK da kombonun
-///    kalan vuruşlarını parry'ler (2D pixel'de Sekiro okunurluğu yok;
-///    ilk vuruşu okumak yeter).
-///  - SPAM CEZASI (sadece zincir DIŞINDA, hafif): boşa giden parry'nin
-///    hemen ardından basılan pencere biraz daralır.
+///  - ZİNCİR: başarılı parry'den sonra kısa süre pencere biraz GENİŞLER
+///    (kombonun sonraki vuruşları biraz daha affedici). Ama HER vuruş için
+///    yine ZAMANLAMALI basmak gerekir: basılı tutmak = BLOCK (posture yer).
+///  - BOŞA BASMA CEZASI (zincirde de geçerli): boşa giden parry'nin hemen
+///    ardından basılan pencere daralır. Abanmak (mash) işe yaramaz,
+///    ritme basmak yarar.
+///
+/// Zorluk ayarı (Inspector): Chain Parry Window Multiplier (büyük = kolay),
+/// Whiff Window Multiplier (küçük = mash daha çok cezalanır).
 /// </summary>
 public class PlayerDefenseController : MonoBehaviour
 {
@@ -46,23 +49,25 @@ public class PlayerDefenseController : MonoBehaviour
     [Min(0f)]
     [SerializeField] private float chainDuration = 1.0f;
 
-    [Tooltip("Zincirdeki parry penceresinin çarpanı (abanırken boşluk kalmasın).")]
-    [Min(1f)]
-    [SerializeField] private float chainWindowMultiplier = 2.5f;
-
+    // NOT: alan adları bilerek değişti (eski: chainWindowMultiplier 2.5,
+    // holdToParryInChain). Prefab'a kayıtlı eski kolay değerler yeni
+    // varsayılanları ezmesin.
     [Tooltip(
-        "Açık: zincir sırasında BLOCK'ta (sağ tık basılı) kalmak da parry " +
-        "sayılır. İlk parry'den sonra basılı tutarak komboyu parry'lersin.")]
-    [SerializeField] private bool holdToParryInChain = true;
+        "Zincirdeki parry penceresinin çarpanı. 1 = ilk parry kadar zor, " +
+        "1.5 = biraz affedici (önerilen), 2.5 = eski çok kolay hali.")]
+    [Min(1f)]
+    [SerializeField] private float chainParryWindowMultiplier = 1.5f;
 
-    [Header("Spam Cezası")]
-    [Tooltip("Boşa giden parry'den sonra bu süre içinde tekrar basılırsa ceza uygulanır.")]
+    [Header("Boşa Basma Cezası (mash'e karşı)")]
+    [Tooltip(
+        "Boşa giden parry penceresi bittikten sonra bu süre içinde tekrar " +
+        "basılırsa ceza uygulanır (zincirde de).")]
     [Min(0f)]
-    [SerializeField] private float spamPenaltyTime = 0.25f;
+    [SerializeField] private float whiffPenaltyTime = 0.3f;
 
-    [Tooltip("Cezalı parry penceresinin çarpanı. 1 = ceza yok.")]
+    [Tooltip("Cezalı parry penceresinin çarpanı. 1 = ceza yok, 0.5 = yarı pencere.")]
     [Range(0.1f, 1f)]
-    [SerializeField] private float spamWindowMultiplier = 0.75f;
+    [SerializeField] private float whiffWindowMultiplier = 0.5f;
 
     [Header("Debug")]
     [Tooltip("Ekranda savunma durumunu gösterir (takılma teşhisi için).")]
@@ -230,10 +235,14 @@ public class PlayerDefenseController : MonoBehaviour
     {
         float window = ParryWindow;
 
-        if (Time.time - lastSuccessTime <= chainDuration)
-            window *= chainWindowMultiplier;
-        else if (Time.time - lastFailTime <= spamPenaltyTime)
-            window *= spamWindowMultiplier;
+        // Zincir: biraz affedici.
+        if (InParryChain)
+            window *= chainParryWindowMultiplier;
+
+        // Boşa basma cezası zincirde de geçerli: abanmak pencereyi
+        // daraltır, ritme basmak tam pencere verir.
+        if (Time.time - lastFailTime <= whiffPenaltyTime)
+            window *= whiffWindowMultiplier;
 
         return window;
     }
@@ -303,13 +312,11 @@ public class PlayerDefenseController : MonoBehaviour
             player.SetBlockingAnimation(value);
     }
 
+    // Sadece açık parry penceresi parry'dir. Basılı tutmak (zincirde de)
+    // BLOCK'tur: güvenli ama posture yer.
     public bool CanParry()
     {
-        if (IsParrying)
-            return true;
-
-        // Zincirde basılı tutmak (block) da parry sayılır.
-        return holdToParryInChain && IsBlocking && InParryChain;
+        return IsParrying;
     }
 
     public bool CanBlock()

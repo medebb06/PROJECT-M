@@ -63,6 +63,22 @@ public class EnemyAttackState : IEnemyState
     private Color originalDangerColor;
     private bool dangerColorChanged;
 
+    // Engellenemez vuruşa karşılıklar (kusursuz kaçış / atla-vur) ve
+    // "ne yapmalıyım" yazısı.
+    private UnblockableCounter counter;
+    private EnemyDangerLabel dangerLabel;
+
+    // Bu vuruşun uyarısı sırasında dash'in BAŞLADIĞI an.
+    private bool prevPlayerDashing;
+    private float dashStartRemaining = -1f;
+    private float dashStartX;
+
+    // "Şimdi kaç" işaretinin vuruştan ne kadar önce çıktığı.
+    private float cueLead;
+
+    // Kusursuz kaçış oldu: kombo kesilir, düşman uzun süre açık kalır.
+    private bool counterLanded;
+
     public EnemyAttackState(EnemyController enemy)
     {
         this.enemy = enemy;
@@ -171,6 +187,12 @@ public class EnemyAttackState : IEnemyState
 
         lastDashSeenTime = -999f;
         stepIndex = 0;
+        counterLanded = false;
+
+        counter = enemy.GetComponent<UnblockableCounter>();
+
+        if (counter == null)
+            counter = enemy.gameObject.AddComponent<UnblockableCounter>();
 
         originalDangerColor = enemy.dangerColor;
         dangerColorChanged = false;
@@ -251,6 +273,11 @@ public class EnemyAttackState : IEnemyState
 
         dodgeCueTriggered = false;
 
+        // Dash takibi her vuruşta sıfırlanır. Uyarı başladığında zaten
+        // dash'teyse bu "yeni" bir dash sayılmaz.
+        prevPlayerDashing = playerRef != null && playerRef.isDashing;
+        dashStartRemaining = -1f;
+
         warningTimer = windup;
 
         warningDuration =
@@ -325,6 +352,8 @@ public class EnemyAttackState : IEnemyState
                     .AddComponent<EnemyDangerIndicator>();
         }
 
+        ShowDangerLabel();
+
         if (IsSweep)
         {
             // Alçak, renkli kutu: "üstünden zıpla".
@@ -364,7 +393,24 @@ public class EnemyAttackState : IEnemyState
         if (indicator != null)
             indicator.Hide();
 
+        if (dangerLabel != null)
+            dangerLabel.Hide();
+
         RestoreDangerColor();
+    }
+
+    // Başın üstünde "DASH!" / "ZIPLA!" yazısı.
+    private void ShowDangerLabel()
+    {
+        dangerLabel = enemy.GetComponent<EnemyDangerLabel>();
+
+        if (dangerLabel == null)
+            dangerLabel = enemy.gameObject.AddComponent<EnemyDangerLabel>();
+
+        if (IsSweep && moveset != null)
+            dangerLabel.Show(hitType, moveset.sweepColor);
+        else
+            dangerLabel.Show(hitType);
     }
 
     private void RestoreDangerColor()
@@ -415,12 +461,26 @@ public class EnemyAttackState : IEnemyState
         if (playerRef != null && playerRef.isDashing)
             lastDashSeenTime = Time.time;
 
+        // Kusursuz kaçış için: dash'in BAŞLADIĞI anı (vuruşa kalan süre
+        // ve oyuncunun konumu) kaydet. Sadece ilk dash sayılır.
+        bool dashingNow = playerRef != null && playerRef.isDashing;
+
+        if (dashingNow && !prevPlayerDashing && dashStartRemaining < 0f)
+        {
+            dashStartRemaining = Mathf.Max(0f, warningTimer);
+            dashStartX = playerRef.transform.position.x;
+        }
+
+        prevPlayerDashing = dashingNow;
+
         // Uyarı kısaysa işaret hemen başta çıkmasın.
         float lead =
             Mathf.Min(
                 enemy.unblockableDodgeCueLead,
                 warningDuration * 0.7f
             );
+
+        cueLead = lead;
 
         if (!dodgeCueTriggered && warningTimer <= lead)
             TriggerDodgeCue();
@@ -505,6 +565,9 @@ public class EnemyAttackState : IEnemyState
 
         if (indicator != null)
             indicator.TriggerNowCue();
+
+        if (dangerLabel != null)
+            dangerLabel.SetUrgent();
 
         if (telegraph != null)
             telegraph.TriggerCue();
@@ -610,7 +673,8 @@ public class EnemyAttackState : IEnemyState
 
             // ---------------- KOMBO: SIRADAKİ VURUŞ ----------------
 
-            if (HasMoreSteps && !enemy.IsTargetDead)
+            // Kusursuz kaçış komboyu keser.
+            if (HasMoreSteps && !enemy.IsTargetDead && !counterLanded)
             {
                 stepIndex++;
 
@@ -641,6 +705,10 @@ public class EnemyAttackState : IEnemyState
 
             if (move != null)
                 recovery *= move.recoveryMultiplier;
+
+            // Kusursuz kaçış: düşman daha uzun süre açık kalır.
+            if (counterLanded && counter != null)
+                recovery *= counter.RecoveryMultiplier;
 
             enemy.StartAttackRecovery(recovery);
 
@@ -799,6 +867,25 @@ public class EnemyAttackState : IEnemyState
 
             CombatEvents.RaiseDodge(enemy, isUnblockable);
 
+            // KUSURSUZ KAÇIŞ: yakalamaya son anda, düşmana doğru dash.
+            if (
+                hitType == MoveHitType.Grab &&
+                counter != null &&
+                counter.TryDashCounter(
+                    player,
+                    dashStartRemaining,
+                    dashStartX,
+                    cueLead,
+                    out bool counterBroke
+                )
+            )
+            {
+                counterLanded = true;
+
+                // Denge kırıldıysa stagger başladı (parry ile aynı yol).
+                return counterBroke;
+            }
+
             return false;
         }
 
@@ -821,6 +908,11 @@ public class EnemyAttackState : IEnemyState
             );
 
             CombatEvents.RaiseAttackMissed(enemy, isUnblockable);
+
+            // ATLA-VUR: süpürmenin TAM üstündeydi (menzil içinde ama
+            // yüksekte) → karşı vuruş penceresi.
+            if (IsSweep && counter != null && JumpedOverSweep(player))
+                counter.OpenJumpWindow();
 
             return false;
         }
@@ -938,6 +1030,15 @@ public class EnemyAttackState : IEnemyState
 
     private bool SweepIgnoresDash =>
         moveset == null || moveset.sweepIgnoresDash;
+
+    // Yatayda süpürmenin menzilinde ama kutunun ÜSTÜNDE: atladı.
+    // (Sadece geri çekilip menzil dışında kalan oyuncu ödül almaz.)
+    private bool JumpedOverSweep(PlayerController player)
+    {
+        return
+            IsInFrontArea(player, SweepReach, 1000f) &&
+            !IsInFrontArea(player, SweepReach, SweepHeight);
+    }
 
     // Hasar + knockback tek çağrıda (normal, süpürme ve engellenemez ortak).
     private bool DealDirectHit(Vector2 hitDirection)
