@@ -149,8 +149,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 2.11}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 0.2337, y: 2.1025}
+  m_SizeDelta: {x: 123.3651, y: 105.6529}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &5568643269363869309
 Canvas:
@@ -496,6 +496,7 @@ GameObject:
   - component: {fileID: 6221554288633988248}
   - component: {fileID: 7222443890327140745}
   - component: {fileID: 6276451650368419223}
+  - component: {fileID: 3730113943131720685}
   m_Layer: 10
   m_Name: Enemy
   m_TagString: Enemy
@@ -569,7 +570,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 2752677570131296368, guid: 7762019bb3755d14f9e911552351e14f, type: 3}
+  m_Sprite: {fileID: -2062054304277209012, guid: e9f3311fd85dd26408ee7cbe203092e2, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1020,6 +1021,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2b2b6f745eeb85458d2343fafa51c7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDepthSorter
+--- !u!114 &3730113943131720685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4745338656465375485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5794ddfa2fe1fe94aa0bbafb2c731a5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAnimationDriver
+  idleState: Idle
+  walkState: Walk
+  attackState: Attack
+  hurtState: Hurt
+  locomotionBlend: 0
+  walkSpeedThreshold: 0.15
+  alignHitFrameToDamage: 1
+  hurtDuringStagger: 1
+  hurtOnDeath: 1
+  restartHurtOnNewHit: 1
 --- !u!1 &6601302652787602694
 GameObject:
   m_ObjectHideFlags: 0
