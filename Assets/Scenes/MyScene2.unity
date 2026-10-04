@@ -1010,7 +1010,42 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RunManager
   enemyPrefab: {fileID: 3697985245505729534, guid: 1601fc16a190ab042a1c6487dfc1fad4, type: 3}
+  bossPrefab: {fileID: 0}
   player: {fileID: 2122615062}
+  acts: 3
+  roomsPerAct: 4
+  doorCount: 3
+  eliteHealthMultiplier: 1.6
+  eliteDamageMultiplier: 1.2
+  eliteSpeedMultiplier: 1.1
+  eliteScale: 1.15
+  bossNames:
+  - "K\u0131l\u0131\xE7 Ustas\u0131"
+  - "K\u0131z\u0131l D\xFCellocu"
+  - "G\xF6lge Efendisi"
+  bossHealthMultiplier: 6
+  bossHealthPerAct: 1.5
+  bossExecutePercent: 0.25
+  bossScale: 1.35
+  bossPhase2At: 0.5
+  bossHealPercent: 0.5
+  restHealPercent: 0.4
+  goldPerKill: 8
+  goldPerKillPerAct: 0.25
+  executeKillBonus: 4
+  eliteGoldMultiplier: 2.5
+  bossGoldPerAct: 60
+  perfectRoomGold: 15
+  goldPerParry: 1
+  shopCharmCount: 3
+  charmPrice: 45
+  upgradePrice: 60
+  healPrice: 40
+  shopHealPercent: 0.35
+  rerollPrice: 15
+  rerollPriceIncrease: 10
+  removePrice: 40
+  pricePerAct: 0.2
   spawnPoints: []
   spawnDistanceMin: 8
   spawnDistanceMax: 11
@@ -1045,8 +1080,6 @@ MonoBehaviour:
   maxSpeedBonus: 0.6
   healthBonusPerStage: 0.01
   offerAtRunStart: 1
-  firstOfferStage: 1
-  offerEveryNStages: 1
   offerChoices: 3
   includeDefaultCharms: 1
   extraCharms: []
@@ -9987,16 +10020,16 @@ MonoBehaviour:
   attack4Duration: 0.3
   attack1MoveStart: 0.07
   attack1MoveEnd: 0.15
-  attack1HitTime: 0
+  attack1HitTime: 0.1
   attack2MoveStart: 0.12
   attack2MoveEnd: 0.16
-  attack2HitTime: 0
+  attack2HitTime: 0.1
   attack3MoveStart: 0.065
   attack3MoveEnd: 0.18
-  attack3HitTime: 0
+  attack3HitTime: 0.1
   attack4MoveStart: 0.2
   attack4MoveEnd: 0.282
-  attack4HitTime: 0
+  attack4HitTime: 0.1
 --- !u!114 &2122615051
 MonoBehaviour:
   m_ObjectHideFlags: 0

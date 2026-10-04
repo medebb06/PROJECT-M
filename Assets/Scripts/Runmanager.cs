@@ -1,32 +1,31 @@
+using NUnit.Framework.Interfaces;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum RunState
-{
-    Starting,   // koşu başlıyor
-    Offer,      // charm seçimi (oyun duraklatılmış)
-    Fighting,   // bölüm sürüyor
-    Cleared,    // bölüm temizlendi
-    Dead        // oyuncu öldü, yeniden başlatma bekleniyor
-}
-
 /// <summary>
-/// Koşu (run) döngüsü:
-///   [başlangıç charm'ı] -> bölüm 1 -> temizle -> charm seç -> bölüm 2 -> ...
-///   Oyuncu ölünce koşu biter; Enter ile baştan başlar.
+/// KOŞU DÖNGÜSÜ:
 ///
-/// KURULUM: Sahnede boş bir objeye bu bileşeni ekle ve 'Enemy Prefab' ata.
-/// Gerisi (charm'lar, arayüz, istatistikler) kendiliğinden kurulur.
-/// Charm'lar istiflenir: aynı charm tekrar seçilirse güçlenir.
+///   [Lobi: zorluk seç] → başlangıç charm'ı →
+///   PERDE 1: oda 1 (dövüş) → kapı seç → oda 2 → kapı → oda 3 → kapı → oda 4 → BOSS
+///   PERDE 2: ...                                                            → BOSS
+///   PERDE 3: ...                                                            → BOSS → ZAFER
+///
+/// Kapılar: Dövüş (charm), Elit (2 charm + bol altın), Dükkan, Dinlenme.
+/// Altın: öldürme (+execute bonusu), parry, hasarsız oda, elit, boss.
+/// Koşular arası: MetaProgress (charm kilitleri, zorluk kademeleri).
+///
+/// KURULUM: Sahnede boş bir objeye ekle, 'Enemy Prefab' ata (ve istersen
+/// 'Boss Prefab'). Gerisi kendiliğinden kurulur.
 /// </summary>
 public class RunManager : MonoBehaviour
 {
     public static RunManager Instance { get; private set; }
 
-    // Bölüm olayları (charm'lar dinler: Kusursuzluk vb.). int: bölüm no.
-    public static event System.Action<int> StageStarted;
-    public static event System.Action<int> StageCleared;
+    // Bölüm (dövüş odası) olayları. int: dövüş odası sayacı (Stage).
+    public static event Action<int> StageStarted;
+    public static event Action<int> StageCleared;
 
     [RuntimeInitializeOnLoadMethod(
         RuntimeInitializeLoadType.SubsystemRegistration
@@ -41,7 +40,96 @@ public class RunManager : MonoBehaviour
     [Header("References")]
     public GameObject enemyPrefab;
 
+    [Tooltip("Perde sonu boss'u. Boşsa Enemy Prefab büyütülerek kullanılır.")]
+    public GameObject bossPrefab;
+
     [SerializeField] private PlayerController player;
+
+    // =========================================================
+    // KOŞU YAPISI
+    // =========================================================
+
+    [Header("Koşu Yapısı")]
+    [Min(1)]
+    [SerializeField] private int acts = 3;
+
+    [Tooltip("Boss'tan önceki oda sayısı (her perdede).")]
+    [Min(1)]
+    [SerializeField] private int roomsPerAct = 4;
+
+    [Tooltip("Kapı seçiminde sunulan kapı sayısı.")]
+    [Range(2, 3)]
+    [SerializeField] private int doorCount = 3;
+
+    [Header("Elit")]
+    [SerializeField] private float eliteHealthMultiplier = 1.6f;
+    [SerializeField] private float eliteDamageMultiplier = 1.2f;
+    [SerializeField] private float eliteSpeedMultiplier = 1.1f;
+    [SerializeField] private float eliteScale = 1.15f;
+
+    [Header("Boss")]
+    [SerializeField]
+    private string[] bossNames =
+    {
+        "Kılıç Ustası",
+        "Kızıl Düellocu",
+        "Gölge Efendisi"
+    };
+
+    [Tooltip("Boss canı = normal düşman canı × bu (+ perde başına ek).")]
+    [SerializeField] private float bossHealthMultiplier = 6f;
+    [SerializeField] private float bossHealthPerAct = 1.5f;
+
+    [Tooltip("Her execute boss'un MAX canının bu oranını götürür (0.25 = 4 execute).")]
+    [Range(0.05f, 1f)]
+    [SerializeField] private float bossExecutePercent = 0.25f;
+
+    [SerializeField] private float bossScale = 1.35f;
+
+    [Range(0.1f, 0.9f)]
+    [SerializeField] private float bossPhase2At = 0.5f;
+
+    [Tooltip("Boss yenilince iyileşme (max canın yüzdesi).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float bossHealPercent = 0.5f;
+
+    [Header("Dinlenme")]
+    [Range(0f, 1f)]
+    [SerializeField] private float restHealPercent = 0.4f;
+
+    [Header("Ekonomi (altın)")]
+    [SerializeField] private int goldPerKill = 8;
+
+    [Tooltip("Perde başına öldürme altını artışı (0.25 = +%25).")]
+    [SerializeField] private float goldPerKillPerAct = 0.25f;
+
+    [SerializeField] private int executeKillBonus = 4;
+    [SerializeField] private float eliteGoldMultiplier = 2.5f;
+    [SerializeField] private int bossGoldPerAct = 60;
+    [SerializeField] private int perfectRoomGold = 15;
+    [SerializeField] private int goldPerParry = 1;
+
+    [Header("Dükkan")]
+    [Range(1, 4)]
+    [SerializeField] private int shopCharmCount = 3;
+
+    [SerializeField] private int charmPrice = 45;
+    [SerializeField] private int upgradePrice = 60;
+    [SerializeField] private int healPrice = 40;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float shopHealPercent = 0.35f;
+
+    [SerializeField] private int rerollPrice = 15;
+    [SerializeField] private int rerollPriceIncrease = 10;
+    [SerializeField] private int removePrice = 40;
+
+    [Tooltip("Perde başına fiyat artışı (0.2 = +%20).")]
+    [SerializeField] private float pricePerAct = 0.2f;
+
+    // =========================================================
+    // DOĞURMA / DÜELLO / ZORLUK (önceki ayarlar)
+    // =========================================================
 
     [Header("Spawn")]
     [Tooltip("Boş bırakırsan düşmanlar oyuncunun iki yanında, zeminde doğar.")]
@@ -50,217 +138,187 @@ public class RunManager : MonoBehaviour
     [SerializeField] private float spawnDistanceMin = 8f;
     [SerializeField] private float spawnDistanceMax = 11f;
 
-    [Tooltip("Doğan düşmanın zeminden yüksekliği (zemin bulunursa).")]
     [SerializeField] private float spawnHeightOffset = 1.5f;
 
-    [Tooltip("Doğan düşmanın oyuncuyu fark etme mesafesi (chaseRange'in yerine geçer).")]
     [SerializeField] private float aggroRange = 14f;
 
-    [Tooltip(
-        "Zemini ararken ışının oyuncunun ne kadar üstünden başlayacağı. " +
-        "Büyük olursa oyuncunun üstündeki platformlara doğabilirler; " +
-        "küçük tutmak ulaşılamaz yerde doğmayı azaltır.")]
     [SerializeField] private float spawnRaycastHeight = 3f;
 
     [Header("Stuck Recovery (takılma kurtarma)")]
-    [Tooltip(
-        "Bir dalgada bu kadar saniye hiç düşman ölmez/doğmazsa kurtarma çalışır: " +
-        "uzakta ya da ulaşılamayan düşmanlar oyuncunun yanına taşınır, " +
-        "haritadan düşenler silinir. 0 = kapalı.")]
     [SerializeField] private float stuckTimeout = 15f;
-
-    [Tooltip("Oyuncudan bu kadar uzaktaki canlı düşman 'takılmış' sayılır.")]
     [SerializeField] private float stragglerDistance = 16f;
-
-    [Tooltip("Oyuncunun bu kadar altına düşen düşman haritadan düşmüş sayılır ve silinir.")]
     [SerializeField] private float fallKillDepth = 25f;
 
     [SerializeField] private float spawnInterval = 0.35f;
 
-    [Header("DÜELLO PROFİLİ (Düellocu gibi güçlü düşmanlar için)")]
-    [Tooltip(
-        "AÇIK: aşağıdaki Stage / Waves ayarları yerine düello ayarları " +
-        "kullanılır: az düşman, yavaş zorluk artışı, bol iyileşme. " +
-        "Kapalı: eski kalabalık mod.")]
+    [Header("DÜELLO PROFİLİ")]
     [SerializeField] private bool duelMode = true;
 
-    [Tooltip("Bölüm 1'deki düşman sayısı.")]
     [Min(1)]
     [SerializeField] private int duelBaseEnemies = 1;
 
-    [Tooltip("Kaç bölümde bir +1 düşman eklenir. 0 = hiç eklenmez.")]
     [Min(0)]
     [SerializeField] private int duelExtraEnemyEveryNStages = 4;
 
-    [Tooltip("Bir bölümdeki en fazla TOPLAM düşman.")]
     [Min(1)]
     [SerializeField] private int duelMaxEnemies = 3;
 
-    [Tooltip(
-        "Aynı anda en fazla kaç düşman. Fazlası, öncekiler ölünce " +
-        "sıradaki dalgada gelir.")]
     [Min(1)]
     [SerializeField] private int duelMaxSimultaneous = 2;
 
-    [Tooltip(
-        "Bölüm başına düşman güçlenmesinin (hız, hasar, can, engellenemez " +
-        "ihtimali) çarpanı. 1 = kalabalık modla aynı, 0.4 = %40'ı kadar.")]
     [Range(0f, 1f)]
     [SerializeField] private float duelScalingMultiplier = 0.4f;
 
-    [Tooltip("Düelloda bölüm temizlenince iyileşme (max canın yüzdesi).")]
     [Range(0f, 1f)]
-    [SerializeField] private float duelHealBetweenStagesPercent = 0.25f;
+    [SerializeField] private float duelHealBetweenStagesPercent = 0.15f;
 
     [Header("Execute Gelişimi")]
-    [Tooltip(
-        "Her bölümde düşmanın Execute Damage değerine eklenen oran " +
-        "(0.35 = bölüm başına +%35). Düşman canından HIZLI büyümeli ki " +
-        "execute ölümcül kalsın. 0 = kapalı.")]
     [Min(0f)]
     [SerializeField] private float executeGrowthPerStage = 0.35f;
 
-    [Header("Stage")]
+    [Header("Stage (kalabalık mod)")]
     [SerializeField] private int baseEnemyCount = 2;
-
-    [Tooltip("Her bölümde eklenen düşman sayısı (kesirli birikir).")]
     [SerializeField] private float enemiesPerStage = 0.75f;
-
-    [Tooltip("Bir bölümün TOPLAM düşman sayısı üst sınırı (sonsuz modda yüksek tutulur).")]
     [SerializeField] private int maxEnemiesPerStage = 30;
-
-    [Tooltip("Bir dalgada AYNI ANDA ekranda olabilecek düşman sayısı üst sınırı.")]
     [SerializeField] private int maxEnemiesPerWave = 6;
 
-    [Header("Waves (bölümü uzatır)")]
-    [Tooltip(
-        "Bölümün toplam düşman sayısı = (taban formül) × bu çarpan, " +
-        "dalgalara bölünür. 1 = eski uzunluk, 1.5 = biraz daha uzun, 2 = iki kat.")]
     [Min(1f)]
     [SerializeField] private float stageLengthMultiplier = 1.5f;
 
-    [Tooltip("Bir bölümdeki dalga sayısı (bölüm 1'de). 1 = eski davranış.")]
     [SerializeField] private int wavesPerStage = 2;
-
-    [Tooltip("Kaç bölümde bir dalga sayısı +1 artsın. 0 = hiç artmaz.")]
     [SerializeField] private int extraWaveEveryNStages = 3;
-
     [SerializeField] private int maxWavesPerStage = 8;
-
-    [Tooltip(
-        "Sıradaki dalga, canlı düşman sayısı bu değere (veya altına) inince " +
-        "gelir. 0 = hepsi ölünce. 1 = son düşman kalınca (akış kopmaz). " +
-        "Son dalga her zaman hepsinin ölmesini bekler.")]
     [SerializeField] private int nextWaveAliveThreshold = 1;
-
-    [Tooltip("Dalgalar arası bekleme (saniye).")]
     [SerializeField] private float timeBetweenWaves = 1.0f;
 
     [Header("Difficulty per stage")]
-    [Tooltip("Her bölümde düşman hızına eklenen oran.")]
     [SerializeField] private float speedBonusPerStage = 0.02f;
-
-    [Tooltip("Her bölümde engellenemez vuruş ihtimaline eklenen değer.")]
     [SerializeField] private float unblockableBonusPerStage = 0.02f;
-
     [SerializeField] private float unblockableChanceCap = 0.8f;
-
-    [Tooltip("Düşman hızına eklenebilecek en yüksek oran (0.6 = %60).")]
     [SerializeField] private float maxSpeedBonus = 0.6f;
-
-    [Tooltip(
-        "Her bölümde düşman canına eklenen oran (0.25 = bölüm başına %25). " +
-        "Düşmanın Execute Damage'ini aşınca execute tek vuruşta öldüremez; " +
-        "can hasarı charm'ları (Ağır Darbe, kritik) o zaman anlam kazanır.")]
     [SerializeField] private float healthBonusPerStage = 0.25f;
 
     [Header("Charms")]
-    [Tooltip("Koşunun en başında bir charm seçilsin (bölüm 1'den önce).")]
     [SerializeField] private bool offerAtRunStart = true;
-
-    [Tooltip("İlk charm teklifinin geleceği bölüm (temizlendikten sonra).")]
-    [SerializeField] private int firstOfferStage = 1;
-
-    [Tooltip("Kaç bölümde bir charm teklifi (1 = her bölüm).")]
-    [SerializeField] private int offerEveryNStages = 1;
-
     [SerializeField] private int offerChoices = 3;
-
     [SerializeField] private bool includeDefaultCharms = true;
 
-    [Tooltip("Kendi CharmDefinition asset'lerin.")]
     [SerializeField]
     private List<CharmDefinition> extraCharms =
         new List<CharmDefinition>();
 
-    [Header("Parry odaklı denge (bedava takası bitir)")]
-    [Tooltip(
-        "AÇIK: oyuncu kendiliğinden can yenilemez (koşu boyunca). " +
-        "Hasar yiyip yenilenerek vurmak parry'den kârlı olmasın; iyileşme " +
-        "sadece charm'lardan, parry'den ve bölüm aralarından gelir.")]
+    [Header("Parry odaklı denge")]
     [SerializeField] private bool disablePlayerHealthRecovery = true;
 
-    [Tooltip(
-        "Koşuda düşman saldırısı, uyarının bu oranından sonra vurarak " +
-        "KESİLEMEZ. Prefab'daki Attack Commit Point bunun üstündeyse buna " +
-        "düşürülür (altındaysa dokunulmaz). Düşük değer = saldırıyı vurarak " +
-        "iptal etmek zorlaşır, cevap parry/dash/geri çekilme olur.")]
     [Range(0f, 1f)]
     [SerializeField] private float runAttackCommitPoint = 0.15f;
 
-    [Tooltip("Her bölümde düşmanın NORMAL saldırı hasarına eklenen oran (0.06 = %6).")]
     [SerializeField] private float damageBonusPerStage = 0.06f;
-
-    [Tooltip("Hasar artışının üst sınırı (1.5 = en fazla +%150).")]
     [SerializeField] private float maxDamageBonus = 1.5f;
 
-    [Tooltip("Bölüm temizlenince iyileşen can: oyuncunun MAX canının yüzdesi (0.1 = %10).")]
     [Range(0f, 1f)]
     [SerializeField] private float healBetweenStagesPercent = 0.10f;
 
     [Header("Riposte (parry ödülü)")]
-    [Tooltip("Başarılı parry'den sonra güçlenmiş vuruşların süresi (sn).")]
     [SerializeField] private float riposteDuration = 2f;
-
-    [Tooltip("En fazla kaç vuruş güçlenmiş sayılır (süre ya da vuruş, hangisi önce biterse).")]
     [SerializeField] private int riposteMaxHits = 3;
-
-    [Tooltip("Riposte sırasında denge hasarı çarpanı.")]
     [SerializeField] private float riposteBalanceMultiplier = 2f;
-
-    [Tooltip("Riposte sırasında can hasarı çarpanı.")]
     [SerializeField] private float riposteHealthMultiplier = 1.5f;
 
-    [Tooltip("Riposte sırasında kritik şansına eklenen değer (0.5 = +%50).")]
     [Range(0f, 1f)]
     [SerializeField] private float riposteCritChanceBonus = 0.5f;
 
-    [Tooltip("Parry'nin oyuncuya iade ettiği posture.")]
     [SerializeField] private int postureRefundOnParry = 25;
 
-    // ---------------------------------------------------------
-    // Durum (arayüz okur)
-    // ---------------------------------------------------------
+    // =========================================================
+    // DURUM (arayüz okur)
+    // =========================================================
 
-    public RunState State { get; private set; } = RunState.Starting;
+    public RunState State { get; private set; } = RunState.Lobby;
+
+    public int Act { get; private set; }
+    public int Acts => acts;
+    public int RoomInAct { get; private set; }
+    public int RoomsPerAct => roomsPerAct;
+    public RoomType CurrentRoom { get; private set; }
+
+    // Dövüş odası sayacı (zorluk bununla ölçeklenir).
     public int Stage { get; private set; }
+
     public int AliveEnemies { get; private set; }
     public int Wave { get; private set; }
     public int WaveCount { get; private set; }
-    public string WaveBannerText { get; private set; } = "";
-    public float WaveBannerUntil { get; private set; }
+
+    public string BannerText { get; private set; } = "";
+    public float BannerUntil { get; private set; }
+
+    // Eski adlar (uyumluluk).
+    public string WaveBannerText => BannerText;
+    public float WaveBannerUntil => BannerUntil;
+
     public bool IsStartOffer { get; private set; }
     public bool IsBonusOffer { get; private set; }
+    public string OfferTitle { get; private set; } = "";
+
     public CharmInventory Inventory { get; private set; }
     public RunStats Stats { get; private set; }
     public IReadOnlyList<CharmDefinition> Offers => offers;
 
+    // Ekonomi
+    public int Gold { get; private set; }
+    public int LastGoldGain { get; private set; }
+    public string LastGoldReason { get; private set; } = "";
+    public float LastGoldTime { get; private set; } = -99f;
+
+    // Kapılar
+    public IReadOnlyList<RoomType> DoorOptions => doorOptions;
+
+    // Dükkan
+    public IReadOnlyList<ShopItem> ShopItems => shopItems;
+    public int CurrentRerollPrice { get; private set; }
+    public int RemovePriceNow => Price(removePrice);
+
+    // Dinlenme
+    public bool CanUpgradeAnyCharm => UpgradableCharms().Count > 0;
+    public int RestHealPercentDisplay =>
+        Mathf.RoundToInt(restHealPercent * HeatHealMultiplier * 100f);
+
+    // Zorluk / meta
+    public int Heat { get; private set; }
+    public bool IsVictory { get; private set; }
+    public IReadOnlyList<string> NewUnlocks => newUnlocks;
+
+    // Elit düşman mı? (arayüz)
+    public bool IsEliteEnemy(EnemyController e) => eliteEnemies.Contains(e);
+
+    // =========================================================
+    // İÇ
+    // =========================================================
+
     private List<CharmDefinition> offers = new List<CharmDefinition>();
     private int chosenIndex = -1;
+
+    private readonly List<RoomType> doorOptions = new List<RoomType>();
+    private int chosenDoor = -1;
+
+    private readonly List<ShopItem> shopItems = new List<ShopItem>();
+    private bool leaveShop;
+
+    private int restChoice = -1; // 0 = iyileş, 1 = yükselt
+
+    private bool startRequested;
     private bool restartRequested;
 
-    // Charm'ların verdiği ekstra charm seçimleri (bölüm sonunda kullanılır).
     private int bonusOffers;
+
+    private bool shopUsedThisAct;
+    private bool restUsedThisAct;
+
+    private bool roomDamaged;
+    private int runExecutes;
+    private int runParries;
+
+    private readonly List<string> newUnlocks = new List<string>();
 
     private readonly List<CharmDefinition> pool =
         new List<CharmDefinition>();
@@ -268,12 +326,50 @@ public class RunManager : MonoBehaviour
     private readonly List<EnemyController> spawned =
         new List<EnemyController>();
 
+    private readonly HashSet<EnemyController> eliteEnemies =
+        new HashSet<EnemyController>();
+
+    private EnemyController currentBoss;
+
     private Health playerHealth;
     private Vector3 playerStartPosition;
 
-    // Doğurmada kullanılan şablon. 'Enemy Prefab' gerçek bir prefab ise
-    // onun kendisi; sahne nesnesi atanmışsa gizli bir kopyası.
     private GameObject spawnTemplate;
+    private GameObject bossTemplate;
+
+    // =========================================================
+    // ZORLUK (ISI) ÇARPANLARI
+    // =========================================================
+
+    // Isı 1: düşman hasarı +%25
+    private float HeatDamageMultiplier => Heat >= 1 ? 1.25f : 1f;
+
+    // Isı 2: iyileşmeler yarı yarıya
+    private float HeatHealMultiplier => Heat >= 2 ? 0.5f : 1f;
+
+    // Isı 3: düşman canı +%30
+    private float HeatHealthMultiplier => Heat >= 3 ? 1.3f : 1f;
+
+    // Isı 4: elitler ve boss daha güçlü, faz 2 daha erken
+    private float HeatEliteMultiplier => Heat >= 4 ? 1.25f : 1f;
+
+    // Isı 5: fiyatlar +%50, altın -%25
+    private float HeatPriceMultiplier => Heat >= 5 ? 1.5f : 1f;
+    private float HeatGoldMultiplier => Heat >= 5 ? 0.75f : 1f;
+
+    public static string DescribeHeat(int level)
+    {
+        switch (level)
+        {
+            case 0: return "Normal";
+            case 1: return "Düşman hasarı +%25";
+            case 2: return "+ İyileşmeler yarı yarıya";
+            case 3: return "+ Düşman canı +%30";
+            case 4: return "+ Elit/boss güçlü, faz 2 erken";
+            case 5: return "+ Fiyatlar +%50, altın −%25";
+            default: return "";
+        }
+    }
 
     // =========================================================
     // KURULUM
@@ -294,6 +390,20 @@ public class RunManager : MonoBehaviour
     {
         if (Instance == this)
             Instance = null;
+    }
+
+    private void OnEnable()
+    {
+        CombatEvents.EnemyKilled += OnEnemyKilled;
+        CombatEvents.ParrySucceeded += OnParry;
+        CombatEvents.PlayerDamaged += OnPlayerDamaged;
+    }
+
+    private void OnDisable()
+    {
+        CombatEvents.EnemyKilled -= OnEnemyKilled;
+        CombatEvents.ParrySucceeded -= OnParry;
+        CombatEvents.PlayerDamaged -= OnPlayerDamaged;
     }
 
     private void Start()
@@ -320,9 +430,13 @@ public class RunManager : MonoBehaviour
 
         spawnTemplate = PrepareTemplate(enemyPrefab);
 
+        bossTemplate =
+            bossPrefab != null
+                ? PrepareTemplate(bossPrefab)
+                : spawnTemplate;
+
         Inventory = new CharmInventory(player.gameObject);
 
-        // Koşu istatistikleri (CombatEvents'i dinler).
         Stats = GetComponent<RunStats>();
 
         if (Stats == null)
@@ -330,11 +444,9 @@ public class RunManager : MonoBehaviour
 
         Stats.Init(player, playerHealth);
 
-        // Koşuda bedava can yenilenmesi kapalı.
         if (disablePlayerHealthRecovery)
             playerHealth.SetRecoveryEnabled(false);
 
-        // Parry ödülü (riposte).
         ParryRiposte riposte = player.GetComponent<ParryRiposte>();
 
         if (riposte == null)
@@ -375,36 +487,135 @@ public class RunManager : MonoBehaviour
         chosenIndex = index;
     }
 
+    public void ChooseDoor(int index)
+    {
+        if (State != RunState.ChoosingRoom)
+            return;
+
+        if (index < 0 || index >= doorOptions.Count)
+            return;
+
+        chosenDoor = index;
+    }
+
+    public void RequestStart()
+    {
+        if (State == RunState.Lobby)
+            startRequested = true;
+    }
+
+    public void ChangeHeat(int delta)
+    {
+        if (State != RunState.Lobby)
+            return;
+
+        MetaProgress.SelectedHeat = MetaProgress.SelectedHeat + delta;
+        Heat = MetaProgress.SelectedHeat;
+    }
+
     public void RequestRestart()
     {
-        if (State == RunState.Dead)
+        if (State == RunState.Dead || State == RunState.Victory)
             restartRequested = true;
     }
 
-    // Bölüm sonunda bir ekstra charm seçimi (ör. Kusursuzluk).
     public void QueueBonusOffer()
     {
         bonusOffers++;
     }
 
-    private static void RaiseStage(System.Action<int> handlers, int stage)
+    public void ShowBanner(string text, float seconds)
     {
-        if (handlers == null)
+        BannerText = text;
+        BannerUntil = Time.unscaledTime + seconds;
+    }
+
+    // ---------------- DÜKKAN ----------------
+
+    public bool CanAfford(int price) => Gold >= price;
+
+    public bool BuyShopItem(int index)
+    {
+        if (State != RunState.Shop)
+            return false;
+
+        if (index < 0 || index >= shopItems.Count)
+            return false;
+
+        ShopItem item = shopItems[index];
+
+        if (item.sold || Gold < item.price)
+            return false;
+
+        if (item.kind == ShopItemKind.Charm)
+        {
+            if (item.charm == null || !Inventory.CanAdd(item.charm))
+                return false;
+
+            Inventory.Add(item.charm);
+        }
+        else if (item.kind == ShopItemKind.Heal)
+        {
+            if (playerHealth.CurrentHealth >= playerHealth.MaxHealth)
+                return false;
+
+            HealPercent(shopHealPercent);
+        }
+
+        Gold -= item.price;
+        item.sold = true;
+
+        // Aynı charm'ın diğer kartlarında fiyat (yeni/yükseltme) güncellensin.
+        RefreshShopPrices();
+
+        return true;
+    }
+
+    public bool RerollShop()
+    {
+        if (State != RunState.Shop || Gold < CurrentRerollPrice)
+            return false;
+
+        Gold -= CurrentRerollPrice;
+        CurrentRerollPrice += rerollPriceIncrease;
+
+        RollShopCharms();
+
+        return true;
+    }
+
+    public bool RemoveCharm(CharmDefinition definition)
+    {
+        if (State != RunState.Shop || Gold < RemovePriceNow)
+            return false;
+
+        if (!Inventory.Remove(definition))
+            return false;
+
+        Gold -= RemovePriceNow;
+
+        RefreshShopPrices();
+
+        return true;
+    }
+
+    public void LeaveShop()
+    {
+        if (State == RunState.Shop)
+            leaveShop = true;
+    }
+
+    // ---------------- DİNLENME ----------------
+
+    public void ChooseRest(bool heal)
+    {
+        if (State != RunState.Rest)
             return;
 
-        System.Delegate[] list = handlers.GetInvocationList();
+        if (!heal && !CanUpgradeAnyCharm)
+            return;
 
-        for (int i = 0; i < list.Length; i++)
-        {
-            try
-            {
-                ((System.Action<int>)list[i])(stage);
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("RunManager: bölüm olayı abone hatası → " + e);
-            }
-        }
+        restChoice = heal ? 0 : 1;
     }
 
     // =========================================================
@@ -415,192 +626,609 @@ public class RunManager : MonoBehaviour
     {
         while (true)
         {
-            Stage = 0;
-            State = RunState.Starting;
+            // ---------------- LOBİ ----------------
 
-            Stats.BeginRun();
+            State = RunState.Lobby;
+            Heat = MetaProgress.SelectedHeat;
+            startRequested = false;
+
+            player.canControl = false;
+
+            while (!startRequested)
+                yield return null;
+
+            player.canControl = true;
+
+            BeginRun();
 
             if (offerAtRunStart)
-                yield return OfferRoutine(true);
+                yield return OfferRoutine(true, "BAŞLANGIÇ CHARM'INI SEÇ", null, offerChoices);
 
-            while (!playerHealth.IsDead)
+            bool won = false;
+
+            // ---------------- PERDELER ----------------
+
+            for (Act = 1; Act <= acts && !playerHealth.IsDead; Act++)
             {
-                Stage++;
+                shopUsedThisAct = false;
+                restUsedThisAct = false;
 
-                Stats.BeginStage(Stage);
+                ShowBanner("PERDE " + Act, 1.8f);
 
-                RaiseStage(StageStarted, Stage);
-
-                spawned.Clear();
-
-                WaveCount = WavesForStage();
-
-                // ---------- DALGALAR ----------
-
-                for (Wave = 1; Wave <= WaveCount; Wave++)
+                for (
+                    RoomInAct = 1;
+                    RoomInAct <= roomsPerAct && !playerHealth.IsDead;
+                    RoomInAct++
+                )
                 {
-                    State = RunState.Fighting;
+                    RoomType type;
 
-                    Stats.SetWave(Wave, WaveCount);
-
-                    WaveBannerText =
-                        Wave == 1
-                            ? "BÖLÜM " + Stage
-                            : "DALGA " + Wave + " / " + WaveCount;
-
-                    WaveBannerUntil = Time.unscaledTime + 1.6f;
-
-                    int spawnedBefore = spawned.Count;
-
-                    yield return SpawnWave(EnemiesForWave(Wave));
-
-                    // Hiç düşman doğmadıysa (şablon geçersiz) döngüyü sessizce
-                    // dönmek yerine net bir hatayla durdur.
-                    if (
-                        spawned.Count == spawnedBefore &&
-                        !playerHealth.IsDead
-                    )
+                    // Koşunun ilk odası her zaman dövüş.
+                    if (Act == 1 && RoomInAct == 1)
                     {
-                        Debug.LogError(
-                            "RunManager: düşman doğurulamadı! " +
-                            "'Enemy Prefab' alanını kontrol et."
-                        );
-
-                        yield break;
+                        type = RoomType.Fight;
+                    }
+                    else
+                    {
+                        yield return ChooseRoomRoutine();
+                        type = doorOptions[Mathf.Clamp(chosenDoor, 0, doorOptions.Count - 1)];
                     }
 
-                    // Sıradaki dalga için eşik; son dalga hepsinin ölmesini bekler.
-                    // Düelloda her dalga tamamen bitince sıradaki gelir.
-                    int target =
-                        Wave < WaveCount && !duelMode
-                            ? Mathf.Max(0, nextWaveAliveThreshold)
-                            : 0;
-
-                    // İlerleme izleme: canlı sayısı değişmiyorsa (kimse ölmüyor)
-                    // takılma olabilir; stuckTimeout sonra kurtarma çalışır.
-                    int lastAlive = AliveEnemies;
-                    float lastProgressTime = Time.time;
-
-                    while (!playerHealth.IsDead)
-                    {
-                        RefreshAlive();
-
-                        if (AliveEnemies <= target)
-                            break;
-
-                        if (AliveEnemies != lastAlive)
-                        {
-                            lastAlive = AliveEnemies;
-                            lastProgressTime = Time.time;
-                        }
-                        else if (
-                            stuckTimeout > 0f &&
-                            Time.time - lastProgressTime > stuckTimeout
-                        )
-                        {
-                            RecoverStragglers();
-
-                            lastProgressTime = Time.time;
-                        }
-
-                        yield return null;
-                    }
-
-                    if (playerHealth.IsDead)
-                        break;
-
-                    if (Wave < WaveCount)
-                        yield return new WaitForSeconds(timeBetweenWaves);
+                    yield return RunRoom(type);
                 }
 
                 if (playerHealth.IsDead)
                     break;
 
-                // ---------- BÖLÜM TEMİZLENDİ ----------
+                // ---------------- BOSS ----------------
 
-                State = RunState.Cleared;
+                RoomInAct = roomsPerAct + 1;
 
-                Stats.EndStage(true);
+                yield return RunRoom(RoomType.Boss);
 
-                RaiseStage(StageCleared, Stage);
+                if (playerHealth.IsDead)
+                    break;
 
-                yield return new WaitForSecondsRealtime(1.2f);
-
-                float healPercent =
-                    duelMode
-                        ? duelHealBetweenStagesPercent
-                        : healBetweenStagesPercent;
-
-                if (healPercent > 0f)
-                {
-                    int heal =
-                        Mathf.Max(
-                            1,
-                            Mathf.RoundToInt(
-                                playerHealth.MaxHealth *
-                                healPercent
-                            )
-                        );
-
-                    playerHealth.Heal(heal);
-                }
-
-                if (ShouldOffer())
-                    yield return OfferRoutine(false);
-
-                // Charm'ların verdiği ekstra seçimler.
-                while (bonusOffers > 0 && !playerHealth.IsDead)
-                {
-                    bonusOffers--;
-
-                    yield return OfferRoutine(false, true);
-                }
-
-                yield return new WaitForSecondsRealtime(0.4f);
+                if (Act == acts)
+                    won = true;
             }
 
-            // ---------- ÖLDÜ ----------
+            Act = Mathf.Clamp(Act, 1, acts);
 
-            // Dalga döngüsünden çıkarken Wave bir artmış olabilir.
+            // ---------------- SONUÇ ----------------
+
+            IsVictory = won && !playerHealth.IsDead;
+
             Wave = Mathf.Clamp(Wave, 0, WaveCount);
 
-            Stats.EndStage(false);
-            Stats.EndRun(this);
+            if (!IsVictory)
+                Stats.EndStage(false);
 
-            State = RunState.Dead;
+            Stats.EndRun(this, IsVictory);
+
+            RecordMeta();
+
+            State = IsVictory ? RunState.Victory : RunState.Dead;
+
+            if (IsVictory)
+            {
+                // Zafer: oyuncu dövüşten çıksın.
+                player.canControl = false;
+            }
 
             restartRequested = false;
 
             yield return new WaitForSecondsRealtime(1.0f);
 
-            // Enter ile ya da (debug) R ile oyuncu dışarıdan dirildiyse.
-            while (!restartRequested && playerHealth.IsDead)
+            while (
+                !restartRequested &&
+                (IsVictory || playerHealth.IsDead)
+            )
+            {
                 yield return null;
+            }
 
             ResetRun();
         }
     }
 
-    private bool ShouldOffer()
+    private void BeginRun()
     {
-        if (Stage < firstOfferStage)
-            return false;
+        Stage = 0;
+        Act = 1;
+        RoomInAct = 0;
+        Gold = 0;
+        LastGoldTime = -99f;
+        bonusOffers = 0;
+        runExecutes = 0;
+        runParries = 0;
+        IsVictory = false;
+        newUnlocks.Clear();
 
-        int every = Mathf.Max(1, offerEveryNStages);
+        Heat = MetaProgress.SelectedHeat;
 
-        return (Stage - firstOfferStage) % every == 0;
+        State = RunState.Starting;
+
+        Stats.BeginRun();
+    }
+
+    private void RecordMeta()
+    {
+        int actReached =
+            IsVictory ? acts : Mathf.Clamp(Act, 1, acts);
+
+        int heatBefore = MetaProgress.HeatUnlocked;
+
+        List<string> ids =
+            MetaProgress.RecordRun(
+                actReached,
+                IsVictory,
+                Heat,
+                runExecutes,
+                runParries
+            );
+
+        newUnlocks.Clear();
+
+        for (int i = 0; i < pool.Count; i++)
+        {
+            CharmDefinition d = pool[i];
+
+            if (d != null && !string.IsNullOrEmpty(d.unlockId) && ids.Contains(d.unlockId))
+                newUnlocks.Add("Yeni charm: " + d.displayName);
+        }
+
+        if (MetaProgress.HeatUnlocked > heatBefore)
+            newUnlocks.Add("Yeni zorluk: Isı " + MetaProgress.HeatUnlocked);
     }
 
     // =========================================================
-    // CHARM SEÇİMİ
+    // KAPI SEÇİMİ
     // =========================================================
 
-    private IEnumerator OfferRoutine(bool isStartOffer, bool isBonus = false)
+    private IEnumerator ChooseRoomRoutine()
+    {
+        GenerateDoors();
+
+        chosenDoor = -1;
+
+        State = RunState.ChoosingRoom;
+
+        yield return PausedWait(() => chosenDoor >= 0);
+    }
+
+    private void GenerateDoors()
+    {
+        doorOptions.Clear();
+
+        bool lastBeforeBoss = RoomInAct == roomsPerAct;
+
+        // Aday ağırlıkları.
+        List<RoomType> candidates = new List<RoomType>();
+        List<float> weights = new List<float>();
+
+        void Add(RoomType t, float w)
+        {
+            candidates.Add(t);
+            weights.Add(w);
+        }
+
+        Add(RoomType.Fight, 3f);
+
+        if (Act >= 2 || RoomInAct >= 2)
+            Add(RoomType.Elite, 1.6f);
+
+        if (!shopUsedThisAct)
+            Add(RoomType.Shop, lastBeforeBoss ? 3f : 1.2f);
+
+        if (!restUsedThisAct && RoomInAct >= 2)
+            Add(RoomType.Rest, lastBeforeBoss ? 3f : 1f);
+
+        // Tekrarsız ağırlıklı seçim.
+        while (doorOptions.Count < doorCount && candidates.Count > 0)
+        {
+            float total = 0f;
+
+            for (int i = 0; i < weights.Count; i++)
+                total += weights[i];
+
+            float roll = UnityEngine.Random.value * total;
+            int pick = candidates.Count - 1;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                roll -= weights[i];
+
+                if (roll <= 0f)
+                {
+                    pick = i;
+                    break;
+                }
+            }
+
+            doorOptions.Add(candidates[pick]);
+            candidates.RemoveAt(pick);
+            weights.RemoveAt(pick);
+        }
+
+        // En az bir dövüş kapısı olsun (ilerleme garantisi).
+        if (!doorOptions.Contains(RoomType.Fight) && !doorOptions.Contains(RoomType.Elite))
+            doorOptions[doorOptions.Count - 1] = RoomType.Fight;
+
+        // Boss'tan önce: dükkan ya da dinlenme şansı garanti (kullanılmadıysa).
+        if (
+            lastBeforeBoss &&
+            !doorOptions.Contains(RoomType.Shop) &&
+            !doorOptions.Contains(RoomType.Rest)
+        )
+        {
+            RoomType support =
+                !restUsedThisAct ? RoomType.Rest
+                : !shopUsedThisAct ? RoomType.Shop
+                : RoomType.Fight;
+
+            if (support != RoomType.Fight)
+            {
+                // Elit varsa onun yerine koy (normal dövüş kapısı kalsın).
+                int replace =
+                    CountCombatDoors() > 1
+                        ? doorOptions.IndexOf(RoomType.Elite)
+                        : -1;
+
+                if (replace >= 0)
+                    doorOptions[replace] = support;
+                else if (doorOptions.Count < 3)
+                    doorOptions.Add(support);
+            }
+        }
+    }
+
+    private int CountCombatDoors()
+    {
+        int n = 0;
+
+        for (int i = 0; i < doorOptions.Count; i++)
+        {
+            if (doorOptions[i] == RoomType.Fight || doorOptions[i] == RoomType.Elite)
+                n++;
+        }
+
+        return n;
+    }
+
+    // =========================================================
+    // ODALAR
+    // =========================================================
+
+    private IEnumerator RunRoom(RoomType type)
+    {
+        CurrentRoom = type;
+
+        switch (type)
+        {
+            case RoomType.Shop:
+                shopUsedThisAct = true;
+                yield return ShopRoutine();
+                break;
+
+            case RoomType.Rest:
+                restUsedThisAct = true;
+                yield return RestRoutine();
+                break;
+
+            default:
+                yield return CombatRoom(type);
+                break;
+        }
+    }
+
+    private IEnumerator CombatRoom(RoomType type)
+    {
+        Stage++;
+
+        Stats.BeginStage(Stage);
+
+        RaiseStage(StageStarted, Stage);
+
+        roomDamaged = false;
+
+        spawned.Clear();
+        eliteEnemies.Clear();
+        currentBoss = null;
+
+        if (type == RoomType.Boss)
+        {
+            WaveCount = 1;
+            Wave = 1;
+
+            State = RunState.Fighting;
+
+            string bossName = BossNameForAct();
+
+            ShowBanner(bossName.ToUpperInvariant(), 2f);
+
+            SpawnBoss(bossName);
+
+            yield return WaitUntilCleared(0);
+        }
+        else
+        {
+            WaveCount = WavesForStage();
+
+            for (Wave = 1; Wave <= WaveCount; Wave++)
+            {
+                State = RunState.Fighting;
+
+                if (Wave == 1)
+                {
+                    ShowBanner(
+                        type == RoomType.Elite
+                            ? "ELİT"
+                            : "PERDE " + Act + "  •  ODA " + RoomInAct,
+                        1.4f
+                    );
+                }
+                else
+                {
+                    ShowBanner("DALGA " + Wave + " / " + WaveCount, 1.2f);
+                }
+
+                int spawnedBefore = spawned.Count;
+
+                yield return SpawnWave(
+                    EnemiesForWave(Wave),
+                    type == RoomType.Elite
+                );
+
+                if (spawned.Count == spawnedBefore && !playerHealth.IsDead)
+                {
+                    Debug.LogError(
+                        "RunManager: düşman doğurulamadı! " +
+                        "'Enemy Prefab' alanını kontrol et."
+                    );
+
+                    yield break;
+                }
+
+                int target =
+                    Wave < WaveCount && !duelMode
+                        ? Mathf.Max(0, nextWaveAliveThreshold)
+                        : 0;
+
+                yield return WaitUntilCleared(target);
+
+                if (playerHealth.IsDead)
+                    yield break;
+
+                if (Wave < WaveCount)
+                    yield return new WaitForSeconds(timeBetweenWaves);
+            }
+        }
+
+        if (playerHealth.IsDead)
+            yield break;
+
+        // ---------------- TEMİZLENDİ ----------------
+
+        State = RunState.Cleared;
+
+        Stats.EndStage(true);
+
+        RaiseStage(StageCleared, Stage);
+
+        if (!roomDamaged)
+            AddGold(perfectRoomGold, "Hasarsız oda");
+
+        yield return new WaitForSecondsRealtime(1.0f);
+
+        float heal =
+            type == RoomType.Boss
+                ? bossHealPercent
+                : (duelMode ? duelHealBetweenStagesPercent : healBetweenStagesPercent);
+
+        HealPercent(heal);
+
+        // ---------------- ÖDÜL ----------------
+
+        if (type == RoomType.Elite)
+        {
+            yield return OfferRoutine(false, "ELİT ÖDÜLÜ  (1/2)", null, offerChoices);
+            yield return OfferRoutine(false, "ELİT ÖDÜLÜ  (2/2)", null, offerChoices);
+        }
+        else if (type == RoomType.Boss)
+        {
+            if (Act < acts)
+                yield return OfferRoutine(false, "BOSS ÖDÜLÜ", null, offerChoices + 1);
+        }
+        else
+        {
+            yield return OfferRoutine(false, "BİR CHARM SEÇ", null, offerChoices);
+        }
+
+        while (bonusOffers > 0 && !playerHealth.IsDead)
+        {
+            bonusOffers--;
+
+            yield return OfferRoutine(false, "KUSURSUZ ODA: BONUS CHARM", null, offerChoices, true);
+        }
+
+        yield return new WaitForSecondsRealtime(0.3f);
+    }
+
+    private IEnumerator WaitUntilCleared(int target)
+    {
+        int lastAlive = AliveEnemies;
+        float lastProgressTime = Time.time;
+
+        while (!playerHealth.IsDead)
+        {
+            RefreshAlive();
+
+            if (AliveEnemies <= target)
+                break;
+
+            if (AliveEnemies != lastAlive)
+            {
+                lastAlive = AliveEnemies;
+                lastProgressTime = Time.time;
+            }
+            else if (
+                stuckTimeout > 0f &&
+                Time.time - lastProgressTime > stuckTimeout
+            )
+            {
+                RecoverStragglers();
+                lastProgressTime = Time.time;
+            }
+
+            yield return null;
+        }
+    }
+
+    private string BossNameForAct()
+    {
+        if (bossNames == null || bossNames.Length == 0)
+            return "Boss";
+
+        return bossNames[Mathf.Clamp(Act - 1, 0, bossNames.Length - 1)];
+    }
+
+    // ---------------- DÜKKAN ----------------
+
+    private IEnumerator ShopRoutine()
+    {
+        CurrentRerollPrice = Price(rerollPrice);
+
+        shopItems.Clear();
+
+        RollShopCharms();
+
+        shopItems.Add(
+            new ShopItem
+            {
+                kind = ShopItemKind.Heal,
+                price = Price(healPrice)
+            }
+        );
+
+        leaveShop = false;
+
+        State = RunState.Shop;
+
+        yield return PausedWait(() => leaveShop);
+    }
+
+    private void RollShopCharms()
+    {
+        // Var olan charm kartlarını çıkar (iyileşme kalır).
+        shopItems.RemoveAll(i => i.kind == ShopItemKind.Charm);
+
+        List<CharmDefinition> rolled =
+            CharmCatalog.Roll(pool, Inventory, shopCharmCount);
+
+        for (int i = 0; i < rolled.Count; i++)
+        {
+            shopItems.Insert(
+                i,
+                new ShopItem
+                {
+                    kind = ShopItemKind.Charm,
+                    charm = rolled[i]
+                }
+            );
+        }
+
+        RefreshShopPrices();
+    }
+
+    private void RefreshShopPrices()
+    {
+        for (int i = 0; i < shopItems.Count; i++)
+        {
+            ShopItem item = shopItems[i];
+
+            if (item.kind != ShopItemKind.Charm || item.charm == null)
+                continue;
+
+            item.price =
+                Inventory.GetStacks(item.charm) > 0
+                    ? Price(upgradePrice)
+                    : Price(charmPrice);
+        }
+    }
+
+    private int Price(int basePrice)
+    {
+        return Mathf.Max(
+            1,
+            Mathf.RoundToInt(
+                basePrice *
+                (1f + pricePerAct * (Mathf.Max(1, Act) - 1)) *
+                HeatPriceMultiplier
+            )
+        );
+    }
+
+    // ---------------- DİNLENME ----------------
+
+    private IEnumerator RestRoutine()
+    {
+        restChoice = -1;
+
+        State = RunState.Rest;
+
+        yield return PausedWait(() => restChoice >= 0);
+
+        if (restChoice == 0)
+        {
+            HealPercent(restHealPercent);
+            yield break;
+        }
+
+        List<CharmDefinition> upgradable = UpgradableCharms();
+
+        if (upgradable.Count > 0)
+        {
+            yield return OfferRoutine(
+                false,
+                "BİR CHARM'I GÜÇLENDİR",
+                upgradable,
+                upgradable.Count
+            );
+        }
+    }
+
+    private List<CharmDefinition> UpgradableCharms()
+    {
+        List<CharmDefinition> list = new List<CharmDefinition>();
+
+        if (Inventory == null)
+            return list;
+
+        IReadOnlyList<CharmInventory.Entry> entries = Inventory.Entries;
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (Inventory.CanAdd(entries[i].definition))
+                list.Add(entries[i].definition);
+        }
+
+        return list;
+    }
+
+    // ---------------- CHARM TEKLİFİ ----------------
+
+    private IEnumerator OfferRoutine(
+        bool isStartOffer,
+        string title,
+        List<CharmDefinition> custom,
+        int choices,
+        bool isBonus = false
+    )
     {
         List<CharmDefinition> rolled =
-            CharmCatalog.Roll(pool, Inventory, offerChoices);
+            custom ?? CharmCatalog.Roll(pool, Inventory, choices);
 
-        // Seçilecek bir şey kalmadıysa (hepsi sınırda) atla.
         if (rolled.Count == 0)
             yield break;
 
@@ -608,32 +1236,36 @@ public class RunManager : MonoBehaviour
         chosenIndex = -1;
         IsStartOffer = isStartOffer;
         IsBonusOffer = isBonus;
+        OfferTitle = title;
+
         State = RunState.Offer;
 
-        // Duraklatmadan önce kalan zaman efektlerini temizle.
-        HitStop.ClearAll();
-        EnemyTime.Clear();
-
-        // Seçim sırasında tıklama oyuncuya saldırı verdirmesin.
-        player.canControl = false;
-
-        Time.timeScale = 0f;
-
-        // Zamanı seçim boyunca 0'da TUT: başka bir script (hit-stop vb.)
-        // zamanı açsa bile seçim ekranı sırasında oyun durmuş kalsın.
-        while (chosenIndex < 0)
-        {
-            if (Time.timeScale != 0f)
-                Time.timeScale = 0f;
-
-            yield return null;
-        }
+        yield return PausedWait(() => chosenIndex >= 0);
 
         CharmDefinition picked = offers[chosenIndex];
 
         offers = new List<CharmDefinition>();
 
         Inventory.Add(picked);
+    }
+
+    // Oyunu durdurup bir karar bekler (seçim ekranları).
+    private IEnumerator PausedWait(Func<bool> done)
+    {
+        HitStop.ClearAll();
+        EnemyTime.Clear();
+
+        player.canControl = false;
+
+        Time.timeScale = 0f;
+
+        while (!done())
+        {
+            if (Time.timeScale != 0f)
+                Time.timeScale = 0f;
+
+            yield return null;
+        }
 
         Time.timeScale = 1f;
 
@@ -644,14 +1276,117 @@ public class RunManager : MonoBehaviour
     }
 
     // =========================================================
+    // EKONOMİ
+    // =========================================================
+
+    private void AddGold(int amount, string reason)
+    {
+        amount = Mathf.RoundToInt(amount * HeatGoldMultiplier);
+
+        if (amount <= 0)
+            return;
+
+        Gold += amount;
+
+        LastGoldGain = amount;
+        LastGoldReason = reason;
+        LastGoldTime = Time.unscaledTime;
+
+        if (Stats != null)
+            Stats.AddGold(amount);
+    }
+
+    private void OnEnemyKilled(EnemyController enemy)
+    {
+        if (enemy == null || !spawned.Contains(enemy))
+            return;
+
+        bool executed = enemy.CurrentState is EnemyExecuteState;
+
+        if (executed)
+            runExecutes++;
+
+        if (enemy == currentBoss)
+        {
+            AddGold(bossGoldPerAct * Act, "Boss");
+            return;
+        }
+
+        float amount =
+            goldPerKill * (1f + goldPerKillPerAct * (Act - 1));
+
+        if (executed)
+            amount += executeKillBonus;
+
+        string reason = executed ? "Execute" : "Öldürme";
+
+        if (eliteEnemies.Contains(enemy))
+        {
+            amount *= eliteGoldMultiplier;
+            reason = "Elit";
+        }
+
+        AddGold(Mathf.RoundToInt(amount), reason);
+    }
+
+    private void OnParry(EnemyController enemy, bool brokeBalance)
+    {
+        if (State != RunState.Fighting)
+            return;
+
+        runParries++;
+
+        if (goldPerParry > 0)
+            AddGold(goldPerParry, "Parry");
+    }
+
+    private void OnPlayerDamaged(PlayerDamageReport report)
+    {
+        if (report.kind == PlayerHitKind.BlockCost)
+            return;
+
+        roomDamaged = true;
+    }
+
+    private void HealPercent(float percent)
+    {
+        percent *= HeatHealMultiplier;
+
+        if (percent <= 0f || playerHealth == null)
+            return;
+
+        int heal =
+            Mathf.Max(1, Mathf.RoundToInt(playerHealth.MaxHealth * percent));
+
+        playerHealth.Heal(heal);
+    }
+
+    private static void RaiseStage(Action<int> handlers, int stage)
+    {
+        if (handlers == null)
+            return;
+
+        Delegate[] list = handlers.GetInvocationList();
+
+        for (int i = 0; i < list.Length; i++)
+        {
+            try
+            {
+                ((Action<int>)list[i])(stage);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("RunManager: bölüm olayı abone hatası → " + e);
+            }
+        }
+    }
+
+    // =========================================================
     // DOĞURMA
     // =========================================================
 
-    // Bölümdeki dalga sayısı: taban + her N bölümde +1 (üst sınırlı).
     private int WavesForStage()
     {
-        // Düello: aynı anda en fazla duelMaxSimultaneous düşman; fazlası
-        // ayrı dalgada.
         if (duelMode)
         {
             return Mathf.Max(
@@ -675,7 +1410,6 @@ public class RunManager : MonoBehaviour
         );
     }
 
-    // Bölümün TOPLAM düşman sayısı: (taban + bölüm artışı) × uzunluk çarpanı.
     private int TotalEnemiesForStage()
     {
         if (duelMode)
@@ -706,8 +1440,6 @@ public class RunManager : MonoBehaviour
         );
     }
 
-    // Toplamı dalgalara böler (artan sayı ilk dalgalara dağılır).
-    // Aynı anda ekranda olabilecek düşman sayısı maxEnemiesPerWave ile sınırlı.
     private int EnemiesForWave(int wave)
     {
         int total = TotalEnemiesForStage();
@@ -724,10 +1456,9 @@ public class RunManager : MonoBehaviour
         return Mathf.Clamp(count, 1, Mathf.Max(1, cap));
     }
 
-    // Bir dalgayı doğurur. Önceki dalgaların düşmanları listede kalır.
-    private IEnumerator SpawnWave(int count)
+    private IEnumerator SpawnWave(int count, bool elite)
     {
-        int firstSide = Random.value < 0.5f ? -1 : 1;
+        int firstSide = UnityEngine.Random.value < 0.5f ? -1 : 1;
 
         for (int i = 0; i < count; i++)
         {
@@ -736,7 +1467,17 @@ public class RunManager : MonoBehaviour
 
             int side = (i % 2 == 0) ? firstSide : -firstSide;
 
-            SpawnOne(side);
+            EnemyController enemy = SpawnOne(side, spawnTemplate);
+
+            if (enemy != null)
+            {
+                ConfigureEnemy(enemy);
+
+                if (elite)
+                    MakeElite(enemy);
+
+                spawned.Add(enemy);
+            }
 
             RefreshAlive();
 
@@ -744,7 +1485,87 @@ public class RunManager : MonoBehaviour
         }
     }
 
-    private void SpawnOne(int side)
+    private void SpawnBoss(string bossName)
+    {
+        int side = UnityEngine.Random.value < 0.5f ? -1 : 1;
+
+        EnemyController boss = SpawnOne(side, bossTemplate);
+
+        if (boss == null)
+            return;
+
+        ConfigureEnemy(boss);
+
+        Health health = boss.GetComponent<Health>();
+
+        if (health != null)
+        {
+            float mult =
+                (bossHealthMultiplier + bossHealthPerAct * (Act - 1)) *
+                HeatEliteMultiplier;
+
+            health.SetMaxHealth(
+                Mathf.RoundToInt(health.MaxHealth * mult),
+                true
+            );
+
+            // Boss'u bir execute bitirmez: her biri canın bir parçasını alır.
+            boss.executeDamage =
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(health.MaxHealth * bossExecutePercent)
+                );
+        }
+
+        boss.attackDamage =
+            Mathf.Max(1, Mathf.RoundToInt(boss.attackDamage * HeatEliteMultiplier));
+
+        boss.transform.localScale *= bossScale;
+
+        BossController controller = boss.GetComponent<BossController>();
+
+        if (controller == null)
+            controller = boss.gameObject.AddComponent<BossController>();
+
+        float phaseAt =
+            Heat >= 4
+                ? Mathf.Min(0.7f, bossPhase2At + 0.15f)
+                : bossPhase2At;
+
+        controller.Setup(bossName, phaseAt);
+
+        currentBoss = boss;
+
+        spawned.Add(boss);
+
+        RefreshAlive();
+    }
+
+    private void MakeElite(EnemyController enemy)
+    {
+        eliteEnemies.Add(enemy);
+
+        float m = HeatEliteMultiplier;
+
+        Health health = enemy.GetComponent<Health>();
+
+        if (health != null)
+        {
+            health.SetMaxHealth(
+                Mathf.RoundToInt(health.MaxHealth * eliteHealthMultiplier * m),
+                true
+            );
+        }
+
+        enemy.attackDamage =
+            Mathf.Max(1, Mathf.RoundToInt(enemy.attackDamage * eliteDamageMultiplier * m));
+
+        enemy.chaseSpeed *= eliteSpeedMultiplier;
+
+        enemy.transform.localScale *= eliteScale;
+    }
+
+    private EnemyController SpawnOne(int side, GameObject template)
     {
         Vector3 playerPosition = player.transform.position;
 
@@ -753,19 +1574,18 @@ public class RunManager : MonoBehaviour
         if (spawnPoints != null && spawnPoints.Length > 0)
         {
             Transform point =
-                spawnPoints[Random.Range(0, spawnPoints.Length)];
+                spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)];
 
             position = point.position;
         }
         else
         {
             float distance =
-                Random.Range(spawnDistanceMin, spawnDistanceMax);
+                UnityEngine.Random.Range(spawnDistanceMin, spawnDistanceMax);
 
             float x = playerPosition.x + side * distance;
             float y = playerPosition.y;
 
-            // Zemini bul: yukarıdan aşağı ışın at.
             RaycastHit2D hit =
                 Physics2D.Raycast(
                     new Vector2(x, playerPosition.y + spawnRaycastHeight),
@@ -780,58 +1600,41 @@ public class RunManager : MonoBehaviour
             position = new Vector3(x, y, playerPosition.z);
         }
 
-        // Şablon yok olduysa (ör. sahne düşmanı öldü) Instantiate hata
-        // verir ve doğma coroutine'i çökerdi: kontrol et.
-        if (spawnTemplate == null)
+        if (template == null)
         {
             Debug.LogError(
                 "RunManager: düşman şablonu yok edilmiş! 'Enemy Prefab' " +
                 "alanına Project penceresinden PREFAB ata (sahne nesnesi değil)."
             );
 
-            return;
+            return null;
         }
 
         GameObject obj =
-            Instantiate(spawnTemplate, position, Quaternion.identity);
+            Instantiate(template, position, Quaternion.identity);
 
-        // Gizli şablondan gelen kopya kapalıdır; aç (Awake/Start şimdi çalışır).
         if (!obj.activeSelf)
             obj.SetActive(true);
 
-        EnemyController enemy =
-            obj.GetComponent<EnemyController>();
-
-        if (enemy == null)
-            return;
-
-        ConfigureEnemy(enemy);
-
-        spawned.Add(enemy);
+        return obj.GetComponent<EnemyController>();
     }
 
     // Bölüm zorluğu + doğan düşman oyuncuyu hemen fark etsin.
     private void ConfigureEnemy(EnemyController enemy)
     {
-        // Bölüm ilerlemesi. Düelloda güçlenme yavaş (çarpanla küçülür).
         float t =
             (Stage - 1) *
             (duelMode ? duelScalingMultiplier : 1f);
 
         enemy.chaseRange = aggroRange;
-
-        // Uzakta Idle'a düşüp bölümü kilitlemesin.
         enemy.alwaysHunt = true;
 
-        // Saldırı erken kararlı olsun: vurarak iptal etmek zorlaşsın,
-        // parry en iyi cevap kalsın. (Prefab daha düşükse ona dokunma.)
         enemy.attackCommitPoint =
             Mathf.Min(enemy.attackCommitPoint, runAttackCommitPoint);
 
-        // Normal saldırı hasarı bölümle artar: hasar yemek giderek pahalı.
-        // (Engellenemez vuruş zaten büyük; ölçeklenmez.)
         float damageMultiplier =
-            1f + Mathf.Min(maxDamageBonus, damageBonusPerStage * t);
+            (1f + Mathf.Min(maxDamageBonus, damageBonusPerStage * t)) *
+            HeatDamageMultiplier;
 
         enemy.attackDamage =
             Mathf.Max(
@@ -839,7 +1642,12 @@ public class RunManager : MonoBehaviour
                 Mathf.RoundToInt(enemy.attackDamage * damageMultiplier)
             );
 
-        // Hız: bölümle artar, üst sınırı var.
+        enemy.unblockableDamage =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(enemy.unblockableDamage * HeatDamageMultiplier)
+            );
+
         enemy.chaseSpeed *=
             1f + Mathf.Min(maxSpeedBonus, speedBonusPerStage * t);
 
@@ -849,23 +1657,20 @@ public class RunManager : MonoBehaviour
                 enemy.unblockableChance + unblockableBonusPerStage * t
             );
 
-        // Can: bölümle artar. Execute Damage'i aşınca execute tek vuruşta
-        // öldüremez, bu da can hasarı charm'larını anlamlı kılar.
         Health health = enemy.GetComponent<Health>();
 
-        if (health != null && healthBonusPerStage > 0f)
+        if (health != null)
         {
             int scaled =
                 Mathf.RoundToInt(
                     health.MaxHealth *
-                    (1f + healthBonusPerStage * t)
+                    (1f + healthBonusPerStage * t) *
+                    HeatHealthMultiplier
                 );
 
             health.SetMaxHealth(scaled, true);
         }
 
-        // Execute: düşman canından HIZLI büyür (düello çarpanından
-        // etkilenmez), böylece sersemletilen düşman execute ile ölür.
         if (executeGrowthPerStage > 0f)
         {
             enemy.executeDamage =
@@ -873,7 +1678,8 @@ public class RunManager : MonoBehaviour
                     1,
                     Mathf.RoundToInt(
                         enemy.executeDamage *
-                        (1f + executeGrowthPerStage * (Stage - 1))
+                        (1f + executeGrowthPerStage * (Stage - 1)) *
+                        HeatHealthMultiplier
                     )
                 );
         }
@@ -883,12 +1689,10 @@ public class RunManager : MonoBehaviour
     // TAKILMA KURTARMA
     // =========================================================
 
-    // Uzun süredir ilerleme yok: canlı düşmanlara bak, çözülebilenleri çöz.
     private void RecoverStragglers()
     {
         Vector3 playerPosition = player.transform.position;
 
-        string report = "";
         int moved = 0;
         int removed = 0;
 
@@ -901,28 +1705,14 @@ public class RunManager : MonoBehaviour
 
             Vector3 ep = e.transform.position;
 
-            string stateName =
-                e.CurrentState != null
-                    ? e.CurrentState.GetType().Name
-                    : "null";
-
-            report +=
-                "\n  " + e.name + " konum=" + ep +
-                " durum=" + stateName;
-
-            // 1) Haritadan düşmüş: sil.
             if (ep.y < playerPosition.y - fallKillDepth)
             {
                 Destroy(e.gameObject);
-
                 removed++;
-
                 continue;
             }
 
-            // 2) Uzakta ya da Idle'da takılı: oyuncunun yanına taşı.
-            float distance =
-                Vector2.Distance(ep, playerPosition);
+            float distance = Vector2.Distance(ep, playerPosition);
 
             if (
                 distance > stragglerDistance ||
@@ -931,8 +1721,7 @@ public class RunManager : MonoBehaviour
             {
                 int side = (i % 2 == 0) ? -1 : 1;
 
-                e.transform.position =
-                    RecoverPosition(side);
+                e.transform.position = RecoverPosition(side);
 
                 Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
 
@@ -948,18 +1737,17 @@ public class RunManager : MonoBehaviour
         Debug.LogWarning(
             "RunManager: " + stuckTimeout.ToString("0") +
             " sn'dir ilerleme yok → kurtarma. Taşınan: " + moved +
-            ", silinen: " + removed + ". Canlı düşmanlar:" + report
+            ", silinen: " + removed
         );
     }
 
-    // Oyuncunun yanında, oyuncunun durduğu (ulaşılabilir) zeminde bir nokta.
     private Vector3 RecoverPosition(int side)
     {
         Vector3 playerPosition = player.transform.position;
 
         float x =
             playerPosition.x +
-            side * Random.Range(6f, 9f);
+            side * UnityEngine.Random.Range(6f, 9f);
 
         float y = playerPosition.y;
 
@@ -977,20 +1765,14 @@ public class RunManager : MonoBehaviour
         return new Vector3(x, y, playerPosition.z);
     }
 
-    // 'Enemy Prefab' alanına Project penceresinden gerçek bir prefab
-    // atanmışsa onu kullanır. SAHNEDEKİ bir düşman atanmışsa, o düşman
-    // ölünce nesne yok olur ve sonraki doğmalar kırılır; bu yüzden
-    // başlangıçta gizli bir kopyasını çıkarıp onu şablon yapar.
     private GameObject PrepareTemplate(GameObject source)
     {
-        // Prefab asset'lerinin sahnesi geçersizdir; sahne nesnelerinin geçerli.
         if (!source.scene.IsValid())
             return source;
 
         Debug.LogWarning(
-            "RunManager: 'Enemy Prefab' alanına SAHNEDEKİ bir düşman (" +
-            source.name + ") atanmış. Gizli bir şablon kopyası " +
-            "oluşturuluyor. Doğrusu: Project penceresinden prefab'ı atamak."
+            "RunManager: '" + source.name + "' SAHNEDEKİ bir nesne. Gizli " +
+            "şablon kopyası oluşturuluyor. Doğrusu: Project penceresinden prefab."
         );
 
         GameObject template =
@@ -1015,7 +1797,6 @@ public class RunManager : MonoBehaviour
                 alive++;
         }
 
-        // Hâlâ doğma sürerken sayaç 'count'tan düşük görünmesin.
         AliveEnemies = Mathf.Max(alive, 0);
     }
 
@@ -1025,7 +1806,6 @@ public class RunManager : MonoBehaviour
 
     private void ResetRun()
     {
-        // Sahnedeki tüm düşmanlar.
         for (int i = EnemyController.All.Count - 1; i >= 0; i--)
         {
             EnemyController e = EnemyController.All[i];
@@ -1035,13 +1815,18 @@ public class RunManager : MonoBehaviour
         }
 
         spawned.Clear();
+        eliteEnemies.Clear();
+        currentBoss = null;
+        shopItems.Clear();
+        doorOptions.Clear();
+
         bonusOffers = 0;
         AliveEnemies = 0;
         Wave = 0;
         WaveCount = 0;
-        WaveBannerUntil = 0f;
+        BannerUntil = 0f;
+        Gold = 0;
 
-        // Charm'lar ve istatistikler sıfırlanır.
         Inventory.Clear();
 
         HitStop.ClearAll();
@@ -1049,7 +1834,6 @@ public class RunManager : MonoBehaviour
 
         Time.timeScale = 1f;
 
-        // Oyuncuyu başlangıca al.
         playerHealth.Revive();
 
         PlayerPosture posture = player.GetComponent<PlayerPosture>();

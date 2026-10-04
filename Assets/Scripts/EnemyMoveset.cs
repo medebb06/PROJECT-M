@@ -227,6 +227,133 @@ public class EnemyMoveset : MonoBehaviour
     }
 
     // =========================================================
+    // BOSS
+    // =========================================================
+
+    // Faz 1: Düellocu seti + dörtlü kombo. Uyarılar biraz daha kısa.
+    public static List<AttackMove> CreateBossPhase1Moves()
+    {
+        List<AttackMove> moves = CreateDuelistMoves();
+
+        moves.Add(
+            new AttackMove
+            {
+                name = "Dörtlü Kombo",
+                weight = 1f,
+                cooldown = 3f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.7f),
+                    new MoveHit(MoveHitType.Normal, 0.4f),
+                    new MoveHit(MoveHitType.Normal, 0.4f),
+                    new MoveHit(MoveHitType.Normal, 0.65f, 0f, 1.4f)
+                }
+            }
+        );
+
+        ScaleWindups(moves, 0.92f);
+
+        return moves;
+    }
+
+    // Faz 2: daha uzun ve karışık kombolar, daha hızlı.
+    public static List<AttackMove> CreateBossPhase2Moves()
+    {
+        List<AttackMove> moves = new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Hızlı Vuruş",
+                weight = 0.8f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.6f) }
+            },
+
+            new AttackMove
+            {
+                name = "Beşli Kombo",
+                weight = 1.2f,
+                cooldown = 3f,
+                recoveryMultiplier = 1.8f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.65f),
+                    new MoveHit(MoveHitType.Normal, 0.38f),
+                    new MoveHit(MoveHitType.Normal, 0.38f),
+                    new MoveHit(MoveHitType.Normal, 0.5f),
+                    new MoveHit(MoveHitType.Normal, 0.6f, 0f, 1.5f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Gecikmeli Kombo",
+                weight = 0.9f,
+                cooldown = 2f,
+                recoveryMultiplier = 1.4f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.9f, 0.7f, 1.2f),
+                    new MoveHit(MoveHitType.Normal, 0.4f),
+                    new MoveHit(MoveHitType.Normal, 0.45f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Çifte Süpürme",
+                weight = 0.7f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.5f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Sweep, 0.85f, 0f, 1.4f),
+                    new MoveHit(MoveHitType.Sweep, 0.7f, 0f, 1.4f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Kombo + Yakalama",
+                weight = 0.7f,
+                cooldown = 5f,
+                recoveryMultiplier = 1.8f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.65f),
+                    new MoveHit(MoveHitType.Normal, 0.4f),
+                    new MoveHit(MoveHitType.Grab, 0.9f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Kombo + Süpürme",
+                weight = 0.8f,
+                cooldown = 3f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.65f),
+                    new MoveHit(MoveHitType.Normal, 0.4f),
+                    new MoveHit(MoveHitType.Sweep, 0.55f, 0f, 1.5f)
+                }
+            }
+        };
+
+        return moves;
+    }
+
+    private static void ScaleWindups(List<AttackMove> moves, float factor)
+    {
+        for (int i = 0; i < moves.Count; i++)
+        {
+            for (int h = 0; h < moves[i].hits.Count; h++)
+                moves[i].hits[h].windup *= factor;
+        }
+    }
+
+    // =========================================================
     // VARSAYILAN: DÜELLOCU
     // =========================================================
 

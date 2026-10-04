@@ -2,34 +2,26 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Koşu arayüzü (prototip, OnGUI): bölüm bilgisi, charm listesi,
-/// charm seçim ekranı ve koşu sonu ekranı (istatistik özeti).
-/// Ek asset gerektirmez. Oyun duraklatılmışken de çalışır.
+/// Koşu arayüzü (OnGUI, ek asset yok). Ekranlar:
+///   Lobi (zorluk seçimi) · HUD (perde/oda, altın, charm'lar) · Boss çubuğu ·
+///   Kapı seçimi · Charm seçimi · Dükkan · Dinlenme · Koşu sonu / Zafer.
 ///
-/// Seçim: 1/2/3 tuşları ya da tıklama.  Yeniden başla: Enter.
-/// TAB (basılı tut): canlı istatistik paneli.
-/// Boyut: 'UI Scale' (Inspector). RunManager kendiliğinden ekler.
+/// Tuşlar:
+///   Lobi: ←/→ zorluk, Enter başla.   Seçimler: 1/2/3 ya da tıkla.
+///   Dükkan: 1..4 satın al, R yenile, Enter çık.   Sonuç: Enter.
+///   TAB (basılı): canlı istatistik.
+/// Boyut: 'UI Scale'. RunManager kendiliğinden ekler.
 /// </summary>
 public class RunUI : MonoBehaviour
 {
     [Header("Boyut")]
-    [Tooltip("Tüm arayüzün boyutu. 1 = büyük, 0.7 = kompakt (önerilen).")]
     [Range(0.4f, 1.5f)]
     [SerializeField] private float uiScale = 0.7f;
 
     [Header("Davranış")]
-    [Tooltip("Basılı tutunca canlı istatistik paneli açılır.")]
     [SerializeField] private KeyCode liveStatsKey = KeyCode.Tab;
-
-    [Tooltip("Koşu sonu tablosunda gösterilecek en fazla bölüm (sonuncular).")]
     [SerializeField] private int maxStageRows = 8;
-
-    [Tooltip("Alttaki build satırı (kritik / denge / can çarpanları).")]
     [SerializeField] private bool showBuildStats = true;
-
-    // ---------------------------------------------------------
-    // Stiller
-    // ---------------------------------------------------------
 
     private GUIStyle titleStyle;
     private GUIStyle labelStyle;
@@ -37,7 +29,9 @@ public class RunUI : MonoBehaviour
     private GUIStyle tinyStyle;
     private GUIStyle charmStyle;
     private GUIStyle cardStyle;
+    private GUIStyle buttonStyle;
     private GUIStyle bannerStyle;
+    private GUIStyle bigTitleStyle;
     private GUIStyle riposteStyle;
     private GUIStyle richCentered;
     private GUIStyle legendStyle;
@@ -51,7 +45,6 @@ public class RunUI : MonoBehaviour
     private static readonly Color Gold = new Color(1f, 0.82f, 0.3f);
     private static readonly Color Soft = new Color(1f, 1f, 1f, 0.75f);
 
-    // Saldırı sonucu renkleri (bar ve lejant).
     private static readonly Color ColParry = new Color(1f, 0.82f, 0.2f);
     private static readonly Color ColBlock = new Color(0.4f, 0.6f, 1f);
     private static readonly Color ColDash = new Color(0.3f, 0.9f, 0.9f);
@@ -61,6 +54,7 @@ public class RunUI : MonoBehaviour
     private static readonly Color ColHit = new Color(0.95f, 0.25f, 0.25f);
 
     private const float Pad = 8f;
+    private const string GoldIcon = "●";
 
     // =========================================================
     // GİRİŞ
@@ -73,24 +67,77 @@ public class RunUI : MonoBehaviour
         if (run == null)
             return;
 
-        if (run.State == RunState.Offer)
+        switch (run.State)
         {
-            for (int i = 0; i < 9; i++)
-            {
-                if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i)))
-                    run.Choose(i);
-            }
+            case RunState.Lobby:
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
+                    run.ChangeHeat(-1);
+
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
+                    run.ChangeHeat(1);
+
+                if (EnterPressed() || Input.GetKeyDown(KeyCode.Space))
+                    run.RequestStart();
+                break;
+
+            case RunState.Offer:
+                for (int i = 0; i < 9; i++)
+                {
+                    if (NumberPressed(i))
+                        run.Choose(i);
+                }
+                break;
+
+            case RunState.ChoosingRoom:
+                for (int i = 0; i < 3; i++)
+                {
+                    if (NumberPressed(i))
+                        run.ChooseDoor(i);
+                }
+                break;
+
+            case RunState.Shop:
+                for (int i = 0; i < 9; i++)
+                {
+                    if (NumberPressed(i))
+                        run.BuyShopItem(i);
+                }
+
+                if (Input.GetKeyDown(KeyCode.R))
+                    run.RerollShop();
+
+                if (EnterPressed() || Input.GetKeyDown(KeyCode.Escape))
+                    run.LeaveShop();
+                break;
+
+            case RunState.Rest:
+                if (NumberPressed(0))
+                    run.ChooseRest(true);
+
+                if (NumberPressed(1))
+                    run.ChooseRest(false);
+                break;
+
+            case RunState.Dead:
+            case RunState.Victory:
+                if (EnterPressed())
+                    run.RequestRestart();
+                break;
         }
-        else if (run.State == RunState.Dead)
-        {
-            if (
-                Input.GetKeyDown(KeyCode.Return) ||
-                Input.GetKeyDown(KeyCode.KeypadEnter)
-            )
-            {
-                run.RequestRestart();
-            }
-        }
+    }
+
+    private static bool EnterPressed()
+    {
+        return
+            Input.GetKeyDown(KeyCode.Return) ||
+            Input.GetKeyDown(KeyCode.KeypadEnter);
+    }
+
+    private static bool NumberPressed(int index)
+    {
+        return
+            Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + index)) ||
+            Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index));
     }
 
     // =========================================================
@@ -104,7 +151,6 @@ public class RunUI : MonoBehaviour
         if (run == null || run.Inventory == null)
             return;
 
-        // 720p referans × uiScale. Sanal ekran: width × height.
         float scale = Screen.height / 720f * uiScale;
 
         GUI.matrix =
@@ -115,7 +161,14 @@ public class RunUI : MonoBehaviour
 
         EnsureStyles();
 
+        if (run.State == RunState.Lobby)
+        {
+            DrawLobby(run, width, height);
+            return;
+        }
+
         DrawHud(run, width, height);
+        DrawBossBar(width);
 
         switch (run.State)
         {
@@ -123,27 +176,42 @@ public class RunUI : MonoBehaviour
                 DrawOffer(run, width, height);
                 break;
 
+            case RunState.ChoosingRoom:
+                DrawDoors(run, width, height);
+                break;
+
+            case RunState.Shop:
+                DrawShop(run, width, height);
+                break;
+
+            case RunState.Rest:
+                DrawRest(run, width, height);
+                break;
+
             case RunState.Fighting:
-                if (Time.unscaledTime < run.WaveBannerUntil)
-                    DrawBanner(run.WaveBannerText, width, height);
+            case RunState.Starting:
+                if (Time.unscaledTime < run.BannerUntil)
+                    DrawBanner(run.BannerText, width, height);
                 break;
 
             case RunState.Cleared:
                 DrawBanner(
-                    "BÖLÜM " + run.Stage + " TEMİZLENDİ",
+                    run.CurrentRoom == RoomType.Boss
+                        ? "BOSS YENİLDİ"
+                        : "ODA TEMİZLENDİ",
                     width,
                     height
                 );
                 break;
 
             case RunState.Dead:
-                DrawDead(run, width, height);
+            case RunState.Victory:
+                DrawResult(run, width, height);
                 break;
         }
 
         if (
-            run.State != RunState.Dead &&
-            run.State != RunState.Offer &&
+            (run.State == RunState.Fighting || run.State == RunState.Cleared) &&
             Input.GetKey(liveStatsKey)
         )
         {
@@ -152,7 +220,105 @@ public class RunUI : MonoBehaviour
     }
 
     // =========================================================
-    // HUD (sol üst kompakt panel)
+    // LOBİ
+    // =========================================================
+
+    private void DrawLobby(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        float panelWidth = 420f;
+        float panelHeight = MetaProgress.HeatUnlocked > 0 ? 250f : 190f;
+
+        Rect panel =
+            new Rect(
+                (width - panelWidth) * 0.5f,
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float y = panel.y + 14f;
+
+        GUI.Label(new Rect(panel.x, y, panelWidth, 34f), "YENİ KOŞU", bigTitleStyle);
+
+        y += 40f;
+
+        GUI.Label(
+            new Rect(panel.x, y, panelWidth, 18f),
+            "Koşu " + MetaProgress.Runs +
+            "   •   Zafer " + MetaProgress.Wins +
+            "   •   En iyi perde " + MetaProgress.BestAct,
+            Centered(smallStyle)
+        );
+
+        y += 18f;
+
+        GUI.Label(
+            new Rect(panel.x, y, panelWidth, 16f),
+            "Toplam execute " + MetaProgress.TotalExecutes +
+            "   •   Toplam parry " + MetaProgress.TotalParries,
+            Centered(tinyStyle)
+        );
+
+        y += 30f;
+
+        if (MetaProgress.HeatUnlocked > 0)
+        {
+            int heat = run.Heat;
+
+            GUI.Label(
+                new Rect(panel.x, y, panelWidth, 24f),
+                "<color=#888888>[A]</color>   <b>ISI " + heat + "</b> / " +
+                MetaProgress.HeatUnlocked + "   <color=#888888>[D]</color>",
+                Centered(titleStyle)
+            );
+
+            y += 26f;
+
+            string desc = "";
+
+            for (int i = 1; i <= heat; i++)
+                desc += RunManager.DescribeHeat(i) + "\n";
+
+            if (heat == 0)
+                desc = RunManager.DescribeHeat(0);
+
+            GUI.Label(
+                new Rect(panel.x + 20f, y, panelWidth - 40f, 60f),
+                "<color=#FFB080>" + desc.TrimEnd() + "</color>",
+                Centered(tinyStyle)
+            );
+
+            y += 62f;
+        }
+        else
+        {
+            GUI.Label(
+                new Rect(panel.x, y, panelWidth, 16f),
+                "<color=#888888>Bir koşuyu kazan: zorluk kademeleri açılır</color>",
+                Centered(tinyStyle)
+            );
+
+            y += 26f;
+        }
+
+        if (
+            GUI.Button(
+                new Rect(panel.x + panelWidth * 0.5f - 90f, panel.yMax - 40f, 180f, 28f),
+                "BAŞLA  <color=#888888>[Enter]</color>",
+                buttonStyle
+            )
+        )
+        {
+            run.RequestStart();
+        }
+    }
+
+    // =========================================================
+    // HUD
     // =========================================================
 
     private void DrawHud(RunManager run, float width, float height)
@@ -160,32 +326,53 @@ public class RunUI : MonoBehaviour
         IReadOnlyList<CharmInventory.Entry> entries =
             run.Inventory.Entries;
 
-        float panelWidth = 210f;
+        float panelWidth = 220f;
         float lineH = 15f;
-        float panelHeight = 44f + entries.Count * lineH + (entries.Count > 0 ? 6f : 0f);
+        float panelHeight = 46f + entries.Count * lineH + (entries.Count > 0 ? 6f : 0f);
 
         Rect panel = new Rect(Pad, Pad, panelWidth, panelHeight);
 
         GUI.Box(panel, GUIContent.none, panelStyle);
 
-        string stageText = "BÖLÜM " + run.Stage;
-
-        if (run.WaveCount > 1)
-            stageText += "  <size=11><color=#BBBBBB>dalga " + run.Wave + "/" + run.WaveCount + "</color></size>";
+        string where =
+            "PERDE " + Mathf.Max(1, run.Act) + "  <size=11><color=#BBBBBB>" +
+            (run.RoomInAct > run.RoomsPerAct
+                ? "BOSS"
+                : "oda " + Mathf.Max(1, run.RoomInAct) + "/" + run.RoomsPerAct) +
+            (run.Heat > 0 ? "  •  ısı " + run.Heat : "") +
+            "</color></size>";
 
         GUI.Label(
             new Rect(panel.x + 8f, panel.y + 4f, panelWidth - 16f, 20f),
-            stageText,
+            where,
             titleStyle
         );
 
+        string goldLine =
+            "<color=#FFD54A>" + GoldIcon + " " + run.Gold + "</color>";
+
+        // Son kazanılan altın: kısa süre görünür.
+        float sinceGold = Time.unscaledTime - run.LastGoldTime;
+
+        if (sinceGold < 1.6f)
+        {
+            float a = 1f - Mathf.Clamp01((sinceGold - 1.0f) / 0.6f);
+
+            goldLine +=
+                "  <color=#FFE08A" + Mathf.RoundToInt(a * 255).ToString("X2") + ">+" +
+                run.LastGoldGain + " " + run.LastGoldReason + "</color>";
+        }
+
+        if (run.State == RunState.Fighting)
+            goldLine += "   <color=#BBBBBB>düşman " + run.AliveEnemies + "</color>";
+
         GUI.Label(
-            new Rect(panel.x + 8f, panel.y + 24f, panelWidth - 16f, 16f),
-            "Düşman: " + run.AliveEnemies,
+            new Rect(panel.x + 8f, panel.y + 24f, panelWidth - 12f, 18f),
+            goldLine,
             smallStyle
         );
 
-        float y = panel.y + 44f;
+        float y = panel.y + 46f;
 
         for (int i = 0; i < entries.Count; i++)
         {
@@ -217,7 +404,6 @@ public class RunUI : MonoBehaviour
         DrawRiposte(width);
     }
 
-    // Build'in toplam etkisi: charm'ların ve riposte'un birleşik sonucu.
     private void DrawBuildStats(float height)
     {
         PlayerStats stats = PlayerStats.Current;
@@ -241,17 +427,71 @@ public class RunUI : MonoBehaviour
         );
     }
 
-    // Parry sonrası güçlenmiş vuruş hakları (üst orta, küçük).
     private void DrawRiposte(float width)
     {
         if (!ParryRiposte.IsActive)
             return;
 
         GUI.Label(
-            new Rect(0, 10f, width, 24f),
+            new Rect(0, RiposteY(), width, 24f),
             "RİPOSTE " + new string('●', Mathf.Max(0, ParryRiposte.HitsLeft)),
             riposteStyle
         );
+    }
+
+    // Boss çubuğu varsa riposte onun altında.
+    private float RiposteY()
+    {
+        BossController boss = BossController.Current;
+
+        return boss != null && boss.IsAlive ? 60f : 10f;
+    }
+
+    // =========================================================
+    // BOSS ÇUBUĞU
+    // =========================================================
+
+    private void DrawBossBar(float width)
+    {
+        BossController boss = BossController.Current;
+
+        if (boss == null || !boss.IsAlive)
+            return;
+
+        float barWidth = Mathf.Min(460f, width - 2f * 240f);
+        barWidth = Mathf.Max(260f, barWidth);
+
+        float x = (width - barWidth) * 0.5f;
+        float y = 10f;
+
+        GUI.Label(
+            new Rect(x, y, barWidth, 18f),
+            "<b>" + boss.BossName.ToUpperInvariant() + "</b>" +
+            (boss.InPhase2 ? "   <color=#FF6A50>FAZ 2</color>" : ""),
+            Centered(smallStyle)
+        );
+
+        y += 19f;
+
+        Color old = GUI.color;
+
+        // Can
+        GUI.color = new Color(0f, 0f, 0f, 0.6f);
+        GUI.DrawTexture(new Rect(x - 1f, y - 1f, barWidth + 2f, 10f), Texture2D.whiteTexture);
+
+        GUI.color = new Color(0.85f, 0.18f, 0.15f);
+        GUI.DrawTexture(new Rect(x, y, barWidth * boss.HealthPercent, 8f), Texture2D.whiteTexture);
+
+        y += 11f;
+
+        // Denge
+        GUI.color = new Color(0f, 0f, 0f, 0.5f);
+        GUI.DrawTexture(new Rect(x - 1f, y - 1f, barWidth + 2f, 5f), Texture2D.whiteTexture);
+
+        GUI.color = new Color(1f, 0.8f, 0.25f);
+        GUI.DrawTexture(new Rect(x, y, barWidth * boss.BalancePercent, 3f), Texture2D.whiteTexture);
+
+        GUI.color = old;
     }
 
     // =========================================================
@@ -276,11 +516,7 @@ public class RunUI : MonoBehaviour
         float w = panelWidth - 20f;
         float y = panel.y + 6f;
 
-        GUI.Label(
-            new Rect(x, y, w, 18f),
-            s.HeaderLine() + "   " + s.KillsLine(),
-            smallStyle
-        );
+        GUI.Label(new Rect(x, y, w, 18f), s.HeaderLine(), smallStyle);
 
         y += 22f;
 
@@ -291,11 +527,7 @@ public class RunUI : MonoBehaviour
 
         GUI.Label(
             new Rect(x, y, w, 32f),
-            s.DefenseLine() + "\n" +
-            "Alınan " + s.DamageTotal +
-            "  (normal " + s.DamageNormal +
-            ", engellenemez " + s.DamageUnblockable + ")" +
-            "   İyileşme " + s.Healed,
+            s.DefenseLine() + "\n" + s.KillsLine(),
             tinyStyle
         );
     }
@@ -310,58 +542,38 @@ public class RunUI : MonoBehaviour
 
         IReadOnlyList<CharmDefinition> offers = run.Offers;
 
-        float cardWidth = 220f;
+        float cardWidth = 210f;
         float cardHeight = 190f;
-        float gap = 14f;
+        float gap = 12f;
 
         float total =
             offers.Count * cardWidth +
             Mathf.Max(0, offers.Count - 1) * gap;
 
+        // Çok kart varsa küçült.
+        if (total > width - 40f)
+        {
+            float f = (width - 40f) / total;
+            cardWidth *= f;
+            gap *= f;
+            total = width - 40f;
+        }
+
         float x = (width - total) * 0.5f;
         float cardY = (height - cardHeight) * 0.5f;
 
-        string heading =
-            run.IsStartOffer
-                ? "BAŞLANGIÇ CHARM'INI SEÇ"
-                : run.IsBonusOffer
-                    ? "KUSURSUZ BÖLÜM: BONUS CHARM"
-                    : "BİR CHARM SEÇ";
-
         GUI.Label(
             new Rect(0, cardY - 46f, width, 34f),
-            heading,
+            string.IsNullOrEmpty(run.OfferTitle) ? "BİR CHARM SEÇ" : run.OfferTitle,
             bannerStyle
         );
 
         for (int i = 0; i < offers.Count; i++)
         {
-            CharmDefinition def = offers[i];
-
-            int owned = run.Inventory.GetStacks(def);
-            int next = owned + 1;
-
-            string level =
-                owned == 0
-                    ? "Yeni"
-                    : "Seviye " + owned + " → " + next;
-
-            string effect =
-                def.effect != null
-                    ? def.effect.Describe(next)
-                    : "";
-
-            string text =
-                "<size=11><color=#888888>" + (i + 1) + "</color></size>  " +
-                "<b>" + def.displayName + "</b>\n" +
-                "<size=11><color=#9AD1FF>" + level + "</color></size>\n\n" +
-                "<size=12>" + def.description + "</size>\n\n" +
-                "<size=11><color=#FFD54A>" + effect + "</color></size>";
-
             if (
                 GUI.Button(
                     new Rect(x, cardY, cardWidth, cardHeight),
-                    text,
+                    CharmCardText(run, offers[i], i + 1, ""),
                     cardStyle
                 )
             )
@@ -379,16 +591,406 @@ public class RunUI : MonoBehaviour
         );
     }
 
+    private static string CharmCardText(
+        RunManager run,
+        CharmDefinition def,
+        int number,
+        string footer
+    )
+    {
+        int owned = run.Inventory.GetStacks(def);
+        int next = owned + 1;
+
+        string level =
+            owned == 0
+                ? "Yeni"
+                : "Seviye " + owned + " → " + next;
+
+        string effect =
+            def.effect != null
+                ? def.effect.Describe(next)
+                : "";
+
+        return
+            "<size=11><color=#888888>" + number + "</color></size>  " +
+            "<b>" + def.displayName + "</b>\n" +
+            "<size=11><color=#9AD1FF>" + level + "</color></size>\n\n" +
+            "<size=12>" + def.description + "</size>\n\n" +
+            "<size=11><color=#FFD54A>" + effect + "</color></size>" +
+            footer;
+    }
+
+    // =========================================================
+    // KAPI SEÇİMİ
+    // =========================================================
+
+    private void DrawDoors(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        IReadOnlyList<RoomType> doors = run.DoorOptions;
+
+        float cardWidth = 180f;
+        float cardHeight = 150f;
+        float gap = 14f;
+
+        float total =
+            doors.Count * cardWidth +
+            Mathf.Max(0, doors.Count - 1) * gap;
+
+        float x = (width - total) * 0.5f;
+        float cardY = (height - cardHeight) * 0.5f;
+
+        GUI.Label(
+            new Rect(0, cardY - 62f, width, 30f),
+            "SIRADAKİ ODA",
+            bannerStyle
+        );
+
+        Health hp = PlayerHealth();
+
+        GUI.Label(
+            new Rect(0, cardY - 30f, width, 18f),
+            "Perde " + run.Act + "  •  oda " + run.RoomInAct + "/" + run.RoomsPerAct +
+            (run.RoomInAct == run.RoomsPerAct ? "  <color=#FF8A80>(sonra BOSS)</color>" : "") +
+            "      Can " + (hp != null ? hp.CurrentHealth + "/" + hp.MaxHealth : "-") +
+            "      <color=#FFD54A>" + GoldIcon + " " + run.Gold + "</color>",
+            richCentered
+        );
+
+        for (int i = 0; i < doors.Count; i++)
+        {
+            if (
+                GUI.Button(
+                    new Rect(x, cardY, cardWidth, cardHeight),
+                    DoorText(doors[i], i + 1, run),
+                    cardStyle
+                )
+            )
+            {
+                run.ChooseDoor(i);
+            }
+
+            x += cardWidth + gap;
+        }
+    }
+
+    private static string DoorText(RoomType type, int number, RunManager run)
+    {
+        string title;
+        string color;
+        string desc;
+
+        switch (type)
+        {
+            case RoomType.Elite:
+                title = "ELİT";
+                color = "#FF6A50";
+                desc = "Güçlü düşman.\n\nÖdül: <b>2 charm</b> + bol altın.";
+                break;
+
+            case RoomType.Shop:
+                title = "DÜKKAN";
+                color = "#FFD54A";
+                desc = "Altınla charm al, iyileş ya da charm sil.";
+                break;
+
+            case RoomType.Rest:
+                title = "DİNLENME";
+                color = "#7CE08A";
+                desc =
+                    "%" + run.RestHealPercentDisplay + " iyileş\nya da\nbir charm'ı güçlendir.";
+                break;
+
+            default:
+                title = "DÖVÜŞ";
+                color = "#DDDDDD";
+                desc = "Normal düşman.\n\nÖdül: charm seçimi.";
+                break;
+        }
+
+        return
+            "<size=11><color=#888888>" + number + "</color></size>  " +
+            "<size=17><b><color=" + color + ">" + title + "</color></b></size>\n\n" +
+            "<size=12>" + desc + "</size>";
+    }
+
+    // =========================================================
+    // DÜKKAN
+    // =========================================================
+
+    private void DrawShop(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        float panelWidth = Mathf.Min(720f, width - 2f * Pad);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 470f);
+
+        Rect panel =
+            new Rect(
+                (width - panelWidth) * 0.5f,
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float y = panel.y + 10f;
+
+        GUI.Label(
+            new Rect(panel.x, y, panelWidth, 30f),
+            "DÜKKAN   <color=#FFD54A>" + GoldIcon + " " + run.Gold + "</color>",
+            Centered(bannerStyle)
+        );
+
+        y += 40f;
+
+        IReadOnlyList<ShopItem> items = run.ShopItems;
+
+        // ---------------- CHARM KARTLARI ----------------
+
+        int charmCount = 0;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].kind == ShopItemKind.Charm)
+                charmCount++;
+        }
+
+        float cardWidth = 200f;
+        float cardHeight = 180f;
+        float gap = 12f;
+
+        float total =
+            charmCount * cardWidth +
+            Mathf.Max(0, charmCount - 1) * gap;
+
+        float x = panel.x + (panelWidth - total) * 0.5f;
+
+        int number = 1;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            ShopItem item = items[i];
+
+            if (item.kind != ShopItemKind.Charm || item.charm == null)
+                continue;
+
+            bool canBuy =
+                !item.sold &&
+                run.CanAfford(item.price) &&
+                run.Inventory.CanAdd(item.charm);
+
+            string footer =
+                item.sold
+                    ? "\n\n<b><color=#888888>SATILDI</color></b>"
+                    : "\n\n<b><color=" + (run.CanAfford(item.price) ? "#FFD54A" : "#FF6A50") +
+                      ">" + GoldIcon + " " + item.price + "</color></b>";
+
+            GUI.enabled = canBuy;
+
+            if (
+                GUI.Button(
+                    new Rect(x, y, cardWidth, cardHeight),
+                    CharmCardText(run, item.charm, number, footer),
+                    cardStyle
+                )
+            )
+            {
+                run.BuyShopItem(i);
+            }
+
+            GUI.enabled = true;
+
+            x += cardWidth + gap;
+            number++;
+        }
+
+        y += cardHeight + 14f;
+
+        // ---------------- İYİLEŞME / YENİLE ----------------
+
+        float bx = panel.x + (panelWidth - (2f * 200f + 12f)) * 0.5f;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            ShopItem item = items[i];
+
+            if (item.kind != ShopItemKind.Heal)
+                continue;
+
+            Health hp = PlayerHealth();
+
+            bool full = hp != null && hp.CurrentHealth >= hp.MaxHealth;
+
+            GUI.enabled = !item.sold && !full && run.CanAfford(item.price);
+
+            string label =
+                item.sold
+                    ? "İyileşme  <color=#888888>(alındı)</color>"
+                    : number + "  İyileş   <color=#FFD54A>" + GoldIcon + " " + item.price + "</color>";
+
+            if (GUI.Button(new Rect(bx, y, 200f, 26f), label, buttonStyle))
+                run.BuyShopItem(i);
+
+            GUI.enabled = true;
+
+            number++;
+        }
+
+        GUI.enabled = run.CanAfford(run.CurrentRerollPrice);
+
+        if (
+            GUI.Button(
+                new Rect(bx + 212f, y, 200f, 26f),
+                "R  Yenile   <color=#FFD54A>" + GoldIcon + " " + run.CurrentRerollPrice + "</color>",
+                buttonStyle
+            )
+        )
+        {
+            run.RerollShop();
+        }
+
+        GUI.enabled = true;
+
+        y += 36f;
+
+        // ---------------- CHARM SİL ----------------
+
+        IReadOnlyList<CharmInventory.Entry> owned = run.Inventory.Entries;
+
+        if (owned.Count > 0)
+        {
+            GUI.Label(
+                new Rect(panel.x + 16f, y, panelWidth - 32f, 16f),
+                "Charm sil  <color=#FFD54A>" + GoldIcon + " " + run.RemovePriceNow + "</color>" +
+                "  <color=#888888>(istemediğin charm'dan kurtul)</color>",
+                smallStyle
+            );
+
+            y += 18f;
+
+            float cx = panel.x + 16f;
+
+            // Döngü sırasında silme listeyi değiştirebilir: kopya üzerinden.
+            List<CharmDefinition> defs = new List<CharmDefinition>();
+
+            for (int i = 0; i < owned.Count; i++)
+                defs.Add(owned[i].definition);
+
+            GUI.enabled = run.CanAfford(run.RemovePriceNow);
+
+            for (int i = 0; i < defs.Count; i++)
+            {
+                string label = "x " + defs[i].displayName;
+
+                float w = Mathf.Max(70f, buttonStyle.CalcSize(new GUIContent(label)).x + 12f);
+
+                if (cx + w > panel.xMax - 16f)
+                {
+                    cx = panel.x + 16f;
+                    y += 24f;
+                }
+
+                if (GUI.Button(new Rect(cx, y, w, 20f), label, buttonStyle))
+                {
+                    run.RemoveCharm(defs[i]);
+                    break;
+                }
+
+                cx += w + 6f;
+            }
+
+            GUI.enabled = true;
+        }
+
+        // ---------------- ÇIK ----------------
+
+        if (
+            GUI.Button(
+                new Rect(panel.x + panelWidth * 0.5f - 90f, panel.yMax - 36f, 180f, 26f),
+                "DEVAM ET  <color=#888888>[Enter]</color>",
+                buttonStyle
+            )
+        )
+        {
+            run.LeaveShop();
+        }
+    }
+
+    // =========================================================
+    // DİNLENME
+    // =========================================================
+
+    private void DrawRest(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        float cardWidth = 200f;
+        float cardHeight = 130f;
+        float gap = 16f;
+
+        float x = (width - (2f * cardWidth + gap)) * 0.5f;
+        float cardY = (height - cardHeight) * 0.5f;
+
+        GUI.Label(new Rect(0, cardY - 60f, width, 30f), "DİNLENME", bannerStyle);
+
+        Health hp = PlayerHealth();
+
+        GUI.Label(
+            new Rect(0, cardY - 28f, width, 18f),
+            "Can " + (hp != null ? hp.CurrentHealth + "/" + hp.MaxHealth : "-"),
+            richCentered
+        );
+
+        if (
+            GUI.Button(
+                new Rect(x, cardY, cardWidth, cardHeight),
+                "<size=11><color=#888888>1</color></size>  " +
+                "<size=17><b><color=#7CE08A>DİNLEN</color></b></size>\n\n" +
+                "<size=12>Max canın %" + run.RestHealPercentDisplay + "'i kadar iyileş.</size>",
+                cardStyle
+            )
+        )
+        {
+            run.ChooseRest(true);
+        }
+
+        GUI.enabled = run.CanUpgradeAnyCharm;
+
+        if (
+            GUI.Button(
+                new Rect(x + cardWidth + gap, cardY, cardWidth, cardHeight),
+                "<size=11><color=#888888>2</color></size>  " +
+                "<size=17><b><color=#9AD1FF>ANTRENMAN</color></b></size>\n\n" +
+                "<size=12>" +
+                (run.CanUpgradeAnyCharm
+                    ? "Sahip olduğun bir charm'ı bir seviye güçlendir."
+                    : "Güçlendirilecek charm yok.") +
+                "</size>",
+                cardStyle
+            )
+        )
+        {
+            run.ChooseRest(false);
+        }
+
+        GUI.enabled = true;
+    }
+
     // =========================================================
     // BANNER
     // =========================================================
 
     private void DrawBanner(string text, float width, float height)
     {
+        if (string.IsNullOrEmpty(text))
+            return;
+
         float bannerH = 40f;
         float y = height * 0.28f;
 
-        // İnce şerit arka plan.
         Color old = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.45f);
         GUI.DrawTexture(new Rect(0, y, width, bannerH), Texture2D.whiteTexture);
@@ -398,17 +1000,19 @@ public class RunUI : MonoBehaviour
     }
 
     // =========================================================
-    // KOŞU SONU
+    // KOŞU SONU / ZAFER
     // =========================================================
 
-    private void DrawDead(RunManager run, float width, float height)
+    private void DrawResult(RunManager run, float width, float height)
     {
         GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
 
         RunStats s = run.Stats;
 
+        IReadOnlyList<string> unlocks = run.NewUnlocks;
+
         float panelWidth = Mathf.Min(680f, width - 2f * Pad);
-        float panelHeight = Mathf.Min(height - 2f * Pad, 560f);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 580f);
 
         Rect panel =
             new Rect(
@@ -424,37 +1028,47 @@ public class RunUI : MonoBehaviour
         float w = panelWidth - 32f;
         float y = panel.y + 10f;
 
-        GUI.Label(new Rect(panel.x, y, panelWidth, 34f), "KOŞU BİTTİ", bannerStyle);
+        GUI.Label(
+            new Rect(panel.x, y, panelWidth, 34f),
+            run.State == RunState.Victory
+                ? "<color=#FFD54A>ZAFER!</color>"
+                : "KOŞU BİTTİ",
+            bannerStyle
+        );
 
         y += 38f;
 
         if (s == null || !s.HasResult)
         {
-            GUI.Label(
-                new Rect(panel.x, y, panelWidth, 20f),
-                "Ulaştığın bölüm: " + run.Stage,
-                Centered(labelStyle)
-            );
-
             DrawRestartHint(panel);
             return;
         }
 
-        GUI.Label(
-            new Rect(panel.x, y, panelWidth, 18f),
-            s.HeaderLine() + "     " + s.KillsLine(),
-            Centered(smallStyle)
-        );
+        GUI.Label(new Rect(panel.x, y, panelWidth, 18f), s.HeaderLine(), Centered(smallStyle));
 
         y += 18f;
 
         GUI.Label(
             new Rect(panel.x, y, panelWidth, 18f),
-            "<color=#FF8A80>" + s.DeathText() + "</color>",
+            (s.Victory ? "<color=#FFD54A>" : "<color=#FF8A80>") + s.DeathText() + "</color>",
             richCentered
         );
 
-        y += 26f;
+        y += 20f;
+
+        // Yeni açılımlar
+        for (int i = 0; i < unlocks.Count; i++)
+        {
+            GUI.Label(
+                new Rect(panel.x, y, panelWidth, 16f),
+                "<color=#7CE08A>+ " + unlocks[i] + "</color>",
+                richCentered
+            );
+
+            y += 16f;
+        }
+
+        y += 8f;
 
         y = DrawOutcomeBlock(new Rect(x, y, w, 0f), "NORMAL SALDIRILARA CEVAP", s.Normal, false);
         y += 4f;
@@ -463,7 +1077,7 @@ public class RunUI : MonoBehaviour
 
         GUIStyle line = Centered(tinyStyle);
 
-        GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.DefenseLine(), line);
+        GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.KillsLine() + "     " + s.DefenseLine(), line);
         y += 15f;
         GUI.Label(new Rect(panel.x, y, panelWidth, 15f), s.DamageTakenLine(), line);
         y += 15f;
@@ -475,7 +1089,7 @@ public class RunUI : MonoBehaviour
             line
         );
 
-        y += 24f;
+        y += 22f;
 
         DrawStageTable(s, panel, y);
 
@@ -486,12 +1100,11 @@ public class RunUI : MonoBehaviour
     {
         GUI.Label(
             new Rect(panel.x, panel.yMax - 24f, panel.width, 18f),
-            "Yeniden başlamak için <b>ENTER</b>",
+            "Lobiye dönmek için <b>ENTER</b>",
             richCentered
         );
     }
 
-    // Başlık + yığılmış bar + renkli lejant. Bitiş y'sini döndürür.
     private float DrawOutcomeBlock(
         Rect area,
         string title,
@@ -519,15 +1132,15 @@ public class RunUI : MonoBehaviour
 
         if (total > 0)
         {
-            float x = bar.x;
+            float bx = bar.x;
 
-            x = Segment(x, bar, o.parried, total, ColParry);
-            x = Segment(x, bar, o.blocked, total, ColBlock);
-            x = Segment(x, bar, o.dashed, total, ColDash);
-            x = Segment(x, bar, o.missed, total, ColMissed);
-            x = Segment(x, bar, o.interrupted, total, ColInterrupted);
-            x = Segment(x, bar, o.iFrame, total, ColIFrame);
-            Segment(x, bar, o.hit, total, ColHit);
+            bx = Segment(bx, bar, o.parried, total, ColParry);
+            bx = Segment(bx, bar, o.blocked, total, ColBlock);
+            bx = Segment(bx, bar, o.dashed, total, ColDash);
+            bx = Segment(bx, bar, o.missed, total, ColMissed);
+            bx = Segment(bx, bar, o.interrupted, total, ColInterrupted);
+            bx = Segment(bx, bar, o.iFrame, total, ColIFrame);
+            Segment(bx, bar, o.hit, total, ColHit);
         }
 
         GUI.color = old;
@@ -593,7 +1206,7 @@ public class RunUI : MonoBehaviour
     {
         string[] headers =
         {
-            "Bölüm", "Süre", "Öldürme", "Parry", "Block", "Yendi", "Hasar"
+            "Dövüş", "Süre", "Öldürme", "Parry", "Block", "Yendi", "Hasar"
         };
 
         float col = 70f;
@@ -604,13 +1217,10 @@ public class RunUI : MonoBehaviour
         GUIStyle cell = Centered(tinyStyle);
 
         for (int c = 0; c < headers.Length; c++)
-        {
             GUI.Label(new Rect(left + c * col, y, col, 16f), headers[c], head);
-        }
 
         y += 17f;
 
-        // İnce ayırıcı çizgi.
         Color old = GUI.color;
         GUI.color = new Color(1f, 1f, 1f, 0.15f);
         GUI.DrawTexture(new Rect(left, y, tableWidth, 1f), Texture2D.whiteTexture);
@@ -643,12 +1253,29 @@ public class RunUI : MonoBehaviour
             };
 
             for (int c = 0; c < values.Length; c++)
-            {
                 GUI.Label(new Rect(left + c * col, y, col, 14f), values[c], cell);
-            }
 
             y += 14f;
         }
+    }
+
+    // =========================================================
+    // YARDIMCILAR
+    // =========================================================
+
+    private Health cachedPlayerHealth;
+
+    private Health PlayerHealth()
+    {
+        if (cachedPlayerHealth == null)
+        {
+            PlayerController p = FindFirstObjectByType<PlayerController>();
+
+            if (p != null)
+                cachedPlayerHealth = p.GetComponent<Health>();
+        }
+
+        return cachedPlayerHealth;
     }
 
     // =========================================================
@@ -685,17 +1312,20 @@ public class RunUI : MonoBehaviour
 
         bannerStyle = Make(24, FontStyle.Bold, Color.white);
         bannerStyle.alignment = TextAnchor.MiddleCenter;
+        bannerStyle.richText = true;
+
+        bigTitleStyle = Make(28, FontStyle.Bold, Gold);
+        bigTitleStyle.alignment = TextAnchor.MiddleCenter;
 
         richCentered = Make(12, FontStyle.Normal, Color.white);
         richCentered.richText = true;
         richCentered.alignment = TextAnchor.MiddleCenter;
 
-        // Arka planlar: 1px açık kenarlıklı koyu panel (9-slice).
         dimTexture = Solid(new Color(0f, 0f, 0f, 0.6f));
 
         panelTexture =
             Bordered(
-                new Color(0.06f, 0.06f, 0.08f, 0.72f),
+                new Color(0.06f, 0.06f, 0.08f, 0.78f),
                 new Color(1f, 1f, 1f, 0.18f)
             );
 
@@ -725,13 +1355,29 @@ public class RunUI : MonoBehaviour
             border = new RectOffset(1, 1, 1, 1)
         };
 
-        cardStyle.normal.background = cardTexture;
-        cardStyle.hover.background = cardHoverTexture;
-        cardStyle.active.background = cardHoverTexture;
-        cardStyle.focused.background = cardTexture;
-        cardStyle.normal.textColor = Color.white;
-        cardStyle.hover.textColor = Color.white;
-        cardStyle.active.textColor = Color.white;
+        ApplyButtonLook(cardStyle);
+
+        buttonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            alignment = TextAnchor.MiddleCenter,
+            richText = true,
+            padding = new RectOffset(8, 8, 3, 3),
+            border = new RectOffset(1, 1, 1, 1)
+        };
+
+        ApplyButtonLook(buttonStyle);
+    }
+
+    private void ApplyButtonLook(GUIStyle style)
+    {
+        style.normal.background = cardTexture;
+        style.hover.background = cardHoverTexture;
+        style.active.background = cardHoverTexture;
+        style.focused.background = cardTexture;
+        style.normal.textColor = Color.white;
+        style.hover.textColor = Color.white;
+        style.active.textColor = Color.white;
     }
 
     private static GUIStyle Make(int size, FontStyle fontStyle, Color color)
@@ -757,7 +1403,6 @@ public class RunUI : MonoBehaviour
         return tex;
     }
 
-    // 3x3: kenarlar 'border', orta 'fill' (GUIStyle.border = 1 ile 9-slice).
     private static Texture2D Bordered(Color fill, Color border)
     {
         Texture2D tex = new Texture2D(3, 3);

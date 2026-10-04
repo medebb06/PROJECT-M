@@ -31,5 +31,10 @@ public class CharmDefinition : ScriptableObject
     public List<CharmDefinition> requiresAnyOf =
         new List<CharmDefinition>();
 
+    [Tooltip(
+        "Boş değilse: charm ancak bu kilit açılınca (MetaProgress) havuza " +
+        "girer. Ör. 'act2', 'act3', 'win1', 'exec50', 'parry150'.")]
+    public string unlockId = "";
+
     public CharmEffect effect;
 }

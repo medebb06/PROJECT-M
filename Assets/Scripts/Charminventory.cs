@@ -121,6 +121,28 @@ public class CharmInventory
         return true;
     }
 
+    // Charm'ı tamamen çıkarır (dükkanda silme).
+    public bool Remove(CharmDefinition definition)
+    {
+        Entry e = Find(definition);
+
+        if (e == null)
+            return false;
+
+        if (e.effect != null)
+        {
+            e.effect.Remove(e.context);
+
+            Object.Destroy(e.effect);
+        }
+
+        entries.Remove(e);
+
+        Changed?.Invoke();
+
+        return true;
+    }
+
     // Koşu bitti / yeniden başlıyor: her şeyi geri al.
     public void Clear()
     {

@@ -298,7 +298,44 @@ public static class CharmCatalog
 
         list.Add(paralyzeDef);
 
+        ApplyUnlocks(list);
+
         return list;
+    }
+
+    // Koşular arası kilitler: bu charm'lar bir hedefe ulaşınca havuza girer.
+    private static void ApplyUnlocks(List<CharmDefinition> list)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            CharmDefinition d = list[i];
+
+            switch (d.displayName)
+            {
+                case "Ezici Parry":
+                case "Rüzgar Kesiği":
+                    d.unlockId = MetaProgress.UnlockAct2;
+                    break;
+
+                case "Kan Bedeli":
+                case "Kusursuzluk":
+                    d.unlockId = MetaProgress.UnlockAct3;
+                    break;
+
+                case "Salgın":
+                case "Felç Edici Zehir":
+                    d.unlockId = MetaProgress.UnlockWin;
+                    break;
+
+                case "Son Nefes":
+                    d.unlockId = MetaProgress.UnlockExecute;
+                    break;
+
+                case "Odak":
+                    d.unlockId = MetaProgress.UnlockParry;
+                    break;
+            }
+        }
     }
 
     private static CharmDefinition Make(
@@ -371,6 +408,7 @@ public static class CharmCatalog
             if (
                 def != null &&
                 def.weight > 0f &&
+                MetaProgress.IsUnlocked(def.unlockId) &&
                 inventory.CanAdd(def)
             )
             {

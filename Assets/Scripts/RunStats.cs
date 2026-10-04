@@ -34,7 +34,7 @@ public class RunStats : MonoBehaviour
         "(Application.persistentDataPath). Koşular arası karşılaştırma için.")]
     [SerializeField] private bool appendCsv = true;
 
-    [SerializeField] private string csvFileName = "run_stats_v2.csv";
+    [SerializeField] private string csvFileName = "run_stats_v3.csv";
 
     [Tooltip(
         "Dash'ten sonra bu kadar saniye içinde kaçılan saldırı 'dash' " +
@@ -91,6 +91,10 @@ public class RunStats : MonoBehaviour
     public float RunTime { get; private set; }
 
     public int StageReached { get; private set; }
+    public int ActReached { get; private set; }
+    public int Heat { get; private set; }
+    public bool Victory { get; private set; }
+    public int GoldEarned { get; private set; }
     public int WaveReached { get; private set; }
     public int WaveCountAtEnd { get; private set; }
 
@@ -299,6 +303,9 @@ public class RunStats : MonoBehaviour
         }
 
         HasResult = false;
+        Victory = false;
+        GoldEarned = 0;
+        ActReached = 1;
         Recording = true;
     }
 
@@ -323,16 +330,25 @@ public class RunStats : MonoBehaviour
             currentStage.cleared = cleared;
     }
 
-    public void EndRun(RunManager run)
+    public void AddGold(int amount)
+    {
+        if (Recording && amount > 0)
+            GoldEarned += amount;
+    }
+
+    public void EndRun(RunManager run, bool victory = false)
     {
         if (!Recording)
             return;
 
         Recording = false;
         HasResult = true;
+        Victory = victory;
 
         if (run != null)
         {
+            ActReached = run.Act;
+            Heat = run.Heat;
             StageReached = run.Stage;
             WaveReached = run.Wave;
             WaveCountAtEnd = run.WaveCount;
@@ -573,6 +589,9 @@ public class RunStats : MonoBehaviour
 
     public string DeathText()
     {
+        if (Victory)
+            return "ZAFER! Tüm boss'lar yenildi";
+
         if (!DiedByHit)
             return "Ölüm nedeni: bilinmiyor";
 
@@ -685,7 +704,10 @@ public class RunStats : MonoBehaviour
     {
         return
             "Süre " + FormatTime(RunTime) +
-            "   Bölüm " + StageReached +
+            "   Perde " + ActReached +
+            "   Dövüş " + StageReached +
+            "   Altın " + GoldEarned +
+            (Heat > 0 ? "   Isı " + Heat : "") +
             (WaveCountAtEnd > 1
                 ? "  (dalga " + WaveReached + "/" + WaveCountAtEnd + ")"
                 : "");
@@ -742,7 +764,7 @@ public class RunStats : MonoBehaviour
         "parry_kiran;posture_kirildi;dash_sayisi;" +
         "hasar_normal;hasar_engellenemez;hasar_diger;hasar_block_bedeli;iyilesme;en_dusuk_can;" +
         "denge_verilen;can_verilen;isabet;kritik;" +
-        "olum_turu;olum_kaynak;build";
+        "olum_turu;olum_kaynak;build;zafer;perde;isi;altin";
 
     private void WriteCsv()
     {
@@ -799,7 +821,11 @@ public class RunStats : MonoBehaviour
 
                 DiedByHit ? DeathKind.ToString() : "bilinmiyor",
                 Csv(DeathSource),
-                Csv(BuildText)
+                Csv(BuildText),
+                Victory ? "1" : "0",
+                ActReached.ToString(inv),
+                Heat.ToString(inv),
+                GoldEarned.ToString(inv)
             };
 
             StringBuilder sb = new StringBuilder();
