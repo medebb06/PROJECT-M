@@ -118,6 +118,29 @@ public class RunManager : MonoBehaviour
         "(takılan / ulaşılamayan düşman bölümü kilitlemesin).")]
     [SerializeField] private float exitPullDelay = 8f;
 
+    [Header("Harita düşman sayısı")]
+    [Tooltip("İlk bölümdeki toplam düşman (haritada; eski dalga ayarlarından bağımsız).")]
+    [SerializeField] private int levelEnemiesBase = 6;
+
+    [Tooltip("Her bölümde eklenen düşman.")]
+    [SerializeField] private float levelEnemiesPerStage = 1f;
+
+    [SerializeField] private int levelEnemiesMax = 16;
+
+    [Tooltip("Bir nöbet noktasındaki (arena) düşman sayısı hedefi. Nokta sayısı = toplam / bu.")]
+    [SerializeField] private int levelEnemiesPerPost = 3;
+
+    [SerializeField] private int levelMinPosts = 2;
+    [SerializeField] private int levelMaxPosts = 5;
+
+    [Tooltip("Elit odada düşman sayısı çarpanı (daha az ama güçlü).")]
+    [SerializeField] private float levelEliteCountMultiplier = 0.6f;
+
+    [Tooltip(
+        "Açık: dövüş ödülü (charm seçimi) bölüm İÇİNDE değil, çıkış kapısından " +
+        "geçince (bölümler arası geçişte) verilir.")]
+    [SerializeField] private bool rewardsOnTransition = true;
+
     public int RunSeed { get; private set; }
 
     private LevelGenerator level;
@@ -409,6 +432,16 @@ public class RunManager : MonoBehaviour
     private bool showRunDebug;
 
     private int bonusOffers;
+
+    // Bölüm temizlenince biriken, kapıdan geçince verilecek charm seçimleri.
+    private struct PendingOffer
+    {
+        public string title;
+        public int choices;
+        public bool bonus;
+    }
+
+    private readonly List<PendingOffer> pendingOffers = new List<PendingOffer>();
 
     private bool shopUsedThisAct;
     private bool restUsedThisAct;
@@ -929,6 +962,9 @@ public class RunManager : MonoBehaviour
                         type = doorOptions[Mathf.Clamp(chosenDoor, 0, doorOptions.Count - 1)];
                     }
 
+                    // Kapı akışı atlandıysa (harita yok vb.) ödül kaybolmasın.
+                    yield return GrantPendingOffers();
+
                     yield return RunRoom(type);
                 }
 
@@ -941,10 +977,16 @@ public class RunManager : MonoBehaviour
 
                 // Haritada: çıkışta tek kapı, BOSS.
                 if (LevelActive && level.HasLevel)
+                {
                     yield return PhysicalDoors(new List<RoomType> { RoomType.Boss });
+
+                    yield return GrantPendingOffers();
+                }
 
                 if (playerHealth.IsDead)
                     break;
+
+                yield return GrantPendingOffers();
 
                 yield return RunRoom(RoomType.Boss);
 
@@ -1023,6 +1065,7 @@ public class RunManager : MonoBehaviour
         Gold = 0;
         LastGoldTime = -99f;
         bonusOffers = 0;
+        pendingOffers.Clear();
         runExecutes = 0;
         runParries = 0;
         IsVictory = false;
@@ -1084,6 +1127,9 @@ public class RunManager : MonoBehaviour
         if (LevelActive && level.HasLevel)
         {
             yield return PhysicalDoors(doorOptions);
+
+            // Kapıdan geçildi: bölümler arası geçiş → biriken ödüller.
+            yield return GrantPendingOffers();
             yield break;
         }
 
@@ -1373,28 +1419,37 @@ public class RunManager : MonoBehaviour
         HealPercent(heal);
 
         // ---------------- ÖDÜL ----------------
+        // Haritada: ödüller biriktirilir, çıkış kapısından geçince verilir
+        // (bölüm sırasında menü açılmaz).
 
         if (type == RoomType.Elite)
         {
-            yield return OfferRoutine(false, "ELİT ÖDÜLÜ  (1/2)", null, offerChoices);
-            yield return OfferRoutine(false, "ELİT ÖDÜLÜ  (2/2)", null, offerChoices);
+            QueueOffer("ELİT ÖDÜLÜ  (1/2)", offerChoices, false);
+            QueueOffer("ELİT ÖDÜLÜ  (2/2)", offerChoices, false);
         }
         else if (type == RoomType.Boss)
         {
             if (Act < acts)
-                yield return OfferRoutine(false, "BOSS ÖDÜLÜ", null, offerChoices + 1);
+                QueueOffer("BOSS ÖDÜLÜ", offerChoices + 1, false);
         }
         else
         {
-            yield return OfferRoutine(false, "BİR CHARM SEÇ", null, offerChoices);
+            QueueOffer("BİR CHARM SEÇ", offerChoices, false);
         }
 
-        while (bonusOffers > 0 && !playerHealth.IsDead)
+        while (bonusOffers > 0)
         {
             bonusOffers--;
 
-            yield return OfferRoutine(false, "KUSURSUZ ODA: BONUS CHARM", null, offerChoices, true);
+            QueueOffer("KUSURSUZ ODA: BONUS CHARM", offerChoices, true);
         }
+
+        bool deferRewards = rewardsOnTransition && useLevel;
+
+        if (!deferRewards)
+            yield return GrantPendingOffers();
+        else if (pendingOffers.Count > 0)
+            ShowBanner("ÖDÜL ÇIKIŞTA  →  " + pendingOffers.Count + " CHARM", 2f);
 
         yield return new WaitForSecondsRealtime(0.3f);
     }
@@ -1414,7 +1469,7 @@ public class RunManager : MonoBehaviour
 
         bool boss = type == RoomType.Boss;
 
-        int arenaCount = boss ? 1 : WavesForStage();
+        int arenaCount = boss ? 1 : LevelPostCount(type);
 
         try
         {
@@ -1468,6 +1523,9 @@ public class RunManager : MonoBehaviour
             1.6f
         );
 
+        int totalEnemies = LevelEnemyTotal(type);
+        int posts = Mathf.Max(1, level.ArenaCount);
+
         for (int i = 0; i < level.ArenaCount; i++)
         {
             Wave = i + 1;
@@ -1475,12 +1533,15 @@ public class RunManager : MonoBehaviour
             // İlk nöbet odanın tipi; sonrakiler karışık.
             RoomArchetype = i == 0 ? roomType : PickArchetype(false);
 
-            levelSpawnPoints = level.ArenaSpawnPoints(i);
+            levelSpawnPoints = Shuffled(level.ArenaSpawnPoints(i));
             levelSpawnCursor = 0;
 
             int before = spawned.Count;
 
-            yield return SpawnWave(EnemiesForWave(i + 1), type == RoomType.Elite);
+            // Toplamı noktalara eşit dağıt (ilk noktalar +1 alır).
+            int count = totalEnemies / posts + (i < totalEnemies % posts ? 1 : 0);
+
+            yield return SpawnWave(Mathf.Max(1, count), type == RoomType.Elite, 0f);
 
             for (int k = before; k < spawned.Count; k++)
                 MakeGuard(spawned[k]);
@@ -1989,6 +2050,23 @@ public class RunManager : MonoBehaviour
         Inventory.Add(picked);
     }
 
+    private void QueueOffer(string title, int choices, bool bonus)
+    {
+        pendingOffers.Add(new PendingOffer { title = title, choices = choices, bonus = bonus });
+    }
+
+    // Biriken charm seçimlerini sırayla gösterir (bölümler arası geçiş).
+    private IEnumerator GrantPendingOffers()
+    {
+        while (pendingOffers.Count > 0 && !playerHealth.IsDead)
+        {
+            PendingOffer o = pendingOffers[0];
+            pendingOffers.RemoveAt(0);
+
+            yield return OfferRoutine(false, o.title, null, o.choices, o.bonus);
+        }
+    }
+
     // Oyunu durdurup bir karar bekler (seçim ekranları).
     private IEnumerator PausedWait(Func<bool> done)
     {
@@ -2133,6 +2211,47 @@ public class RunManager : MonoBehaviour
     // DOĞURMA
     // =========================================================
 
+    // HARİTA: bölümdeki toplam düşman.
+    private int LevelEnemyTotal(RoomType type)
+    {
+        float count =
+            levelEnemiesBase + Mathf.Max(0, Stage - 1) * levelEnemiesPerStage;
+
+        if (type == RoomType.Elite)
+            count *= levelEliteCountMultiplier;
+
+        return Mathf.Clamp(Mathf.RoundToInt(count), 1, Mathf.Max(1, levelEnemiesMax));
+    }
+
+    // HARİTA: nöbet noktası (arena) sayısı.
+    private int LevelPostCount(RoomType type)
+    {
+        int total = LevelEnemyTotal(type);
+
+        int posts =
+            Mathf.CeilToInt(total / (float)Mathf.Max(1, levelEnemiesPerPost));
+
+        return Mathf.Clamp(posts, Mathf.Max(1, levelMinPosts), Mathf.Max(levelMinPosts, levelMaxPosts));
+    }
+
+    private static Transform[] Shuffled(Transform[] points)
+    {
+        if (points == null)
+            return null;
+
+        Transform[] copy = (Transform[])points.Clone();
+
+        for (int i = copy.Length - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            Transform t = copy[i];
+            copy[i] = copy[j];
+            copy[j] = t;
+        }
+
+        return copy;
+    }
+
     private int WavesForStage()
     {
         if (duelMode)
@@ -2204,8 +2323,10 @@ public class RunManager : MonoBehaviour
         return Mathf.Clamp(count, 1, Mathf.Max(1, cap));
     }
 
-    private IEnumerator SpawnWave(int count, bool elite)
+    private IEnumerator SpawnWave(int count, bool elite, float interval = -1f)
     {
+        float wait = interval < 0f ? spawnInterval : interval;
+
         int firstSide = UnityEngine.Random.value < 0.5f ? -1 : 1;
 
         for (int i = 0; i < count; i++)
@@ -2242,7 +2363,8 @@ public class RunManager : MonoBehaviour
 
             RefreshAlive();
 
-            yield return new WaitForSeconds(spawnInterval);
+            if (wait > 0f)
+                yield return new WaitForSeconds(wait);
         }
     }
 
@@ -2338,9 +2460,19 @@ public class RunManager : MonoBehaviour
             Transform point =
                 levelSpawnPoints[levelSpawnCursor % levelSpawnPoints.Length];
 
+            // Noktalar bittiyse aynı noktanın yanına (üst üste binmesin).
+            int lap = levelSpawnCursor / levelSpawnPoints.Length;
+
             levelSpawnCursor++;
 
             position = point.position;
+
+            if (lap > 0)
+            {
+                float dir = lap % 2 == 1 ? 1f : -1f;
+
+                position += new Vector3(dir * 1.6f * ((lap + 1) / 2), 0.5f, 0f);
+            }
         }
         else if (spawnPoints != null && spawnPoints.Length > 0)
         {
@@ -2841,6 +2973,7 @@ public class RunManager : MonoBehaviour
         doorOptions.Clear();
 
         bonusOffers = 0;
+        pendingOffers.Clear();
         AliveEnemies = 0;
         Wave = 0;
         WaveCount = 0;

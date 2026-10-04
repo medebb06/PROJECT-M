@@ -1,9 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 /// <summary>
 /// ORMAN TEMASI (Jungle/Tiles.png). LevelGenerator bu bileşeni bulursa
@@ -11,21 +8,24 @@ using UnityEditor;
 ///
 /// KURULUM (bir kez):
 ///   1) LevelGenerator'ın olduğu objeye (Managers) 'Jungle Theme' ekle.
-///      (LevelGenerator sahnede yoksa onu da aynı objeye ekle.)
 ///   2) 'Sheet' alanına Assets/Sprites/Tile/Jungle/Tiles.png'yi sürükle.
-///      Sprite'lar otomatik dolar (Sprite Editor'da 16x16 'Grid By Cell
-///      Size' ile dilimlenmiş olmalı).
+/// Sprite Editor'daki dilimleme önemli değil: sayfa oyun başında 16x16 kesilir.
 ///
-/// Tile'lar sayfadaki KONUMLARINA göre tanınır (sütun, satır; sol üst 0,0):
-///   Sol üst çim seti (0-4, 0-4):
-///     satır 0 = çimin üste taşan uçları (süs, çarpışmasız)
-///     satır 1 = yüzey (sol köşe, 3 orta, sağ köşe)
-///     satır 2-3 = toprak (sol kenar, 6 orta varyasyon, sağ kenar)
-///     satır 4 = alt kenar
-///   Kaya seti (0-4, 5-9) aynı düzende ('Ground Style = Rock').
-///   Tahta platform (5-7, 6), ip köprü (5-9, 7-9), ağaç (9-13, 0-9),
-///   arka çalılar (17-24, 0-14), su (6-9, 19-20), kayalar (0-14, 21-22),
-///   mantar / çiçek / saz / bitki (15-22, 15-23).
+/// NE ÇİZER:
+///   - Zemin: sol üst çim seti (0-4, 0-4) komşuya göre (köşe/kenar/iç),
+///     üstte çimin taşan uçları (ayrı, çarpışmasız katman).
+///   - '=' platformlar: ip köprü / tahta.
+///   - Çukurların dibinde su.
+///   - PARALLAX arka plan: 3 çalı bandı (uzak / orta / yakın; sayfadaki
+///     17-24 × 0-14 çalı tepeleri) + aralarında ağaç gövdeleri. Bantlar
+///     kamerayla farklı hızda kayar (Factor: 0 = zeminle aynı, 1 = kamerayla
+///     sabit). Her bant iki üst üste binen sıra çalı + altında dolgu: zemin
+///     alçalsa da / çukurda da boşluk görünmez.
+///   - Çiçek / mantar / sandık gibi küçük süsler KULLANILMAZ.
+///
+/// Sayfa haritası (sütun, satır; sol üst 0,0): çim seti 0-4 × 0-4, kaya seti
+/// 0-4 × 5-9, tahta 5-7 × 6, ip köprü 5-9 × 7-9, ağaç 9-13 × 0-9, çalılar
+/// 17-24 × 0-14 (5 renk: 0 parlak yeşil … 4 en koyu), su 6-9 × 19-20.
 /// </summary>
 public class JungleTheme : MonoBehaviour
 {
@@ -35,19 +35,55 @@ public class JungleTheme : MonoBehaviour
         Rock
     }
 
-    [Header("Tileset")]
-    [Tooltip("Tiles.png. Sürükleyince 'Sprites' otomatik dolar (yalnızca Editor'de).")]
-    public Texture2D sheet;
+    [System.Serializable]
+    public class ParallaxBand
+    {
+        public string name = "Bant";
 
-    [Tooltip("Sayfanın tüm sprite'ları (elle de sürüklenebilir).")]
-    public Sprite[] sprites;
+        [Tooltip("0 = zeminle aynı hızda (yakın), 1 = kamerayla sabit (sonsuz uzak).")]
+        [Range(0f, 1f)] public float factor = 0.5f;
+
+        [Tooltip("Çalı rengi: 0 parlak yeşil, 1 zeytin, 2 koyu zeytin, 3 koyu, 4 en koyu.")]
+        [Range(0, 4)] public int bushColor = 3;
+
+        [Tooltip("Bandın tabanı: ortalama zemin yüksekliğinin bu kadar kare üstü.")]
+        public int heightAboveGround = 3;
+
+        [Tooltip("Açık: en YÜKSEK zemine göre (uzak bant tepelerin üstünden görünsün).")]
+        public bool fromHighestGround;
+
+        public Color tint = Color.white;
+
+        [Tooltip("Çizim sırası (zemin Tilemap'ine göre, negatif = arkada).")]
+        public int order = -20;
+
+        public ParallaxBand()
+        {
+        }
+
+        public ParallaxBand(string name, float factor, int bushColor, int height, bool fromHighest, Color tint, int order)
+        {
+            this.name = name;
+            this.factor = factor;
+            this.bushColor = bushColor;
+            this.heightAboveGround = height;
+            this.fromHighestGround = fromHighest;
+            this.tint = tint;
+            this.order = order;
+        }
+    }
+
+    [Header("Tileset")]
+    [Tooltip("Tiles.png (Project penceresinden sürükle).")]
+    public Texture2D sheet;
 
     [Tooltip("Bir tile'ın piksel boyu.")]
     [Min(1)] public int cellPixels = 16;
 
-    // Her sprite'ın sayfadaki (sütun, satır) yeri. Editor'de hesaplanıp kaydedilir.
-    [HideInInspector] public Vector2Int[] spriteCells;
-    [HideInInspector] public int cellsForCount = -1;
+    [Tooltip(
+        "1 tile = kaç piksel / birim. Tiles.png'nin 'Pixels Per Unit' değeriyle aynı olmalı " +
+        "(16 → bir tile bir Tilemap hücresini tam doldurur).")]
+    [Min(1f)] public float pixelsPerUnit = 16f;
 
     [Header("Zemin")]
     public GroundStyle groundStyle = GroundStyle.Grass;
@@ -55,36 +91,44 @@ public class JungleTheme : MonoBehaviour
     [Tooltip("Yüzeyin üstüne çimin taşan uçlarını koy.")]
     public bool grassOverhang = true;
 
-    [Header("Süsler (çarpışmasız)")]
-    [Tooltip("Yüzeydeki her karede küçük süs (çim tutamı, mantar, çiçek) olasılığı.")]
-    [Range(0f, 1f)] public float propChance = 0.22f;
+    [Tooltip("Çim uçları. Oyuncunun ayağının ÖNÜNDE görünsün istersen büyük bir sayı yap (ör. 50).")]
+    public int overhangOrder = -1;
 
-    [Tooltip("İki kat boylu süs (saz, lavanta, mavi çiçek) olasılığı.")]
-    [Range(0f, 1f)] public float tallPropChance = 0.1f;
+    [Tooltip("Köprü ipleri / direkleri.")]
+    public int bridgeDetailOrder = -2;
 
-    [Tooltip("2x2 büyük süs (dev mantar, yapraklı bitki) olasılığı.")]
-    [Range(0f, 1f)] public float bigPropChance = 0.05f;
+    [Header("Parallax arka plan")]
+    public bool parallax = true;
 
-    [Header("Arka plan")]
+    [Tooltip("Uzaktan yakına. Sıra / renk / hız buradan ayarlanır.")]
+    public ParallaxBand[] bands =
+    {
+        new ParallaxBand("Uzak çalılar", 0.75f, 4, 6, true, new Color(0.55f, 0.68f, 0.68f, 1f), -30),
+        new ParallaxBand("Orta çalılar", 0.5f, 3, 3, false, new Color(0.72f, 0.82f, 0.78f, 1f), -20),
+        new ParallaxBand("Yakın çalılar", 0.25f, 2, 1, false, new Color(0.88f, 0.95f, 0.88f, 1f), -12)
+    };
+
+    [Tooltip("Komşu bant renginin araya karışma olasılığı (çeşitlilik).")]
+    [Range(0f, 1f)] public float bushColorMix = 0.3f;
+
+    [Tooltip("Dikey parallax (0 = bantlar dikeyde sabit; zeminle hizalı kalır).")]
+    [Range(0f, 0.5f)] public float verticalFactor = 0f;
+
+    [Header("Ağaçlar (parallax)")]
     public bool trees = true;
 
-    [Min(4)] public int treeSpacingMin = 9;
-    [Min(4)] public int treeSpacingMax = 16;
+    [Range(0f, 1f)] public float treeFactor = 0.6f;
 
-    [Range(0f, 1f)] public float beehiveChance = 0.3f;
+    [Tooltip("Ağaç dibi: ortalama zeminin bu kadar kare üstü (orta bantın arkasında kalsın).")]
+    public int treeBaseAboveGround = 2;
 
-    public bool bushes = true;
+    [Min(4)] public int treeSpacingMin = 8;
+    [Min(4)] public int treeSpacingMax = 14;
 
-    [Min(0)] public int bushGapMin = 5;
-    [Min(0)] public int bushGapMax = 9;
+    [Range(0f, 1f)] public float beehiveChance = 0.2f;
 
-    public bool rocks = true;
-
-    [Range(0f, 1f)] public float rockChance = 0.2f;
-
-    public Color treeTint = new Color(0.45f, 0.5f, 0.45f, 1f);
-    public Color bushTint = new Color(0.6f, 0.68f, 0.6f, 1f);
-    public Color rockTint = new Color(0.55f, 0.55f, 0.55f, 1f);
+    public Color treeTint = new Color(0.4f, 0.48f, 0.45f, 1f);
+    public int treeLayerOrder = -25;
 
     [Header("Su (çukurların dibinde)")]
     public bool water = true;
@@ -94,24 +138,13 @@ public class JungleTheme : MonoBehaviour
 
     public Color waterColor = new Color(1f, 1f, 1f, 0.9f);
 
-    [Header("Çizim sırası (zemin Tilemap'ine göre)")]
-    [Tooltip("Negatif = karakterlerin arkasında.")]
-    public int treeOrder = -12;
-    public int bushOrder = -10;
-    public int rockOrder = -9;
-    public int propOrder = -2;
-
-    [Tooltip("Çim uçları. Oyuncunun ayağının ÖNÜNDE görünsün istersen büyük bir sayı yap (ör. 50).")]
-    public int overhangOrder = -1;
-
     [Tooltip("Su, düşen oyuncunun önünde kalsın.")]
     public int waterOrder = 30;
-
     // =========================================================
-    // SPRITE → TILE
+    // SPRITE → TILE (sayfa çalışma anında 16x16 kesilir)
     // =========================================================
 
-    private Dictionary<int, Sprite> lookup;
+    private readonly Dictionary<int, Sprite> cutCache = new Dictionary<int, Sprite>();
     private readonly Dictionary<int, Tile> tileCache = new Dictionary<int, Tile>();
     private bool warnedMissing;
 
@@ -120,87 +153,86 @@ public class JungleTheme : MonoBehaviour
         return col * 1000 + row;
     }
 
-    public bool Ready
+    public int Columns => sheet != null ? sheet.width / Mathf.Max(1, cellPixels) : 0;
+    public int Rows => sheet != null ? sheet.height / Mathf.Max(1, cellPixels) : 0;
+
+    // Çim seti en az 5x5 olmalı.
+    public bool Ready => sheet != null && Columns >= 5 && Rows >= 5;
+
+    /// <summary>Hazır değilse nedenini söyler (log için).</summary>
+    public string Problem
     {
         get
         {
-            BuildLookup();
+            if (sheet == null)
+                return "'Sheet' alanı boş → Tiles.png'yi sürükle.";
 
-            return lookup != null && lookup.Count > 0 && lookup.ContainsKey(Key(1, 1));
+            if (Columns < 5 || Rows < 5)
+                return "Sayfa çok küçük (" + sheet.width + "x" + sheet.height + "), 'Cell Pixels' doğru mu?";
+
+            return "";
         }
     }
 
-    private void BuildLookup()
+    private Sprite SpriteAt(int col, int row)
     {
-        if (lookup != null && lookup.Count > 0)
-            return;
+        if (sheet == null || col < 0 || row < 0 || col >= Columns || row >= Rows)
+            return null;
 
-        lookup = new Dictionary<int, Sprite>();
+        int k = Key(col, row);
 
-        if (sprites == null)
-            return;
+        if (cutCache.TryGetValue(k, out Sprite cached) && cached != null)
+            return cached;
 
-        bool cellsValid =
-            spriteCells != null &&
-            spriteCells.Length == sprites.Length &&
-            cellsForCount == sprites.Length;
+        Rect r =
+            new Rect(
+                col * cellPixels,
+                sheet.height - (row + 1) * cellPixels,   // doku y'si aşağıdan yukarı
+                cellPixels,
+                cellPixels
+            );
 
-        for (int i = 0; i < sprites.Length; i++)
-        {
-            Sprite s = sprites[i];
+        Sprite s =
+            Sprite.Create(
+                sheet,
+                r,
+                new Vector2(0.5f, 0.5f),
+                pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect
+            );
 
-            if (s == null)
-                continue;
+        s.name = "Orman " + col + "," + row;
 
-            Vector2Int c = cellsValid ? spriteCells[i] : CellOf(s);
+        cutCache[k] = s;
 
-            int k = Key(c.x, c.y);
-
-            if (!lookup.ContainsKey(k))
-                lookup.Add(k, s);
-        }
-    }
-
-    // Sprite'ın sayfadaki hücresi (sol üst 0,0).
-    private Vector2Int CellOf(Sprite s)
-    {
-        Rect r = s.rect;
-        int texH = s.texture != null ? s.texture.height : 0;
-
-        int col = Mathf.FloorToInt(r.center.x / cellPixels);
-        int row = Mathf.FloorToInt((texH - r.center.y) / cellPixels);
-
-        return new Vector2Int(col, row);
+        return s;
     }
 
     /// <summary>(sütun, satır) hücresinin tile'ı; yoksa null.</summary>
     public TileBase Get(int col, int row, bool solid)
     {
-        BuildLookup();
-
         int k = Key(col, row);
         int cacheKey = solid ? k : -k - 1;
 
-        if (tileCache.TryGetValue(cacheKey, out Tile cached) && cached != null)
-            return cached;
+        if (tileCache.TryGetValue(cacheKey, out Tile cachedTile) && cachedTile != null)
+            return cachedTile;
 
-        if (lookup == null || !lookup.TryGetValue(k, out Sprite s) || s == null)
+        Sprite s = SpriteAt(col, row);
+
+        if (s == null)
         {
             if (!warnedMissing)
             {
                 warnedMissing = true;
-
-                Debug.LogWarning(
-                    "JungleTheme: (" + col + "," + row + ") hücresinde sprite yok. Tiles.png " +
-                    "Sprite Editor'da 'Grid By Cell Size' 16x16 ile dilimlenmiş olmalı."
-                );
+                Debug.LogWarning("JungleTheme: (" + col + "," + row + ") hücresi sayfanın dışında. " + Problem);
             }
 
             return null;
         }
 
         Tile t = ScriptableObject.CreateInstance<Tile>();
-        t.name = "Orman " + col + "," + row;
+        t.name = s.name;
         t.sprite = s;
         t.colliderType = solid ? Tile.ColliderType.Grid : Tile.ColliderType.None;
 
@@ -208,6 +240,7 @@ public class JungleTheme : MonoBehaviour
 
         return t;
     }
+
 
     private static int Hash(int x, int y)
     {
@@ -336,54 +369,12 @@ public class JungleTheme : MonoBehaviour
         public int bottom;
         public int top;
         public Vector2Int origin;
-        public bool[] reserved;     // bu sütunlara süs konmaz (kapı, tezgah …)
+        public bool[] reserved;     // (artık süs yok; uyumluluk için duruyor)
         public int seed;
     }
 
-    private struct Prop
-    {
-        public Vector2Int[] cells;   // (sütun, satır) sayfada, ALT satır sonda değil:
-        public int w;                // cells[j * w + i], j = 0 üst satır
-        public int h;
-    }
-
-    private static Prop P(int w, int h, params int[] colRow)
-    {
-        Vector2Int[] cells = new Vector2Int[w * h];
-
-        for (int i = 0; i < cells.Length; i++)
-            cells[i] = new Vector2Int(colRow[i * 2], colRow[i * 2 + 1]);
-
-        return new Prop { cells = cells, w = w, h = h };
-    }
-
-    private static readonly Prop[] smallProps =
-    {
-        P(1, 1, 22, 17),   // çim tutamı
-        P(1, 1, 22, 17),
-        P(1, 1, 22, 17),
-        P(1, 1, 15, 15),   // mantarlar
-        P(1, 1, 15, 16),
-        P(1, 1, 20, 16),
-        P(1, 1, 16, 17),   // mavi çiçek
-        P(1, 1, 21, 16)    // kazık
-    };
-
-    private static readonly Prop[] tallProps =
-    {
-        P(1, 2, 15, 17, 15, 18),   // mavi çiçekli sarmaşık
-        P(1, 2, 17, 17, 17, 18),   // lavanta
-        P(1, 2, 16, 18, 16, 19),   // saz
-        P(1, 2, 16, 20, 16, 21),   // çift saz
-        P(1, 2, 22, 15, 22, 16)    // uzun kazık
-    };
-
-    private static readonly Prop[] bigProps =
-    {
-        P(2, 2, 16, 15, 17, 15, 16, 16, 17, 16),   // dev mantar
-        P(2, 2, 18, 15, 19, 15, 18, 16, 19, 16),   // sivri dev mantar
-        P(2, 2, 20, 22, 21, 22, 20, 23, 21, 23)    // yapraklı bitki
-    };
+    // Parallax katmanlarının sola/sağa taşma payı (kare).
+    private const int BandMargin = 48;
 
     private Transform layerRoot;
     private TilemapRenderer groundRenderer;
@@ -395,6 +386,38 @@ public class JungleTheme : MonoBehaviour
     /// Haritayı süsler. Katmanlar 'root' altına kurulur (harita silinince gider).
     /// </summary>
     public void Decorate(BuildInfo info, Transform root, Tilemap ground)
+    {
+        pending.Clear();
+
+        try
+        {
+            DecorateInner(info, root, ground);
+        }
+        finally
+        {
+            Flush();
+        }
+    }
+
+    // Tile'lar toplu yazılır (binlerce tek tek SetTile yavaş olur).
+    private readonly Dictionary<Tilemap, List<Vector3Int>> pending = new Dictionary<Tilemap, List<Vector3Int>>();
+    private readonly Dictionary<Tilemap, List<TileBase>> pendingTiles = new Dictionary<Tilemap, List<TileBase>>();
+
+    private void Flush()
+    {
+        foreach (KeyValuePair<Tilemap, List<Vector3Int>> pair in pending)
+        {
+            if (pair.Key == null)
+                continue;
+
+            pair.Key.SetTiles(pair.Value.ToArray(), pendingTiles[pair.Key].ToArray());
+        }
+
+        pending.Clear();
+        pendingTiles.Clear();
+    }
+
+    private void DecorateInner(BuildInfo info, Transform root, Tilemap ground)
     {
         layers.Clear();
 
@@ -429,12 +452,27 @@ public class JungleTheme : MonoBehaviour
             return x < min || x >= max ? int.MinValue : surface[x - min];
         }
 
-        bool Reserved(int x)
+        // Ortalama ve en yüksek zemin (parallax bantları buna göre).
+        long sum = 0;
+        int n = 0;
+        int highest = int.MinValue;
+
+        for (int x = 0; x < info.width; x++)
         {
-            return info.reserved != null && x >= 0 && x < info.reserved.Length && info.reserved[x];
+            int s = Surf(x);
+
+            if (s == int.MinValue)
+                continue;
+
+            sum += s;
+            n++;
+            highest = Mathf.Max(highest, s);
         }
 
-        HashSet<Vector2Int> used = new HashSet<Vector2Int>();
+        int average = n > 0 ? Mathf.RoundToInt(sum / (float)n) : 0;
+
+        if (highest == int.MinValue)
+            highest = average;
 
         // ---------------- ÇİM UÇLARI ----------------
 
@@ -460,9 +498,9 @@ public class JungleTheme : MonoBehaviour
 
         // ---------------- KÖPRÜ İPLERİ / DİREKLERİ ----------------
 
-        Tilemap props = Layer("Süsler", propOrder, Color.white);
-
         List<Run> runs = FindRuns(info.platforms, info.solids);
+
+        Tilemap bridgeMap = null;
 
         for (int i = 0; i < runs.Count; i++)
         {
@@ -471,36 +509,27 @@ public class JungleTheme : MonoBehaviour
             if (!r.bridge)
                 continue;
 
+            if (bridgeMap == null)
+                bridgeMap = Layer("Köprü İpleri", bridgeDetailOrder, Color.white);
+
             for (int x = r.x0; x <= r.x1; x++)
             {
                 int col = x == r.x0 ? 6 : (x == r.x1 ? 8 : 7);
-                Vector2Int cell = new Vector2Int(x, r.y + 1);
 
-                Set(props, info, cell, col, 8);
-                used.Add(cell);
+                Set(bridgeMap, info, new Vector2Int(x, r.y + 1), col, 8);
             }
 
-            Vector2Int l1 = new Vector2Int(r.x0 - 1, r.y + 1);
-            Vector2Int l2 = new Vector2Int(r.x0 - 1, r.y + 2);
-            Vector2Int r1 = new Vector2Int(r.x1 + 1, r.y + 1);
-            Vector2Int r2 = new Vector2Int(r.x1 + 1, r.y + 2);
-
-            Set(props, info, l1, 5, 8);
-            Set(props, info, l2, 5, 7);
-            Set(props, info, r1, 9, 8);
-            Set(props, info, r2, 9, 7);
-
-            used.Add(l1);
-            used.Add(l2);
-            used.Add(r1);
-            used.Add(r2);
+            Set(bridgeMap, info, new Vector2Int(r.x0 - 1, r.y + 1), 5, 8);
+            Set(bridgeMap, info, new Vector2Int(r.x0 - 1, r.y + 2), 5, 7);
+            Set(bridgeMap, info, new Vector2Int(r.x1 + 1, r.y + 1), 9, 8);
+            Set(bridgeMap, info, new Vector2Int(r.x1 + 1, r.y + 2), 9, 7);
         }
 
         // ---------------- SU ----------------
 
         if (water)
         {
-            Tilemap waterMap = Layer("Su", waterOrder, waterColor);
+            Tilemap waterMap = null;
 
             int x = 0;
 
@@ -530,6 +559,9 @@ public class JungleTheme : MonoBehaviour
                 if (edge == int.MinValue)
                     continue;
 
+                if (waterMap == null)
+                    waterMap = Layer("Su", waterOrder, waterColor);
+
                 int line = edge - 1 - waterDrop;
 
                 for (int px = x0; px <= x1; px++)
@@ -544,177 +576,118 @@ public class JungleTheme : MonoBehaviour
             }
         }
 
-        // Düz zemin aralığı: [x, x+w) hepsi zeminli ve aynı yükseklikte mi?
-        bool Flat(int x, int w, out int s)
+        if (!parallax)
+            return;
+
+        // Parallax çapası: başlangıç noktası (kamera oradan başlar).
+        Vector3 anchor =
+            ground != null
+                ? ground.CellToWorld(new Vector3Int(info.origin.x + 2, info.origin.y + average, 0))
+                : Vector3.zero;
+
+        // ---------------- ÇALI BANTLARI ----------------
+
+        if (bands != null)
         {
-            s = Surf(x);
-
-            if (s == int.MinValue)
-                return false;
-
-            for (int i = 1; i < w; i++)
+            for (int b = 0; b < bands.Length; b++)
             {
-                if (Surf(x + i) != s)
-                    return false;
+                ParallaxBand band = bands[b];
+
+                if (band == null)
+                    continue;
+
+                int baseY =
+                    (band.fromHighestGround ? highest : average) + band.heightAboveGround;
+
+                BuildBand(info, rng, band, baseY, anchor);
             }
-
-            return true;
-        }
-
-        // Aralıktaki en alçak yüzey (çukur varsa false).
-        bool Solid(int x, int w, out int lowest)
-        {
-            lowest = int.MaxValue;
-
-            for (int i = 0; i < w; i++)
-            {
-                int s = Surf(x + i);
-
-                if (s == int.MinValue)
-                    return false;
-
-                lowest = Mathf.Min(lowest, s);
-            }
-
-            return true;
         }
 
         // ---------------- AĞAÇLAR ----------------
 
         if (trees)
         {
-            Tilemap treeMap = Layer("Arka Ağaçlar", treeOrder, treeTint);
+            Tilemap treeMap = Layer("Arka Ağaçlar", treeLayerOrder, treeTint);
 
-            int x = rng.Next(2, 6);
+            AddParallax(treeMap, treeFactor, anchor);
 
-            while (x < info.width - 3)
+            int baseY = average + treeBaseAboveGround;
+            int top = Mathf.Max(info.top, baseY + 10);
+
+            int x = -BandMargin + rng.Next(0, 6);
+
+            while (x < info.width + BandMargin)
             {
-                if (!Flat(x, 2, out int baseY) || Surf(x - 1) == int.MinValue || Surf(x + 2) == int.MinValue)
-                {
-                    x++;
-                    continue;
-                }
-
-                PlaceTree(treeMap, info, rng, x, baseY, info.top);
+                PlaceTree(treeMap, info, rng, x, baseY, top);
 
                 x += rng.Next(Mathf.Min(treeSpacingMin, treeSpacingMax), Mathf.Max(treeSpacingMin, treeSpacingMax) + 1);
             }
         }
+    }
 
-        // ---------------- ÇALILAR ----------------
+    // Bir çalı bandı: iki sıra (A/B) 8 genişlikte çalı tepesi, 6'şar kare
+    // aralıkla üst üste binerek; A sırasında tepelerin altı aynı rengin
+    // alt satırıyla dolu (zemin alçalınca boşluk görünmesin).
+    private void BuildBand(BuildInfo info, System.Random rng, ParallaxBand band, int baseY, Vector3 anchor)
+    {
+        Tilemap a = Layer(band.name + " A", band.order, band.tint);
+        Tilemap b = Layer(band.name + " B", band.order + 1, band.tint);
 
-        if (bushes)
+        AddParallax(a, band.factor, anchor);
+        AddParallax(b, band.factor, anchor);
+
+        int color = Mathf.Clamp(band.bushColor, 0, 4);
+
+        int x = -BandMargin + rng.Next(0, 6);
+        int i = 0;
+
+        while (x < info.width + BandMargin)
         {
-            Tilemap bushMap = Layer("Arka Çalılar", bushOrder, bushTint);
+            int c = color;
 
-            int x = rng.Next(0, 4);
+            if (rng.NextDouble() < bushColorMix)
+                c = Mathf.Clamp(color + (rng.Next(0, 2) == 0 ? -1 : 1), 0, 4);
 
-            while (x <= info.width - 8)
+            Tilemap target = i % 2 == 0 ? a : b;
+
+            // Tepeler biraz inip çıksın.
+            int lift = rng.Next(0, 3) == 0 ? 1 : 0;
+
+            for (int col = 0; col < 8; col++)
             {
-                if (!Solid(x, 8, out int baseY))
-                {
-                    x++;
-                    continue;
-                }
+                for (int row = 0; row < 3; row++)
+                    Set(target, info, new Vector2Int(x + col, baseY + lift + 2 - row), 17 + col, c * 3 + row);
 
-                int variant = rng.Next(0, 5) * 3;
-
-                for (int i = 0; i < 8; i++)
-                {
-                    for (int j = 0; j < 3; j++)
-                        Set(bushMap, info, new Vector2Int(x + i, baseY + 2 - j), 17 + i, variant + j);
-                }
-
-                x += 8 + rng.Next(Mathf.Min(bushGapMin, bushGapMax), Mathf.Max(bushGapMin, bushGapMax) + 1) - 4;
-            }
-        }
-
-        // ---------------- KAYALAR ----------------
-
-        if (rocks)
-        {
-            Tilemap rockMap = Layer("Arka Kayalar", rockOrder, rockTint);
-
-            int x = rng.Next(0, 6);
-
-            while (x <= info.width - 5)
-            {
-                if (rng.NextDouble() > rockChance || !Solid(x, 5, out int baseY))
-                {
-                    x += 3;
-                    continue;
-                }
-
-                int startCol = rng.Next(0, 3) * 5;
-
-                for (int i = 0; i < 5; i++)
-                {
-                    Set(rockMap, info, new Vector2Int(x + i, baseY + 1), startCol + i, 21);
-                    Set(rockMap, info, new Vector2Int(x + i, baseY), startCol + i, 22);
-                }
-
-                x += 5 + rng.Next(6, 14);
-            }
-        }
-
-        // ---------------- KÜÇÜK SÜSLER ----------------
-
-        bool Free(int x, int y, int w, int h)
-        {
-            for (int i = 0; i < w; i++)
-            {
-                if (Reserved(x + i))
-                    return false;
-
-                for (int j = 0; j < h; j++)
-                {
-                    Vector2Int c = new Vector2Int(x + i, y + j);
-
-                    if (used.Contains(c) || info.platforms.Contains(c) || info.solids.Contains(c))
-                        return false;
-                }
+                // Kaldırılan tepenin altı boş kalmasın.
+                if (lift > 0)
+                    Set(target, info, new Vector2Int(x + col, baseY), 19 + (col % 4), c * 3 + 2);
             }
 
-            return true;
+            x += 6;
+            i++;
         }
 
-        for (int x = 0; x < info.width; x++)
+        // Dolgu: bandın altından haritanın dibine kadar.
+        int fillRow = color * 3 + 2;
+
+        for (int fx = -BandMargin; fx < info.width + BandMargin + 8; fx++)
         {
-            int s = Surf(x);
-
-            if (s == int.MinValue)
-                continue;
-
-            double roll = rng.NextDouble();
-
-            Prop p;
-
-            if (roll < bigPropChance)
-                p = bigProps[rng.Next(bigProps.Length)];
-            else if (roll < bigPropChance + tallPropChance)
-                p = tallProps[rng.Next(tallProps.Length)];
-            else if (roll < bigPropChance + tallPropChance + propChance)
-                p = smallProps[rng.Next(smallProps.Length)];
-            else
-                continue;
-
-            if (!Flat(x, p.w, out _) || !Free(x, s, p.w, p.h))
-                continue;
-
-            for (int j = 0; j < p.h; j++)
-            {
-                for (int i = 0; i < p.w; i++)
-                {
-                    Vector2Int src = p.cells[j * p.w + i];
-                    Vector2Int cell = new Vector2Int(x + i, s + p.h - 1 - j);
-
-                    Set(props, info, cell, src.x, src.y);
-                    used.Add(cell);
-                }
-            }
-
-            x += p.w - 1;
+            for (int y = info.bottom - 12; y < baseY; y++)
+                Set(a, info, new Vector2Int(fx, y), 19 + ((fx * 7 + y * 3) & 3), fillRow);
         }
+    }
+
+    private void AddParallax(Tilemap map, float factor, Vector3 anchor)
+    {
+        if (map == null)
+            return;
+
+        JungleParallax p = map.GetComponent<JungleParallax>();
+
+        if (p == null)
+            p = map.gameObject.AddComponent<JungleParallax>();
+
+        p.Init(factor, verticalFactor, anchor);
     }
 
     // Ağaç: gövde (10-11), tepede yapraklar (9 ve 12), dallar, isteğe bağlı arı kovanı.
@@ -744,12 +717,9 @@ public class JungleTheme : MonoBehaviour
 
             if (k <= 3)
             {
-                // Yapraklar ve sol dal.
                 Set(map, info, new Vector2Int(x - 1, y), 9, k);
 
-                if (k <= 1)
-                    Set(map, info, new Vector2Int(x + 2, y), 12, k);
-                else if (smallHive)
+                if (k <= 1 || smallHive)
                     Set(map, info, new Vector2Int(x + 2, y), 12, k);
             }
 
@@ -778,7 +748,15 @@ public class JungleTheme : MonoBehaviour
         if (t == null || map == null)
             return;
 
-        map.SetTile(new Vector3Int(info.origin.x + cell.x, info.origin.y + cell.y, 0), t);
+        if (!pending.TryGetValue(map, out List<Vector3Int> cells))
+        {
+            cells = new List<Vector3Int>();
+            pending[map] = cells;
+            pendingTiles[map] = new List<TileBase>();
+        }
+
+        cells.Add(new Vector3Int(info.origin.x + cell.x, info.origin.y + cell.y, 0));
+        pendingTiles[map].Add(t);
     }
 
     private Tilemap Layer(string layerName, int orderOffset, Color tint)
@@ -817,76 +795,55 @@ public class JungleTheme : MonoBehaviour
         return map;
     }
 
-    // =========================================================
-    // EDITOR: sprite'ları otomatik doldur
-    // =========================================================
-
-#if UNITY_EDITOR
     private void OnValidate()
     {
-        if (Application.isPlaying)
-            return;
-
-        if (sheet != null)
-        {
-            string path = AssetDatabase.GetAssetPath(sheet);
-
-            if (!string.IsNullOrEmpty(path))
-            {
-                Object[] all = AssetDatabase.LoadAllAssetsAtPath(path);
-                List<Sprite> list = new List<Sprite>();
-
-                for (int i = 0; i < all.Length; i++)
-                {
-                    if (all[i] is Sprite s)
-                        list.Add(s);
-                }
-
-                if (list.Count > 0 && (sprites == null || sprites.Length != list.Count))
-                    sprites = list.ToArray();
-            }
-        }
-
-        if (sprites != null)
-        {
-            spriteCells = new Vector2Int[sprites.Length];
-
-            for (int i = 0; i < sprites.Length; i++)
-                spriteCells[i] = sprites[i] != null ? CellOf(sprites[i]) : new Vector2Int(-1, -1);
-
-            cellsForCount = sprites.Length;
-        }
-
-        lookup = null;
+        // Ayar değişince kesilmiş sprite'lar yeniden üretilsin.
+        cutCache.Clear();
         tileCache.Clear();
         warnedMissing = false;
     }
+}
 
-    [ContextMenu("Kontrol: gerekli tile'lar var mı?")]
-    private void CheckTiles()
+/// <summary>
+/// Parallax katmanı: kamera çapadan ne kadar uzaklaştıysa katman onun
+/// 'factor' katı kadar kameranın peşinden gelir (uzak = daha yavaş görünür).
+/// Cinemachine kamerayı LateUpdate'te taşıdığı için en sonda çalışır.
+/// </summary>
+[DefaultExecutionOrder(10000)]
+public class JungleParallax : MonoBehaviour
+{
+    private float factorX;
+    private float factorY;
+    private Vector3 anchor;
+    private Vector3 basePosition;
+    private bool ready;
+
+    public void Init(float factorX, float factorY, Vector3 anchor)
     {
-        lookup = null;
-        BuildLookup();
+        this.factorX = factorX;
+        this.factorY = factorY;
+        this.anchor = anchor;
 
-        int[,] needed =
-        {
-            { 0, 0 }, { 1, 0 }, { 4, 0 }, { 0, 1 }, { 1, 1 }, { 4, 1 }, { 0, 2 }, { 1, 2 }, { 4, 2 }, { 1, 4 },
-            { 5, 6 }, { 6, 6 }, { 7, 6 }, { 6, 9 }, { 7, 9 }, { 5, 7 }, { 10, 4 }, { 17, 0 }, { 6, 19 }, { 22, 17 }
-        };
+        basePosition = transform.position;
+        ready = true;
 
-        List<string> missing = new List<string>();
-
-        for (int i = 0; i < needed.GetLength(0); i++)
-        {
-            if (!lookup.ContainsKey(Key(needed[i, 0], needed[i, 1])))
-                missing.Add("(" + needed[i, 0] + "," + needed[i, 1] + ")");
-        }
-
-        if (missing.Count == 0)
-            Debug.Log("JungleTheme: " + lookup.Count + " sprite tanındı, gerekli tile'ların hepsi var.");
-        else
-            Debug.LogWarning("JungleTheme: eksik hücreler: " + string.Join(", ", missing) +
-                             " → Tiles.png'yi Sprite Editor'da Grid By Cell Size 16x16 ile dilimle.");
+        LateUpdate();
     }
-#endif
+
+    private void LateUpdate()
+    {
+        if (!ready)
+            return;
+
+        Camera cam = Camera.main;
+
+        if (cam == null)
+            return;
+
+        Vector3 c = cam.transform.position;
+
+        transform.position =
+            basePosition +
+            new Vector3((c.x - anchor.x) * factorX, (c.y - anchor.y) * factorY, 0f);
+    }
 }
