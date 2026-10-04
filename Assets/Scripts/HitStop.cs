@@ -20,6 +20,8 @@ using UnityEngine;
 ///    (ör. balance break sırasında normal vuruş hit-stop'u karışmaz).
 ///  - Hiç istek kalmayınca zaman, hit-stop başlamadan önceki
 ///    değerine geri döner (ileride pause menüsü eklersen bozulmaz).
+///    DÜZELTME: o değer 0 ise (oyun menüde duraklatılmışken gelen istek)
+///    1'e döner; aksi halde oyun sonsuza kadar donuk kalıyordu.
 ///  - Sahnede HitStop yoksa kendiliğinden oluşturulur.
 /// </summary>
 public class HitStop : MonoBehaviour
@@ -309,7 +311,13 @@ public class HitStop : MonoBehaviour
 
         if (!applied)
         {
-            baseTimeScale = Time.timeScale;
+            // Zaman o an 0 ise (menü duraklatması / başka bir dondurma)
+            // dönüş değeri olarak 0'ı hatırlama: oyun donuk kalırdı.
+            baseTimeScale =
+                Time.timeScale > 0.001f
+                    ? Time.timeScale
+                    : 1f;
+
             applied = true;
         }
 

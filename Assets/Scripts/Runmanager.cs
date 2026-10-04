@@ -363,6 +363,15 @@ public class RunManager : MonoBehaviour
     private float restartRequestTime;
     private Coroutine loopRoutine;
 
+    // Seçim ekranı oyunu bilerek durdurdu mu (PausedWait)?
+    private bool pausedByMenu;
+
+    // Zaman yanlışlıkla 0'da kaldıysa kurtarma.
+    private float frozenSince = -1f;
+
+    // F2: ekranda koşu durumu (teşhis).
+    private bool showRunDebug;
+
     private int bonusOffers;
 
     private bool shopUsedThisAct;
@@ -491,6 +500,18 @@ public class RunManager : MonoBehaviour
 
         BuildArchetypeTemplates();
 
+        EnemyController misplaced = GetComponentInParent<EnemyController>();
+
+        if (misplaced != null)
+        {
+            Debug.LogWarning(
+                "RunManager: '" + misplaced.name + "' objesinde EnemyController var " +
+                "(RunManager'ın kendisi ya da üst objesi). Bu bir düşman değil; " +
+                "EnemyController / EnemyArchetype bileşenlerini oradan kaldır.",
+                misplaced
+            );
+        }
+
         Inventory = new CharmInventory(player.gameObject);
 
         Stats = GetComponent<RunStats>();
@@ -537,6 +558,11 @@ public class RunManager : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.F2))
+            showRunDebug = !showRunDebug;
+
+        GuardFrozenTime();
+
         if (State != RunState.Dead && State != RunState.Victory)
             return;
 
@@ -552,6 +578,75 @@ public class RunManager : MonoBehaviour
 
         if (restartRequested && Time.unscaledTime - restartRequestTime > 2.5f)
             HardRestart();
+    }
+
+    // Menü açık değilken zaman 1 sn'den uzun 0'da kaldıysa (ör. bir
+    // hit-stop yanlış "taban zaman" hatırladıysa) oyunu çöz.
+    private void GuardFrozenTime()
+    {
+        bool menuPause =
+            pausedByMenu ||
+            State == RunState.Offer ||
+            State == RunState.ChoosingRoom ||
+            State == RunState.Shop ||
+            State == RunState.Rest;
+
+        if (menuPause || Time.timeScale > 0.001f)
+        {
+            frozenSince = -1f;
+            return;
+        }
+
+        if (frozenSince < 0f)
+        {
+            frozenSince = Time.unscaledTime;
+            return;
+        }
+
+        if (Time.unscaledTime - frozenSince < 1f)
+            return;
+
+        Debug.LogWarning(
+            "RunManager: zaman " + State + " durumunda 1 sn'den uzun DONUK kaldı " +
+            "(timeScale 0). Düzeltildi."
+        );
+
+        HitStop.ClearAll();
+        EnemyTime.Clear();
+
+        Time.timeScale = 1f;
+
+        frozenSince = -1f;
+    }
+
+    private void OnGUI()
+    {
+        if (!showRunDebug || player == null)
+            return;
+
+        string playerState =
+            player.stateMachine != null && player.stateMachine.CurrentState != null
+                ? player.stateMachine.CurrentState.GetType().Name
+                : "-";
+
+        GUI.color = new Color(0f, 0f, 0f, 0.7f);
+        GUI.DrawTexture(new Rect(8, 200, 430, 92), Texture2D.whiteTexture);
+        GUI.color = Color.white;
+
+        GUI.Label(
+            new Rect(14, 204, 420, 90),
+            "KOŞU [F2]  durum: " + State +
+            "  perde " + Act + " oda " + RoomInAct + "  dövüş " + Stage +
+            "\ntimeScale: " + Time.timeScale.ToString("0.00") +
+            "  düşman zamanı: " + EnemyTime.Scale.ToString("0.00") +
+            "  menü duraklatması: " + pausedByMenu +
+            "\ncanlı düşman: " + AliveEnemies + " / doğan: " + spawned.Count +
+            "  dalga " + Wave + "/" + WaveCount +
+            "\noyuncu: " + playerState +
+            "  canControl: " + player.canControl +
+            "  inputLocked: " + player.inputLocked +
+            "  ölü: " + (playerHealth != null && playerHealth.IsDead)
+        );
     }
 
     private void HardRestart()
@@ -1199,6 +1294,10 @@ public class RunManager : MonoBehaviour
         int lastAlive = AliveEnemies;
         float lastProgressTime = Time.time;
 
+        // Üst üste ilerlemesiz kurtarma sayısı. 2'yi geçerse oda zorla
+        // temizlenir: oyun hiçbir zaman kilitli kalmaz.
+        int stuckStrikes = 0;
+
         while (!playerHealth.IsDead)
         {
             RefreshAlive();
@@ -1210,13 +1309,25 @@ public class RunManager : MonoBehaviour
             {
                 lastAlive = AliveEnemies;
                 lastProgressTime = Time.time;
+                stuckStrikes = 0;
             }
             else if (
                 stuckTimeout > 0f &&
                 Time.time - lastProgressTime > stuckTimeout
             )
             {
-                RecoverStragglers();
+                stuckStrikes++;
+
+                if (stuckStrikes >= 3)
+                {
+                    ForceClearRoom();
+                    stuckStrikes = 0;
+                }
+                else
+                {
+                    RecoverStragglers();
+                }
+
                 lastProgressTime = Time.time;
             }
 
@@ -1396,6 +1507,8 @@ public class RunManager : MonoBehaviour
 
         player.canControl = false;
 
+        pausedByMenu = true;
+
         Time.timeScale = 0f;
 
         while (!done())
@@ -1406,7 +1519,13 @@ public class RunManager : MonoBehaviour
             yield return null;
         }
 
+        // Duraklama sırasında gelmiş hit-stop istekleri "taban zaman = 0"
+        // hatırlamasın: temizle, sonra zamanı aç.
+        HitStop.ClearAll();
+
         Time.timeScale = 1f;
+
+        pausedByMenu = false;
 
         // Seçim tıklamasının saldırı tamponu sönsün, sonra kontrolü ver.
         yield return new WaitForSecondsRealtime(0.3f);
@@ -1889,8 +2008,83 @@ public class RunManager : MonoBehaviour
         Debug.LogWarning(
             "RunManager: " + stuckTimeout.ToString("0") +
             " sn'dir ilerleme yok → kurtarma. Taşınan: " + moved +
-            ", silinen: " + removed
+            ", silinen: " + removed +
+            "\nHâlâ canlı sayılan düşmanlar:\n" + DescribeAliveEnemies()
         );
+    }
+
+    // Takılmanın teşhisi: canlı sayılan her düşmanın adı, durumu, uzaklığı,
+    // görünür / aktif olup olmadığı.
+    private string DescribeAliveEnemies()
+    {
+        Vector3 playerPosition = player.transform.position;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            EnemyController e = spawned[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            Health h = e.GetComponent<Health>();
+
+            sb.Append("  - ")
+              .Append(e.name)
+              .Append(" | durum: ")
+              .Append(e.CurrentState != null ? e.CurrentState.GetType().Name : "yok")
+              .Append(" | uzaklık: ")
+              .Append(Vector2.Distance(e.transform.position, playerPosition).ToString("0.0"))
+              .Append(" | aktif: ")
+              .Append(e.gameObject.activeInHierarchy && e.enabled)
+              .Append(" | görünür: ")
+              .Append(IsVisible(e))
+              .Append(" | can: ")
+              .Append(h != null ? h.CurrentHealth + "/" + h.MaxHealth : "?")
+              .Append(" | konum: ")
+              .Append(e.transform.position.ToString("0.0"))
+              .Append('\n');
+        }
+
+        return sb.Length > 0 ? sb.ToString() : "  (yok)";
+    }
+
+    private static bool IsVisible(EnemyController e)
+    {
+        SpriteRenderer[] renderers = e.GetComponentsInChildren<SpriteRenderer>();
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer sr = renderers[i];
+
+            if (sr.enabled && sr.sprite != null && sr.color.a > 0.05f && sr.isVisible)
+                return true;
+        }
+
+        return false;
+    }
+
+    // Son çare: kurtarma 2 kez işe yaramadıysa kalan düşmanları kaldır,
+    // oda temizlenmiş sayılır. (Teşhis için kim olduklarını yazar.)
+    private void ForceClearRoom()
+    {
+        Debug.LogWarning(
+            "RunManager: oda ilerlemiyor → ZORLA TEMİZLENDİ. Kaldırılan düşmanlar:\n" +
+            DescribeAliveEnemies()
+        );
+
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            EnemyController e = spawned[i];
+
+            if (e != null && !e.IsDead)
+                Destroy(e.gameObject);
+        }
+
+        spawned.Clear();
+
+        RefreshAlive();
     }
 
     private Vector3 RecoverPosition(int side)
@@ -2111,8 +2305,25 @@ public class RunManager : MonoBehaviour
         {
             EnemyController e = EnemyController.All[i];
 
-            if (e != null)
-                Destroy(e.gameObject);
+            if (e == null)
+                continue;
+
+            // GÜVENLİK: RunManager'ın kendisini ya da üst objesini (ör.
+            // 'Managers') ASLA silme. Yanlışlıkla oraya EnemyController
+            // eklenmişse koşu yöneticisi de silinip oyun kilitleniyordu.
+            if (transform.IsChildOf(e.transform))
+            {
+                Debug.LogWarning(
+                    "RunManager: '" + e.name + "' üzerinde EnemyController var ama " +
+                    "RunManager'ı içeriyor; SİLİNMEDİ. Bu objeden EnemyController / " +
+                    "EnemyArchetype gibi düşman bileşenlerini kaldır.",
+                    e
+                );
+
+                continue;
+            }
+
+            Destroy(e.gameObject);
         }
 
         spawned.Clear();
@@ -2151,9 +2362,24 @@ public class RunManager : MonoBehaviour
 
         player.canControl = true;
         player.inputLocked = false;
+        player.isInvincible = false;
+        player.isAttackLocked = false;
+
+        pausedByMenu = false;
 
         player.stateMachine.ChangeState(
             new GroundedState(player, player.stateMachine)
         );
+
+        // Ölüm durumundan çıkışta fizik / saldırı geri açılsın (yedek).
+        if (player.rb != null)
+            player.rb.simulated = true;
+
+        PlayerCombatController combat = player.GetComponent<PlayerCombatController>();
+
+        if (combat != null)
+            combat.enabled = true;
+
+        Time.timeScale = 1f;
     }
 }
