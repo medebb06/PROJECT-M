@@ -120,6 +120,11 @@ public class JungleTheme : MonoBehaviour
         new ParallaxBand("Yakın çalılar", 0.04f, 0.7f, 2, 1, false, new Color(0.88f, 0.95f, 0.88f, 1f), -12)
     };
 
+    [Tooltip(
+        "Açık: dikey parallax yatayla AYNI (çok hafif, zeminle neredeyse birlikte). " +
+        "Kapalı: bantlardaki 'Vertical Factor' kullanılır.")]
+    public bool verticalSameAsHorizontal = true;
+
     [Tooltip("Komşu bant renginin araya karışma olasılığı. 0 = her bant tek renk.")]
     [Range(0f, 1f)] public float bushColorVariation = 0f;
 
@@ -639,7 +644,7 @@ public class JungleTheme : MonoBehaviour
         {
             Tilemap treeMap = Layer("Arka Ağaçlar", treeLayerOrder, treeTint);
 
-            AddParallax(treeMap, treeParallax, treeVerticalFactor, anchor);
+            AddParallax(treeMap, treeParallax, verticalSameAsHorizontal ? treeParallax : treeVerticalFactor, anchor);
 
             int baseY = average + treeBase;
             int top = Mathf.Max(info.top, baseY + 10) + treeExtraHeight;
@@ -663,8 +668,10 @@ public class JungleTheme : MonoBehaviour
         Tilemap a = Layer(band.name + " A", band.order, band.tint);
         Tilemap b = Layer(band.name + " B", band.order + 1, band.tint);
 
-        AddParallax(a, band.factor, band.verticalFactor, anchor);
-        AddParallax(b, band.factor, band.verticalFactor, anchor);
+        float vertical = verticalSameAsHorizontal ? band.factor : band.verticalFactor;
+
+        AddParallax(a, band.factor, vertical, anchor);
+        AddParallax(b, band.factor, vertical, anchor);
 
         int color = Mathf.Clamp(band.bushColor, 0, 4);
 
@@ -697,14 +704,71 @@ public class JungleTheme : MonoBehaviour
             i++;
         }
 
-        // Dolgu: bandın altından haritanın dibine kadar.
-        int fillRow = color * 3 + 2;
+        // Dolgu: bandın altından haritanın dibine kadar DÜZ koyu renk.
+        // (Eskiden çalının alt satırı tekrarlanıyordu → dama tahtası görünümü.)
+        TileBase fill = FillTile(color);
 
         for (int fx = -BandMargin; fx < info.width + BandMargin + 8; fx++)
         {
             for (int y = info.bottom - 12; y < baseY; y++)
-                Set(a, info, new Vector2Int(fx, y), 19 + ((fx * 7 + y * 3) & 3), fillRow);
+                SetTile(a, info, new Vector2Int(fx, y), fill);
         }
+    }
+
+    // Çalı renklerinin en koyu (gölge) tonu: sayfadan ölçüldü.
+    private static readonly Color32[] bushShadow =
+    {
+        new Color32(30, 48, 16, 255),
+        new Color32(48, 45, 16, 255),
+        new Color32(28, 31, 10, 255),
+        new Color32(28, 31, 10, 255),
+        new Color32(28, 31, 10, 255)
+    };
+
+    private readonly Dictionary<int, Tile> fillTiles = new Dictionary<int, Tile>();
+    private static Sprite whiteCell;
+
+    private TileBase FillTile(int bushColor)
+    {
+        if (fillTiles.TryGetValue(bushColor, out Tile cached) && cached != null)
+            return cached;
+
+        if (whiteCell == null)
+        {
+            Texture2D tex = new Texture2D(4, 4, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            Color[] px = new Color[16];
+
+            for (int i = 0; i < px.Length; i++)
+                px[i] = Color.white;
+
+            tex.SetPixels(px);
+            tex.Apply();
+
+            whiteCell =
+                Sprite.Create(
+                    tex,
+                    new Rect(0, 0, 4, 4),
+                    new Vector2(0.5f, 0.5f),
+                    4f / (1f + seamOverlap),
+                    0,
+                    SpriteMeshType.FullRect
+                );
+        }
+
+        Tile t = ScriptableObject.CreateInstance<Tile>();
+        t.sprite = whiteCell;
+        t.color = bushShadow[Mathf.Clamp(bushColor, 0, bushShadow.Length - 1)];
+        t.flags = TileFlags.LockColor;
+        t.colliderType = Tile.ColliderType.None;
+
+        fillTiles[bushColor] = t;
+
+        return t;
     }
 
     private void AddParallax(Tilemap map, float factor, float vertical, Vector3 anchor)
@@ -766,7 +830,11 @@ public class JungleTheme : MonoBehaviour
 
     private void Set(Tilemap map, BuildInfo info, Vector2Int cell, int col, int row)
     {
-        TileBase t = Get(col, row, false);
+        SetTile(map, info, cell, Get(col, row, false));
+    }
+
+    private void SetTile(Tilemap map, BuildInfo info, Vector2Int cell, TileBase t)
+    {
 
         if (t == null || map == null)
             return;
@@ -823,6 +891,7 @@ public class JungleTheme : MonoBehaviour
         // Ayar değişince kesilmiş sprite'lar yeniden üretilsin.
         cutCache.Clear();
         tileCache.Clear();
+        fillTiles.Clear();
         warnedMissing = false;
     }
 }
