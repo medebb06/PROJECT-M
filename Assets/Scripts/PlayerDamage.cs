@@ -126,6 +126,13 @@ public static class PlayerDamage
                 stats
             );
 
+        // Sersemlemiş düşman daha çabuk ölür (infaz barı boşken de bitirilebilsin).
+        if (enemy.IsStaggered)
+        {
+            healthAmount =
+                Mathf.Max(1, Mathf.RoundToInt(healthAmount * ExecuteMeter.StaggeredHealthMultiplier));
+        }
+
         health.TakeDamage(healthAmount);
 
         if (feedback != null)

@@ -79,6 +79,9 @@ public class RunManager : MonoBehaviour
 
     [SerializeField] private Color archerTint = new Color(0.78f, 0.85f, 1f);
 
+    [Tooltip("KALABALIK (zayıf, çok sayıda) düşman: Enemy Prefab'ın koyu, küçük kopyası.")]
+    [SerializeField] private Color swarmTint = new Color(0.55f, 0.5f, 0.62f);
+
     [Tooltip(
         "Perde başına tip ağırlıkları. x = Düellocu, y = Çevik, z = Ağır, " +
         "w = Okçu. Perde sayısından kısaysa son satır kullanılır. Koşunun " +
@@ -153,6 +156,20 @@ public class RunManager : MonoBehaviour
     [Tooltip("Bir nöbet noktasındaki düşmanların HEPSİ ölünce iyileşme (azami canın oranı).")]
     [SerializeField] private float mapHealOnPostCleared = 0.12f;
 
+    [Header("Kalabalık + öldürme kolaylığı")]
+    [Tooltip("Her nöbet noktasına ayrıca bu kadar KALABALIK (zayıf) düşman (en az / en çok).")]
+    [SerializeField] private int mapSwarmPerPostMin = 1;
+    [SerializeField] private int mapSwarmPerPostMax = 3;
+
+    [Tooltip("Her bu kadar bölümde nokta başına +1 kalabalık (0 = artmaz).")]
+    [SerializeField] private int mapSwarmGrowthEveryStages = 3;
+
+    [Tooltip("Haritadaki düşmanların can çarpanı (çabuk ölsünler).")]
+    [SerializeField] private float mapEnemyHealthMultiplier = 0.7f;
+
+    [Tooltip("Sersemleme süresi çarpanı (bitirmeye vakit kalsın).")]
+    [SerializeField] private float mapStaggerDurationMultiplier = 1.4f;
+
     [Tooltip("Elit odada düşman sayısı çarpanı (daha az ama güçlü).")]
     [SerializeField] private float levelEliteCountMultiplier = 0.6f;
 
@@ -173,7 +190,7 @@ public class RunManager : MonoBehaviour
     // Odanın ana tipi (banner bunu yazar). Arayüz de okuyabilir.
     public EnemyArchetypeType RoomArchetype { get; private set; }
 
-    private readonly GameObject[] archetypeTemplates = new GameObject[4];
+    private readonly GameObject[] archetypeTemplates = new GameObject[5];
     private Transform variantRoot;
 
     // =========================================================
@@ -1100,6 +1117,8 @@ public class RunManager : MonoBehaviour
 
         State = RunState.Starting;
 
+        ExecuteMeter.ResetForRun();
+
         Stats.BeginRun();
     }
 
@@ -1564,6 +1583,24 @@ public class RunManager : MonoBehaviour
             int count = totalEnemies / posts + (i < totalEnemies % posts ? 1 : 0);
 
             yield return SpawnWave(Mathf.Max(1, count), type == RoomType.Elite, 0f);
+
+            // Kalabalık: noktayı doldurur (zayıf, çabuk ölür, infaz barını doldurur).
+            if (useArchetypes)
+            {
+                int extra =
+                    mapSwarmGrowthEveryStages > 0
+                        ? (Stage - 1) / mapSwarmGrowthEveryStages
+                        : 0;
+
+                int swarm =
+                    UnityEngine.Random.Range(
+                        Mathf.Min(mapSwarmPerPostMin, mapSwarmPerPostMax),
+                        Mathf.Max(mapSwarmPerPostMin, mapSwarmPerPostMax) + 1
+                    ) + extra;
+
+                if (swarm > 0)
+                    yield return SpawnWave(swarm, false, 0f, EnemyArchetypeType.Swarm);
+            }
 
             // Nöbet noktası grubu (hepsi ölünce iyileşme).
             List<EnemyController> group = new List<EnemyController>();
@@ -2404,7 +2441,7 @@ public class RunManager : MonoBehaviour
         return Mathf.Clamp(count, 1, Mathf.Max(1, cap));
     }
 
-    private IEnumerator SpawnWave(int count, bool elite, float interval = -1f)
+    private IEnumerator SpawnWave(int count, bool elite, float interval = -1f, EnemyArchetypeType? forceType = null)
     {
         float wait = interval < 0f ? spawnInterval : interval;
 
@@ -2419,9 +2456,9 @@ public class RunManager : MonoBehaviour
 
             // İlk düşman odanın tipi; sonrakiler (2+ düşmanlı odada) karışık.
             EnemyArchetypeType archetype =
-                i == 0
-                    ? RoomArchetype
-                    : PickArchetype(false);
+                forceType.HasValue
+                    ? forceType.Value
+                    : (i == 0 ? RoomArchetype : PickArchetype(false));
 
             EnemyController enemy = SpawnOne(side, TemplateFor(archetype));
 
@@ -2660,6 +2697,8 @@ public class RunManager : MonoBehaviour
                     1,
                     Mathf.RoundToInt(enemy.unblockableDamage * actMul * mapUnblockableDamageMultiplier)
                 );
+
+            enemy.staggerDuration *= Mathf.Max(0.1f, mapStaggerDurationMultiplier);
         }
 
         Health health = enemy.GetComponent<Health>();
@@ -2672,6 +2711,9 @@ public class RunManager : MonoBehaviour
                     (1f + healthBonusPerStage * t) *
                     HeatHealthMultiplier
                 );
+
+            if (onMap && !Mathf.Approximately(mapEnemyHealthMultiplier, 1f))
+                scaled = Mathf.Max(1, Mathf.RoundToInt(scaled * mapEnemyHealthMultiplier));
 
             health.SetMaxHealth(scaled, true);
         }
@@ -2875,6 +2917,14 @@ public class RunManager : MonoBehaviour
                 EnemyArchetypeType.Archer,
                 archerPrefab == null,
                 archerTint
+            );
+
+        archetypeTemplates[(int)EnemyArchetypeType.Swarm] =
+            MakeVariantTemplate(
+                enemyPrefab,
+                EnemyArchetypeType.Swarm,
+                true,
+                swarmTint
             );
     }
 

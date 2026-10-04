@@ -59,6 +59,9 @@ public class EnemyArchetype : MonoBehaviour
             case EnemyArchetypeType.Archer:
                 return "Okçu";
 
+            case EnemyArchetypeType.Swarm:
+                return "Kalabalık";
+
             default:
                 return "Düellocu";
         }
@@ -123,6 +126,23 @@ public class EnemyArchetype : MonoBehaviour
                     // (Karakter ölçeği 2 olan sahneye göre: ~3 gövde boyu.)
                     attackRangeOverride = 12f,
                     chaseStopOverride = 11f
+                };
+
+            case EnemyArchetypeType.Swarm:
+                // Zayıf, çok sayıda: dengesi çabuk kırılır, 2-3 vuruşta ölür.
+                return new ArchetypeProfile
+                {
+                    health = 0.45f,
+                    maxBalance = 0.4f,
+                    chaseSpeed = 1.15f,
+                    attackDamage = 0.6f,
+                    unblockableDamage = 0.6f,
+                    attackRecovery = 1.2f,
+                    parryBalanceDamage = 1.5f,
+                    blockPostureDamage = 0.6f,
+                    attackKnockback = 0.7f,
+                    knockbackTaken = 1.4f,
+                    scale = 0.8f
                 };
 
             default:
@@ -273,6 +293,10 @@ public class EnemyArchetype : MonoBehaviour
                 case EnemyArchetypeType.Archer:
                     moveset.moves = EnemyMoveset.CreateArcherMoves();
                     break;
+
+                case EnemyArchetypeType.Swarm:
+                    moveset.moves = EnemyMoveset.CreateSwarmMoves();
+                    break;
             }
         }
 
@@ -293,7 +317,8 @@ public enum EnemyArchetypeType
     Duelist,
     Quick,
     Heavy,
-    Archer
+    Archer,
+    Swarm       // SONA eklendi (kayıtlı değerler kaymasın)
 }
 
 // Tipin çarpanları (1 = değişiklik yok).

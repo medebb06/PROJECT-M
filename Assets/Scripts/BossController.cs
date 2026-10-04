@@ -18,6 +18,9 @@ public class BossController : MonoBehaviour
     public string BossName { get; private set; } = "Boss";
     public bool InPhase2 { get; private set; }
 
+    // Faz 2'ye geçiş can oranı (infaz barı bunu kullanır).
+    public float Phase2At => phase2At;
+
     public event Action PhaseChanged;
 
     private float phase2At = 0.5f;

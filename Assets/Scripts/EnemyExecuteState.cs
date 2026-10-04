@@ -169,15 +169,40 @@ public class EnemyExecuteState : IEnemyState
             status.ExecuteMultiplier = 1f;
         }
 
-        if (health != null)
+        int damage =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(enemy.executeDamage * multiplier)
+            );
+
+        // İNFAZ BARI ile yapılan infaz: normal düşman ölür; boss faz 1'de
+        // faz 2 eşiğine iner, faz 2'de ölür.
+        if (ExecuteMeter.TakeLethal(enemy) && health != null)
         {
-            health.TakeDamage(
-                Mathf.Max(
-                    1,
-                    Mathf.RoundToInt(enemy.executeDamage * multiplier)
-                )
+            BossController boss = enemy.GetComponent<BossController>();
+
+            if (boss != null && !boss.InPhase2)
+            {
+                int threshold =
+                    Mathf.FloorToInt(health.MaxHealth * boss.Phase2At);
+
+                damage = Mathf.Max(1, health.CurrentHealth - threshold);
+            }
+            else
+            {
+                damage = Mathf.Max(1, health.CurrentHealth);
+            }
+
+            CombatCallout.Popup(
+                enemy.transform.position + Vector3.up * 2.4f,
+                boss != null && !boss.InPhase2 ? "İNFAZ! FAZ 2" : "İNFAZ!",
+                new Color(1f, 0.8f, 0.3f),
+                1.3f
             );
         }
+
+        if (health != null)
+            health.TakeDamage(damage);
 
         // =====================================================
         // COLLISION GERİ AÇ

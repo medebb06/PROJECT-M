@@ -74,6 +74,13 @@ public class PlayerFinisher : MonoBehaviour
         if (target == null || !target.IsStaggered)
             return false;
 
+        // İNFAZ BARI dolu değilse infaz yok (uyarı; tampon boşalır).
+        if (!ExecuteMeter.TryConsume(target))
+        {
+            ExecuteMeter.WarnNotReady(target);
+            return true;
+        }
+
         // Saldırı sürüyorsa iptal et: execute anında başlasın.
         if (combat != null)
             combat.CancelAttack();

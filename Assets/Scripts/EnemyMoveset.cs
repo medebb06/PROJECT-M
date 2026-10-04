@@ -378,6 +378,40 @@ public class EnemyMoveset : MonoBehaviour
     // abanmak (mash) boşa basma cezasına takılır.
     // =========================================================
 
+    // KALABALIK: zayıf, basit; tek / ikili pençe ve kısa atılma.
+    public static List<AttackMove> CreateSwarmMoves()
+    {
+        return new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Pençe",
+                weight = 1.2f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.6f) }
+            },
+            new AttackMove
+            {
+                name = "İkili Pençe",
+                weight = 0.8f,
+                recoveryMultiplier = 1.2f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.65f),
+                    new MoveHit(MoveHitType.Normal, 0.38f)
+                }
+            },
+            new AttackMove
+            {
+                name = "Atılma",
+                weight = 0.5f,
+                minDistance = 1.5f,
+                cooldown = 3f,
+                recoveryMultiplier = 1.4f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.75f, 0.2f, 1f, 1.5f) }
+            }
+        };
+    }
+
     public static List<AttackMove> CreateQuickMoves()
     {
         return new List<AttackMove>
