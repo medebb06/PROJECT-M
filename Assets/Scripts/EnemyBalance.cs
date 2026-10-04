@@ -90,6 +90,23 @@ public class EnemyBalance : MonoBehaviour
         }
     }
 
+    // Çalışma anında azami dengeyi ayarlar (ör. düşman tipi: Ağır dengesi
+    // geç kırılır, Çevik erken). Mevcut denge yeni sınıra kırpılır.
+    public void SetMaxBalance(int value)
+    {
+        maxBalance = Mathf.Max(1, value);
+
+        if (!isBroken)
+            currentBalance = Mathf.Clamp(currentBalance, 0, maxBalance - 1);
+        else
+            currentBalance = maxBalance;
+
+        OnBalanceChanged?.Invoke(
+            currentBalance,
+            maxBalance
+        );
+    }
+
     public bool AddBalanceDamage(int amount)
     {
         if (isBroken)

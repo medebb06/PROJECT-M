@@ -8,7 +8,8 @@ using UnityEngine;
 ///
 ///  HAMLE (EnemyMoveset var): seçilen hamlenin vuruşlarını SIRAYLA oynar
 ///  (kombo). Her vuruşun türü farklı cevap ister:
-///    Normal → parry/block, Sweep → zıpla, Grab → dash/kaç.
+///    Normal → parry/block, Sweep → zıpla, Grab → dash/kaç,
+///    Shot (ok, mermi) → parry = geri yansıt, block, dash = içinden geç.
 ///  Kombonun 2.+ vuruşları kesilemez; block'lanan ara vuruşlar düşmanı
 ///  geri itmez.
 /// </summary>
@@ -269,7 +270,10 @@ public class EnemyAttackState : IEnemyState
     // Bir vuruşun uyarı aşamasını başlatır (ilk vuruş ya da kombo adımı).
     private void BeginWindup(float windup)
     {
-        isUnblockable = hitType != MoveHitType.Normal;
+        // Ok (Shot) parry/block edilebilir: engellenemez değil.
+        isUnblockable =
+            hitType == MoveHitType.Sweep ||
+            hitType == MoveHitType.Grab;
 
         dodgeCueTriggered = false;
 
@@ -643,12 +647,24 @@ public class EnemyAttackState : IEnemyState
             if (telegraph != null)
                 telegraph.StopWarning();
 
-            resolvingHit = true;
+            bool enemyStaggered;
 
-            bool enemyStaggered =
-                DoAttack();
+            if (hitType == MoveHitType.Shot)
+            {
+                // OK: vuruş anında mermi çıkar; sonucu mermi çözer
+                // (parry / block / dash / isabet).
+                FireShot();
+                enemyStaggered = false;
+            }
+            else
+            {
+                resolvingHit = true;
 
-            resolvingHit = false;
+                enemyStaggered =
+                    DoAttack();
+
+                resolvingHit = false;
+            }
 
             // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
             // savrulması...) bu saldırı bitti; Exit zaten temizledi.
@@ -1026,6 +1042,24 @@ public class EnemyAttackState : IEnemyState
         // =====================================================
 
         return DealDirectHit(hitDirection);
+    }
+
+    // Ok bırak: baktığı yöne (yön kilitli). Oyuncu arkasındaysa düz ileri
+    // atar (ıska): dash ile arkasına geçmek oku da boşa çıkarır.
+    private void FireShot()
+    {
+        EnemyArcher archer = enemy.GetComponent<EnemyArcher>();
+
+        if (archer == null)
+            archer = enemy.gameObject.AddComponent<EnemyArcher>();
+
+        int damage =
+            Mathf.Max(
+                1,
+                Mathf.RoundToInt(enemy.attackDamage * stepDamageMultiplier)
+            );
+
+        archer.Fire(damage);
     }
 
     private bool SweepIgnoresDash =>

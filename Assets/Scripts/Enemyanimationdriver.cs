@@ -23,7 +23,7 @@ using UnityEngine;
 /// KURULUM:
 ///  1) Düşman prefab'ına ekle.
 ///  2) Animator'da state'ler: Idle, Walk, Attack, Hurt (+ isteğe bağlı
-///     Sweep, Grab; yoksa Attack kullanılır). Default = Idle. OK ÇİZME.
+///     Sweep, Grab, Shoot; yoksa Attack kullanılır). Default = Idle. OK ÇİZME.
 ///  3) Parameters'a 'Attack' adında Trigger ekle (sadece uyarı susturur).
 ///  4) EnemyController > Attack Animation Hit Time = klibin başından vuruş
 ///     karesine kadar süre (12 fps'de 5. kare → 5/12 = 0.42).
@@ -43,6 +43,9 @@ public class EnemyAnimationDriver : MonoBehaviour
     [Tooltip("Yakalama/engellenemez animasyonu. Animator'da yoksa Attack oynar.")]
     [SerializeField] private string grabState = "Grab";
 
+    [Tooltip("Ok atma animasyonu (Okçu). Animator'da yoksa Attack oynar.")]
+    [SerializeField] private string shootState = "Shoot";
+
     [Header("Vuruş zamanlaması")]
     [Tooltip(
         "Uyarı sırasında saldırı klibinin donduğu an (sn). 0 = ilk kare. " +
@@ -57,6 +60,10 @@ public class EnemyAnimationDriver : MonoBehaviour
     [Tooltip("Grab klibinin vuruş karesi (sn). 0 = Attack Animation Hit Time.")]
     [Min(0f)]
     [SerializeField] private float grabHitTime = 0f;
+
+    [Tooltip("Shoot klibinde okun bırakıldığı kare (sn). 0 = Attack Animation Hit Time.")]
+    [Min(0f)]
+    [SerializeField] private float shootHitTime = 0f;
 
     [Header("Geçişler")]
     [Tooltip("Idle ↔ Walk yumuşak geçiş süresi (sn). Pixel art için 0.")]
@@ -92,9 +99,11 @@ public class EnemyAnimationDriver : MonoBehaviour
     private int hurtHash;
     private int sweepHash;
     private int grabHash;
+    private int shootHash;
 
     private bool hasSweep;
     private bool hasGrab;
+    private bool hasShoot;
 
     private int current;
     private object lastStateObject;
@@ -120,6 +129,7 @@ public class EnemyAnimationDriver : MonoBehaviour
         hurtHash = Animator.StringToHash(hurtState);
         sweepHash = Animator.StringToHash(sweepState);
         grabHash = Animator.StringToHash(grabState);
+        shootHash = Animator.StringToHash(shootState);
 
         if (animator == null)
         {
@@ -139,6 +149,7 @@ public class EnemyAnimationDriver : MonoBehaviour
 
         hasSweep = CheckState(sweepState, sweepHash, false);
         hasGrab = CheckState(grabState, grabHash, false);
+        hasShoot = CheckState(shootState, shootHash, false);
     }
 
     private void OnEnable()
@@ -267,6 +278,11 @@ public class EnemyAnimationDriver : MonoBehaviour
             case MoveHitType.Grab when hasGrab:
                 attackClipHash = grabHash;
                 attackHitTime = grabHitTime > 0f ? grabHitTime : baseHit;
+                break;
+
+            case MoveHitType.Shot when hasShoot:
+                attackClipHash = shootHash;
+                attackHitTime = shootHitTime > 0f ? shootHitTime : baseHit;
                 break;
 
             default:

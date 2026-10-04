@@ -1,4 +1,3 @@
-using NUnit.Framework.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -18,6 +17,11 @@ using UnityEngine;
 ///
 /// KURULUM: Sahnede boş bir objeye ekle, 'Enemy Prefab' ata (ve istersen
 /// 'Boss Prefab'). Gerisi kendiliğinden kurulur.
+///
+/// DÜŞMAN TİPLERİ: Düellocu (Enemy Prefab), Çevik, Ağır ve Okçu. 'Quick /
+/// Heavy / Archer Prefab' boşsa Enemy Prefab'ın renklendirilmiş kopyası kullanılır
+/// (EnemyArchetype eklenir). Hangi odada hangi tipin çıkacağı perdeye göre
+/// ağırlıklıdır (Archetype Weights Per Act).
 /// </summary>
 public class RunManager : MonoBehaviour
 {
@@ -44,6 +48,54 @@ public class RunManager : MonoBehaviour
     public GameObject bossPrefab;
 
     [SerializeField] private PlayerController player;
+
+    // =========================================================
+    // DÜŞMAN TİPLERİ
+    // =========================================================
+
+    [Header("Düşman Tipleri")]
+    [Tooltip("Kapalı: her odada sadece Enemy Prefab (eski davranış).")]
+    [SerializeField] private bool useArchetypes = true;
+
+    [Tooltip(
+        "ÇEVİK düşman prefab'ı (hızlı seri kombolar). Boşsa Enemy Prefab'ın " +
+        "renklendirilmiş, küçültülmüş kopyası.")]
+    public GameObject quickPrefab;
+
+    [Tooltip(
+        "AĞIR düşman prefab'ı (yavaş, sert, yakalama/süpürme). Boşsa Enemy " +
+        "Prefab'ın renklendirilmiş, büyütülmüş kopyası.")]
+    public GameObject heavyPrefab;
+
+    [Tooltip("Ayrı prefab yoksa kopyaya uygulanan renk (prefab varsa kullanılmaz).")]
+    [SerializeField] private Color quickTint = new Color(0.75f, 1f, 0.8f);
+
+    [SerializeField] private Color heavyTint = new Color(1f, 0.72f, 0.65f);
+
+    [Tooltip(
+        "OKÇU düşman prefab'ı (mesafeden ok, parry = yansıt). Boşsa Enemy " +
+        "Prefab'ın renklendirilmiş kopyası.")]
+    public GameObject archerPrefab;
+
+    [SerializeField] private Color archerTint = new Color(0.78f, 0.85f, 1f);
+
+    [Tooltip(
+        "Perde başına tip ağırlıkları. x = Düellocu, y = Çevik, z = Ağır, " +
+        "w = Okçu. Perde sayısından kısaysa son satır kullanılır. Koşunun " +
+        "ilk odası her zaman Düellocu.")]
+    [SerializeField]
+    private Vector4[] archetypeWeightsPerAct =
+    {
+        new Vector4(0.5f, 0.2f, 0.15f, 0.15f),
+        new Vector4(0.3f, 0.25f, 0.25f, 0.2f),
+        new Vector4(0.25f, 0.25f, 0.25f, 0.25f)
+    };
+
+    // Odanın ana tipi (banner bunu yazar). Arayüz de okuyabilir.
+    public EnemyArchetypeType RoomArchetype { get; private set; }
+
+    private readonly GameObject[] archetypeTemplates = new GameObject[4];
+    private Transform variantRoot;
 
     // =========================================================
     // KOŞU YAPISI
@@ -434,6 +486,8 @@ public class RunManager : MonoBehaviour
             bossPrefab != null
                 ? PrepareTemplate(bossPrefab)
                 : spawnTemplate;
+
+        BuildArchetypeTemplates();
 
         Inventory = new CharmInventory(player.gameObject);
 
@@ -953,6 +1007,8 @@ public class RunManager : MonoBehaviour
         }
         else
         {
+            RoomArchetype = PickArchetype(true);
+
             WaveCount = WavesForStage();
 
             for (Wave = 1; Wave <= WaveCount; Wave++)
@@ -961,10 +1017,15 @@ public class RunManager : MonoBehaviour
 
                 if (Wave == 1)
                 {
+                    string typeName =
+                        useArchetypes
+                            ? "  •  " + EnemyArchetype.NameOf(RoomArchetype).ToUpperInvariant()
+                            : "";
+
                     ShowBanner(
                         type == RoomType.Elite
-                            ? "ELİT"
-                            : "PERDE " + Act + "  •  ODA " + RoomInAct,
+                            ? "ELİT" + typeName
+                            : "PERDE " + Act + "  •  ODA " + RoomInAct + typeName,
                         1.4f
                     );
                 }
@@ -1467,10 +1528,23 @@ public class RunManager : MonoBehaviour
 
             int side = (i % 2 == 0) ? firstSide : -firstSide;
 
-            EnemyController enemy = SpawnOne(side, spawnTemplate);
+            // İlk düşman odanın tipi; sonrakiler (2+ düşmanlı odada) karışık.
+            EnemyArchetypeType archetype =
+                i == 0
+                    ? RoomArchetype
+                    : PickArchetype(false);
+
+            EnemyController enemy = SpawnOne(side, TemplateFor(archetype));
 
             if (enemy != null)
             {
+                // Tip çarpanları ÖNCE (taban değerler), zorluk ölçeği SONRA.
+                EnemyArchetype archetypeComponent =
+                    enemy.GetComponent<EnemyArchetype>();
+
+                if (archetypeComponent != null)
+                    archetypeComponent.Apply();
+
                 ConfigureEnemy(enemy);
 
                 if (elite)
@@ -1763,6 +1837,152 @@ public class RunManager : MonoBehaviour
             y = hit.point.y + spawnHeightOffset;
 
         return new Vector3(x, y, playerPosition.z);
+    }
+
+    // =========================================================
+    // DÜŞMAN TİPLERİ
+    // =========================================================
+
+    private void BuildArchetypeTemplates()
+    {
+        archetypeTemplates[(int)EnemyArchetypeType.Duelist] = spawnTemplate;
+
+        archetypeTemplates[(int)EnemyArchetypeType.Quick] =
+            MakeVariantTemplate(
+                quickPrefab != null ? quickPrefab : enemyPrefab,
+                EnemyArchetypeType.Quick,
+                quickPrefab == null,
+                quickTint
+            );
+
+        archetypeTemplates[(int)EnemyArchetypeType.Heavy] =
+            MakeVariantTemplate(
+                heavyPrefab != null ? heavyPrefab : enemyPrefab,
+                EnemyArchetypeType.Heavy,
+                heavyPrefab == null,
+                heavyTint
+            );
+
+        archetypeTemplates[(int)EnemyArchetypeType.Archer] =
+            MakeVariantTemplate(
+                archerPrefab != null ? archerPrefab : enemyPrefab,
+                EnemyArchetypeType.Archer,
+                archerPrefab == null,
+                archerTint
+            );
+    }
+
+    // Kapalı (inaktif) bir kök altında kopya: Awake/OnEnable çalışmaz,
+    // sahnede görünmez. Doğan her düşman bu kopyadan üretilir ve rengi
+    // EnemyController.Awake'te "orijinal renk" olarak alınır (flaş bozmaz).
+    private GameObject MakeVariantTemplate(
+        GameObject source,
+        EnemyArchetypeType type,
+        bool tint,
+        Color tintColor
+    )
+    {
+        if (source == null)
+            return spawnTemplate;
+
+        if (variantRoot == null)
+        {
+            GameObject root = new GameObject("Düşman Tipi Şablonları");
+
+            root.SetActive(false);
+            root.transform.SetParent(transform, false);
+
+            variantRoot = root.transform;
+        }
+
+        GameObject template = Instantiate(source, variantRoot);
+
+        template.name =
+            source.name + " (" + EnemyArchetype.NameOf(type) + " şablon)";
+
+        if (!template.activeSelf)
+            template.SetActive(true);   // kök kapalı: yine görünmez
+
+        EnemyArchetype archetype = template.GetComponent<EnemyArchetype>();
+
+        if (archetype == null)
+            archetype = template.AddComponent<EnemyArchetype>();
+
+        // Ayrı prefab'da tip zaten seçiliyse ona dokunma; yoksa ata.
+        if (tint || archetype.type == EnemyArchetypeType.Duelist)
+            archetype.type = type;
+
+        if (tint)
+        {
+            SpriteRenderer[] renderers =
+                template.GetComponentsInChildren<SpriteRenderer>(true);
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Color c = renderers[i].color;
+
+                renderers[i].color =
+                    new Color(
+                        c.r * tintColor.r,
+                        c.g * tintColor.g,
+                        c.b * tintColor.b,
+                        c.a
+                    );
+            }
+        }
+
+        return template;
+    }
+
+    private GameObject TemplateFor(EnemyArchetypeType type)
+    {
+        if (!useArchetypes)
+            return spawnTemplate;
+
+        GameObject template = archetypeTemplates[(int)type];
+
+        return template != null ? template : spawnTemplate;
+    }
+
+    // Perdeye göre ağırlıklı tip. Koşunun ilk odası her zaman Düellocu.
+    private EnemyArchetypeType PickArchetype(bool forRoom)
+    {
+        if (!useArchetypes)
+            return EnemyArchetypeType.Duelist;
+
+        if (forRoom && Stage <= 1)
+            return EnemyArchetypeType.Duelist;
+
+        if (archetypeWeightsPerAct == null || archetypeWeightsPerAct.Length == 0)
+            return EnemyArchetypeType.Duelist;
+
+        int index =
+            Mathf.Clamp(Act - 1, 0, archetypeWeightsPerAct.Length - 1);
+
+        Vector4 w = archetypeWeightsPerAct[index];
+
+        float d = Mathf.Max(0f, w.x);
+        float q = Mathf.Max(0f, w.y);
+        float h = Mathf.Max(0f, w.z);
+        float a = Mathf.Max(0f, w.w);
+
+        float total = d + q + h + a;
+
+        if (total <= 0f)
+            return EnemyArchetypeType.Duelist;
+
+        float roll = UnityEngine.Random.value * total;
+
+        if (roll < d)
+            return EnemyArchetypeType.Duelist;
+
+        if (roll < d + q)
+            return EnemyArchetypeType.Quick;
+
+        if (roll < d + q + h)
+            return EnemyArchetypeType.Heavy;
+
+        return EnemyArchetypeType.Archer;
     }
 
     private GameObject PrepareTemplate(GameObject source)

@@ -15,6 +15,7 @@ public class EnemyComboIndicator : MonoBehaviour
 {
     public static readonly Color NormalColor = new Color(1f, 0.25f, 0.2f);
     public static readonly Color GrabColor = new Color(1f, 0.85f, 0.1f);
+    public static readonly Color ShotColor = new Color(1f, 0.55f, 0.15f);
 
     private const float PopDuration = 0.15f;
 
@@ -78,6 +79,10 @@ public class EnemyComboIndicator : MonoBehaviour
 
                 case MoveHitType.Grab:
                     colors.Add(GrabColor);
+                    break;
+
+                case MoveHitType.Shot:
+                    colors.Add(ShotColor);
                     break;
 
                 default:

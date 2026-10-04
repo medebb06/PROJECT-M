@@ -7,7 +7,8 @@ public enum MoveHitType
 {
     Normal, // kırmızı uyarı: parry / block
     Sweep,  // sarı uyarı + ALÇAK mavi kutu: ZIPLA (dash işe yaramaz)
-    Grab    // sarı uyarı + "!" + UZUN sarı kutu: KAÇ (dash / geri çekil)
+    Grab,   // sarı uyarı + "!" + UZUN sarı kutu: KAÇ (dash / geri çekil)
+    Shot    // OK (mermi): parry = geri yansıt, block = posture, dash = içinden geç
 }
 
 // Bir hamledeki tek vuruş.
@@ -98,7 +99,7 @@ public class AttackMove
 ///
 /// KURULUM: Düşman prefab'ına ekle. 'Moves' boşsa Düellocu'nun varsayılan
 /// hamleleri yüklenir (Inspector'da sağ tık > "Varsayılan Düellocu Hamleleri"
-/// ile de doldurulup düzenlenebilir).
+/// ile de doldurulup düzenlenebilir). Çevik / Ağır setleri: EnemyArchetype.
 /// </summary>
 [RequireComponent(typeof(EnemyController))]
 public class EnemyMoveset : MonoBehaviour
@@ -156,6 +157,24 @@ public class EnemyMoveset : MonoBehaviour
     private void FillDefaults()
     {
         moves = CreateDuelistMoves();
+    }
+
+    [ContextMenu("Çevik Hamleleri")]
+    private void FillQuick()
+    {
+        moves = CreateQuickMoves();
+    }
+
+    [ContextMenu("Ağır Hamleleri")]
+    private void FillHeavy()
+    {
+        moves = CreateHeavyMoves();
+    }
+
+    [ContextMenu("Okçu Hamleleri")]
+    private void FillArcher()
+    {
+        moves = CreateArcherMoves();
     }
 
     // Oyuncu uzaklığına göre ağırlıklı rastgele hamle. Uygun yoksa null
@@ -351,6 +370,247 @@ public class EnemyMoveset : MonoBehaviour
             for (int h = 0; h < moves[i].hits.Count; h++)
                 moves[i].hits[h].windup *= factor;
         }
+    }
+
+    // =========================================================
+    // ÇEVİK: kısa uyarılı SERİ kombolar (parry ritmi)
+    // Kombo arası ~0.3 sn: zincir penceresiyle (×1.5) ritme basılabilir,
+    // abanmak (mash) boşa basma cezasına takılır.
+    // =========================================================
+
+    public static List<AttackMove> CreateQuickMoves()
+    {
+        return new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Dürtme",
+                weight = 0.8f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.55f) }
+            },
+
+            new AttackMove
+            {
+                name = "Dörtlü Seri",
+                weight = 1.3f,
+                recoveryMultiplier = 1.5f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.6f),
+                    new MoveHit(MoveHitType.Normal, 0.32f),
+                    new MoveHit(MoveHitType.Normal, 0.32f),
+                    new MoveHit(MoveHitType.Normal, 0.45f, 0f, 1.2f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Beşli Seri",
+                weight = 0.8f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.8f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.6f),
+                    new MoveHit(MoveHitType.Normal, 0.3f),
+                    new MoveHit(MoveHitType.Normal, 0.35f),
+                    new MoveHit(MoveHitType.Normal, 0.3f),
+                    new MoveHit(MoveHitType.Normal, 0.5f, 0f, 1.3f)
+                }
+            },
+
+            new AttackMove
+            {
+                // Ritmi bozan kombo: 2. vuruş rastgele gecikir.
+                name = "Aldatmaca",
+                weight = 0.8f,
+                cooldown = 3f,
+                recoveryMultiplier = 1.4f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.6f),
+                    new MoveHit(MoveHitType.Normal, 0.6f, 0.4f),
+                    new MoveHit(MoveHitType.Normal, 0.3f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Seri + Süpürme",
+                weight = 0.6f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.55f),
+                    new MoveHit(MoveHitType.Normal, 0.32f),
+                    new MoveHit(MoveHitType.Sweep, 0.5f, 0f, 1.2f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Kapma",
+                weight = 0.3f,
+                cooldown = 7f,
+                hits = { new MoveHit(MoveHitType.Grab, 0.9f) }
+            }
+        };
+    }
+
+    // =========================================================
+    // AĞIR: yavaş, sert; sık yakalama ve süpürme
+    // Uzun uyarılar okunur ama ceza büyük; block posture'ı eritir.
+    // =========================================================
+
+    public static List<AttackMove> CreateHeavyMoves()
+    {
+        return new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Ağır Darbe",
+                weight = 1f,
+                hits = { new MoveHit(MoveHitType.Normal, 1.1f) }
+            },
+
+            new AttackMove
+            {
+                name = "Gecikmeli Ezme",
+                weight = 0.8f,
+                cooldown = 2f,
+                hits = { new MoveHit(MoveHitType.Normal, 1.3f, 0.6f, 1.3f) }
+            },
+
+            new AttackMove
+            {
+                name = "İkili Savuruş",
+                weight = 0.9f,
+                recoveryMultiplier = 1.5f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 1.0f),
+                    new MoveHit(MoveHitType.Normal, 0.7f, 0f, 1.2f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Yakalama",
+                weight = 0.9f,
+                cooldown = 4f,
+                hits = { new MoveHit(MoveHitType.Grab, 1.2f) }
+            },
+
+            new AttackMove
+            {
+                name = "Yer Süpürme",
+                weight = 0.9f,
+                cooldown = 3f,
+                hits = { new MoveHit(MoveHitType.Sweep, 1.1f, 0f, 1.3f, 1.2f) }
+            },
+
+            new AttackMove
+            {
+                name = "Darbe + Süpürme",
+                weight = 0.6f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 1.0f),
+                    new MoveHit(MoveHitType.Sweep, 0.7f, 0f, 1.2f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Süpürme + Yakalama",
+                weight = 0.6f,
+                cooldown = 6f,
+                recoveryMultiplier = 1.8f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Sweep, 1.0f),
+                    new MoveHit(MoveHitType.Grab, 0.85f)
+                }
+            }
+        };
+    }
+
+    // =========================================================
+    // OKÇU: mesafeden ok (Shot). Yakına gelinirse hançer / tekme.
+    // Okçunun Attack Range'i büyük (EnemyArchetype: 7); yakın dövüş
+    // vuruşlarının menzili bu yüzden küçük çarpanla (0.25 × 7 ≈ 1.75).
+    // =========================================================
+
+    public static List<AttackMove> CreateArcherMoves()
+    {
+        return new List<AttackMove>
+        {
+            new AttackMove
+            {
+                name = "Tek Ok",
+                weight = 1.2f,
+                minDistance = 2.5f,
+                hits = { new MoveHit(MoveHitType.Shot, 0.9f) }
+            },
+
+            new AttackMove
+            {
+                name = "Çifte Ok",
+                weight = 0.9f,
+                minDistance = 2.5f,
+                recoveryMultiplier = 1.3f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Shot, 0.8f),
+                    new MoveHit(MoveHitType.Shot, 0.45f)
+                }
+            },
+
+            new AttackMove
+            {
+                name = "Gecikmeli Ok",
+                weight = 0.8f,
+                minDistance = 2.5f,
+                hits = { new MoveHit(MoveHitType.Shot, 1.0f, 0.6f, 1.2f) }
+            },
+
+            new AttackMove
+            {
+                name = "Üçlü Yaylım",
+                weight = 0.6f,
+                minDistance = 3f,
+                cooldown = 4f,
+                recoveryMultiplier = 1.6f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Shot, 0.75f),
+                    new MoveHit(MoveHitType.Shot, 0.35f),
+                    new MoveHit(MoveHitType.Shot, 0.35f)
+                }
+            },
+
+            new AttackMove
+            {
+                // Yakına gelen oyuncuya hızlı hançer.
+                name = "Hançer",
+                weight = 1.5f,
+                maxDistance = 2.5f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.55f, 0f, 1f, 0.25f) }
+            },
+
+            new AttackMove
+            {
+                // Yakındaki oyuncuyu süpürüp geri itme: zıpla.
+                name = "Tekme Süpürme",
+                weight = 0.6f,
+                maxDistance = 2.5f,
+                cooldown = 3f,
+                hits = { new MoveHit(MoveHitType.Sweep, 0.7f, 0f, 1f, 0.3f) }
+            }
+        };
     }
 
     // =========================================================
