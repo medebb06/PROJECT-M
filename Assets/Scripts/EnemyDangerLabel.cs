@@ -26,8 +26,10 @@ public class EnemyDangerLabel : MonoBehaviour
     [Tooltip("Yazı boyutu (dünya birimi çarpanı).")]
     public float textSize = 0.05f;
 
-    [Tooltip("Sprite'ın tepesinden yükseklik (kombo noktalarının üstünde kalsın).")]
-    public float heightOffset = 0.75f;
+    [Tooltip(
+        "Can/denge çubuğunun üstünden yükseklik (kombo noktalarının da " +
+        "üstünde kalsın).")]
+    public float heightOffset = 0.5f;
 
     [Tooltip("'Şimdi' anında yazının büyüme çarpanı.")]
     public float urgentScale = 1.35f;
@@ -130,7 +132,12 @@ public class EnemyDangerLabel : MonoBehaviour
                 ? mainRenderer.bounds.max.y
                 : pos.y + 1f;
 
-        root.transform.position = new Vector3(pos.x, topY + heightOffset, pos.z);
+        root.transform.position =
+            new Vector3(
+                pos.x,
+                topY + EnemyOverheadBars.ReservedWorldHeight + heightOffset,
+                pos.z
+            );
 
         float time = Time.time;
         float t = time - shownAt;

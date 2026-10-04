@@ -18,8 +18,10 @@ public class EnemyComboIndicator : MonoBehaviour
 
     private const float PopDuration = 0.15f;
 
-    [Tooltip("Noktaların sprite'ın üstünden yüksekliği.")]
-    public float heightOffset = 0.3f;
+    [Tooltip(
+        "Noktaların düşman CAN/DENGE ÇUBUĞUNUN üstünden yüksekliği " +
+        "(çubuk yoksa sprite'ın üstünden).")]
+    public float heightOffset = 0.15f;
 
     [Tooltip("Noktalar arası mesafe (dünya birimi).")]
     public float spacing = 0.28f;
@@ -136,6 +138,9 @@ public class EnemyComboIndicator : MonoBehaviour
 
         float t = time - shownAt;
 
+        // Başın üstündeki can/denge çubuğunun ÜSTÜNE çık.
+        float barsHeight = EnemyOverheadBars.ReservedWorldHeight;
+
         float pop =
             t < PopDuration
                 ? Mathf.SmoothStep(0f, 1f, t / PopDuration)
@@ -160,7 +165,7 @@ public class EnemyComboIndicator : MonoBehaviour
                     : startX + (count - 1 - i) * spacing;
 
             sr.transform.position =
-                new Vector3(x, topY + heightOffset, position.z);
+                new Vector3(x, topY + barsHeight + heightOffset, position.z);
 
             Color c = colors[i];
             float scale = dotScale * pop;

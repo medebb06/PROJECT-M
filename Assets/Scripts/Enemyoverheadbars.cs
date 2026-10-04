@@ -8,7 +8,13 @@ using UnityEngine;
 ///   Vurunca azalan kısım kısa süre beyaz iz bırakır.
 ///   Denge kırıkken (execute fırsatı) denge çubuğu beyaz-altın yanıp söner.
 ///
+/// SADECE VURULUNCA GÖRÜNÜR: can azalınca ya da denge artınca (vuruş,
+/// parry, zehir, kusursuz kaçış...) belirir; 'Visible Duration' boyunca
+/// yeni hasar olmazsa söner. Denge kırıkken hep görünür.
+///
 /// Boss'ta gösterilmez (onun çubuğu ekranın üstünde, RunUI'da).
+/// Kombo noktaları ve DASH/ZIPLA yazısı çubuğun ÜSTÜNE yerleşir
+/// (ReservedWorldHeight).
 ///
 /// KURULUM YOK: oyun başında kendiliğinden oluşur. Ayar yapmak istersen
 /// sahnede boş bir objeye ekle (o kullanılır).
@@ -35,18 +41,32 @@ public class EnemyOverheadBars : MonoBehaviour
     public Color trailColor = new Color(1f, 1f, 1f, 0.85f);
     public Color backColor = new Color(0f, 0f, 0f, 0.6f);
 
-    [Header("Davranış")]
-    [Tooltip("Açık: sadece hasar almış (ya da dengesi dolmaya başlamış) düşmanda göster.")]
-    public bool onlyWhenEngaged = false;
+    [Header("Görünürlük")]
+    [Tooltip("Kapalı: çubuklar her zaman görünür.")]
+    public bool showOnlyAfterHit = true;
 
+    [Tooltip("Son hasardan sonra çubuğun görünür kaldığı süre (sn).")]
+    [Min(0f)]
+    public float visibleDuration = 3f;
+
+    [Tooltip("Sönme süresi (sn).")]
+    [Min(0.01f)]
+    public float fadeDuration = 0.4f;
+
+    [Header("İz")]
     [Tooltip("Beyaz izin azalan değere yetişme hızı (oran/sn).")]
     public float trailSpeed = 0.8f;
 
     [Tooltip("Beyaz iz azalmaya başlamadan önce bekleme (sn).")]
     public float trailDelay = 0.35f;
 
+    [Header("Eski çubuklar")]
     [Tooltip("Prefab'daki eski Slider çubuklarını gizle.")]
     public bool hideOldEnemyBars = true;
+
+    // Doğumdan sonraki bu süre içindeki değer değişimleri (RunManager'ın
+    // can/ölçek ayarı) "vuruldu" sayılmaz.
+    private const float SpawnGrace = 0.3f;
 
     private class Entry
     {
@@ -56,8 +76,10 @@ public class EnemyOverheadBars : MonoBehaviour
         public float healthTrail = 1f;
         public float balanceTrail = 0f;
         public float lastHealth = 1f;
+        public float lastBalance = 0f;
         public float trailHoldUntil;
-        public bool engaged;
+        public float createdAt;
+        public float lastHitTime = -999f;
         public bool oldBarsHidden;
     }
 
@@ -105,7 +127,37 @@ public class EnemyOverheadBars : MonoBehaviour
     }
 
     // =========================================================
-    // GÜNCELLEME (izler gerçek zamanla akar)
+    // DİĞER GÖSTERGELER İÇİN
+    // Çubukların sprite tepesinden itibaren kapladığı dünya yüksekliği.
+    // Kombo noktaları / tehlike yazısı bunun ÜSTÜNE çıkar. Çubuk
+    // görünmese de aynı yer ayrılır: göstergeler zıplamasın.
+    // =========================================================
+
+    public static float ReservedWorldHeight
+    {
+        get
+        {
+            if (instance == null || !instance.isActiveAndEnabled)
+                return 0f;
+
+            Camera cam = Camera.main;
+
+            if (cam == null || !cam.orthographic || Screen.height <= 0)
+                return instance.worldOffset + 0.2f;
+
+            float scale = Screen.height / 720f * instance.uiScale;
+
+            float barsPixels =
+                (instance.healthHeight + 2f + instance.balanceHeight + 2f) * scale;
+
+            float worldPerPixel = cam.orthographicSize * 2f / Screen.height;
+
+            return instance.worldOffset + barsPixels * worldPerPixel;
+        }
+    }
+
+    // =========================================================
+    // GÜNCELLEME (gerçek zamanla akar)
     // =========================================================
 
     private void LateUpdate()
@@ -120,30 +172,41 @@ public class EnemyOverheadBars : MonoBehaviour
             if (enemy == null)
                 continue;
 
-            Entry e = GetEntry(enemy);
+            Entry e = GetEntry(enemy, now);
 
             if (hideOldEnemyBars && !e.oldBarsHidden)
                 HideOldBars(enemy, e);
 
             float hp = HealthPercent(e);
             float bal = e.balance != null ? e.balance.BalancePercent : 0f;
+            bool broken = e.balance != null && e.balance.IsBroken;
 
-            if (hp < 0.999f || bal > 0.001f)
-                e.engaged = true;
+            bool afterSpawn = now - e.createdAt > SpawnGrace;
+
+            // VURULDU MU? Can azaldı ya da denge arttı.
+            if (afterSpawn)
+            {
+                if (hp < e.lastHealth - 0.0001f || bal > e.lastBalance + 0.0001f)
+                    e.lastHitTime = now;
+
+                // Denge kırıkken hep görünür (execute fırsatı).
+                if (broken)
+                    e.lastHitTime = now;
+            }
 
             // Can azaldıysa iz bir süre bekler, sonra yetişir.
             if (hp < e.lastHealth - 0.0001f)
                 e.trailHoldUntil = now + trailDelay;
 
             e.lastHealth = hp;
+            e.lastBalance = bal;
 
             if (e.healthTrail < hp)
                 e.healthTrail = hp;
             else if (now >= e.trailHoldUntil)
                 e.healthTrail = Mathf.MoveTowards(e.healthTrail, hp, trailSpeed * dt);
 
-            // Denge DOLARAK ilerler: iz, artan kısmı kısa süre beyaz gösterir
-            // (yeni eklenen denge hasarı beyaz → altına döner).
+            // Denge DOLARAK ilerler: yeni eklenen kısım kısa süre beyaz.
             if (bal < e.balanceTrail)
                 e.balanceTrail = bal;
             else
@@ -161,6 +224,19 @@ public class EnemyOverheadBars : MonoBehaviour
 
         for (int i = 0; i < stale.Count; i++)
             entries.Remove(stale[i]);
+    }
+
+    private float Alpha(Entry e)
+    {
+        if (!showOnlyAfterHit)
+            return 1f;
+
+        float since = Time.unscaledTime - e.lastHitTime;
+
+        if (since <= visibleDuration)
+            return 1f;
+
+        return 1f - Mathf.Clamp01((since - visibleDuration) / fadeDuration);
     }
 
     // =========================================================
@@ -203,17 +279,29 @@ public class EnemyOverheadBars : MonoBehaviour
             if (!entries.TryGetValue(enemy, out Entry e))
                 continue;
 
-            if (onlyWhenEngaged && !e.engaged)
+            // Canı olmayan / kurulmamış düşman (şablon vb.): çizme.
+            if (e.health == null || e.health.MaxHealth <= 0)
                 continue;
 
-            DrawBars(cam, enemy, e, scale);
+            float alpha = Alpha(e);
+
+            if (alpha <= 0.001f)
+                continue;
+
+            DrawBars(cam, enemy, e, scale, alpha);
         }
 
         GUI.matrix = oldMatrix;
         GUI.color = oldColor;
     }
 
-    private void DrawBars(Camera cam, EnemyController enemy, Entry e, float scale)
+    private static Color A(Color c, float alpha)
+    {
+        c.a *= alpha;
+        return c;
+    }
+
+    private void DrawBars(Camera cam, EnemyController enemy, Entry e, float scale, float alpha)
     {
         Vector3 top = enemy.transform.position;
 
@@ -226,7 +314,7 @@ public class EnemyOverheadBars : MonoBehaviour
 
         Vector3 screen = cam.WorldToScreenPoint(top);
 
-        // Kameranın arkasında / ekran dışında.
+        // Kameranın arkasında.
         if (screen.z < 0f)
             return;
 
@@ -246,17 +334,17 @@ public class EnemyOverheadBars : MonoBehaviour
         float hp = HealthPercent(e);
 
         // -------- CAN --------
-        GUI.color = backColor;
+        GUI.color = A(backColor, alpha);
         GUI.DrawTexture(new Rect(x - 1f, y - 1f, w + 2f, healthHeight + 2f), Texture2D.whiteTexture);
 
         // Beyaz iz (yeni kaybedilen can).
         if (e.healthTrail > hp)
         {
-            GUI.color = trailColor;
+            GUI.color = A(trailColor, alpha);
             GUI.DrawTexture(new Rect(x, y, w * e.healthTrail, healthHeight), Texture2D.whiteTexture);
         }
 
-        GUI.color = healthColor;
+        GUI.color = A(healthColor, alpha);
         GUI.DrawTexture(new Rect(x, y, w * hp, healthHeight), Texture2D.whiteTexture);
 
         y += healthHeight + 2f;
@@ -265,7 +353,7 @@ public class EnemyOverheadBars : MonoBehaviour
         float bal = e.balance != null ? e.balance.BalancePercent : 0f;
         bool broken = e.balance != null && e.balance.IsBroken;
 
-        GUI.color = new Color(backColor.r, backColor.g, backColor.b, backColor.a * 0.85f);
+        GUI.color = A(backColor, alpha * 0.85f);
         GUI.DrawTexture(new Rect(x - 1f, y - 1f, w + 2f, balanceHeight + 2f), Texture2D.whiteTexture);
 
         if (broken)
@@ -273,16 +361,16 @@ public class EnemyOverheadBars : MonoBehaviour
             // Execute fırsatı: yanıp sönen dolu çubuk.
             bool flash = Mathf.Repeat(Time.unscaledTime * 8f, 1f) < 0.5f;
 
-            GUI.color = flash ? Color.white : balanceColor;
+            GUI.color = A(flash ? Color.white : balanceColor, alpha);
             GUI.DrawTexture(new Rect(x, y, w, balanceHeight), Texture2D.whiteTexture);
             return;
         }
 
         // Altın = yerleşmiş denge, beyaz = yeni eklenen kısım.
-        GUI.color = trailColor;
+        GUI.color = A(trailColor, alpha);
         GUI.DrawTexture(new Rect(x, y, w * bal, balanceHeight), Texture2D.whiteTexture);
 
-        GUI.color = balanceColor;
+        GUI.color = A(balanceColor, alpha);
         GUI.DrawTexture(new Rect(x, y, w * Mathf.Min(bal, e.balanceTrail), balanceHeight), Texture2D.whiteTexture);
     }
 
@@ -290,7 +378,7 @@ public class EnemyOverheadBars : MonoBehaviour
     // YARDIMCILAR
     // =========================================================
 
-    private Entry GetEntry(EnemyController enemy)
+    private Entry GetEntry(EnemyController enemy, float now)
     {
         if (entries.TryGetValue(enemy, out Entry e))
             return e;
@@ -299,12 +387,14 @@ public class EnemyOverheadBars : MonoBehaviour
         {
             health = enemy.GetComponent<Health>(),
             balance = enemy.GetComponent<EnemyBalance>(),
-            sprite = FindMainRenderer(enemy)
+            sprite = FindMainRenderer(enemy),
+            createdAt = now
         };
 
         e.lastHealth = HealthPercent(e);
         e.healthTrail = e.lastHealth;
-        e.balanceTrail = e.balance != null ? e.balance.BalancePercent : 0f;
+        e.lastBalance = e.balance != null ? e.balance.BalancePercent : 0f;
+        e.balanceTrail = e.lastBalance;
 
         entries.Add(enemy, e);
 
