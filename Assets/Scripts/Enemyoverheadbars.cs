@@ -145,7 +145,7 @@ public class EnemyOverheadBars : MonoBehaviour
             if (cam == null || !cam.orthographic || Screen.height <= 0)
                 return instance.worldOffset + 0.2f;
 
-            float scale = Screen.height / 720f * instance.uiScale;
+            float scale = GameSettings.GuiScale(instance.uiScale);
 
             float barsPixels =
                 (instance.healthHeight + 2f + instance.balanceHeight + 2f) * scale;
@@ -256,7 +256,7 @@ public class EnemyOverheadBars : MonoBehaviour
         // RunUI'nın (menüler) ARKASINDA kalsın.
         GUI.depth = 10;
 
-        float scale = Screen.height / 720f * uiScale;
+        float scale = GameSettings.GuiScale(uiScale);
 
         Matrix4x4 oldMatrix = GUI.matrix;
         Color oldColor = GUI.color;

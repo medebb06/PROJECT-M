@@ -5,6 +5,9 @@ using UnityEngine;
 ///   CAN   : kırmızı; kaybedilen kısım beyaz iz bırakıp yetişir, iyileşme yeşil
 ///           parlar, can azken yanıp söner. Üstünde "73 / 100".
 ///   İNFAZ : altın; 3 bölmeli (≈ 3 öldürme). Dolunca parlar + "[E] İNFAZ".
+///   YETENEK: barların sağında [Q] yuvası; bekleme süresi aşağıdan dolar,
+///           hazırken yeteneğin renginde parlar. Seviye noktaları altta.
+/// Ana menüde (Lobi) görünmez. Boyut: Ayarlar → Arayüz boyutu.
 ///
 /// KURULUM YOK: kendiliğinden oluşur. Eski can barlarını (HealthBarUI /
 /// HealthUnitsUI) gizler ('Hide Old Health UI').
@@ -44,6 +47,8 @@ public class PlayerHud : MonoBehaviour
 
     private GUIStyle numberStyle;
     private GUIStyle labelStyle;
+    private GUIStyle glyphStyle;
+    private GUIStyle keyStyle;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -123,6 +128,11 @@ public class PlayerHud : MonoBehaviour
         if (Event.current.type != EventType.Repaint || health == null)
             return;
 
+        RunManager run = RunManager.Instance;
+
+        if (run != null && run.State == RunState.Lobby)
+            return;
+
         // Menülerin (RunUI) arkasında, düşman çubuklarının önünde.
         GUI.depth = 8;
 
@@ -141,9 +151,23 @@ public class PlayerHud : MonoBehaviour
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
+
+            glyphStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            keyStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
         }
 
-        float scale = Screen.height / 720f * uiScale;
+        float scale = GameSettings.GuiScale(uiScale);
 
         Matrix4x4 oldMatrix = GUI.matrix;
         Color oldColor = GUI.color;
@@ -265,7 +289,86 @@ public class PlayerHud : MonoBehaviour
         GUI.color = full ? executeColor : new Color(0.8f, 0.8f, 0.8f, 0.7f);
         GUI.Label(new Rect(x + barWidth + 10f, y - 4f, 140f, executeHeight + 8f), full ? "[E] İNFAZ" : "İNFAZ", labelStyle);
 
+        // ---------------- YETENEK YUVASI ----------------
+
+        DrawAbilitySlot(x + barWidth + 92f, y + executeHeight, now);
+
         GUI.matrix = oldMatrix;
         GUI.color = oldColor;
+    }
+
+    // bottom: yuvanın alt kenarı (infaz barının altıyla hizalı).
+    private void DrawAbilitySlot(float x, float bottom, float now)
+    {
+        PlayerAbility ability = PlayerAbility.Instance;
+
+        if (ability == null || !ability.HasAbility)
+            return;
+
+        const float size = 38f;
+
+        float y = bottom - size;
+
+        Color c = AbilityInfo.Color(ability.Type);
+        bool ready = ability.Ready;
+        float charge = ability.Charge01;
+
+        // Hazır olunca kısa büyüme.
+        float pop = Mathf.Clamp01(1f - (now - ability.LastReadyTime) / 0.35f);
+        float grow = pop * 4f;
+
+        Rect r = new Rect(x - grow * 0.5f, y - grow * 0.5f, size + grow, size + grow);
+
+        // Arka plan + çerçeve.
+        GUI.color = new Color(0f, 0f, 0f, 0.65f);
+        GUI.DrawTexture(new Rect(r.x - 2f, r.y - 2f, r.width + 4f, r.height + 4f), Texture2D.whiteTexture);
+
+        // Dolum (aşağıdan yukarı).
+        Color fillColor = c;
+        fillColor.a = ready ? 0.9f : 0.45f;
+
+        GUI.color = fillColor;
+        GUI.DrawTexture(new Rect(r.x, r.yMax - r.height * charge, r.width, r.height * charge), Texture2D.whiteTexture);
+
+        // Hazırken nabız gibi parlayan çerçeve.
+        if (ready)
+        {
+            float pulse = 0.5f + 0.5f * Mathf.Sin(now * 5f);
+
+            GUI.color = new Color(1f, 1f, 1f, 0.25f + 0.35f * pulse);
+
+            GUI.DrawTexture(new Rect(r.x - 2f, r.y - 2f, r.width + 4f, 2f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x - 2f, r.yMax, r.width + 4f, 2f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x - 2f, r.y, 2f, r.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.xMax, r.y, 2f, r.height), Texture2D.whiteTexture);
+        }
+
+        // Kullanınca kısa beyaz flaş.
+        float used = Mathf.Clamp01(1f - (now - ability.LastUsedTime) / 0.25f);
+
+        if (used > 0f)
+        {
+            GUI.color = new Color(1f, 1f, 1f, 0.7f * used);
+            GUI.DrawTexture(r, Texture2D.whiteTexture);
+        }
+
+        // İkon yazısı.
+        string glyph = ready ? AbilityInfo.Glyph(ability.Type) : Mathf.CeilToInt(ability.CooldownLeft).ToString();
+
+        GUI.color = new Color(0f, 0f, 0f, 0.85f);
+        GUI.Label(new Rect(r.x + 1f, r.y + 1f, r.width, r.height), glyph, glyphStyle);
+        GUI.color = ready ? Color.white : new Color(0.85f, 0.85f, 0.85f);
+        GUI.Label(r, glyph, glyphStyle);
+
+        // [Q] üstte.
+        GUI.color = ready ? c : new Color(0.7f, 0.7f, 0.7f, 0.8f);
+        GUI.Label(new Rect(x, y - 15f, size, 14f), "[Q]", keyStyle);
+
+        // Seviye noktaları altta.
+        for (int i = 0; i < AbilityInfo.MaxLevel; i++)
+        {
+            GUI.color = i < ability.Level ? c : new Color(1f, 1f, 1f, 0.2f);
+            GUI.DrawTexture(new Rect(x + size * 0.5f - 13f + i * 10f, y + size + 4f, 6f, 3f), Texture2D.whiteTexture);
+        }
     }
 }

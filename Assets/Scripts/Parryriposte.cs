@@ -152,7 +152,8 @@ public class ParryRiposte : MonoBehaviour
         if (!active || !result.hit)
             return;
 
-        if (info.source == DamageSource.Poison)
+        // Zehir ve yetenek vuruşları riposte hakkı yemez.
+        if (info.source == DamageSource.Poison || info.source == DamageSource.Ability)
             return;
 
         HitsLeft--;

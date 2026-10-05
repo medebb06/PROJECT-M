@@ -7,7 +7,8 @@ public enum DamageSource
     Attack,   // oyuncunun kombo vuruşu
     Slam,     // ground slam
     Poison,   // zehir tiki (ileride)
-    Other
+    Other,
+    Ability   // Q yeteneği (PlayerAbility)
 }
 
 // Oyuncunun düşmana vuracağı bir hasarın TAM tarifi.

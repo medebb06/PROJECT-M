@@ -262,7 +262,7 @@ public class CombatCallout : MonoBehaviour
 
         tm.text = label;
         tm.fontSize = 64;
-        tm.characterSize = characterSize;
+        tm.characterSize = characterSize * GameSettings.WorldTextScale;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.fontStyle = FontStyle.Bold;

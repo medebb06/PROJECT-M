@@ -5,10 +5,12 @@ using UnityEngine;
 /// <summary>
 /// KOŞULAR ARASI İLERLEME (kalıcı). PlayerPrefs'e JSON olarak kaydedilir.
 ///
-/// Stat grind YOK: ilerleme ÇEŞİTLİLİK açar.
+/// İlerleme:
 ///  - Charm kilitleri: bazı charm'lar bir hedefe ulaşınca havuza girer
 ///    (CharmDefinition.unlockId).
 ///  - Zorluk (Isı) kademeleri: N. kademede kazanınca N+1 açılır.
+///  - ÖZ: koşu sonunda kazanılır; ana menüde DEMİRCİ'den kalıcı yükseltme
+///    ve yetenek kilidi alınır (MetaUpgrades listesi).
 ///
 /// Sıfırlamak için: Unity menüsü yok; ResetAll() çağır ya da PlayerPrefs'ten
 /// "projectm_meta_v1" anahtarını sil.
@@ -54,6 +56,13 @@ public static class MetaProgress
         public int highestHeatWon = -1;
         public int selectedHeat;
         public List<string> unlocked = new List<string>();
+
+        // --- Kalıcı gelişim (Öz) ---
+        public int essence;
+        public int totalEssence;
+        public List<string> upgradeIds = new List<string>();
+        public List<int> upgradeLevels = new List<int>();
+        public int selectedAbility = -1;
     }
 
     private static Data data;
@@ -100,6 +109,115 @@ public static class MetaProgress
             Save();
         }
     }
+
+    // ---------------------------------------------------------
+    // ÖZ ve KALICI GELİŞİM (Demirci)
+    // ---------------------------------------------------------
+
+    public static int Essence => D.essence;
+    public static int TotalEssence => D.totalEssence;
+
+    public static int UpgradeLevel(string id)
+    {
+        int i = D.upgradeIds.IndexOf(id);
+
+        return i >= 0 && i < D.upgradeLevels.Count ? D.upgradeLevels[i] : 0;
+    }
+
+    /// <summary>Bir sonraki seviyenin bedeli; en üst seviyedeyse -1.</summary>
+    public static int NextCost(MetaUpgrade upgrade)
+    {
+        int level = UpgradeLevel(upgrade.id);
+
+        if (level >= upgrade.costs.Length)
+            return -1;
+
+        return upgrade.costs[level];
+    }
+
+    public static bool TryBuy(MetaUpgrade upgrade)
+    {
+        int cost = NextCost(upgrade);
+
+        if (cost < 0 || D.essence < cost)
+            return false;
+
+        if (!string.IsNullOrEmpty(upgrade.requires) && UpgradeLevel(upgrade.requires) <= 0)
+            return false;
+
+        D.essence -= cost;
+
+        int i = D.upgradeIds.IndexOf(upgrade.id);
+
+        if (i < 0)
+        {
+            D.upgradeIds.Add(upgrade.id);
+            D.upgradeLevels.Add(1);
+        }
+        else
+        {
+            while (D.upgradeLevels.Count <= i)
+                D.upgradeLevels.Add(0);
+
+            D.upgradeLevels[i]++;
+        }
+
+        Save();
+
+        return true;
+    }
+
+    public static void AddEssence(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        D.essence += amount;
+        D.totalEssence += amount;
+
+        Save();
+    }
+
+    /// <summary>Kilitli yeteneğin Demirci bedeli (kilit yoksa / bulunamazsa -1).</summary>
+    public static int AbilityUnlockCost(AbilityType type)
+    {
+        MetaUpgrade[] all = MetaUpgrades.All;
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i].isAbility && all[i].ability == type)
+                return NextCost(all[i]);
+        }
+
+        return -1;
+    }
+
+    public static bool IsAbilityUnlocked(AbilityType type)
+    {
+        string id = AbilityInfo.UnlockId(type);
+
+        return string.IsNullOrEmpty(id) || UpgradeLevel(id) > 0;
+    }
+
+    /// <summary>Menüde seçilen başlangıç yeteneği (-1 = seçilmedi).</summary>
+    public static int SelectedAbility
+    {
+        get => D.selectedAbility;
+        set
+        {
+            D.selectedAbility = value;
+            Save();
+        }
+    }
+
+    // Değerler (yükseltme seviyelerinden).
+    public static int BonusMaxHealth => UpgradeLevel(MetaUpgrades.Health) * 10;
+    public static float BonusPostHeal => UpgradeLevel(MetaUpgrades.PostHeal) * 0.03f;
+    public static float ExecuteFillMultiplier => 1f + UpgradeLevel(MetaUpgrades.ExecuteFill) * 0.15f;
+    public static float AbilityCooldownMultiplier => 1f - UpgradeLevel(MetaUpgrades.AbilityCooldown) * 0.08f;
+    public static float ShopPriceMultiplier => 1f - UpgradeLevel(MetaUpgrades.ShopDiscount) * 0.08f;
+    public static int StartGold => UpgradeLevel(MetaUpgrades.StartGold) * 25;
+    public static float EssenceMultiplier => 1f + UpgradeLevel(MetaUpgrades.EssenceGain) * 0.1f;
 
     public static bool IsUnlocked(string id)
     {
@@ -182,6 +300,12 @@ public static class MetaProgress
 
         if (data.unlocked == null)
             data.unlocked = new List<string>();
+
+        if (data.upgradeIds == null)
+            data.upgradeIds = new List<string>();
+
+        if (data.upgradeLevels == null)
+            data.upgradeLevels = new List<int>();
     }
 
     private static void Save()
@@ -195,4 +319,86 @@ public static class MetaProgress
         data = new Data();
         Save();
     }
+}
+
+/// <summary>Demirci'nin kalıcı yükseltmesi.</summary>
+public class MetaUpgrade
+{
+    public string id;
+    public string name;
+    public string description;   // {0} = seviye başı değer metni
+    public int[] costs;          // seviye başına bedel (uzunluk = max seviye)
+    public string requires;      // önce alınması gereken (boş = yok)
+    public bool isAbility;
+    public AbilityType ability;
+}
+
+/// <summary>Kalıcı yükseltme listesi (sıra = menü sırası).</summary>
+public static class MetaUpgrades
+{
+    public const string Health = "hp";
+    public const string PostHeal = "postheal";
+    public const string ExecuteFill = "execfill";
+    public const string AbilityCooldown = "abilitycd";
+    public const string ShopDiscount = "shop";
+    public const string StartGold = "gold";
+    public const string EssenceGain = "essence";
+
+    public static readonly MetaUpgrade[] All =
+    {
+        new MetaUpgrade
+        {
+            id = Health, name = "Dayanıklılık",
+            description = "Koşuya +10 max can ile başla (seviye başı).",
+            costs = new[] { 30, 50, 80, 120, 170 }
+        },
+        new MetaUpgrade
+        {
+            id = PostHeal, name = "Nefeslenme",
+            description = "Nöbet grubu temizlenince +%3 ek iyileşme (seviye başı).",
+            costs = new[] { 40, 70, 110 }
+        },
+        new MetaUpgrade
+        {
+            id = ExecuteFill, name = "Cellat",
+            description = "İnfaz barı %15 daha hızlı dolar (seviye başı).",
+            costs = new[] { 40, 70, 110 }
+        },
+        new MetaUpgrade
+        {
+            id = AbilityCooldown, name = "Odaklanma",
+            description = "Yetenek bekleme süresi −%8 (seviye başı).",
+            costs = new[] { 50, 80, 120 }
+        },
+        new MetaUpgrade
+        {
+            id = ShopDiscount, name = "Pazarlık",
+            description = "Dükkan fiyatları −%8 (seviye başı).",
+            costs = new[] { 35, 60, 90 }
+        },
+        new MetaUpgrade
+        {
+            id = StartGold, name = "Kese",
+            description = "Koşuya +25 altınla başla (seviye başı).",
+            costs = new[] { 25, 45, 70 }
+        },
+        new MetaUpgrade
+        {
+            id = EssenceGain, name = "Öz Toplayıcı",
+            description = "Koşu sonunda +%10 öz (seviye başı).",
+            costs = new[] { 60, 100, 150 }
+        },
+        new MetaUpgrade
+        {
+            id = AbilityInfo.UnlockId(AbilityType.Frost), name = "Yetenek: Buz Nefesi",
+            description = "Düşmanların zamanı yavaşlar, öndekiler donar.",
+            costs = new[] { 90 }, isAbility = true, ability = AbilityType.Frost
+        },
+        new MetaUpgrade
+        {
+            id = AbilityInfo.UnlockId(AbilityType.Fire), name = "Yetenek: Alev Dalgası",
+            description = "Öndeki düşmanları yakar; sersemlemiş düşmana çift yanık.",
+            costs = new[] { 90 }, isAbility = true, ability = AbilityType.Fire
+        }
+    };
 }

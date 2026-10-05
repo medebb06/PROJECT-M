@@ -123,6 +123,9 @@ public class ExecuteMeter : MonoBehaviour
 
         bool wasFull = IsFull;
 
+        // Kalıcı gelişim: Cellat (dolum hızı).
+        amount *= MetaProgress.ExecuteFillMultiplier;
+
         Fill = Mathf.Clamp01(Fill + amount);
 
         if (!wasFull && IsFull)

@@ -6,8 +6,12 @@ using UnityEngine;
 ///   Lobi (zorluk seçimi) · HUD (perde/oda, altın, charm'lar) · Boss çubuğu ·
 ///   Kapı seçimi · Charm seçimi · Dükkan · Dinlenme · Koşu sonu / Zafer.
 ///
+/// Ana menü (Lobi): BAŞLA / KALICI GELİŞİM (Demirci) / AYARLAR / ÇIKIŞ.
+/// Koşu içinde Esc: duraklatma menüsü (Devam / Ayarlar / Ana menü).
+///
 /// Tuşlar:
-///   Lobi: ←/→ zorluk, Enter başla.   Seçimler: 1/2/3 ya da tıkla.
+///   Menü: W/S ya da ↑/↓ seç, Enter onayla, Esc geri.
+///   Yeni koşu: ←/→ zorluk, Enter başla.   Seçimler: 1/2/3 ya da tıkla.
 ///   Dükkan: 1..4 satın al, R yenile, Enter çık.   Sonuç: Enter.
 ///   TAB (basılı): canlı istatistik.
 /// Boyut: 'UI Scale'. RunManager kendiliğinden ekler.
@@ -37,7 +41,12 @@ public class RunUI : MonoBehaviour
     private GUIStyle legendStyle;
     private GUIStyle panelStyle;
 
+    private GUIStyle menuTitleStyle;
+    private GUIStyle menuItemStyle;
+    private GUIStyle menuHintStyle;
+
     private Texture2D dimTexture;
+    private Texture2D sideFadeTexture;
     private Texture2D panelTexture;
     private Texture2D cardTexture;
     private Texture2D cardHoverTexture;
@@ -54,6 +63,24 @@ public class RunUI : MonoBehaviour
     private static readonly Color ColHit = new Color(0.95f, 0.25f, 0.25f);
 
     private const float Pad = 8f;
+
+    // ---------------- MENÜ DURUMU ----------------
+
+    private enum MenuPage { Main, NewRun, Meta, Settings }
+
+    private MenuPage page = MenuPage.Main;
+    private int mainIndex;
+    private bool pauseSettings;
+    private bool confirmAbandon;
+    private float pendingUiScale = -1f;
+    private string metaMessage = "";
+    private Vector2 lastMenuMouse;
+    private float metaMessageUntil;
+
+    private static readonly string[] MainItems =
+    {
+        "BAŞLA", "KALICI GELİŞİM", "AYARLAR", "ÇIKIŞ"
+    };
     private const string GoldIcon = "●";
 
     // =========================================================
@@ -70,14 +97,40 @@ public class RunUI : MonoBehaviour
         switch (run.State)
         {
             case RunState.Lobby:
-                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
-                    run.ChangeHeat(-1);
+                UpdateLobby(run);
+                break;
 
-                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
-                    run.ChangeHeat(1);
+            case RunState.AbilityOffer:
+                for (int i = 0; i < 9; i++)
+                {
+                    if (NumberPressed(i))
+                        run.ChooseAbility(i);
+                }
+                break;
 
-                if (EnterPressed() || Input.GetKeyDown(KeyCode.Space))
-                    run.RequestStart();
+            case RunState.Fighting:
+            case RunState.Cleared:
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    if (run.IsPaused)
+                    {
+                        if (pauseSettings)
+                        {
+                            pauseSettings = false;
+                            GameSettings.Save();
+                        }
+                        else
+                        {
+                            run.SetPaused(false);
+                        }
+                    }
+                    else if (run.CanPause)
+                    {
+                        pauseSettings = false;
+                        confirmAbandon = false;
+                        run.SetPaused(true);
+                    }
+                }
                 break;
 
             case RunState.Offer:
@@ -132,6 +185,94 @@ public class RunUI : MonoBehaviour
         }
     }
 
+    private void UpdateLobby(RunManager run)
+    {
+        bool back = Input.GetKeyDown(KeyCode.Escape);
+
+        switch (page)
+        {
+            case MenuPage.Main:
+                if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+                    mainIndex = (mainIndex + MainItems.Length - 1) % MainItems.Length;
+
+                if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
+                    mainIndex = (mainIndex + 1) % MainItems.Length;
+
+                if (EnterPressed() || Input.GetKeyDown(KeyCode.Space))
+                    ActivateMain(run, mainIndex);
+                break;
+
+            case MenuPage.NewRun:
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
+                    run.ChangeHeat(-1);
+
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
+                    run.ChangeHeat(1);
+
+                if (EnterPressed() || Input.GetKeyDown(KeyCode.Space))
+                    StartRun(run);
+
+                if (back)
+                    page = MenuPage.Main;
+                break;
+
+            case MenuPage.Meta:
+            case MenuPage.Settings:
+                if (back)
+                {
+                    if (page == MenuPage.Settings)
+                        GameSettings.Save();
+
+                    page = MenuPage.Main;
+                }
+                break;
+        }
+    }
+
+    private void ActivateMain(RunManager run, int index)
+    {
+        switch (index)
+        {
+            case 0:
+                // Zorluk kademesi açık değilse doğrudan başla.
+                if (MetaProgress.HeatUnlocked > 0)
+                    page = MenuPage.NewRun;
+                else
+                    StartRun(run);
+                break;
+
+            case 1:
+                page = MenuPage.Meta;
+                break;
+
+            case 2:
+                pendingUiScale = -1f;
+                page = MenuPage.Settings;
+                break;
+
+            case 3:
+                QuitGame();
+                break;
+        }
+    }
+
+    private void StartRun(RunManager run)
+    {
+        page = MenuPage.Main;
+        run.RequestStart();
+    }
+
+    private static void QuitGame()
+    {
+        GameSettings.Save();
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
     private static bool EnterPressed()
     {
         return
@@ -157,7 +298,7 @@ public class RunUI : MonoBehaviour
         if (run == null || run.Inventory == null)
             return;
 
-        float scale = Screen.height / 720f * uiScale;
+        float scale = GameSettings.GuiScale(uiScale);
 
         GUI.matrix =
             Matrix4x4.Scale(new Vector3(scale, scale, 1f));
@@ -169,7 +310,7 @@ public class RunUI : MonoBehaviour
 
         if (run.State == RunState.Lobby)
         {
-            DrawLobby(run, width, height);
+            DrawMainMenu(run, width, height);
             return;
         }
 
@@ -178,6 +319,10 @@ public class RunUI : MonoBehaviour
 
         switch (run.State)
         {
+            case RunState.AbilityOffer:
+                DrawAbilityOffer(run, width, height);
+                break;
+
             case RunState.Offer:
                 DrawOffer(run, width, height);
                 break;
@@ -218,21 +363,488 @@ public class RunUI : MonoBehaviour
 
         if (
             (run.State == RunState.Fighting || run.State == RunState.Cleared) &&
-            Input.GetKey(liveStatsKey)
+            Input.GetKey(liveStatsKey) &&
+            !run.IsPaused
         )
         {
             DrawLiveStats(run, width);
         }
+
+        if (run.IsPaused)
+            DrawPause(run, width, height);
+        else
+            pauseSettings = false;
     }
 
     // =========================================================
     // LOBİ
     // =========================================================
 
-    private void DrawLobby(RunManager run, float width, float height)
+    // =========================================================
+    // ANA MENÜ
+    // =========================================================
+
+    private void DrawMainMenu(RunManager run, float width, float height)
+    {
+        // Sol tarafta koyu geçiş: arkadaki orman görünür kalsın.
+        GUI.DrawTexture(new Rect(0, 0, Mathf.Min(width, 760f), height), sideFadeTexture);
+
+        switch (page)
+        {
+            case MenuPage.Main:
+                DrawMainPage(run, width, height);
+                break;
+
+            case MenuPage.NewRun:
+                DrawLobby(run, width, height);
+                break;
+
+            case MenuPage.Meta:
+                DrawMetaPage(width, height);
+                break;
+
+            case MenuPage.Settings:
+                DrawSettingsPanel(width, height, () =>
+                {
+                    GameSettings.Save();
+                    page = MenuPage.Main;
+                });
+                break;
+        }
+    }
+
+    private void DrawMainPage(RunManager run, float width, float height)
+    {
+        float x = 70f;
+        float y = height * 0.2f;
+
+        // Başlık (gölgeli).
+        Color old = GUI.color;
+
+        GUI.color = new Color(0f, 0f, 0f, 0.7f);
+        GUI.Label(new Rect(x + 3f, y + 3f, 600f, 70f), "PROJECT M", menuTitleStyle);
+        GUI.color = old;
+        GUI.Label(new Rect(x, y, 600f, 70f), "PROJECT M", menuTitleStyle);
+
+        y += 70f;
+
+        GUI.Label(
+            new Rect(x + 4f, y, 600f, 18f),
+            "<color=#BBBBBB>denge • parry • infaz</color>",
+            smallStyle
+        );
+
+        y += 60f;
+
+        Event e = Event.current;
+
+        // Fare hareket ettiyse üzerindeki madde seçilir (klavye seçimini ezmesin).
+        bool mouseMoved =
+            e.type == EventType.Repaint &&
+            (e.mousePosition - lastMenuMouse).sqrMagnitude > 1f;
+
+        for (int i = 0; i < MainItems.Length; i++)
+        {
+            Rect r = new Rect(x, y, 320f, 34f);
+
+            if (mouseMoved && r.Contains(e.mousePosition))
+                mainIndex = i;
+
+            bool selected = i == mainIndex;
+
+            string label = MainItems[i];
+
+            if (i == 1)
+                label += "   <size=14><color=#C9A0FF>◆ " + MetaProgress.Essence + " öz</color></size>";
+
+            string text =
+                selected
+                    ? "<color=#FFD54A>›  " + label + "</color>"
+                    : "<color=#DDDDDD>    " + label + "</color>";
+
+            if (GUI.Button(r, text, menuItemStyle))
+            {
+                mainIndex = i;
+                ActivateMain(run, i);
+            }
+
+            y += 40f;
+        }
+
+        if (e.type == EventType.Repaint)
+            lastMenuMouse = e.mousePosition;
+
+        // Alt bilgi.
+        string stats =
+            "Koşu " + MetaProgress.Runs +
+            "   •   Zafer " + MetaProgress.Wins +
+            "   •   En iyi perde " + MetaProgress.BestAct;
+
+        if (run.LastEssence > 0)
+            stats += "   •   <color=#C9A0FF>son koşu +" + run.LastEssence + " öz</color>";
+
+        GUI.Label(new Rect(x, height - 56f, 700f, 18f), stats, smallStyle);
+
+        GUI.Label(
+            new Rect(x, height - 36f, 900f, 18f),
+            "[Q] yetenek   [E] infaz   [Esc] duraklat   W/S + Enter: menü",
+            menuHintStyle
+        );
+    }
+
+    // ---------------- KALICI GELİŞİM (DEMİRCİ) ----------------
+
+    private void DrawMetaPage(float width, float height)
+    {
+        MetaUpgrade[] list = MetaUpgrades.All;
+
+        float rowH = 42f;
+        float panelWidth = Mathf.Min(660f, width - 2f * Pad);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 96f + list.Length * rowH + 50f);
+
+        Rect panel =
+            new Rect(
+                Mathf.Max(Pad, 60f),
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float y = panel.y + 12f;
+
+        GUI.Label(new Rect(panel.x + 16f, y, panelWidth, 30f), "<b>DEMİRCİ</b>  <size=14><color=#BBBBBB>kalıcı gelişim</color></size>", titleStyle);
+
+        GUI.Label(
+            new Rect(panel.x, y, panelWidth - 16f, 30f),
+            "<size=18><color=#C9A0FF>◆ " + MetaProgress.Essence + " öz</color></size>",
+            RightAligned(titleStyle)
+        );
+
+        y += 30f;
+
+        GUI.Label(
+            new Rect(panel.x + 16f, y, panelWidth - 32f, 32f),
+            "<color=#AAAAAA>Öz koşu sonunda kazanılır (öldürme, perde, boss, zafer; ısı arttırır). " +
+            "Ana menüye dönmek de koşuyu bitirir.</color>",
+            legendStyle
+        );
+
+        y += 40f;
+
+        for (int i = 0; i < list.Length; i++)
+        {
+            MetaUpgrade u = list[i];
+
+            int level = MetaProgress.UpgradeLevel(u.id);
+            int max = u.costs.Length;
+            int cost = MetaProgress.NextCost(u);
+
+            Rect row = new Rect(panel.x + 12f, y, panelWidth - 24f, rowH - 4f);
+
+            Color old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, i % 2 == 0 ? 0.04f : 0.08f);
+            GUI.DrawTexture(row, Texture2D.whiteTexture);
+            GUI.color = old;
+
+            string nameColor = u.isAbility ? "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(u.ability)) : "#FFFFFF";
+
+            string pips = "";
+
+            if (!u.isAbility)
+            {
+                for (int p = 0; p < max; p++)
+                    pips += p < level ? "<color=#FFD54A>■</color>" : "<color=#555555>■</color>";
+            }
+
+            GUI.Label(
+                new Rect(row.x + 8f, row.y + 2f, row.width - 170f, 18f),
+                "<b><color=" + nameColor + ">" + u.name + "</color></b>   " + pips,
+                labelStyle
+            );
+
+            GUI.Label(
+                new Rect(row.x + 8f, row.y + 20f, row.width - 170f, 16f),
+                "<color=#BBBBBB>" + u.description + "</color>",
+                smallStyle
+            );
+
+            Rect button = new Rect(row.xMax - 150f, row.y + 7f, 142f, 24f);
+
+            if (cost < 0)
+            {
+                GUI.enabled = false;
+                GUI.Button(button, u.isAbility ? "AÇIK" : "MAKS", buttonStyle);
+                GUI.enabled = true;
+            }
+            else
+            {
+                bool afford = MetaProgress.Essence >= cost;
+
+                GUI.enabled = afford;
+
+                string label =
+                    (u.isAbility ? "AÇ  " : "AL  ") +
+                    "<color=" + (afford ? "#C9A0FF" : "#FF6A50") + ">◆ " + cost + "</color>";
+
+                if (GUI.Button(button, label, buttonStyle))
+                {
+                    if (MetaProgress.TryBuy(u))
+                    {
+                        metaMessage = u.name + (u.isAbility ? " açıldı!" : " → seviye " + MetaProgress.UpgradeLevel(u.id));
+                        metaMessageUntil = Time.unscaledTime + 2.5f;
+                    }
+                }
+
+                GUI.enabled = true;
+            }
+
+            y += rowH;
+        }
+
+        if (Time.unscaledTime < metaMessageUntil)
+        {
+            GUI.Label(
+                new Rect(panel.x, panel.yMax - 62f, panelWidth, 18f),
+                "<color=#7CE08A>" + metaMessage + "</color>",
+                richCentered
+            );
+        }
+
+        if (
+            GUI.Button(
+                new Rect(panel.x + panelWidth * 0.5f - 90f, panel.yMax - 36f, 180f, 26f),
+                "GERİ  <color=#888888>[Esc]</color>",
+                buttonStyle
+            )
+        )
+        {
+            page = MenuPage.Main;
+        }
+    }
+
+    // ---------------- AYARLAR (menü + duraklatma ortak) ----------------
+
+    private void DrawSettingsPanel(float width, float height, System.Action onBack)
+    {
+        float panelWidth = 460f;
+        float panelHeight = 270f;
+
+        Rect panel =
+            new Rect(
+                (width - panelWidth) * 0.5f,
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        float y = panel.y + 14f;
+
+        GUI.Label(new Rect(panel.x, y, panelWidth, 30f), "AYARLAR", Centered(bannerStyle));
+
+        y += 46f;
+
+        float lx = panel.x + 20f;
+        float sx = panel.x + 200f;
+        float sw = panelWidth - 220f - 60f;
+
+        // Arayüz boyutu: sürüklerken uygulanmaz (kaydırıcı ölçekle kayıp
+        // titremesin), bırakınca uygulanır.
+        if (pendingUiScale < 0f)
+            pendingUiScale = GameSettings.UiScale;
+
+        GUI.Label(new Rect(lx, y, 180f, 20f), "Arayüz boyutu", labelStyle);
+        pendingUiScale = GUI.HorizontalSlider(new Rect(sx, y + 5f, sw, 16f), pendingUiScale, GameSettings.MinUiScale, GameSettings.MaxUiScale);
+        GUI.Label(new Rect(sx + sw + 8f, y, 60f, 20f), pendingUiScale.ToString("0.00") + "x", smallStyle);
+
+        if (GUIUtility.hotControl == 0 && Mathf.Abs(pendingUiScale - GameSettings.UiScale) > 0.01f)
+        {
+            GameSettings.UiScale = pendingUiScale;
+            pendingUiScale = GameSettings.UiScale;
+        }
+
+        y += 32f;
+
+        GUI.Label(new Rect(lx, y, 180f, 20f), "Dünya yazıları", labelStyle);
+        float world = GUI.HorizontalSlider(new Rect(sx, y + 5f, sw, 16f), GameSettings.WorldTextScale, GameSettings.MinUiScale, GameSettings.MaxUiScale);
+        GUI.Label(new Rect(sx + sw + 8f, y, 60f, 20f), GameSettings.WorldTextScale.ToString("0.00") + "x", smallStyle);
+
+        if (Mathf.Abs(world - GameSettings.WorldTextScale) > 0.001f)
+            GameSettings.WorldTextScale = world;
+
+        y += 32f;
+
+        GUI.Label(new Rect(lx, y, 180f, 20f), "Ses", labelStyle);
+        float volume = GUI.HorizontalSlider(new Rect(sx, y + 5f, sw, 16f), GameSettings.Volume, 0f, 1f);
+        GUI.Label(new Rect(sx + sw + 8f, y, 60f, 20f), "%" + Mathf.RoundToInt(GameSettings.Volume * 100f), smallStyle);
+
+        if (Mathf.Abs(volume - GameSettings.Volume) > 0.001f)
+            GameSettings.Volume = volume;
+
+        y += 32f;
+
+        bool full = GameSettings.Fullscreen;
+
+        if (GUI.Button(new Rect(lx, y, 200f, 24f), "Tam ekran: " + (full ? "<color=#7CE08A>AÇIK</color>" : "<color=#888888>KAPALI</color>"), buttonStyle))
+            GameSettings.Fullscreen = !full;
+
+        if (GUI.Button(new Rect(lx + 212f, y, 200f, 24f), "Varsayılan boyutlar", buttonStyle))
+        {
+            GameSettings.UiScale = 1f;
+            GameSettings.WorldTextScale = 1f;
+            pendingUiScale = 1f;
+        }
+
+        if (
+            GUI.Button(
+                new Rect(panel.x + panelWidth * 0.5f - 90f, panel.yMax - 36f, 180f, 26f),
+                "GERİ  <color=#888888>[Esc]</color>",
+                buttonStyle
+            )
+        )
+        {
+            onBack();
+        }
+    }
+
+    // ---------------- DURAKLATMA ----------------
+
+    private void DrawPause(RunManager run, float width, float height)
     {
         GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
 
+        if (pauseSettings)
+        {
+            DrawSettingsPanel(width, height, () =>
+            {
+                GameSettings.Save();
+                pauseSettings = false;
+            });
+
+            return;
+        }
+
+        float panelWidth = 320f;
+        float panelHeight = 200f;
+
+        Rect panel =
+            new Rect(
+                (width - panelWidth) * 0.5f,
+                (height - panelHeight) * 0.5f,
+                panelWidth,
+                panelHeight
+            );
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        GUI.Label(new Rect(panel.x, panel.y + 12f, panelWidth, 30f), "DURAKLATILDI", Centered(bannerStyle));
+
+        float bx = panel.x + 40f;
+        float bw = panelWidth - 80f;
+        float y = panel.y + 58f;
+
+        if (GUI.Button(new Rect(bx, y, bw, 28f), "DEVAM  <color=#888888>[Esc]</color>", buttonStyle))
+            run.SetPaused(false);
+
+        y += 36f;
+
+        if (GUI.Button(new Rect(bx, y, bw, 28f), "AYARLAR", buttonStyle))
+        {
+            pendingUiScale = -1f;
+            pauseSettings = true;
+        }
+
+        y += 36f;
+
+        string abandon =
+            confirmAbandon
+                ? "<color=#FF8A80>EMİN MİSİN? (koşu biter)</color>"
+                : "ANA MENÜ";
+
+        if (GUI.Button(new Rect(bx, y, bw, 28f), abandon, buttonStyle))
+        {
+            if (!confirmAbandon)
+            {
+                confirmAbandon = true;
+            }
+            else
+            {
+                confirmAbandon = false;
+                page = MenuPage.Main;
+                run.AbandonRun();
+            }
+        }
+    }
+
+    // ---------------- YETENEK SEÇİMİ ----------------
+
+    private void DrawAbilityOffer(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        IReadOnlyList<AbilityType> offers = run.AbilityOffers;
+
+        float cardWidth = 200f;
+        float cardHeight = 190f;
+        float gap = 12f;
+
+        float total = offers.Count * cardWidth + Mathf.Max(0, offers.Count - 1) * gap;
+
+        if (total > width - 40f)
+        {
+            float f = (width - 40f) / total;
+            cardWidth *= f;
+            gap *= f;
+            total = width - 40f;
+        }
+
+        float x = (width - total) * 0.5f;
+        float cardY = (height - cardHeight) * 0.5f;
+
+        GUI.Label(new Rect(0, cardY - 62f, width, 34f), "YETENEĞİNİ SEÇ", bannerStyle);
+
+        GUI.Label(
+            new Rect(0, cardY - 28f, width, 18f),
+            "<color=#BBBBBB>[Q] ile kullanılır  •  parry ve öldürme bekleme süresini kısaltır  •  dükkanda yükseltilir</color>",
+            richCentered
+        );
+
+        for (int i = 0; i < offers.Count; i++)
+        {
+            if (GUI.Button(new Rect(x, cardY, cardWidth, cardHeight), AbilityCardText(offers[i], i + 1), cardStyle))
+                run.ChooseAbility(i);
+
+            x += cardWidth + gap;
+        }
+
+        GUI.Label(
+            new Rect(0, cardY + cardHeight + 10f, width, 18f),
+            "1 / 2 / 3 / 4 ya da tıkla   <color=#888888>(yeni yetenekler: ana menü → Kalıcı Gelişim)</color>",
+            Centered(tinyStyle)
+        );
+    }
+
+    private static string AbilityCardText(AbilityType type, int number)
+    {
+        string color = "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(type));
+
+        bool last = MetaProgress.SelectedAbility == (int)type;
+
+        return
+            "<size=11><color=#888888>" + number + "</color></size>  " +
+            "<b><color=" + color + ">" + AbilityInfo.Name(type) + "</color></b>" +
+            (last ? "  <size=10><color=#888888>(son seçim)</color></size>" : "") + "\n\n" +
+            "<size=12>" + AbilityInfo.Description(type) + "</size>\n\n" +
+            "<size=11><color=#FFD54A>Bekleme " + AbilityInfo.BaseCooldown(type).ToString("0") + " sn</color></size>";
+    }
+
+    // ---------------- YENİ KOŞU (zorluk) ----------------
+
+    private void DrawLobby(RunManager run, float width, float height)
+    {
         float panelWidth = 420f;
         float panelHeight = MetaProgress.HeatUnlocked > 0 ? 250f : 190f;
 
@@ -249,6 +861,9 @@ public class RunUI : MonoBehaviour
         float y = panel.y + 14f;
 
         GUI.Label(new Rect(panel.x, y, panelWidth, 34f), "YENİ KOŞU", bigTitleStyle);
+
+        if (GUI.Button(new Rect(panel.x + 8f, panel.y + 8f, 70f, 22f), "‹ GERİ", buttonStyle))
+            page = MenuPage.Main;
 
         y += 40f;
 
@@ -319,7 +934,7 @@ public class RunUI : MonoBehaviour
             )
         )
         {
-            run.RequestStart();
+            StartRun(run);
         }
     }
 
@@ -730,7 +1345,7 @@ public class RunUI : MonoBehaviour
         GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
 
         float panelWidth = Mathf.Min(720f, width - 2f * Pad);
-        float panelHeight = Mathf.Min(height - 2f * Pad, 470f);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 530f);
 
         Rect panel =
             new Rect(
@@ -861,6 +1476,62 @@ public class RunUI : MonoBehaviour
         GUI.enabled = true;
 
         y += 36f;
+
+        // ---------------- YETENEK ----------------
+
+        float ax = panel.x + (panelWidth - (2f * 300f + 12f)) * 0.5f;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            ShopItem item = items[i];
+
+            if (item.kind != ShopItemKind.Ability)
+                continue;
+
+            string name = AbilityInfo.Name(item.ability);
+            string color = "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(item.ability));
+
+            PlayerAbility ability = run.Ability;
+
+            string label;
+
+            if (item.abilityUpgrade)
+            {
+                int lv = ability != null ? ability.Level : 1;
+
+                label =
+                    (i + 1) + "  Yükselt: <color=" + color + ">" + name + "</color> " +
+                    lv + "→" + (lv + 1);
+            }
+            else
+            {
+                label =
+                    (i + 1) + "  " + (ability != null && ability.HasAbility ? "Değiştir: " : "Al: ") +
+                    "<color=" + color + ">" + name + "</color>";
+            }
+
+            label +=
+                item.sold
+                    ? "  <color=#888888>(alındı)</color>"
+                    : "   <color=" + (run.CanAfford(item.price) ? "#FFD54A" : "#FF6A50") + ">" +
+                      GoldIcon + " " + item.price + "</color>";
+
+            GUI.enabled = !item.sold && run.CanAfford(item.price);
+
+            if (GUI.Button(new Rect(ax, y, 300f, 26f), new GUIContent(label, AbilityInfo.Description(item.ability)), buttonStyle))
+                run.BuyShopItem(i);
+
+            GUI.enabled = true;
+
+            ax += 312f;
+        }
+
+        if (!string.IsNullOrEmpty(GUI.tooltip))
+        {
+            GUI.Label(new Rect(panel.x + 16f, y + 28f, panelWidth - 32f, 16f), "<color=#BBBBBB>" + GUI.tooltip + "</color>", Centered(tinyStyle));
+        }
+
+        y += 50f;
 
         // ---------------- CHARM SİL ----------------
 
@@ -1062,6 +1733,19 @@ public class RunUI : MonoBehaviour
 
         y += 20f;
 
+        // Öz (kalıcı gelişim)
+        if (run.LastEssence > 0)
+        {
+            GUI.Label(
+                new Rect(panel.x, y, panelWidth, 18f),
+                "<color=#C9A0FF><b>+" + run.LastEssence + " ÖZ</b></color>  <size=11><color=#888888>(" +
+                run.LastEssenceBreakdown + ")  •  toplam " + MetaProgress.Essence + "</color></size>",
+                richCentered
+            );
+
+            y += 18f;
+        }
+
         // Yeni açılımlar
         for (int i = 0; i < unlocks.Count; i++)
         {
@@ -1116,7 +1800,7 @@ public class RunUI : MonoBehaviour
                 buttonHeight
             );
 
-        if (GUI.Button(button, "YENİ KOŞU  <color=#888888>[Enter]</color>", buttonStyle))
+        if (GUI.Button(button, "ANA MENÜ  <color=#888888>[Enter]</color>", buttonStyle))
         {
             RunManager run = RunManager.Instance;
 
@@ -1343,6 +2027,13 @@ public class RunUI : MonoBehaviour
 
         dimTexture = Solid(new Color(0f, 0f, 0f, 0.6f));
 
+        sideFadeTexture = HorizontalFade(new Color(0.02f, 0.03f, 0.04f), 0.85f);
+
+        menuTitleStyle = Make(56, FontStyle.Bold, Gold);
+
+        menuHintStyle = Make(11, FontStyle.Normal, new Color(1f, 1f, 1f, 0.6f));
+        menuHintStyle.richText = true;
+
         panelTexture =
             Bordered(
                 new Color(0.06f, 0.06f, 0.08f, 0.78f),
@@ -1387,6 +2078,19 @@ public class RunUI : MonoBehaviour
         };
 
         ApplyButtonLook(buttonStyle);
+
+        // Ana menü maddeleri: arka plansız, büyük yazı.
+        menuItemStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 22,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft,
+            richText = true
+        };
+
+        menuItemStyle.normal.textColor = Color.white;
+        menuItemStyle.hover.textColor = Color.white;
+        menuItemStyle.active.textColor = Color.white;
     }
 
     private void ApplyButtonLook(GUIStyle style)
@@ -1441,6 +2145,33 @@ public class RunUI : MonoBehaviour
         tex.Apply();
 
         return tex;
+    }
+
+    // Soldan sağa sönen koyu şerit (ana menü arkası).
+    private static Texture2D HorizontalFade(Color color, float maxAlpha)
+    {
+        const int w = 128;
+
+        Texture2D tex = new Texture2D(w, 1, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        for (int x = 0; x < w; x++)
+        {
+            float t = x / (float)(w - 1);
+            float a = maxAlpha * (1f - Mathf.SmoothStep(0f, 1f, t));
+
+            tex.SetPixel(x, 0, new Color(color.r, color.g, color.b, a));
+        }
+
+        tex.Apply();
+
+        return tex;
+    }
+
+    private static GUIStyle RightAligned(GUIStyle source)
+    {
+        return new GUIStyle(source) { alignment = TextAnchor.MiddleRight };
     }
 
     private static GUIStyle Centered(GUIStyle source)

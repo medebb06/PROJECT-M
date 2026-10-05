@@ -18,6 +18,9 @@ public class EnemyStatus : MonoBehaviour
     private static readonly Color PoisonTint =
         new Color(0.45f, 1f, 0.35f);
 
+    private static readonly Color BurnTint =
+        new Color(1f, 0.5f, 0.15f);
+
     // Felç Edici Zehir: zehirli düşmanın saldırı uyarısı bu çarpanla uzar.
     // Charm koyar / kaldırır. 1 = etkisiz.
     public static float PoisonedWindupMultiplier = 1f;
@@ -39,7 +42,15 @@ public class EnemyStatus : MonoBehaviour
     private float poisonTimeLeft;
     private float accumulator;
 
+    // YANIK (Alev Dalgası yeteneği): zehirden AYRI sayaç, aynı kural
+    // (denge kırık değilse dengeyi, kırıksa canı eritir).
+    private float burnBalanceFraction;
+    private float burnHealthFraction;
+    private float burnTimeLeft;
+    private float burnAccumulator;
+
     public bool IsPoisoned => poisonTimeLeft > 0f;
+    public bool IsBurning => burnTimeLeft > 0f;
 
     // Ölürken zehirli miydi? (Salgın charm'ı için.)
     public bool DiedPoisoned { get; private set; }
@@ -109,8 +120,32 @@ public class EnemyStatus : MonoBehaviour
         poisonTimeLeft = Mathf.Max(poisonTimeLeft, duration);
     }
 
+    // Yanık: süre yenilenir, en güçlü hız tutulur.
+    public void ApplyBurn(
+        float balanceFractionPerSecond,
+        float healthFractionPerSecond,
+        float duration
+    )
+    {
+        if (enemy != null && enemy.IsDead)
+            return;
+
+        if (!IsBurning)
+        {
+            burnBalanceFraction = 0f;
+            burnHealthFraction = 0f;
+        }
+
+        burnBalanceFraction = Mathf.Max(burnBalanceFraction, balanceFractionPerSecond);
+        burnHealthFraction = Mathf.Max(burnHealthFraction, healthFractionPerSecond);
+        burnTimeLeft = Mathf.Max(burnTimeLeft, duration);
+    }
+
     private void Update()
     {
+        if (burnTimeLeft > 0f)
+            UpdateBurn();
+
         if (poisonTimeLeft <= 0f)
             return;
 
@@ -164,7 +199,49 @@ public class EnemyStatus : MonoBehaviour
         }
     }
 
+    private void UpdateBurn()
+    {
+        if (enemy == null || enemy.IsDead)
+        {
+            burnTimeLeft = 0f;
+            return;
+        }
+
+        float dt = EnemyTime.DeltaTime;
+
+        burnTimeLeft -= dt;
+
+        bool onBalance = balance != null && !balance.IsBroken;
+
+        float perSecond =
+            onBalance
+                ? balance.MaxBalance * burnBalanceFraction
+                : (health != null && !health.IsDead ? health.MaxHealth * burnHealthFraction : 0f);
+
+        burnAccumulator += perSecond * dt;
+
+        while (burnAccumulator >= 1f)
+        {
+            burnAccumulator -= 1f;
+
+            Tick(1, BurnTint);
+        }
+
+        if (burnTimeLeft <= 0f)
+        {
+            burnTimeLeft = 0f;
+            burnBalanceFraction = 0f;
+            burnHealthFraction = 0f;
+            burnAccumulator = 0f;
+        }
+    }
+
     private void Tick(int amount)
+    {
+        Tick(amount, PoisonTint);
+    }
+
+    private void Tick(int amount, Color tint)
     {
         if (balance != null && !balance.IsBroken)
         {
@@ -176,6 +253,6 @@ public class EnemyStatus : MonoBehaviour
             health.TakeDamage(amount);
         }
 
-        enemy.PlayTintFlash(PoisonTint, 0.15f);
+        enemy.PlayTintFlash(tint, 0.15f);
     }
 }

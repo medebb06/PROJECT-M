@@ -7,6 +7,13 @@
 - Unity 6'da obsolete olanlar kullanılmaz: `GetInstanceID`, `FindObjectsOfType` (yerine `FindFirstObjectByType`, `FindObjectsByType`).
 - Ölçek: oyuncu canı **100**, posture 100, parry dengeye +50, düşman normal vuruşu −30. Sayılar benim tahminimden büyük; yüzde tabanlı yaz.
 
+## 0.1 YENİ SOHBETE BAŞLARKEN (5 Ekim 2026 durumu)
+- **Çalışma yolu:** Claude, kullanıcının bilgisayarındaki klasörlere bağlanarak çalışıyor. Bağlı klasörler: `D:\Oyun\PROJECT-M\Assets\Scripts` (scriptler BURAYA doğrudan, eskisinin üzerine yazılır), `D:\Oyun\PROJECT-M\Assets\Prefabs`, `C:\Users\PC\AppData\LocalLow\DefaultCompany\PROJECT M` (run_stats_v4.csv, Player.log), `D:\Oyun\PROJECT-M\Assets\Sprites\background`. Yeni sohbette bağlantı yoksa `device_request_folder_access` ile yeniden iste.
+- **DİKKAT:** `Assets` içindeki bağlı bir klasör varken SendUserFile / outputs dosyaları o klasörün "Claude outputs" alt klasörüne düşer → Unity aynı sınıfı iki kez derler (CS0101). Script teslimi = `device_commit_files` ile Scripts'e yaz. (SkyBackdrop.cs şu an `Assets/Sprites/background/Claude outputs/` içinde, tek kopya; istenirse Scripts'e taşınabilir.)
+- **Önce güncel dosyayı al:** Proje dokümanlarındaki .cs'ler eski olabilir; değişiklikten önce Scripts'ten stage edip ona yama yap.
+- **Yeni alan adı kuralı:** Sahnedeki kayıtlı Inspector değerleri koddaki varsayılanları ezer; bir varsayılanın uygulanması gerekiyorsa alanın ADINI değiştir.
+- **Denge verisi:** RunStats → `run_stats_v4.csv` (LocalLow). Ayar önerisinden önce son koşuları oku.
+
 ## 1. Dosya haritası
 
 **Oyuncu:** PlayerController (isInvincible = state bayrağı + `hitInvincibilityTimer`), PlayerMovement (coyote düzeltmesi), PlayerStateMachine, Grounded/Air/Jump/WallSlide/WallJump(flipX ile yön)/Dash(Dash layer, kaçış)/GroundSlam state'leri, PlayerHurtState (sersemleme + korumalı dönem + knockback yavaşlaması), PlayerDamageReceiver (hasar tepkisi, `HitSlowMotion` sınıfı, slow-mo profilleri), PlayerInvincibilityBlink (beyaz flaş + yanıp sönme), PlayerCombatController (kombo, `attack1-4BalanceDamage`, `attackHealthDamage`, CancelAttack), AttackState (oyuncu komboları → PlayerDamage), PlayerFinisher (execute), PlayerDefenseController/Parry/Block, PlayerPosture, ParryRiposte.
@@ -179,3 +186,79 @@
 - Dikey parallax: her bandın `verticalFactor`'ı (uzak 0.92, orta 0.85, yakın 0.7; ağaç 0.88): zıplayınca arka plan neredeyse oynamaz. Dikey çapa = kameranın haritaya geldiği ilk kare. Alan adı `bands` → `parallaxBands` (yeni varsayılanlar gelsin).
 - Su: sayfadaki doğru satırlar (18 köpük, 19 köpük+su, 20 derin). Çukur duvar sütunlarının ARKASINA da su (sıra −1): yuvarlak kaya kenarlarıyla su arasında boşluk kalmaz.
 - LevelGenerator: `visualDepth` 30 (zemin görselde aşağı uzar, düşme çizgisi aynı), uçlarda düz duvar yerine zemin `edgeExtension` 24 kare devam eder + görünmez BoxCollider2D engel.
+
+## 27. Hafif parallax (26. adım)
+- 25b: bantlar kaybolmuştu → dikey çapa lobi kamerasından alınıyordu (x yakın, y 300 aşağı). Artık kamera hem x (30) hem y (20) yakınken alınır.
+- 26: parallax çok güçlüydü → `backgroundBands` (yeni ad): yatay uzak 0.12 / orta 0.08 / yakın 0.04, ağaç `treeParallax` 0.1; dikey aynı (0.92/0.85/0.7). Uzak bant artık ortalama zemin +5 (en yüksek zemine göre değil; ileride en arkaya dağ gelecek). `bushColorVariation` 0 (bantlar tek renk). Parallax konumu piksele (1/PPU) yuvarlanır.
+- Yırtılma önerisi: Tiles.png Filter Point, Compression None, Generate Mip Maps kapalı; Main Camera'ya Pixel Perfect Camera (Assets PPU 16) + CinemachineCamera'ya CinemachinePixelPerfect.
+- 27: Ekran görüntüsünde çalı bantlarında satır aralarında ince gökyüzü renkli yatay çizgiler (tile dikiş boşluğu, kamera yarım pikselde). JungleTheme `seamOverlap` 0.02: Sprite.Create PPU = 16/(1+0.02) → tile'lar %2 büyük, komşuya biner. Kalıcı çözüm Pixel Perfect Camera.
+- 28: Pixel Perfect Camera (öneri Reference Resolution 384×216 = 1080p'de 5x) ile çizgiler gitti ama parallax kamera dururken titriyordu. JungleParallax konumu artık URP `beginCameraRendering`'de (kameranın son konumu) hesaplanır, piksel yuvarlama kapalı (`JungleParallax.SnapToPixels`). Titreme sürerse: Player Rigidbody2D Interpolate, CinemachineBrain Update Method = Late Update / Blend Update = Late Update, Pixel Perfect Upscale Render Texture kapalı dene.
+- 29: Bant altı dolgusu çalının alt satırını tekrar ettiği için dama tahtası görünüyordu → düz koyu renk dolgu (çalı renginin sayfadan ölçülen gölge tonu; beyaz sprite + Tile.color, bant tint'iyle çarpılır). Dikey parallax hâlâ fazlaydı → `verticalSameAsHorizontal` (varsayılan açık): dikey = yatay faktör (0.04–0.12).
+
+## 28. Gökyüzü + Demirci (30. adım, test bekliyor)
+- Kullanıcının D:\Oyun\PROJECT-M\Assets\Sprites\background klasörü (576x324, PPU 16, Point): 4 katmanlı gökyüzü seti. c* gündüz (c1 gök, c2 uzak bulut, c3 kümülüs, c4 alçak bulut; c5/c6 birleşik), a* gün batımı (a gradyan, a5 çizgi bulut, a4/a3/a2 bulutlar; 5 = a2 kopyası; a7/a8 birleşik), b* alacakaranlık (b2 gök+ay, b3/b4/b5 mor bulutlar; b6/b7 birleşik), gece (1 yıldızlı gök, 2 ay, 3 alt bulut, 4 üst bulut; orig/orig_big birleşik).
+- SkyBackdrop (yeni, Managers'a eklenir; Reset/sağ tık ile klasörden otomatik dolar): kameraya sabit, yatayda sonsuz tekrar (Tiled SpriteRenderer, 3 genişlik), katman başına follow (1 = sabit, ~0.96 hafif parallax) + drift (rüzgâr), alt kenar = ekran altı + bottomOffset −2, sıra −500+. Perde 1 gündüz, 2 gün batımı, 3 alacakaranlık, boss = gece, lobi = gündüz. Pozisyon beginCameraRendering'de, piksele hizalı.
+- LevelGenerator: Demirci NPC (şablon = `blacksmith` alanı ya da sahnede "Demirci" adlı obje; kopyası fizik bileşenleri silinerek doğar, ayakları zemine oturur, NpcFacePlayer ile oyuncuya döner). Dükkan geçişinde tezgah dikdörtgeni yerine demirci (yazılar başının üstünde, [W] aynı). Her dövüş bölümü başında oyuncunun 7 kare sağında, yakına gelince rastgele selam yazısı.
+- 30b: gökyüzü ekranın sadece alt kısmında kalıyordu (görsel 20.25 birim, kamera görüşü daha yüksek). Katman, ekranı kaplayacak kadar TAM SAYI katla büyütülür (needed = ekran yüksekliği − bottomOffset).
+- 31: Bant diplerindeki düz koyu şerit (ve yakın bant ile zemin arası boşluk) → her bant `bushRowsPerBand` 2 sıra (2 kare aşağı, 3 kare kaydırılmış, iç içe), düz dolgu sadece en alt sıranın altında; `bandHeightShift` −1. ÖN PLAN (yeni): kamerayla karakter arası koyu siluet çalı öbekleri (1–3 çalı, aralık 16–34) + %35 ihtimalle gövde; negatif parallax `foregroundFactor` −0.35 / dikey −0.08, renk (0.12,0.14,0.12), sıra zemin+100, taban ort. zemin −2.
+- 32: Bant dipleri arasında gökyüzü üçgenleri (çalı alt köşeleri) → dolgu AYRI katmanda (bant sırası −1) ve en alt sıranın alt satırını da kapsar. Bantlar `bushBands` (yeni ad), yükseklik uzak 4 / orta 2 / yakın 0. ÖN PLAN Hollow Knight tarzı: dolgu yok, ekranın ALT KENARINA kilitli (JungleParallax.LockToScreenBottom; dikeyde kamerayla), yatay −0.35; iki sıra iç içe çok koyu çalı tepesi (0.07,0.08,0.08) + %25 ekranı boydan geçen gövde; `foregroundScreenOffset` −1.
+- 33: Kullanıcının Scripts'inde eski sürümler vardı (JungleTheme 31, LevelGenerator 25 → demirci yoktu); gönderilen dosyalar bağlı 'background' klasörünün "Claude outputs" alt klasörüne düşüp Unity'de çift sınıf hatası yaptı. Artık D:\Oyun\PROJECT-M\Assets\Scripts klasörü bağlı: dosyalar DOĞRUDAN oraya yazılır (SendUserFile kullanma, Assets içine kopya düşer). SkyBackdrop.cs şu an Assets/Sprites/background/Claude outputs içinde (tek kopya).
+- 33: Ön plan KAPALI (kod duruyor). Orman 4 bant (`forestBands`): uzak 0.16/renk4/+6, uzak-orta 0.12/renk3/+4, orta 0.08/renk2/+2, yakın 0.04/renk0 (yeşil, koyu tint)/0; her bant 2 sıra + arkasında alt satırı da kapsayan düz dolgu → bantlar arasında gökyüzü boşluğu kalmaz.
+- 34: En üst bant ile altındaki arasında küçük gökyüzü üçgenleri → bant dolgusu en ÜST sıranın tabanına kadar çıkar, en üst sıra 'lift' (1 kare kaldırma) almaz.
+
+## 29. Zorluk ayarı (35. adım, test bekliyor)
+- Veri (run_stats_v4, harita modundaki son 9 koşu): hepsi Perde 1'in 1–3. bölümünde ölüm. Ölümcül hasarın çoğu normal vuruş (30) + engellenemez (prefab 75 → %40 tavana takılıyor = tek vuruşta 40). 100 canla 2–3 vuruş = ölüm; bölümde 6+ düşman, arada iyileşme yok.
+- RunManager (yeni alan adları, sahnedeki eski değerler ezmesin): `mapEnemiesStart` 4, `mapEnemiesPerStage` 0.75, `mapEnemiesMax` 12, `mapEnemiesPerPost` 2 (aynı anda 2 düşman), nokta 2–6. `mapDamageByAct` {0.7, 0.85, 1} (normal + engellenemez), `mapUnblockableDamageMultiplier` 0.6 (75 → ~31 Perde 1), `mapUnblockableGrowthMultiplier` 0.5, `mapHealOnPostCleared` 0.12 (nöbet grubu bitince +%12 can, yeşil yazı).
+- Dosyalar artık doğrudan D:\Oyun\PROJECT-M\Assets\Scripts'e yazılıyor; Prefabs ve LocalLow\DefaultCompany\PROJECT M (run_stats, Player.log) da bağlı.
+
+## 30. İnfaz barı + Kalabalık düşman + oyuncu HUD (36. adım, test bekliyor)
+- ExecuteMeter (yeni, kendiliğinden oluşur): öldürme +0.34 (Kalabalık +0.15), dengeyi kıran parry +0.08; koşu başı DOLU (startFull). Doluyken E: TryConsume → hedef "ölümcül" işaretlenir; EnemyExecuteState: normal düşman ölür, boss faz 1'de canı Phase2At eşiğine iner (sonra faz 2'ye geçer), faz 2'de ölür; "İNFAZ!" yazısı. İnfazla ölen düşman barı doldurmaz. Bar boşken E → "İNFAZ BARI DOLU DEĞİL". RunManager.BeginRun → ResetForRun.
+- Öldürme kolaylığı: PlayerDamage: sersemlemiş düşmana can hasarı ×2 (`staggeredHealthMultiplier`). RunManager (harita): düşman canı ×0.7 (`mapEnemyHealthMultiplier`), sersemleme süresi ×1.4 (`mapStaggerDurationMultiplier`).
+- KALABALIK (EnemyArchetypeType.Swarm, enum SONUNA): Enemy Prefab'ın koyu (0.55,0.5,0.62), ×0.8 küçük kopyası; can ×0.45, denge ×0.4, hasar ×0.6, hız ×1.15, savrulur ×1.4; hamleler Pençe / İkili Pençe / Atılma (CreateSwarmMoves). Her nöbet noktasına ayrıca 1–3 (+1 / 3 bölüm) kalabalık (`mapSwarmPerPostMin/Max`, `mapSwarmGrowthEveryStages`). archetypeTemplates 5.
+- BossController.Phase2At eklendi.
+- PlayerHud (yeni, kendiliğinden): SOL ALT köşede sabit CAN (kırmızı, beyaz iz, iyileşmede yeşil, %25 altı yanıp söner, "73 / 100") + İNFAZ (altın, 3 bölme, dolunca parlar + "[E] İNFAZ"). Eski HealthBarUI / HealthUnitsUI objelerini gizler.
+
+## 31. Akış: yoğunluk + seri + devriye (37. adım, test bekliyor)
+- Veri (21:50 koşusu): 10 dk, 141 öldürme (14/dk), Perde 3, normal saldırıların ~%90'ı karşılanmış; ölüm Ağır'ın engellenemez vuruşu. Karar: genel kolaylaştırma YOK, akış artırıldı.
+- RunManager (yeni adlar): `mapSwarmMin/Max` 2–4 kalabalık / nokta; `mapHordeChance` 0.25 → SÜRÜ noktası (1 güçlü + 5–6 kalabalık, ilk nokta hariç); devriyeler `mapPatrolsBase` 1 + 1 / `mapPatrolGrowthEveryStages` 2 bölüm (en çok 4), her biri 1–2 kalabalık, ara parçaların düz zemininde (LevelGenerator.CreatePatrolPoints, arenadan ±3 ve başlangıç/çıkıştan uzak, en az 10 kare aralık); `mapAggroRange` 17 (MakeGuard). BeginRun → KillStreak.ResetForRun.
+- KillStreak (yeni, kendiliğinden): 3 sn içinde art arda öldürme = seri; öldürme başına +%3 denge+can hasarı (PlayerStats çarpanı, en çok %30), her 5 öldürmede +%3 can. PlayerHud can barının üstünde "SERİ ×N  +X% HASAR" + kalan süre çizgisi.
+- Ağır profil engellenemez hasar ×1.15 → ×0.85.
+
+
+## 32. ÖZET: oyunun şu anki hali (37. adım sonrası)
+- **Döngü:** Lobi → 3 perde × (oda kapıları: Dövüş / Elit / Dükkan / Dinlenme) → Boss → Zafer. Her dövüş odası rastgele orman haritası (Dead Cells tarzı parça birleştirme), nöbet noktaları + sürü noktaları + devriyeler; hepsi ölünce çıkış kapısı açılır. Charm seçimleri sadece kapıdan geçince (bölümler arası) ve dükkanda.
+- **Dövüş:** Sekiro tarzı denge/parry; düşman tipleri Düellocu, Çevik, Ağır, Okçu (ayrı sprite: Duelist, Archer; Çevik/Ağır/Kalabalık renklendirilmiş kopya), Kalabalık (zayıf sürü). İnfaz barı (öldürmeyle dolar, dolunca tek vuruş / boss faz atlatma), seri öldürme (hasar bonusu + can), nöbet temizleyince +%12 can.
+- **Görsel:** Jungle tileset (çim zemin, köprü, su), 4 katmanlı hafif parallax orman + ağaçlar, perdeye göre gökyüzü (gündüz / gün batımı / alacakaranlık / gece boss), Demirci NPC (dükkan + bölüm başı selam), Pixel Perfect Camera önerildi (384×216).
+- **Arayüz:** Sol altta can + infaz barı + seri sayacı (PlayerHud), düşman başı çubukları, boss çubuğu, RunUI menüleri.
+- **Son veri (21:50):** 10 dk, 141 öldürme, Perde 3, ölüm Ağır engellenemez. 37. adım (yoğunluk/seri/devriye) henüz test edilmedi.
+
+## 33. SONRAKİ ADIM ÖNERİLERİ (öncelik sırasıyla)
+1. **37. adımı test + veri:** birkaç koşu → CSV'den öldürme/dk, ölüm yeri, seri uzunluğu; sürü/devriye sayısını ayarla. (RunStats'a "en uzun seri" ve "infaz sayısı" sütunu eklenebilir.)
+2. **Kalabalık için gerçek sprite + yeni düşman tipleri:** sprite gelince Kalabalık'ı ayrı prefab yap; sonra uçan düşman (yukarıdan dalış, zıplayarak vurulur), kalkanlı (önden vuruş işlemez → arkasına dash), patlayan / zıplayan sürü. Her biri farklı cevap istesin.
+3. **Kapı ve kamp ateşi sprite'ları:** çıkış kapıları ve dinlenme alanındaki dikdörtgenler hâlâ placeholder. (Tileset'te ağaç kovuğu 13–14 × 0–3 geçici kapı olabilir.)
+4. **Dağ katmanı:** gökyüzü ile uzak çalılar arasına (kullanıcı planlıyor); sprite gelince SkyBackdrop'a ya da JungleTheme'e katman.
+5. **Ön plan (Hollow Knight tarzı) yeniden:** kod JungleTheme'de kapalı duruyor (`foreground`); daha iyi siluet sprite'larıyla tekrar denenebilir.
+6. **Boss'lar:** her perdeye ayrı boss (şu an aynı boss + faz 2). Boss arenasına özel görsel / mekanik (platform, düşen kaya vb.).
+7. **Ses ve his:** öldürme / infaz / seri sesleri, ekran sarsıntısı, infazda kısa yakın plan zoom.
+8. **Meta ilerleme:** koşular arası kalıcı kilitler (MetaProgress var) → lobi'de demirciden kalıcı yükseltme satın alma.
+9. **Charm dengesi:** son koşularda Zehir/Salgın yığınları çok güçlü görünüyor; CSV ile kontrol.
+10. **Temizlik:** eski HealthBarUI/HealthUnitsUI, EnemyBalanceBar gibi kullanılmayan UI'ları sahneden kaldırmak; SkyBackdrop.cs'yi Scripts'e taşımak; Managers'taki EnemyController kalıntısını kontrol.
+
+## 34. YARININ PLANI (4 Ekim, kullanıcı istedi) → 5 Ekim'de 38. adımda YAPILDI (bkz. 35)
+1. Arayüz boyutu · 2. Başlangıç ekranı · 3. Yetenek sistemi (Q) · 4. Kalıcı gelişim (Öz + Demirci).
+
+## 35. Ana menü + ayarlar + yetenek + kalıcı gelişim (38. adım, test bekliyor)
+- 37. adım test edildi, şimdilik dokunulmuyor.
+- **GameSettings (yeni, statik, PlayerPrefs):** UiScale (0.6–1.6) tüm OnGUI'lere çarpan (`GameSettings.GuiScale(bileşenÇarpanı)`: RunUI, PlayerHud, EnemyOverheadBars), WorldTextScale (CombatCallout.CreateText + CritFeedback TextMesh characterSize → İNFAZ!, DASH!, kapı yazıları, kritik), Volume (AudioListener), Fullscreen. Arayüz kaydırıcısı fare bırakılınca uygulanır (titreme olmasın).
+- **Ana menü (RunUI, Lobi durumu):** sol tarafta koyu geçiş + "PROJECT M", maddeler BAŞLA / KALICI GELİŞİM (öz sayısı) / AYARLAR / ÇIKIŞ (W/S, ↑/↓, Enter, fare). BAŞLA: ısı açıksa Yeni Koşu paneli (eski lobi, ‹ GERİ), değilse direkt başlar. Arkada RunManager lobide rastgele orman haritası kurar (`menuBackgroundLevel`, Generate(seed,1,false) → demirci başta selam verir; gökyüzü lobi = gündüz). Sonuç ekranı düğmesi artık "ANA MENÜ".
+- **Duraklatma (Esc, sadece Fighting):** DEVAM / AYARLAR / ANA MENÜ (iki kez bas onayı → RunManager.AbandonRun: istatistik + meta + öz kaydedilir, ResetRun, döngü lobiye). RunManager.SetPaused: HitStop temizler, timeScale 0'da tutar, canControl'ü saklar/geri verir; GuardFrozenTime bunu sayar; duraklamada InteractPressed (kapı/tezgah [W]) çalışmaz.
+- **Yetenek (Q) — PlayerAbility (oyuncuya RunManager ekler) + AbilityTypes.cs (AbilityType enum + AbilityInfo):** tek yuva, bekleme süresi (Şok 10, Gölge 6, Buz 13, Alev 9 sn), parry −1.5 sn / öldürme −0.75 sn şarj. Seviye 1-3: +%25 güç, −%10 bekleme. Hasar max denge/canın YÜZDESİ, PlayerDamage hattından (DamageSource.Ability, enum SONUNA): kritik + charm'lar çalışır, riposte hakkı yemez (Parryriposte). Boss'a ×0.5.
+  - Şok Dalgası (baştan açık): r 4.5, denge %30 / can %6, itme 9, 0.25 sn korunma, halka efekti.
+  - Gölge Adım: 9 birimde en yakın düşman (baktığı yön öncelikli, |dy|≤4), ARKASINA ışınlan (zemin raycast + OverlapBox ground|wall; çukur/duvar → "YER YOK"), düşmana döner, denge %40 / can %10, 0.4 sn korunma, mor iz.
+  - Buz Nefesi: EnemyTime.RequestRamp(3.5 sn, 0.35) (tüm düşmanlar), öndeki kutu (6×3) denge %20 + 1.5 sn saldırı başlatamaz.
+  - Alev Dalgası: öndeki kutu (6.5×2.6) denge %10 + YANIK (EnemyStatus.ApplyBurn yeni, zehirden ayrı sayaç: denge %7/sn, can %4/sn, 4 sn; sersemlemiş düşmana can yanığı ×2).
+  - Koşu başında RunState.AbilityOffer (enum SONUNA) kart seçimi (açık yetenek 1 ise direkt verilir + banner). Dükkanda: "Yükselt" (80) + açık başka bir yetenekle "Değiştir" (70, seviye korunur). ShopItemKind.Ability + ShopItem.ability/abilityUpgrade.
+  - PlayerHud: infaz yazısının sağında [Q] yuvası (aşağıdan dolar, hazırken renkli nabız, kalan sn, seviye noktaları). PlayerHud lobide çizilmez.
+- **Kalıcı gelişim — MetaProgress (aynı kayıt anahtarı, yeni alanlar):** essence, totalEssence, upgradeIds/Levels, selectedAbility. Koşu sonu öz = öldürme×0.25 + (perde−1)×20 + boss×25 + zafer 50, ×(1+0.2×ısı)×Öz Toplayıcı (RunManager.GrantEssence; sonuç ekranında "+N ÖZ (döküm)"). MetaUpgrades.All (Demirci sayfası): Dayanıklılık +10 can ×5, Nefeslenme nöbet iyileşmesi +%3 ×3, Cellat infaz dolumu +%15 ×3, Odaklanma yetenek bekleme −%8 ×3, Pazarlık dükkan −%8 ×3, Kese +25 başlangıç altını ×3, Öz Toplayıcı +%10 ×3, yetenek kilitleri Gölge Adım 60 / Buz 90 / Alev 90. BeginRun uygular (SetMaxHealth taban+bonus, Gold, Ability.Clear); ExecuteMeter.Add × ExecuteFillMultiplier; Price × ShopPriceMultiplier.
+- Değişen/yeni dosyalar: GameSettings, AbilityTypes, PlayerAbility (yeni); Runui, Runmanager, RunTypes, MetaProgress, PlayerHud, Enemyoverheadbars, CombatCallout, Critfeedback, EnemyStatus, ExecuteMeter, Parryriposte, Damageinfo.
+- Test listesi: menü gezinme + ayar kaydırıcıları; Esc duraklat → ana menü; yetenek seçimi (Kalıcı Gelişim'den Gölge Adım açınca seçim ekranı çıkar); Gölge Adım'ın duvar/çukur kenarında davranışı; Buz'un parry slow-mo ile birlikte his; öz miktarı (bir koşu ~40–120 hedef).

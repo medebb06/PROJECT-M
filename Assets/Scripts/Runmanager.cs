@@ -391,9 +391,42 @@ public class RunManager : MonoBehaviour
 
     [SerializeField] private int postureRefundOnParry = 25;
 
+    [Header("Ana menü")]
+    [Tooltip("Lobide (ana menü) arkada rastgele bir orman haritası kurulur.")]
+    [SerializeField] private bool menuBackgroundLevel = true;
+
+    [Header("Yetenek (Q)")]
+    [SerializeField] private bool abilityOfferAtStart = true;
+    [SerializeField] private int abilityShopPrice = 70;
+    [SerializeField] private int abilityUpgradeShopPrice = 80;
+
+    [Header("Öz (kalıcı para birimi, koşu sonu)")]
+    [SerializeField] private float essencePerKill = 0.25f;
+    [SerializeField] private int essencePerActReached = 20;
+    [SerializeField] private int essencePerBoss = 25;
+    [SerializeField] private int essenceForVictory = 50;
+    [Tooltip("Isı kademesi başına öz çarpanı.")]
+    [SerializeField] private float essencePerHeat = 0.2f;
+
     // =========================================================
     // DURUM (arayüz okur)
     // =========================================================
+
+    // Yetenek seçimi (koşu başı)
+    public IReadOnlyList<AbilityType> AbilityOffers => abilityOffers;
+    public PlayerAbility Ability { get; private set; }
+
+    // Öz: son koşuda kazanılan (sonuç ekranı / menü)
+    public int LastEssence { get; private set; }
+    public string LastEssenceBreakdown { get; private set; } = "";
+
+    // Duraklatma menüsü (Esc)
+    public bool IsPaused { get; private set; }
+
+    public bool CanPause =>
+        !IsPaused &&
+        !pausedByMenu &&
+        State == RunState.Fighting;
 
     public RunState State { get; private set; } = RunState.Lobby;
 
@@ -492,6 +525,14 @@ public class RunManager : MonoBehaviour
     }
 
     private readonly List<PendingOffer> pendingOffers = new List<PendingOffer>();
+
+    private readonly List<AbilityType> abilityOffers = new List<AbilityType>();
+    private int chosenAbility = -1;
+
+    private int runKills;
+    private int runBossKills;
+    private int playerBaseMaxHealth;
+    private bool canControlBeforePause = true;
 
     private bool shopUsedThisAct;
     private bool restUsedThisAct;
@@ -667,6 +708,10 @@ public class RunManager : MonoBehaviour
             postureRefundOnParry
         );
 
+        Ability = PlayerAbility.Ensure(player.gameObject);
+
+        playerBaseMaxHealth = playerHealth.MaxHealth;
+
         if (includeDefaultCharms)
             pool.AddRange(CharmCatalog.CreateDefaults());
 
@@ -689,6 +734,17 @@ public class RunManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.F2))
             showRunDebug = !showRunDebug;
+
+        // Duraklatma menüsü açıkken zaman donuk kalsın (hit-stop geri açmasın).
+        if (IsPaused)
+        {
+            if (Time.timeScale != 0f)
+                Time.timeScale = 0f;
+
+            // Koşu bu arada bittiyse (ör. zehir) menüyü kapat.
+            if (State != RunState.Fighting && State != RunState.Cleared)
+                SetPaused(false);
+        }
 
         GuardFrozenTime();
 
@@ -715,6 +771,8 @@ public class RunManager : MonoBehaviour
     {
         bool menuPause =
             pausedByMenu ||
+            IsPaused ||
+            State == RunState.AbilityOffer ||
             State == RunState.Offer ||
             State == RunState.ChoosingRoom ||
             State == RunState.Shop ||
@@ -837,6 +895,90 @@ public class RunManager : MonoBehaviour
             startRequested = true;
     }
 
+    public void ChooseAbility(int index)
+    {
+        if (State != RunState.AbilityOffer)
+            return;
+
+        if (index < 0 || index >= abilityOffers.Count)
+            return;
+
+        chosenAbility = index;
+    }
+
+    // ---------------- DURAKLATMA (Esc) ----------------
+
+    public void SetPaused(bool paused)
+    {
+        if (paused == IsPaused)
+            return;
+
+        if (paused)
+        {
+            if (!CanPause)
+                return;
+
+            HitStop.ClearAll();
+
+            canControlBeforePause = player.canControl;
+            player.canControl = false;
+
+            IsPaused = true;
+            Time.timeScale = 0f;
+        }
+        else
+        {
+            IsPaused = false;
+
+            HitStop.ClearAll();
+            Time.timeScale = 1f;
+
+            if (State == RunState.Fighting || State == RunState.Cleared)
+                player.canControl = canControlBeforePause;
+        }
+    }
+
+    /// <summary>
+    /// Duraklatma menüsünden "ANA MENÜ": koşu biter (istatistik + öz kaydedilir),
+    /// döngü lobiye döner.
+    /// </summary>
+    public void AbandonRun()
+    {
+        if (
+            State == RunState.Lobby ||
+            State == RunState.Dead ||
+            State == RunState.Victory
+        )
+        {
+            return;
+        }
+
+        if (loopRoutine != null)
+            StopCoroutine(loopRoutine);
+
+        IsPaused = false;
+        pausedByMenu = false;
+        Time.timeScale = 1f;
+
+        IsVictory = false;
+        Act = Mathf.Clamp(Act, 1, acts);
+
+        FinishRunSafely();
+
+        restartRequested = false;
+
+        try
+        {
+            ResetRun();
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+
+        loopRoutine = StartCoroutine(RunLoop());
+    }
+
     public void ChangeHeat(int delta)
     {
         if (State != RunState.Lobby)
@@ -898,6 +1040,33 @@ public class RunManager : MonoBehaviour
                 return false;
 
             HealPercent(shopHealPercent);
+        }
+        else if (item.kind == ShopItemKind.Ability)
+        {
+            if (Ability == null)
+                return false;
+
+            if (item.abilityUpgrade)
+            {
+                if (!Ability.HasAbility || Ability.Type != item.ability || !Ability.CanLevelUp)
+                    return false;
+
+                Ability.LevelUp();
+            }
+            else
+            {
+                // Değiştir: seviye korunur.
+                int keepLevel = Ability.HasAbility ? Ability.Level : 1;
+
+                Ability.Equip(item.ability, keepLevel);
+
+                // Eski yeteneğin yükseltme kartı artık geçersiz.
+                for (int i = 0; i < shopItems.Count; i++)
+                {
+                    if (shopItems[i].kind == ShopItemKind.Ability && shopItems[i].abilityUpgrade)
+                        shopItems[i].sold = true;
+                }
+            }
         }
 
         Gold -= item.price;
@@ -972,12 +1141,17 @@ public class RunManager : MonoBehaviour
 
             player.canControl = false;
 
+            BuildMenuLevel();
+
             while (!startRequested)
                 yield return null;
 
             player.canControl = true;
 
             BeginRun();
+
+            if (abilityOfferAtStart)
+                yield return AbilityOfferRoutine();
 
             if (offerAtRunStart)
                 yield return OfferRoutine(true, "BAŞLANGIÇ CHARM'INI SEÇ", null, offerChoices);
@@ -1105,6 +1279,63 @@ public class RunManager : MonoBehaviour
         {
             Debug.LogException(e);
         }
+
+        try
+        {
+            GrantEssence();
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+    // Koşu sonu ÖZ: öldürme + ulaşılan perde + boss + zafer, ısıyla artar.
+    private void GrantEssence()
+    {
+        int actReached = IsVictory ? acts : Mathf.Clamp(Act, 1, acts);
+
+        float kills = runKills * essencePerKill;
+        int acts_ = (actReached - 1) * essencePerActReached;
+        int bosses = runBossKills * essencePerBoss;
+        int win = IsVictory ? essenceForVictory : 0;
+
+        float multiplier =
+            (1f + essencePerHeat * Heat) *
+            MetaProgress.EssenceMultiplier;
+
+        int total = Mathf.RoundToInt((kills + acts_ + bosses + win) * multiplier);
+
+        LastEssence = total;
+
+        LastEssenceBreakdown =
+            "öldürme " + Mathf.RoundToInt(kills) +
+            "  •  perde " + acts_ +
+            "  •  boss " + bosses +
+            (win > 0 ? "  •  zafer " + win : "") +
+            (multiplier > 1.001f ? "  •  ×" + multiplier.ToString("0.0#") : "");
+
+        MetaProgress.AddEssence(total);
+    }
+
+    // Ana menü arkası: küçük bir orman haritası (demirci başta selam verir).
+    private void BuildMenuLevel()
+    {
+        if (!menuBackgroundLevel || !LevelActive)
+            return;
+
+        try
+        {
+            level.Generate(UnityEngine.Random.Range(1, int.MaxValue), 1, false);
+
+            if (level.HasLevel)
+                level.TeleportPlayer(level.PlayerStart);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            level.Clear();
+        }
     }
 
     private void BeginRun()
@@ -1122,6 +1353,21 @@ public class RunManager : MonoBehaviour
         newUnlocks.Clear();
 
         Heat = MetaProgress.SelectedHeat;
+
+        // ---------------- KALICI GELİŞİM ----------------
+
+        runKills = 0;
+        runBossKills = 0;
+        LastEssence = 0;
+        LastEssenceBreakdown = "";
+
+        Gold = MetaProgress.StartGold;
+
+        if (playerHealth != null && playerBaseMaxHealth > 0)
+            playerHealth.SetMaxHealth(playerBaseMaxHealth + MetaProgress.BonusMaxHealth, true);
+
+        if (Ability != null)
+            Ability.Clear();
 
         RunSeed =
             fixedSeed != 0
@@ -1732,13 +1978,15 @@ public class RunManager : MonoBehaviour
 
             postGroups.RemoveAt(i);
 
-            if (mapHealOnPostCleared > 0f && playerHealth != null && !playerHealth.IsDead)
+            float postHeal = mapHealOnPostCleared + MetaProgress.BonusPostHeal;
+
+            if (postHeal > 0f && playerHealth != null && !playerHealth.IsDead)
             {
-                HealPercent(mapHealOnPostCleared);
+                HealPercent(postHeal);
 
                 CombatCallout.Popup(
                     player.transform.position + Vector3.up * 2.2f,
-                    "+" + Mathf.RoundToInt(mapHealOnPostCleared * 100f) + "% CAN",
+                    "+" + Mathf.RoundToInt(postHeal * HeatHealMultiplier * 100f) + "% CAN",
                     new Color(0.5f, 1f, 0.55f),
                     1f
                 );
@@ -1842,6 +2090,10 @@ public class RunManager : MonoBehaviour
 
     private static bool InteractPressed()
     {
+        // Duraklatma menüsü açıkken kapı / tezgah seçilmesin.
+        if (Instance != null && Instance.IsPaused)
+            return false;
+
         return
             Input.GetKeyDown(KeyCode.W) ||
             Input.GetKeyDown(KeyCode.UpArrow) ||
@@ -2086,11 +2338,62 @@ public class RunManager : MonoBehaviour
             }
         );
 
+        AddAbilityShopItems();
+
         leaveShop = false;
 
         State = RunState.Shop;
 
         yield return PausedWait(() => leaveShop);
+    }
+
+    // Yetenek kartları: mevcut yeteneği yükselt + (açık başka yetenek varsa)
+    // değiştir. Yeteneği olmayan oyuncuya satın alma kartı.
+    private void AddAbilityShopItems()
+    {
+        if (Ability == null)
+            return;
+
+        if (Ability.HasAbility && Ability.CanLevelUp)
+        {
+            shopItems.Add(
+                new ShopItem
+                {
+                    kind = ShopItemKind.Ability,
+                    ability = Ability.Type,
+                    abilityUpgrade = true,
+                    price = Price(abilityUpgradeShopPrice)
+                }
+            );
+        }
+
+        List<AbilityType> others = new List<AbilityType>();
+
+        for (int i = 0; i < AbilityInfo.All.Length; i++)
+        {
+            AbilityType t = AbilityInfo.All[i];
+
+            if (!MetaProgress.IsAbilityUnlocked(t))
+                continue;
+
+            if (Ability.HasAbility && t == Ability.Type)
+                continue;
+
+            others.Add(t);
+        }
+
+        if (others.Count == 0)
+            return;
+
+        shopItems.Add(
+            new ShopItem
+            {
+                kind = ShopItemKind.Ability,
+                ability = others[UnityEngine.Random.Range(0, others.Count)],
+                abilityUpgrade = false,
+                price = Price(abilityShopPrice)
+            }
+        );
     }
 
     private void RollShopCharms()
@@ -2139,7 +2442,8 @@ public class RunManager : MonoBehaviour
             Mathf.RoundToInt(
                 basePrice *
                 (1f + pricePerAct * (Mathf.Max(1, Act) - 1)) *
-                HeatPriceMultiplier
+                HeatPriceMultiplier *
+                MetaProgress.ShopPriceMultiplier
             )
         );
     }
@@ -2189,6 +2493,46 @@ public class RunManager : MonoBehaviour
         }
 
         return list;
+    }
+
+    // ---------------- YETENEK SEÇİMİ (koşu başı) ----------------
+
+    private IEnumerator AbilityOfferRoutine()
+    {
+        if (Ability == null)
+            yield break;
+
+        abilityOffers.Clear();
+
+        for (int i = 0; i < AbilityInfo.All.Length; i++)
+        {
+            if (MetaProgress.IsAbilityUnlocked(AbilityInfo.All[i]))
+                abilityOffers.Add(AbilityInfo.All[i]);
+        }
+
+        if (abilityOffers.Count == 0)
+            yield break;
+
+        if (abilityOffers.Count == 1)
+        {
+            Ability.Equip(abilityOffers[0]);
+            ShowBanner("YETENEK: " + AbilityInfo.Name(abilityOffers[0]).ToUpperInvariant() + "  [Q]", 2.2f);
+            yield break;
+        }
+
+        chosenAbility = -1;
+
+        State = RunState.AbilityOffer;
+
+        yield return PausedWait(() => chosenAbility >= 0);
+
+        AbilityType picked = abilityOffers[Mathf.Clamp(chosenAbility, 0, abilityOffers.Count - 1)];
+
+        MetaProgress.SelectedAbility = (int)picked;
+
+        Ability.Equip(picked);
+
+        State = RunState.Starting;
     }
 
     // ---------------- CHARM TEKLİFİ ----------------
@@ -2306,8 +2650,12 @@ public class RunManager : MonoBehaviour
         if (executed)
             runExecutes++;
 
+        runKills++;
+
         if (enemy == currentBoss)
         {
+            runBossKills++;
+
             AddGold(bossGoldPerAct * Act, "Boss");
             return;
         }
@@ -3189,6 +3537,11 @@ public class RunManager : MonoBehaviour
         Gold = 0;
 
         Inventory.Clear();
+
+        if (Ability != null)
+            Ability.Clear();
+
+        IsPaused = false;
 
         HitStop.ClearAll();
         EnemyTime.Clear();

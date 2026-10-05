@@ -13,7 +13,8 @@ public enum RunState
     Shop,           // dükkan
     Rest,           // dinlenme
     Dead,           // öldü
-    Victory         // son boss yenildi
+    Victory,        // son boss yenildi
+    AbilityOffer    // koşu başı yetenek seçimi (oyun duraklatılmış)
 }
 
 public enum RoomType
@@ -28,13 +29,16 @@ public enum RoomType
 public enum ShopItemKind
 {
     Charm,
-    Heal
+    Heal,
+    Ability   // yetenek al / değiştir / yükselt
 }
 
 public class ShopItem
 {
     public ShopItemKind kind;
     public CharmDefinition charm;
+    public AbilityType ability;      // kind == Ability
+    public bool abilityUpgrade;      // true: mevcut yeteneği yükselt
     public int price;
     public bool sold;
 }
