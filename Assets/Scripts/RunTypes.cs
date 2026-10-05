@@ -14,7 +14,9 @@ public enum RunState
     Rest,           // dinlenme
     Dead,           // öldü
     Victory,        // son boss yenildi
-    AbilityOffer    // koşu başı yetenek seçimi (oyun duraklatılmış)
+    AbilityOffer,   // koşu başı yetenek seçimi (oyun duraklatılmış)
+    WeaponOffer,    // koşu başı silah seçimi
+    CharmReplace    // yuva dolu: yeni charm için birini bırak
 }
 
 public enum RoomType
@@ -30,7 +32,10 @@ public enum ShopItemKind
 {
     Charm,
     Heal,
-    Ability   // yetenek al / değiştir / yükselt
+    Ability,   // yetenek al / değiştir / yükselt
+    Weapon,    // silah değiştir
+    Legendary, // efsanevi charm (pahalı)
+    Cleanse    // laneti kaldır
 }
 
 public class ShopItem
@@ -39,6 +44,7 @@ public class ShopItem
     public CharmDefinition charm;
     public AbilityType ability;      // kind == Ability
     public bool abilityUpgrade;      // true: mevcut yeteneği yükselt
+    public WeaponType weapon;        // kind == Weapon
     public int price;
     public bool sold;
 }

@@ -36,5 +36,8 @@ public class CharmDefinition : ScriptableObject
         "girer. Ör. 'act2', 'act3', 'win1', 'exec50', 'parry150'.")]
     public string unlockId = "";
 
+    [Tooltip("EFSANEVİ: oynanışı değiştiren nadir charm (lanetli sandık / dükkan / seçimde nadiren).")]
+    public bool legendary;
+
     public CharmEffect effect;
 }

@@ -960,12 +960,12 @@ public class LevelGenerator : MonoBehaviour
     {
         LevelProps props = LevelProps.Ensure(gameObject);
 
-        props.ResetLevel(ThemeOn ? theme : null, root != null ? root.transform : null);
-
         TilemapRenderer tr = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
 
         int layer = tr != null ? tr.sortingLayerID : 0;
         int order = tr != null ? tr.sortingOrder + 1 : 1;
+
+        props.ResetLevel(ThemeOn ? theme : null, root != null ? root.transform : null, cell, layer, order);
 
         System.Random rng = new System.Random(seed * 31 + 7);
 

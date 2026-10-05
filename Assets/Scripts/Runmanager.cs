@@ -484,6 +484,28 @@ public class RunManager : MonoBehaviour
     [SerializeField] private int duelMinFillers = 1;
     [SerializeField] private int duelMaxFillers = 2;
 
+    [Header("Build + risk (50. adım)")]
+    [Tooltip("En fazla bu kadar FARKLI charm. Doluyken yeni charm için birini bırakmak gerekir.")]
+    [SerializeField] private int charmSlots = 6;
+
+    [Tooltip("Oda temizlenince iyileşme çarpanı (gerilim: iyileşme parry / sandık / dükkandan gelsin).")]
+    [SerializeField] private float betweenStageHealMultiplier = 0.4f;
+
+    [Tooltip("Nöbet temizlenince iyileşme çarpanı.")]
+    [SerializeField] private float postHealMultiplier = 0.5f;
+
+    [Tooltip("Dövüş haritasında LANETLİ sandık çıkma ihtimali (efsanevi charm + altın, ama lanet).")]
+    [Range(0f, 1f)] [SerializeField] private float cursedChestChance = 0.45f;
+    [SerializeField] private int cursedChestGold = 50;
+    [Tooltip("Lanet: kaç oda sürer.")]
+    [SerializeField] private int curseRooms = 2;
+    [Tooltip("Lanet: alınan hasar çarpanı.")]
+    [SerializeField] private float curseDamageTaken = 1.35f;
+
+    [SerializeField] private int legendaryShopPrice = 150;
+    [SerializeField] private int weaponShopPrice = 90;
+    [SerializeField] private int cleanseShopPrice = 60;
+
     [Header("Ana menü")]
     [Tooltip("Lobide (ana menü) arkada rastgele bir orman haritası kurulur.")]
     [SerializeField] private bool menuBackgroundLevel = true;
@@ -510,6 +532,21 @@ public class RunManager : MonoBehaviour
 
     // Yetenek seçimi (koşu başı)
     public IReadOnlyList<AbilityType> AbilityOffers => abilityOffers;
+
+    // Silah
+    public PlayerWeapon Weapon { get; private set; }
+    public IReadOnlyList<WeaponType> WeaponOffers => weaponOffers;
+
+    public bool IsWeaponAvailable(WeaponType type) =>
+        testUnlockAllAbilities || MetaProgress.IsWeaponUnlocked(type);
+
+    // Charm yuvaları
+    public int CharmSlots => Mathf.Max(1, charmSlots);
+    public bool CharmSlotsFull => Inventory != null && Inventory.Entries.Count >= CharmSlots;
+    public CharmDefinition ReplaceCandidate { get; private set; }
+
+    // Lanet
+    public int CurseRoomsLeft { get; private set; }
     public PlayerAbility Ability { get; private set; }
 
     // Yetenek bu koşuda kullanılabilir mi (kalıcı kilit ya da test anahtarı).
@@ -630,12 +667,19 @@ public class RunManager : MonoBehaviour
         public string title;
         public int choices;
         public bool bonus;
+        public bool legendary;
     }
 
     private readonly List<PendingOffer> pendingOffers = new List<PendingOffer>();
 
     private readonly List<AbilityType> abilityOffers = new List<AbilityType>();
     private int chosenAbility = -1;
+
+    private readonly List<WeaponType> weaponOffers = new List<WeaponType>();
+    private int chosenWeapon = -1;
+
+    private int replaceChoice = -2;   // -2 bekliyor, -1 vazgeç, >=0 bırakılacak charm
+    private readonly object curseToken = new object();
 
     private int runKills;
     private int runBossKills;
@@ -817,6 +861,8 @@ public class RunManager : MonoBehaviour
         );
 
         Ability = PlayerAbility.Ensure(player.gameObject);
+
+        Weapon = PlayerWeapon.Ensure(player.gameObject);
 
         PlayerDamage.AttackBalanceMultiplier = runPlayerAttackBalanceMultiplier;
 
@@ -1005,6 +1051,32 @@ public class RunManager : MonoBehaviour
             startRequested = true;
     }
 
+    public void ChooseWeapon(int index)
+    {
+        if (State != RunState.WeaponOffer)
+            return;
+
+        if (index < 0 || index >= weaponOffers.Count)
+            return;
+
+        if (!IsWeaponAvailable(weaponOffers[index]))
+            return;
+
+        chosenWeapon = index;
+    }
+
+    /// <summary>Yuva doluyken: index = bırakılacak charm, -1 = yeni charm'ı alma.</summary>
+    public void ChooseReplace(int index)
+    {
+        if (State != RunState.CharmReplace)
+            return;
+
+        if (index >= Inventory.Entries.Count)
+            return;
+
+        replaceChoice = Mathf.Max(-1, index);
+    }
+
     public void ChooseAbility(int index)
     {
         if (State != RunState.AbilityOffer)
@@ -1141,12 +1213,30 @@ public class RunManager : MonoBehaviour
         if (item.sold || Gold < item.price)
             return false;
 
-        if (item.kind == ShopItemKind.Charm)
+        if (item.kind == ShopItemKind.Charm || item.kind == ShopItemKind.Legendary)
         {
             if (item.charm == null || !Inventory.CanAdd(item.charm))
                 return false;
 
+            // Yuva dolu: yeni charm alınamaz (önce dükkanda birini sil).
+            if (Inventory.GetStacks(item.charm) == 0 && CharmSlotsFull)
+                return false;
+
             Inventory.Add(item.charm);
+        }
+        else if (item.kind == ShopItemKind.Weapon)
+        {
+            if (Weapon == null || Weapon.Current == item.weapon)
+                return false;
+
+            Weapon.Equip(item.weapon);
+        }
+        else if (item.kind == ShopItemKind.Cleanse)
+        {
+            if (CurseRoomsLeft <= 0)
+                return false;
+
+            ClearCurse();
         }
         else if (item.kind == ShopItemKind.Heal)
         {
@@ -1263,6 +1353,8 @@ public class RunManager : MonoBehaviour
             player.canControl = true;
 
             BeginRun();
+
+            yield return WeaponOfferRoutine();
 
             if (abilityOfferAtStart)
                 yield return AbilityOfferRoutine();
@@ -1482,6 +1574,11 @@ public class RunManager : MonoBehaviour
 
         if (Ability != null)
             Ability.Clear();
+
+        if (Weapon != null)
+            Weapon.Equip(WeaponType.Sword);
+
+        ClearCurse();
 
         RunSeed =
             fixedSeed != 0
@@ -1836,7 +1933,15 @@ public class RunManager : MonoBehaviour
                 ? bossHealPercent
                 : (duelMode ? duelHealBetweenStagesPercent : healBetweenStagesPercent);
 
-        HealPercent(heal);
+        // Gerilim: oda arası iyileşme az (Kan Ritmi'nde hiç yok).
+        if (type != RoomType.Boss)
+            heal *= BloodRhythmEffect.Active ? 0f : betweenStageHealMultiplier;
+
+        if (heal > 0f)
+            HealPercent(heal);
+
+        // Lanet oda sayacı.
+        TickCurse();
 
         // ---------------- ÖDÜL ----------------
         // Haritada: ödüller biriktirilir, çıkış kapısından geçince verilir
@@ -2080,6 +2185,19 @@ public class RunManager : MonoBehaviour
             yield break;
         }
 
+        // LANETLİ SANDIK: haritada bir yerde (efsanevi charm + lanet).
+        if (
+            (type == RoomType.Fight || type == RoomType.Elite) &&
+            LevelProps.Instance != null &&
+            UnityEngine.Random.value < cursedChestChance
+        )
+        {
+            Transform[] spot = level.CreatePatrolPoints(1, 6);
+
+            if (spot != null && spot.Length > 0 && spot[0] != null)
+                LevelProps.Instance.SpawnExtraChest(spot[0].position, true);
+        }
+
         // MEYDAN OKUMA: süre içinde hepsini temizle → bonus charm + altın.
         bool challenge =
             type == RoomType.Fight &&
@@ -2164,7 +2282,9 @@ public class RunManager : MonoBehaviour
 
             postGroups.RemoveAt(i);
 
-            float postHeal = mapHealOnPostCleared + MetaProgress.BonusPostHeal;
+            float postHeal =
+                (mapHealOnPostCleared + MetaProgress.BonusPostHeal) *
+                (BloodRhythmEffect.Active ? 0f : postHealMultiplier);
 
             if (postHeal > 0f && playerHealth != null && !playerHealth.IsDead)
             {
@@ -2527,6 +2647,8 @@ public class RunManager : MonoBehaviour
 
         AddAbilityShopItems();
 
+        AddSpecialShopItems();
+
         leaveShop = false;
 
         State = RunState.Shop;
@@ -2536,6 +2658,60 @@ public class RunManager : MonoBehaviour
 
     // Yetenek kartları: mevcut yeteneği yükselt + (açık başka yetenek varsa)
     // değiştir. Yeteneği olmayan oyuncuya satın alma kartı.
+    // Pahalı ama güçlü: efsanevi charm, silah, lanet temizliği (altın birikmesin).
+    private void AddSpecialShopItems()
+    {
+        List<CharmDefinition> legend = CharmCatalog.RollLegendary(pool, Inventory, 1);
+
+        if (legend.Count > 0)
+        {
+            shopItems.Add(
+                new ShopItem
+                {
+                    kind = ShopItemKind.Legendary,
+                    charm = legend[0],
+                    price = Price(legendaryShopPrice)
+                }
+            );
+        }
+
+        if (Weapon != null)
+        {
+            List<WeaponType> others = new List<WeaponType>();
+
+            for (int i = 0; i < WeaponInfo.All.Length; i++)
+            {
+                WeaponType w = WeaponInfo.All[i];
+
+                if (w != Weapon.Current && IsWeaponAvailable(w))
+                    others.Add(w);
+            }
+
+            if (others.Count > 0)
+            {
+                shopItems.Add(
+                    new ShopItem
+                    {
+                        kind = ShopItemKind.Weapon,
+                        weapon = others[UnityEngine.Random.Range(0, others.Count)],
+                        price = Price(weaponShopPrice)
+                    }
+                );
+            }
+        }
+
+        if (CurseRoomsLeft > 0)
+        {
+            shopItems.Add(
+                new ShopItem
+                {
+                    kind = ShopItemKind.Cleanse,
+                    price = Price(cleanseShopPrice)
+                }
+            );
+        }
+    }
+
     private void AddAbilityShopItems()
     {
         if (Ability == null)
@@ -2749,12 +2925,94 @@ public class RunManager : MonoBehaviour
 
         offers = new List<CharmDefinition>();
 
+        // Yuva dolu ve yeni bir charm: hangisini bırakacağını sor.
+        if (Inventory.GetStacks(picked) == 0 && CharmSlotsFull)
+        {
+            ReplaceCandidate = picked;
+            replaceChoice = -2;
+
+            State = RunState.CharmReplace;
+
+            yield return PausedWait(() => replaceChoice != -2);
+
+            if (replaceChoice >= 0 && replaceChoice < Inventory.Entries.Count)
+            {
+                Inventory.Remove(Inventory.Entries[replaceChoice].definition);
+                Inventory.Add(picked);
+            }
+
+            ReplaceCandidate = null;
+            yield break;
+        }
+
         Inventory.Add(picked);
     }
 
-    private void QueueOffer(string title, int choices, bool bonus)
+    // ---------------- SİLAH SEÇİMİ (koşu başı) ----------------
+
+    private IEnumerator WeaponOfferRoutine()
     {
-        pendingOffers.Add(new PendingOffer { title = title, choices = choices, bonus = bonus });
+        if (Weapon == null)
+            yield break;
+
+        weaponOffers.Clear();
+        weaponOffers.AddRange(WeaponInfo.All);
+
+        chosenWeapon = -1;
+
+        State = RunState.WeaponOffer;
+
+        yield return PausedWait(() => chosenWeapon >= 0);
+
+        Weapon.Equip(weaponOffers[Mathf.Clamp(chosenWeapon, 0, weaponOffers.Count - 1)]);
+
+        State = RunState.Starting;
+    }
+
+    // ---------------- LANET ----------------
+
+    private void ApplyCurse()
+    {
+        CurseRoomsLeft = Mathf.Max(CurseRoomsLeft, curseRooms);
+
+        PlayerStats stats = PlayerStats.Current;
+
+        if (stats != null)
+        {
+            stats.RemoveModifiers(curseToken);
+            stats.AddModifier(curseToken, StatType.DamageTaken, 0f, curseDamageTaken);
+        }
+
+        ShowBanner("LANET: alınan hasar +%" + Mathf.RoundToInt((curseDamageTaken - 1f) * 100f) + "  (" + CurseRoomsLeft + " oda)", 2.4f);
+    }
+
+    private void TickCurse()
+    {
+        if (CurseRoomsLeft <= 0)
+            return;
+
+        CurseRoomsLeft--;
+
+        if (CurseRoomsLeft <= 0)
+        {
+            ClearCurse();
+            ShowBanner("LANET KALKTI", 1.6f);
+        }
+    }
+
+    private void ClearCurse()
+    {
+        CurseRoomsLeft = 0;
+
+        PlayerStats stats = PlayerStats.Current;
+
+        if (stats != null)
+            stats.RemoveModifiers(curseToken);
+    }
+
+    private void QueueOffer(string title, int choices, bool bonus, bool legendary = false)
+    {
+        pendingOffers.Add(new PendingOffer { title = title, choices = choices, bonus = bonus, legendary = legendary });
     }
 
     // Biriken charm seçimlerini sırayla gösterir (bölümler arası geçiş).
@@ -2765,7 +3023,17 @@ public class RunManager : MonoBehaviour
             PendingOffer o = pendingOffers[0];
             pendingOffers.RemoveAt(0);
 
-            yield return OfferRoutine(false, o.title, null, o.choices, o.bonus);
+            List<CharmDefinition> custom = null;
+
+            if (o.legendary)
+            {
+                custom = CharmCatalog.RollLegendary(pool, Inventory, o.choices);
+
+                if (custom.Count == 0)
+                    custom = null;   // hepsi alınmışsa normal teklif
+            }
+
+            yield return OfferRoutine(false, o.title, custom, o.choices, o.bonus);
         }
     }
 
@@ -2815,6 +3083,20 @@ public class RunManager : MonoBehaviour
         int gold = UnityEngine.Random.Range(Mathf.Min(vaseGoldMin, vaseGoldMax), Mathf.Max(vaseGoldMin, vaseGoldMax) + 1);
 
         AddGold(gold, "Vazo");
+    }
+
+    public void OnChestOpened(Vector3 at, bool cursed)
+    {
+        if (cursed)
+        {
+            AddGold(cursedChestGold, "Lanetli sandık");
+            QueueOffer("LANETLİ SANDIK: EFSANEVİ CHARM", 2, true, true);
+            CombatCallout.Popup(at + Vector3.up, "EFSANEVİ CHARM (çıkışta) + LANET", new Color(0.8f, 0.45f, 1f), 1.1f);
+            ApplyCurse();
+            return;
+        }
+
+        OnChestOpened(at);
     }
 
     public void OnChestOpened(Vector3 at)
@@ -3915,6 +4197,11 @@ public class RunManager : MonoBehaviour
 
         if (Ability != null)
             Ability.Clear();
+
+        if (Weapon != null)
+            Weapon.Equip(WeaponType.Sword);
+
+        ClearCurse();
 
         IsPaused = false;
         FadeAlpha = 0f;

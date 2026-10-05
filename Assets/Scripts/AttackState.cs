@@ -106,6 +106,12 @@ public class AttackState : ICombatState
 
         player.PlayAttackAnimation(step);
 
+        // Silahın hızına göre animasyon hızı (ayrı sprite gerekmez).
+        PlayerWeapon weapon = PlayerWeapon.Instance;
+
+        if (weapon != null)
+            player.SetAttackAnimationSpeed(1f / Mathf.Max(0.2f, weapon.DurationMultiplier));
+
         // =====================================================
         // ATTACK DIRECTION VECTOR
         // =====================================================
@@ -316,6 +322,8 @@ public class AttackState : ICombatState
                 player.rb.linearVelocity.y
             );
 
+        player.SetAttackAnimationSpeed(1f);
+
         onEnd?.Invoke();
     }
 
@@ -358,10 +366,15 @@ public class AttackState : ICombatState
         // HITBOX
         // =====================================================
 
+        // Silah menzili: kutu büyürse merkez ileri kayar (oyuncunun arkasına uzamaz).
+        Vector2 box = combat.EffectiveHitBox;
+
+        boxCenter += dir * (box.x - combat.hitBoxSize.x) * 0.5f;
+
         Collider2D[] hits =
             Physics2D.OverlapBoxAll(
                 boxCenter,
-                combat.hitBoxSize,
+                box,
                 0f,
                 enemyLayer
             );
@@ -369,7 +382,7 @@ public class AttackState : ICombatState
         bool hitSomething = false;
 
         // Vazo / sandık.
-        if (LevelProps.HitArea(boxCenter, combat.hitBoxSize))
+        if (LevelProps.HitArea(boxCenter, box))
             hitSomething = true;
 
         foreach (var h in hits)
@@ -446,6 +459,10 @@ public class AttackState : ICombatState
         // =====================================================
         // ATTACK FEEDBACK
         // =====================================================
+
+        // Silah kesik izi + silaha özel vuruş etkisi.
+        if (PlayerWeapon.Instance != null)
+            PlayerWeapon.Instance.OnSwing(step, boxCenter, box, dir, hitSomething);
 
         if (hitSomething)
         {

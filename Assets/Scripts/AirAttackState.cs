@@ -151,7 +151,8 @@ public class AirAttackState : ICombatState
             local.x = Mathf.Abs(local.x) * direction;
 
             center = player.transform.TransformPoint(local);
-            size = combat.hitBoxSize;
+            size = combat.EffectiveHitBox;
+            center += new Vector2(direction, 0f) * (size.x - combat.hitBoxSize.x) * 0.5f;
             dir = direction > 0f ? Vector2.right : Vector2.left;
         }
 
@@ -204,6 +205,9 @@ public class AirAttackState : ICombatState
         // Pogo: düşmana, mermiye ya da DİKENE değen aşağı vuruş.
         if (down && !hitSomething)
             hitSomething = HitProjectileBelow(center, size) || LevelProps.SpikeIn(center, size);
+
+        if (PlayerWeapon.Instance != null)
+            PlayerWeapon.Instance.OnSwing(down ? 0 : step, center, size, dir, hitSomething);
 
         if (!hitSomething)
             return;

@@ -209,6 +209,12 @@ public class PlayerAbility : MonoBehaviour
         Charge(killCharge);
     }
 
+    /// <summary>Charm'lar için: bekleme süresini kısalt.</summary>
+    public void ReduceCooldown(float seconds)
+    {
+        Charge(seconds);
+    }
+
     private void Charge(float seconds)
     {
         if (!HasAbility || CooldownLeft <= 0f || seconds <= 0f)

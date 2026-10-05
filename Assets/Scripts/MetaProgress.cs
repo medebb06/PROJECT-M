@@ -192,6 +192,26 @@ public static class MetaProgress
         return -1;
     }
 
+    public static bool IsWeaponUnlocked(WeaponType type)
+    {
+        string id = WeaponInfo.UnlockId(type);
+
+        return string.IsNullOrEmpty(id) || UpgradeLevel(id) > 0;
+    }
+
+    public static int WeaponUnlockCost(WeaponType type)
+    {
+        MetaUpgrade[] all = MetaUpgrades.All;
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i].isWeapon && all[i].weapon == type)
+                return NextCost(all[i]);
+        }
+
+        return -1;
+    }
+
     public static bool IsAbilityUnlocked(AbilityType type)
     {
         string id = AbilityInfo.UnlockId(type);
@@ -331,6 +351,8 @@ public class MetaUpgrade
     public string requires;      // önce alınması gereken (boş = yok)
     public bool isAbility;
     public AbilityType ability;
+    public bool isWeapon;
+    public WeaponType weapon;
 }
 
 /// <summary>Kalıcı yükseltme listesi (sıra = menü sırası).</summary>
@@ -387,6 +409,18 @@ public static class MetaUpgrades
             id = EssenceGain, name = "Öz Toplayıcı",
             description = "Koşu sonunda +%10 öz (seviye başı).",
             costs = new[] { 60, 100, 150 }
+        },
+        new MetaUpgrade
+        {
+            id = WeaponInfo.UnlockId(WeaponType.Spear), name = "Silah: Mızrak",
+            description = "Uzun menzil, ileri atılan ilk vuruş.",
+            costs = new[] { 70 }, isWeapon = true, weapon = WeaponType.Spear
+        },
+        new MetaUpgrade
+        {
+            id = WeaponInfo.UnlockId(WeaponType.Greatsword), name = "Silah: Büyük Kılıç",
+            description = "Yavaş, dengeyi ezer; 4. vuruş şok dalgası.",
+            costs = new[] { 90 }, isWeapon = true, weapon = WeaponType.Greatsword
         },
         new MetaUpgrade
         {

@@ -46,7 +46,7 @@ public static class CharmCatalog
             Make(
                 "Keskin Gözler",
                 "Vuruşların kritik olma şansı artar. Kritik vuruş hasarı katlar.",
-                3,
+                2,
                 Stat(StatType.CritChance, add: 0.10f)
             )
         );
@@ -57,7 +57,7 @@ public static class CharmCatalog
             Make(
                 "Ölümcül Darbe",
                 "Kritik vuruşlar çok daha fazla hasar verir.",
-                3,
+                2,
                 Stat(StatType.CritMultiplier, add: 0.35f)
             )
         );
@@ -69,7 +69,7 @@ public static class CharmCatalog
                 "Keskin Uçlar",
                 "Vuruşların düşmanın dengesini daha çok bozar: " +
                 "daha çabuk sersemler.",
-                3,
+                2,
                 Stat(StatType.BalanceDamage, mult: 1.15f)
             )
         );
@@ -80,7 +80,7 @@ public static class CharmCatalog
             Make(
                 "Ağır Darbe",
                 "Sersemlemiş düşmana daha çok can hasarı verirsin.",
-                3,
+                2,
                 Stat(StatType.HealthDamage, mult: 1.2f)
             )
         );
@@ -98,7 +98,7 @@ public static class CharmCatalog
             Make(
                 "Parry Şifası",
                 "Başarılı parry bazen seni iyileştirir.",
-                5,
+                3,
                 parryHeal
             )
         );
@@ -116,7 +116,7 @@ public static class CharmCatalog
             Make(
                 "Hasat",
                 "Düşman öldürmek bazen seni iyileştirir.",
-                5,
+                3,
                 killHeal
             )
         );
@@ -300,9 +300,63 @@ public static class CharmCatalog
 
         list.Add(paralyzeDef);
 
+        // =====================================================
+        // EFSANEVİ (50. adım): oynanışı DEĞİŞTİREN, nadir, tek yığın.
+        // Lanetli sandıktan / dükkandan; normal seçimde nadiren.
+        // =====================================================
+
+        list.Add(Legendary("Denge Patlaması",
+            "Dengesi kırılan düşman PATLAR, çevredekilerin dengesini sarsar. Kalabalıkta zincir.",
+            ScriptableObject.CreateInstance<BalanceBurstEffect>()));
+
+        list.Add(Legendary("Hayalet Kılıç",
+            "Kombonun 4. vuruşu kısa süre sonra hayalet bir vuruşla TEKRARLANIR.",
+            ScriptableObject.CreateInstance<PhantomBladeEffect>()));
+
+        list.Add(Legendary("İnfazcı",
+            "İnfaz barı hızlı dolar; her infaz can verir ve yeteneği (Q) anında doldurur.",
+            ScriptableObject.CreateInstance<ExecutionerEffect>()));
+
+        list.Add(Legendary("Kan Ritmi",
+            "RİSK: her parry can verir, ama oda arası ve nöbet iyileşmeleri KAPANIR.",
+            ScriptableObject.CreateInstance<BloodRhythmEffect>()));
+
+        list.Add(Legendary("Kusursuz Refleks",
+            "RİSK: parry penceresi daralır; ama riposte çok güçlenir ve her parry yeteneği doldurur.",
+            ScriptableObject.CreateInstance<PerfectReflexEffect>()));
+
+        list.Add(Legendary("Cam Kalp",
+            "RİSK: max can %30 azalır; odada her öldürme hasarı artırır.",
+            ScriptableObject.CreateInstance<GlassHeartEffect>()));
+
         ApplyUnlocks(list);
 
         return list;
+    }
+
+    // Efsanevi: tek yığın, nadir (normal teklifte düşük ağırlık).
+    private static CharmDefinition Legendary(string name, string description, CharmEffect effect)
+    {
+        CharmDefinition def = Make(name, description, 1, effect);
+
+        def.legendary = true;
+        def.weight = 0.25f;
+
+        return def;
+    }
+
+    /// <summary>Havuzdan sadece EFSANEVİLER (lanetli sandık / dükkan).</summary>
+    public static List<CharmDefinition> RollLegendary(List<CharmDefinition> pool, CharmInventory inventory, int count)
+    {
+        List<CharmDefinition> legend = new List<CharmDefinition>();
+
+        for (int i = 0; i < pool.Count; i++)
+        {
+            if (pool[i] != null && pool[i].legendary)
+                legend.Add(pool[i]);
+        }
+
+        return Roll(legend, inventory, count);
     }
 
     // Koşular arası kilitler: bu charm'lar bir hedefe ulaşınca havuza girer.

@@ -552,6 +552,13 @@ public class PlayerController : MonoBehaviour
         animationController.PlayAttackAnimation(attackStep);
     }
 
+    // Silah hızı için saldırı animasyonu hızı (1 = normal).
+    public void SetAttackAnimationSpeed(float speed)
+    {
+        if (animationController != null)
+            animationController.SetSpeed(speed);
+    }
+
     public void PlayDeathAnimation()
     {
         animationController.PlayDeathAnimation();

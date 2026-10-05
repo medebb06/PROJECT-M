@@ -19,10 +19,16 @@ public static class PlayerDamage
     // (kombo + slam) denge hasarı çarpanı. Parry ana denge kırıcı olsun.
     public static float AttackBalanceMultiplier = 1f;
 
+    // Silah (PlayerWeapon koyar): sadece normal vuruşlar (kombo + havada).
+    public static float WeaponBalanceMultiplier = 1f;
+    public static float WeaponHealthMultiplier = 1f;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
         AttackBalanceMultiplier = 1f;
+        WeaponBalanceMultiplier = 1f;
+        WeaponHealthMultiplier = 1f;
     }
 
     public static HitResult HitEnemy(
@@ -80,6 +86,9 @@ public static class PlayerDamage
                 info.source == DamageSource.Attack || info.source == DamageSource.Slam
                     ? AttackBalanceMultiplier
                     : 1f;
+
+            if (info.source == DamageSource.Attack)
+                sourceMultiplier *= WeaponBalanceMultiplier;
 
             int amount =
                 Resolve(
@@ -141,7 +150,7 @@ public static class PlayerDamage
             Resolve(
                 StatType.HealthDamage,
                 info.healthDamage,
-                critMultiplier,
+                critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f),
                 stats
             );
 

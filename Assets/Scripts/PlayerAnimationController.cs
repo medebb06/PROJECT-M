@@ -225,6 +225,13 @@ public class PlayerAnimationController : MonoBehaviour
         PlayAttackAnimation(down ? 3 : (step <= 1 ? 1 : 2));
     }
 
+    // Silah hızı: saldırı sırasında animator hızı (bitince 1).
+    public void SetSpeed(float speed)
+    {
+        if (animator != null)
+            animator.speed = Mathf.Max(0.05f, speed);
+    }
+
     public void PlayDeathAnimation()
     {
         if (animator == null)

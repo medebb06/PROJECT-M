@@ -16,6 +16,9 @@ public class ExecuteMeter : MonoBehaviour
 {
     public static ExecuteMeter Instance { get; private set; }
 
+    // İnfazcı charm'ı koyar (1 = etkisiz).
+    public static float CharmFillMultiplier = 1f;
+
     [Header("Dolma")]
     [Tooltip("Normal düşman öldürünce (3 öldürme ≈ dolu).")]
     [Range(0f, 1f)] public float killFill = 0.34f;
@@ -61,6 +64,7 @@ public class ExecuteMeter : MonoBehaviour
     private static void ResetStatics()
     {
         Instance = null;
+        CharmFillMultiplier = 1f;
         lethal.Clear();
         lastExecuted = null;
     }
@@ -168,8 +172,8 @@ public class ExecuteMeter : MonoBehaviour
 
         bool wasFull = IsFull;
 
-        // Kalıcı gelişim: Cellat (dolum hızı).
-        amount *= MetaProgress.ExecuteFillMultiplier;
+        // Kalıcı gelişim: Cellat (dolum hızı). Charm: İnfazcı.
+        amount *= MetaProgress.ExecuteFillMultiplier * CharmFillMultiplier;
 
         Fill = Mathf.Clamp01(Fill + amount);
 

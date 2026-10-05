@@ -38,6 +38,7 @@ public class LevelProps : MonoBehaviour
         public SpriteRenderer sr;
         public Rect area;
         public bool chest;
+        public bool cursed;
         public bool used;
     }
 
@@ -46,6 +47,12 @@ public class LevelProps : MonoBehaviour
 
     private JungleTheme theme;
     private Transform levelRoot;
+    private float levelCell = 1f;
+    private int levelLayer;
+    private int levelOrder = 1;
+
+    [Header("Lanetli sandık")]
+    public Color cursedTint = new Color(0.75f, 0.45f, 1f);
     private PlayerController player;
     private Collider2D playerCol;
     private PlayerDamageReceiver receiver;
@@ -75,8 +82,16 @@ public class LevelProps : MonoBehaviour
     /// <summary>Yeni harita: eski listeyi sıfırla (nesneler haritayla silinir).</summary>
     public void ResetLevel(JungleTheme jungle, Transform root)
     {
+        ResetLevel(jungle, root, levelCell, levelLayer, levelOrder);
+    }
+
+    public void ResetLevel(JungleTheme jungle, Transform root, float cell, int sortingLayer, int order)
+    {
         theme = jungle;
         levelRoot = root;
+        levelCell = cell;
+        levelLayer = sortingLayer;
+        levelOrder = order;
         props.Clear();
         spikes.Clear();
     }
@@ -90,6 +105,23 @@ public class LevelProps : MonoBehaviour
     {
         Prop p = Create("Sandık", ground, parent, cell, chestClosedCells, new Color(0.65f, 0.42f, 0.18f), sortingLayer, order);
         p.chest = true;
+        props.Add(p);
+    }
+
+    /// <summary>Haritaya sonradan sandık (RunManager: lanetli sandık).</summary>
+    public void SpawnExtraChest(Vector3 ground, bool cursed)
+    {
+        if (levelRoot == null)
+            return;
+
+        Prop p = Create(cursed ? "Lanetli Sandık" : "Sandık", ground, levelRoot, levelCell, chestClosedCells, new Color(0.65f, 0.42f, 0.18f), levelLayer, levelOrder);
+
+        p.chest = true;
+        p.cursed = cursed;
+
+        if (cursed)
+            p.sr.color = cursedTint;
+
         props.Add(p);
     }
 
@@ -229,7 +261,7 @@ public class LevelProps : MonoBehaviour
                 p.sr.color = p.sr.color * 0.6f;
 
             if (run != null)
-                run.OnChestOpened(at);
+                run.OnChestOpened(at, p.cursed);
 
             return;
         }

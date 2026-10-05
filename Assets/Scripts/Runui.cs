@@ -108,6 +108,25 @@ public class RunUI : MonoBehaviour
                 }
                 break;
 
+            case RunState.WeaponOffer:
+                for (int i = 0; i < 9; i++)
+                {
+                    if (NumberPressed(i))
+                        run.ChooseWeapon(i);
+                }
+                break;
+
+            case RunState.CharmReplace:
+                for (int i = 0; i < 9; i++)
+                {
+                    if (NumberPressed(i))
+                        run.ChooseReplace(i);
+                }
+
+                if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
+                    run.ChooseReplace(-1);
+                break;
+
             case RunState.Fighting:
             case RunState.Cleared:
                 if (Input.GetKeyDown(KeyCode.Escape))
@@ -322,6 +341,14 @@ public class RunUI : MonoBehaviour
         {
             case RunState.AbilityOffer:
                 DrawAbilityOffer(run, width, height);
+                break;
+
+            case RunState.WeaponOffer:
+                DrawWeaponOffer(run, width, height);
+                break;
+
+            case RunState.CharmReplace:
+                DrawCharmReplace(run, width, height);
                 break;
 
             case RunState.Offer:
@@ -563,11 +590,14 @@ public class RunUI : MonoBehaviour
             GUI.DrawTexture(row, Texture2D.whiteTexture);
             GUI.color = old;
 
-            string nameColor = u.isAbility ? "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(u.ability)) : "#FFFFFF";
+            string nameColor =
+                u.isAbility ? "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(u.ability)) :
+                u.isWeapon ? "#" + ColorUtility.ToHtmlStringRGB(WeaponInfo.Color(u.weapon)) :
+                "#FFFFFF";
 
             string pips = "";
 
-            if (!u.isAbility)
+            if (!u.isAbility && !u.isWeapon)
             {
                 for (int p = 0; p < max; p++)
                     pips += p < level ? "<color=#FFD54A>■</color>" : "<color=#555555>■</color>";
@@ -590,7 +620,7 @@ public class RunUI : MonoBehaviour
             if (cost < 0)
             {
                 GUI.enabled = false;
-                GUI.Button(button, u.isAbility ? "AÇIK" : "MAKS", buttonStyle);
+                GUI.Button(button, u.isAbility || u.isWeapon ? "AÇIK" : "MAKS", buttonStyle);
                 GUI.enabled = true;
             }
             else
@@ -600,14 +630,14 @@ public class RunUI : MonoBehaviour
                 GUI.enabled = afford;
 
                 string label =
-                    (u.isAbility ? "AÇ  " : "AL  ") +
+                    (u.isAbility || u.isWeapon ? "AÇ  " : "AL  ") +
                     "<color=" + (afford ? "#C9A0FF" : "#FF6A50") + ">◆ " + cost + "</color>";
 
                 if (GUI.Button(button, label, buttonStyle))
                 {
                     if (MetaProgress.TryBuy(u))
                     {
-                        metaMessage = u.name + (u.isAbility ? " açıldı!" : " → seviye " + MetaProgress.UpgradeLevel(u.id));
+                        metaMessage = u.name + (u.isAbility || u.isWeapon ? " açıldı!" : " → seviye " + MetaProgress.UpgradeLevel(u.id));
                         metaMessageUntil = Time.unscaledTime + 2.5f;
                     }
                 }
@@ -796,6 +826,119 @@ public class RunUI : MonoBehaviour
 
     // ---------------- YETENEK SEÇİMİ ----------------
 
+    // ---------------- SİLAH SEÇİMİ ----------------
+
+    private void DrawWeaponOffer(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        IReadOnlyList<WeaponType> offers = run.WeaponOffers;
+
+        float cardWidth = 200f;
+        float cardHeight = 190f;
+        float gap = 12f;
+
+        float total = offers.Count * cardWidth + Mathf.Max(0, offers.Count - 1) * gap;
+
+        if (total > width - 40f)
+        {
+            float f = (width - 40f) / total;
+            cardWidth *= f;
+            gap *= f;
+            total = width - 40f;
+        }
+
+        float x = (width - total) * 0.5f;
+        float cardY = (height - cardHeight) * 0.5f;
+
+        GUI.Label(new Rect(0, cardY - 62f, width, 34f), "SİLAHINI SEÇ", bannerStyle);
+
+        GUI.Label(
+            new Rect(0, cardY - 28f, width, 18f),
+            "<color=#BBBBBB>Kombo hızı, menzil ve hasar silaha göre değişir  •  dükkanda değiştirilebilir</color>",
+            richCentered
+        );
+
+        for (int i = 0; i < offers.Count; i++)
+        {
+            WeaponType t = offers[i];
+            bool open = run.IsWeaponAvailable(t);
+
+            string color = "#" + ColorUtility.ToHtmlStringRGB(WeaponInfo.Color(t));
+
+            string text =
+                "<size=11><color=#888888>" + (i + 1) + "</color></size>  " +
+                "<b><color=" + (open ? color : "#777777") + ">" + WeaponInfo.Name(t) + "</color></b>\n\n" +
+                "<size=12>" + (open ? "" : "<color=#777777>") + WeaponInfo.Description(t) + (open ? "" : "</color>") + "</size>\n\n" +
+                "<size=11><color=#FFD54A>Hız ×" + (1f / WeaponInfo.Duration(t)).ToString("0.0#") +
+                "  Menzil ×" + WeaponInfo.Reach(t).ToString("0.0#") +
+                "  Denge ×" + WeaponInfo.Balance(t).ToString("0.0#") + "</color></size>";
+
+            if (!open)
+            {
+                int cost = MetaProgress.WeaponUnlockCost(t);
+
+                text += "\n<size=12><b><color=#C9A0FF>KİLİTLİ</color></b></size>  <size=11><color=#999999>Kalıcı Gelişim" + (cost > 0 ? "  ◆ " + cost : "") + "</color></size>";
+            }
+
+            GUI.enabled = open;
+
+            if (GUI.Button(new Rect(x, cardY, cardWidth, cardHeight), text, cardStyle))
+                run.ChooseWeapon(i);
+
+            GUI.enabled = true;
+
+            x += cardWidth + gap;
+        }
+    }
+
+    // ---------------- YUVA DOLU: CHARM BIRAK ----------------
+
+    private void DrawCharmReplace(RunManager run, float width, float height)
+    {
+        GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
+
+        IReadOnlyList<CharmInventory.Entry> owned = run.Inventory.Entries;
+
+        float panelWidth = 460f;
+        float rowH = 30f;
+        float panelHeight = 120f + owned.Count * rowH + 40f;
+
+        Rect panel = new Rect((width - panelWidth) * 0.5f, (height - panelHeight) * 0.5f, panelWidth, panelHeight);
+
+        GUI.Box(panel, GUIContent.none, panelStyle);
+
+        GUI.Label(new Rect(panel.x, panel.y + 10f, panelWidth, 30f), "YUVALAR DOLU", Centered(bannerStyle));
+
+        CharmDefinition c = run.ReplaceCandidate;
+
+        GUI.Label(
+            new Rect(panel.x + 16f, panel.y + 46f, panelWidth - 32f, 40f),
+            "Yeni: <b>" + (c != null ? (c.legendary ? "<color=#FFB347>" + c.displayName + "</color>" : c.displayName) : "?") + "</b>\n" +
+            "<color=#BBBBBB>Yerine BIRAKACAĞIN charm'ı seç (" + run.CharmSlots + " yuva).</color>",
+            legendStyle
+        );
+
+        float y = panel.y + 96f;
+
+        for (int i = 0; i < owned.Count; i++)
+        {
+            CharmInventory.Entry e = owned[i];
+
+            string label =
+                (i + 1) + "  Bırak: " + (e.definition.legendary ? "<color=#FFB347>" + e.definition.displayName + "</color>" : e.definition.displayName) +
+                (e.stacks > 1 ? " <color=#9AD1FF>x" + e.stacks + "</color>" : "");
+
+            if (GUI.Button(new Rect(panel.x + 30f, y, panelWidth - 60f, 24f), label, buttonStyle))
+                run.ChooseReplace(i);
+
+            y += rowH;
+        }
+
+        if (GUI.Button(new Rect(panel.x + panelWidth * 0.5f - 110f, panel.yMax - 36f, 220f, 26f), "VAZGEÇ (yeniyi alma)  <color=#888888>[0/Esc]</color>", buttonStyle))
+            run.ChooseReplace(-1);
+    }
+
     private void DrawAbilityOffer(RunManager run, float width, float height)
     {
         GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
@@ -983,7 +1126,7 @@ public class RunUI : MonoBehaviour
 
         float panelWidth = 220f;
         float lineH = 15f;
-        float panelHeight = 46f + entries.Count * lineH + (entries.Count > 0 ? 6f : 0f);
+        float panelHeight = 46f + 16f + (run.CurseRoomsLeft > 0 ? 15f : 0f) + entries.Count * lineH + (entries.Count > 0 ? 6f : 0f);
 
         Rect panel = new Rect(Pad, Pad, panelWidth, panelHeight);
 
@@ -1037,6 +1180,32 @@ public class RunUI : MonoBehaviour
         );
 
         float y = panel.y + 46f;
+
+        // Silah + charm yuvaları.
+        string weaponLine =
+            run.Weapon != null
+                ? "<color=#" + ColorUtility.ToHtmlStringRGB(WeaponInfo.Color(run.Weapon.Current)) + "><b>" +
+                  WeaponInfo.Name(run.Weapon.Current).ToUpperInvariant() + "</b></color>"
+                : "";
+
+        GUI.Label(
+            new Rect(panel.x + 8f, y, panelWidth - 12f, 15f),
+            weaponLine + "   <color=#BBBBBB>charm " + entries.Count + "/" + run.CharmSlots + "</color>",
+            charmStyle
+        );
+
+        y += 16f;
+
+        if (run.CurseRoomsLeft > 0)
+        {
+            GUI.Label(
+                new Rect(panel.x + 8f, y, panelWidth - 12f, 15f),
+                "<color=#C98BFF>LANET: alınan hasar artık  (" + run.CurseRoomsLeft + " oda)</color>",
+                charmStyle
+            );
+
+            y += 15f;
+        }
 
         for (int i = 0; i < entries.Count; i++)
         {
@@ -1277,7 +1446,9 @@ public class RunUI : MonoBehaviour
 
         return
             "<size=11><color=#888888>" + number + "</color></size>  " +
-            "<b>" + def.displayName + "</b>\n" +
+            (def.legendary ? "<size=10><color=#FFB347><b>EFSANEVİ</b></color></size>\n" : "") +
+            "<b>" + (def.legendary ? "<color=#FFB347>" + def.displayName + "</color>" : def.displayName) + "</b>\n" +
+            (owned == 0 && run.CharmSlotsFull ? "<size=10><color=#FF8A80>Yuva dolu: yeni charm için birini bırakman gerekir</color></size>\n" : "") +
             "<size=11><color=#9AD1FF>" + level + "</color></size>\n\n" +
             "<size=12>" + def.description + "</size>\n\n" +
             "<size=11><color=#FFD54A>" + effect + "</color></size>" +
@@ -1388,7 +1559,7 @@ public class RunUI : MonoBehaviour
         GUI.DrawTexture(new Rect(0, 0, width, height), dimTexture);
 
         float panelWidth = Mathf.Min(720f, width - 2f * Pad);
-        float panelHeight = Mathf.Min(height - 2f * Pad, 530f);
+        float panelHeight = Mathf.Min(height - 2f * Pad, 600f);
 
         Rect panel =
             new Rect(
@@ -1444,7 +1615,8 @@ public class RunUI : MonoBehaviour
             bool canBuy =
                 !item.sold &&
                 run.CanAfford(item.price) &&
-                run.Inventory.CanAdd(item.charm);
+                run.Inventory.CanAdd(item.charm) &&
+                !(run.Inventory.GetStacks(item.charm) == 0 && run.CharmSlotsFull);
 
             string footer =
                 item.sold
@@ -1522,11 +1694,61 @@ public class RunUI : MonoBehaviour
 
         // ---------------- YETENEK ----------------
 
-        float ax = panel.x + (panelWidth - (2f * 300f + 12f)) * 0.5f;
+        // İki sütun: 2'den fazla özel eşya alt satıra geçer.
+        float colW = 300f;
+        float ax0 = panel.x + (panelWidth - (2f * colW + 12f)) * 0.5f;
+        float ax = ax0;
+        int col = 0;
 
         for (int i = 0; i < items.Count; i++)
         {
             ShopItem item = items[i];
+
+            if (item.kind == ShopItemKind.Weapon || item.kind == ShopItemKind.Legendary || item.kind == ShopItemKind.Cleanse)
+            {
+                string slabel;
+                string tip;
+                bool sOk = !item.sold && run.CanAfford(item.price);
+
+                if (item.kind == ShopItemKind.Weapon)
+                {
+                    slabel = (i + 1) + "  Silah: <color=#" + ColorUtility.ToHtmlStringRGB(WeaponInfo.Color(item.weapon)) + ">" + WeaponInfo.Name(item.weapon) + "</color>";
+                    tip = WeaponInfo.Description(item.weapon);
+                }
+                else if (item.kind == ShopItemKind.Legendary)
+                {
+                    bool full = run.Inventory.GetStacks(item.charm) == 0 && run.CharmSlotsFull;
+
+                    slabel = (i + 1) + "  <color=#FFB347>EFSANEVİ: " + (item.charm != null ? item.charm.displayName : "?") + "</color>" + (full ? " <color=#FF8A80>(yuva dolu)</color>" : "");
+                    tip = item.charm != null ? item.charm.description : "";
+                    sOk = sOk && !full;
+                }
+                else
+                {
+                    slabel = (i + 1) + "  <color=#C98BFF>Laneti kaldır</color>";
+                    tip = "Lanetin kalan odalarını siler.";
+                }
+
+                slabel +=
+                    item.sold
+                        ? "  <color=#888888>(alındı)</color>"
+                        : "   <color=" + (run.CanAfford(item.price) ? "#FFD54A" : "#FF6A50") + ">" + GoldIcon + " " + item.price + "</color>";
+
+                GUI.enabled = sOk;
+
+                if (GUI.Button(new Rect(ax, y, colW, 26f), new GUIContent(slabel, tip), buttonStyle))
+                    run.BuyShopItem(i);
+
+                GUI.enabled = true;
+
+                col++;
+                ax = col % 2 == 0 ? ax0 : ax0 + colW + 12f;
+
+                if (col % 2 == 0)
+                    y += 30f;
+
+                continue;
+            }
 
             if (item.kind != ShopItemKind.Ability)
                 continue;
@@ -1561,13 +1783,23 @@ public class RunUI : MonoBehaviour
 
             GUI.enabled = !item.sold && run.CanAfford(item.price);
 
-            if (GUI.Button(new Rect(ax, y, 300f, 26f), new GUIContent(label, AbilityInfo.Description(item.ability)), buttonStyle))
+            if (GUI.Button(new Rect(ax, y, colW, 26f), new GUIContent(label, AbilityInfo.Description(item.ability)), buttonStyle))
                 run.BuyShopItem(i);
 
             GUI.enabled = true;
 
-            ax += 312f;
+            col++;
+            ax = col % 2 == 0 ? ax0 : ax0 + colW + 12f;
+
+            if (col % 2 == 0)
+                y += 30f;
         }
+
+        if (col % 2 == 1)
+            y += 30f;
+
+        if (col > 0)
+            y -= 30f;   // aşağıdaki +50 ile eski aralık korunur
 
         if (!string.IsNullOrEmpty(GUI.tooltip))
         {
