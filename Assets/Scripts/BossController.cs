@@ -24,6 +24,7 @@ public class BossController : MonoBehaviour
     public event Action PhaseChanged;
 
     private float phase2At = 0.5f;
+    private int act = 1;
 
     private EnemyController enemy;
     private EnemyMoveset moveset;
@@ -58,6 +59,13 @@ public class BossController : MonoBehaviour
 
     public void Setup(string bossName, float phase2Threshold)
     {
+        Setup(bossName, phase2Threshold, 1);
+    }
+
+    /// <summary>act: perde (1 Kılıç Ustası, 2 Kızıl Düellocu, 3 Gölge Efendisi).</summary>
+    public void Setup(string bossName, float phase2Threshold, int bossAct)
+    {
+        act = Mathf.Max(1, bossAct);
         BossName = bossName;
         phase2At = Mathf.Clamp01(phase2Threshold);
         InPhase2 = false;
@@ -67,7 +75,20 @@ public class BossController : MonoBehaviour
         if (moveset == null)
             moveset = gameObject.AddComponent<EnemyMoveset>();
 
-        moveset.moves = EnemyMoveset.CreateBossPhase1Moves();
+        moveset.moves = EnemyMoveset.CreateBossMoves(act, false);
+
+        // Perdeye göre karakter.
+        if (act == 2)
+        {
+            enemy.chaseSpeed *= 1.25f;
+            enemy.attackRecoveryTime *= 0.8f;
+        }
+        else if (act >= 3)
+        {
+            enemy.attackRecoveryTime *= 0.9f;
+            enemy.balanceHitKnockbackForce *= 0.5f;
+            enemy.healthKnockbackForce *= 0.5f;
+        }
 
         Current = this;
     }
@@ -99,7 +120,7 @@ public class BossController : MonoBehaviour
         InPhase2 = true;
 
         if (moveset != null)
-            moveset.moves = EnemyMoveset.CreateBossPhase2Moves();
+            moveset.moves = EnemyMoveset.CreateBossMoves(act, true);
 
         enemy.chaseSpeed *= 1.15f;
         enemy.attackRecoveryTime *= 0.85f;

@@ -304,7 +304,7 @@ public static class LevelChunkLibrary
 
             // ---- 40. adım: dikey yol, sandık, vazo, diken ----
 
-            new LevelChunk("Kule Yukarı", ChunkKind.Filler, 0.6f,
+            new LevelChunk("Kule Yukarı", ChunkKind.Filler, 0f,   // 49: düz harita (kapalı)
                 "................",
                 "................",
                 "................",
@@ -320,7 +320,7 @@ public static class LevelChunkLibrary
                 "################",
                 "################"),
 
-            new LevelChunk("Kule Aşağı", ChunkKind.Filler, 0.6f,
+            new LevelChunk("Kule Aşağı", ChunkKind.Filler, 0f,   // 49: düz harita (kapalı)
                 "................",
                 "................",
                 "................",

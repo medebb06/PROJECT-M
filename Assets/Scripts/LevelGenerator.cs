@@ -60,6 +60,9 @@ public class LevelGenerator : MonoBehaviour
     [Min(1)] public int maxDrift = 5;
 
     [Header("Dikey rota (Dead Cells gibi aşağı-yukarı)")]
+    [Tooltip("KAPALI (49. adım): harita eskisi gibi düz gider (yokuş / küçük basamak kalır). Açınca kat değişimleri geri gelir.")]
+    public bool verticalRoutes = false;
+
     [Tooltip("Her arenadan önce kat değiştirme ihtimali (geniş merdiven / basamak / kule / iniş). 0 = dümdüz harita.")]
     [Range(0f, 1f)] public float verticalRouteChance = 0.6f;
 
@@ -588,7 +591,7 @@ public class LevelGenerator : MonoBehaviour
         // rastgele (en az verticalStep fark), sınır ±verticalRange.
         void PlaceRoute(int count)
         {
-            if (rng.NextDouble() > verticalRouteChance)
+            if (!verticalRoutes || rng.NextDouble() > verticalRouteChance)
             {
                 PlaceFillers(count);
                 return;

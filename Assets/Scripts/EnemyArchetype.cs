@@ -391,6 +391,22 @@ public class EnemyArchetype : MonoBehaviour
             }
         }
 
+        // ---------------- İMZA SALDIRISI (48. adım) ----------------
+        // Her tipin kendine özgü uzun hamlesi (Kalabalık hariç).
+
+        if (applyMoveset)
+        {
+            EnemyMoveset ms = GetComponent<EnemyMoveset>();
+
+            if (ms != null && ms.moves != null && !ms.moves.Exists(m => m != null && m.signature))
+            {
+                AttackMove sig = EnemyMoveset.Signature(type);
+
+                if (sig != null)
+                    ms.moves.Add(sig);
+            }
+        }
+
         Debug.Log("DÜŞMAN TİPİ: " + DisplayName + " → " + name);
     }
 

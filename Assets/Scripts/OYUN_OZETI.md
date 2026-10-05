@@ -313,3 +313,13 @@
   5) Koşarken ilk vuruş momentum taşır: hız × `attackMomentumCarry` 0.12 (en çok `attackMomentumMax` 1 birim) vuruş ilerlemesine eklenir.
   6) İnişe 0.7 birimden yakınken yan hava vuruşu başlamaz → tampon bekler, yere değince YER kombosu çıkar (AboutToLand).
   7) Slam düşmana değmeden inince kilit `slamLandLock` 0.05 sn (0.12 idi).
+
+## 39. Yön kararı: parry = ana mekanik → 1v1 ağırlıklı (47. adım, test bekliyor)
+- Gerekçe: parry okumak/zamanlamak ister, kalabalıkta bu kaybolur (veri: kalabalıkta oyuncu vurarak kesiyor + hasar yığıyordu). Plan: (1) her karşılaşma küçük DÜELLO, (2) az ama belirgin düşman tipleri + imza saldırısı, (3) elit/boss gerçek düello, perde başına ayrı boss, (4) parry'yi besleyen ödüller (davranış charm'ları), (5) kısa, kararlı haritalar.
+- 1. adım YAPILDI — RunManager "Düello karşılaşmaları" (`duelEncounters` açık): her nöbet noktası = 1 ANA düşman (kalabalık olmayan tip) + `duelSwarmChance` 0.6 ile 1..`duelSwarmMaxPerAct` {1,2,2} kalabalık; nöbet sayısı `duelPostsPerAct` {2,3,3}, elit odası `duelElitePosts` 2; sürü noktası yok; devriye `duelPatrols` 1 × 1 kalabalık; arenalar arası ara parça `duelMinFillers` 1 – `duelMaxFillers` 2 (LevelGenerator min/maxFillers'ı koşu sırasında ezer). Kapatınca eski kalabalık düzen.
+- Sıradaki (2. adım): düşman tiplerine imza saldırısı + perde başına ayrı boss.
+- 48 (2. adım, test bekliyor): 
+  - İMZA SALDIRILARI (AttackMove.signature, EnemyMoveset.Signature(type)): Düellocu "Kılıç Dansı" (5: N,N,gecikmeli N,süpürme,N), Çevik "Fırtına" (6 hızlı, 5. gecikmeli), Ağır "Deprem" (N,süpürme,yakalama,gecikmeli ağır N), Okçu "Ok Yağmuru" (5 ok), Kalkanlı "Kalkan Hücumu" (yakalama-hücum + 2 N). Başlarken düşmanın üstünde adı (turuncu). Son Normal vuruşu parry'lemek dengeye ×3 (MoveHit.parryBalanceMultiplier / ParryReward, EnemyAttackState.HandleParry, "KUSURSUZ!"). EnemyArchetype.Apply her tipe (Kalabalık hariç) ekler.
+  - PERDE BOSS'LARI (EnemyMoveset.CreateBossMoves(act, faz2), BossController.Setup(..., act)): 1 Kılıç Ustası = eski set; 2 Kızıl Düellocu = Çevik seti + Fırtına, hızlı (koşu ×1.25, recovery ×0.8), faz 2 "Kızıl Kasırga" (7 vuruş, yakalama dahil) + uyarılar ×0.88; 3 Gölge Efendisi = Ağır seti + Deprem + Kılıç Dansı, az savrulur, faz 2 "Gölge Zinciri" (6 vuruş, son parry ×3.5) + uyarılar ×0.85.
+  - Düello ANA düşmanı güçlendi: can `duelMainHealthMultiplier` 1.4, denge `duelMainBalanceMultiplier` 1.3, recovery `duelMainRecoveryMultiplier` 0.8.
+- 49: Harita yine DÜZ (kullanıcı isteği): LevelGenerator `verticalRoutes` false (kat değişimi / Climb parçaları kullanılmaz), Kule Yukarı/Aşağı ağırlığı 0. Kalanlar: yokuşlar (±2), küçük basamaklar, çim platformlar, sandık/vazo/diken, Üst Yol. Climb parçaları ve kodu duruyor (açınca geri gelir).

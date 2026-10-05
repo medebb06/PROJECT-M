@@ -37,7 +37,18 @@ public class MoveHit
     [Min(0.1f)]
     public float reachMultiplier = 1f;
 
+    [Tooltip("Bu vuruş PARRY'lenince düşmanın dengesine giden hasar çarpanı (imza saldırısının son vuruşu büyük ödül).")]
+    [Min(0f)]
+    public float parryBalanceMultiplier = 1f;
+
     public MoveHit() { }
+
+    // Zincirle: new MoveHit(...).ParryReward(3f)
+    public MoveHit ParryReward(float multiplier)
+    {
+        parryBalanceMultiplier = multiplier;
+        return this;
+    }
 
     public MoveHit(
         MoveHitType type,
@@ -81,6 +92,9 @@ public class AttackMove
     public float recoveryMultiplier = 1f;
 
     public List<MoveHit> hits = new List<MoveHit>();
+
+    [Tooltip("İMZA SALDIRISI: başlarken düşmanın üstünde adı yazar; son vuruşunu parry'lemek dengeyi büyük ölçüde kırar.")]
+    public bool signature;
 
     [NonSerialized] public float lastUsedTime = -999f;
 }
@@ -219,7 +233,223 @@ public class EnemyMoveset : MonoBehaviour
     {
         move.lastUsedTime = now;
         lastMove = move;
+
+        // İmza saldırısı duyurusu: oyuncu ne geldiğini bilsin.
+        if (move.signature)
+        {
+            CombatCallout.PopupAbove(
+                this,
+                move.name.ToUpperInvariant(),
+                new Color(1f, 0.6f, 0.2f),
+                0.9f,
+                0.7f
+            );
+        }
+
         return move;
+    }
+
+    // =========================================================
+    // İMZA SALDIRILARI (48. adım): her tipin kendine özgü, uzun ama
+    // okunur hamlesi. Son vuruşu parry'lemek dengeyi ×3 vurur.
+    // =========================================================
+
+    public static AttackMove Signature(EnemyArchetypeType type)
+    {
+        switch (type)
+        {
+            case EnemyArchetypeType.Quick:
+                return new AttackMove
+                {
+                    name = "Fırtına",
+                    signature = true,
+                    weight = 0.6f,
+                    cooldown = 9f,
+                    recoveryMultiplier = 2f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Normal, 0.75f),
+                        new MoveHit(MoveHitType.Normal, 0.28f),
+                        new MoveHit(MoveHitType.Normal, 0.28f),
+                        new MoveHit(MoveHitType.Normal, 0.28f),
+                        new MoveHit(MoveHitType.Normal, 0.5f, 0.35f),
+                        new MoveHit(MoveHitType.Normal, 0.3f, 0f, 1.3f).ParryReward(3f)
+                    }
+                };
+
+            case EnemyArchetypeType.Heavy:
+                return new AttackMove
+                {
+                    name = "Deprem",
+                    signature = true,
+                    weight = 0.6f,
+                    cooldown = 10f,
+                    recoveryMultiplier = 2.2f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Normal, 1.1f),
+                        new MoveHit(MoveHitType.Sweep, 0.65f, 0f, 1.2f),
+                        new MoveHit(MoveHitType.Grab, 0.75f),
+                        new MoveHit(MoveHitType.Normal, 0.9f, 0.4f, 1.6f).ParryReward(3f)
+                    }
+                };
+
+            case EnemyArchetypeType.Archer:
+                return new AttackMove
+                {
+                    name = "Ok Yağmuru",
+                    signature = true,
+                    weight = 0.5f,
+                    minDistance = 5f,
+                    cooldown = 10f,
+                    recoveryMultiplier = 2f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Shot, 0.9f),
+                        new MoveHit(MoveHitType.Shot, 0.3f),
+                        new MoveHit(MoveHitType.Shot, 0.3f),
+                        new MoveHit(MoveHitType.Shot, 0.55f, 0.3f),
+                        new MoveHit(MoveHitType.Shot, 0.3f)
+                    }
+                };
+
+            case EnemyArchetypeType.Shielded:
+                return new AttackMove
+                {
+                    name = "Kalkan Hücumu",
+                    signature = true,
+                    weight = 0.6f,
+                    cooldown = 9f,
+                    recoveryMultiplier = 2f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Grab, 1.0f, 0f, 1f, 1.3f),
+                        new MoveHit(MoveHitType.Normal, 0.45f),
+                        new MoveHit(MoveHitType.Normal, 0.7f, 0.3f, 1.4f).ParryReward(3f)
+                    }
+                };
+
+            case EnemyArchetypeType.Duelist:
+                return new AttackMove
+                {
+                    name = "Kılıç Dansı",
+                    signature = true,
+                    weight = 0.6f,
+                    cooldown = 9f,
+                    recoveryMultiplier = 2f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Normal, 0.75f),
+                        new MoveHit(MoveHitType.Normal, 0.4f),
+                        new MoveHit(MoveHitType.Normal, 0.55f, 0.45f),
+                        new MoveHit(MoveHitType.Sweep, 0.5f, 0f, 1.2f),
+                        new MoveHit(MoveHitType.Normal, 0.55f, 0f, 1.5f).ParryReward(3f)
+                    }
+                };
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Setin sonuna tipin imza saldırısını ekler (yoksa).</summary>
+    public static List<AttackMove> WithSignature(List<AttackMove> moves, EnemyArchetypeType type)
+    {
+        AttackMove sig = Signature(type);
+
+        if (sig != null)
+            moves.Add(sig);
+
+        return moves;
+    }
+
+    // =========================================================
+    // PERDE BOSS'LARI (48. adım)
+    //   1 Kılıç Ustası   : dengeli (eski boss seti)
+    //   2 Kızıl Düellocu : hızlı seriler, aldatmaca, Fırtına
+    //   3 Gölge Efendisi : ağır + karışık, süpürme/yakalama zincirleri
+    // =========================================================
+
+    public static List<AttackMove> CreateBossMoves(int act, bool phase2)
+    {
+        if (act <= 1)
+            return phase2 ? CreateBossPhase2Moves() : CreateBossPhase1Moves();
+
+        if (act == 2)
+        {
+            List<AttackMove> m = CreateQuickMoves();
+
+            m.Add(Signature(EnemyArchetypeType.Quick));
+
+            if (phase2)
+            {
+                m.Add(
+                    new AttackMove
+                    {
+                        name = "Kızıl Kasırga",
+                        signature = true,
+                        weight = 0.9f,
+                        cooldown = 7f,
+                        recoveryMultiplier = 2.2f,
+                        hits =
+                        {
+                            new MoveHit(MoveHitType.Normal, 0.6f),
+                            new MoveHit(MoveHitType.Normal, 0.26f),
+                            new MoveHit(MoveHitType.Normal, 0.26f),
+                            new MoveHit(MoveHitType.Normal, 0.6f, 0.4f),
+                            new MoveHit(MoveHitType.Normal, 0.26f),
+                            new MoveHit(MoveHitType.Grab, 0.6f),
+                            new MoveHit(MoveHitType.Normal, 0.45f, 0f, 1.5f).ParryReward(3f)
+                        }
+                    }
+                );
+
+                ScaleWindups(m, 0.88f);
+            }
+            else
+            {
+                ScaleWindups(m, 0.95f);
+            }
+
+            return m;
+        }
+
+        // Perde 3+
+        List<AttackMove> h = CreateHeavyMoves();
+
+        h.Add(Signature(EnemyArchetypeType.Heavy));
+        h.Add(Signature(EnemyArchetypeType.Duelist));
+
+        if (phase2)
+        {
+            h.Add(
+                new AttackMove
+                {
+                    name = "Gölge Zinciri",
+                    signature = true,
+                    weight = 1f,
+                    cooldown = 7f,
+                    recoveryMultiplier = 2.4f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Normal, 0.8f),
+                        new MoveHit(MoveHitType.Normal, 0.4f),
+                        new MoveHit(MoveHitType.Sweep, 0.5f, 0f, 1.3f),
+                        new MoveHit(MoveHitType.Normal, 0.7f, 0.5f),
+                        new MoveHit(MoveHitType.Grab, 0.6f),
+                        new MoveHit(MoveHitType.Normal, 0.6f, 0f, 1.7f).ParryReward(3.5f)
+                    }
+                }
+            );
+
+            ScaleWindups(h, 0.85f);
+        }
+        else
+        {
+            ScaleWindups(h, 0.92f);
+        }
+
+        return h;
     }
 
     private float WeightOf(AttackMove move, float distance, float now)

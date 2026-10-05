@@ -1220,9 +1220,21 @@ public class EnemyAttackState : IEnemyState
             enemy.parryBalanceDamage
         );
 
-        balance.AddBalanceDamage(
-            enemy.parryBalanceDamage
-        );
+        // İmza saldırısının son vuruşu gibi: vuruşa özel parry ödülü.
+        float reward =
+            move != null && move.hits != null && stepIndex >= 0 && stepIndex < move.hits.Count
+                ? move.hits[stepIndex].parryBalanceMultiplier
+                : 1f;
+
+        int parryDamage =
+            Mathf.Max(1, Mathf.RoundToInt(enemy.parryBalanceDamage * Mathf.Max(0f, reward)));
+
+        balance.AddBalanceDamage(parryDamage);
+
+        if (reward >= 2f)
+        {
+            CombatCallout.PopupAbove(enemy, "KUSURSUZ!", new Color(1f, 0.85f, 0.3f), 1f);
+        }
 
         // Parry de düşmanın dengesine vuruyor: beyaz flaş.
         enemy.PlayBalanceDamageFlash();

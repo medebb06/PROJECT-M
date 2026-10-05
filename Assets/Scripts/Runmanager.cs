@@ -452,6 +452,38 @@ public class RunManager : MonoBehaviour
     [SerializeField] private float challengeTimePerEnemy = 5f;
     [SerializeField] private int challengeGold = 30;
 
+    [Header("Düello karşılaşmaları (47. adım)")]
+    [Tooltip("Açık: her nöbet noktası = 1 ANA düşman (parry testi) + 0-2 kalabalık. Sürü noktası yok, devriye az, harita kısa.")]
+    [SerializeField] private bool duelEncounters = true;
+
+    [Tooltip("Perde başına dövüş odasındaki nöbet (düello) sayısı.")]
+    [SerializeField] private int[] duelPostsPerAct = { 2, 3, 3 };
+
+    [Tooltip("Elit odasında düello sayısı (her biri elit ana düşman).")]
+    [SerializeField] private int duelElitePosts = 2;
+
+    [Tooltip("Bir düelloya eşlik eden kalabalık ihtimali.")]
+    [Range(0f, 1f)] [SerializeField] private float duelSwarmChance = 0.6f;
+
+    [Tooltip("Perde başına eşlik eden en fazla kalabalık.")]
+    [SerializeField] private int[] duelSwarmMaxPerAct = { 1, 2, 2 };
+
+    [Tooltip("Noktalar arası devriye (1 kalabalık).")]
+    [SerializeField] private int duelPatrols = 1;
+
+    [Tooltip("Düellonun ANA düşmanı: can çarpanı.")]
+    [SerializeField] private float duelMainHealthMultiplier = 1.4f;
+
+    [Tooltip("Düellonun ANA düşmanı: denge çarpanı (parry ile kırmak daha anlamlı).")]
+    [SerializeField] private float duelMainBalanceMultiplier = 1.3f;
+
+    [Tooltip("Düellonun ANA düşmanı: saldırı sonrası bekleme çarpanı (küçük = daha saldırgan).")]
+    [SerializeField] private float duelMainRecoveryMultiplier = 0.8f;
+
+    [Tooltip("Düello modunda arenalar arası ara parça (kısa harita).")]
+    [SerializeField] private int duelMinFillers = 1;
+    [SerializeField] private int duelMaxFillers = 2;
+
     [Header("Ana menü")]
     [Tooltip("Lobide (ana menü) arkada rastgele bir orman haritası kurulur.")]
     [SerializeField] private bool menuBackgroundLevel = true;
@@ -1859,6 +1891,13 @@ public class RunManager : MonoBehaviour
 
         int arenaCount = boss ? 1 : LevelPostCount(type);
 
+        // Düello modu: arenalar arası kısa yol.
+        if (duelEncounters && level != null)
+        {
+            level.minFillers = Mathf.Max(0, duelMinFillers);
+            level.maxFillers = Mathf.Max(level.minFillers, duelMaxFillers);
+        }
+
         try
         {
             level.Generate(RunSeed + Stage * 7919, arenaCount, boss);
@@ -1933,12 +1972,21 @@ public class RunManager : MonoBehaviour
 
             // SÜRÜ noktası: 1 güçlü düşman + bol kalabalık (ilk nokta hariç).
             bool horde =
+                !duelEncounters &&
                 useArchetypes && i > 0 && UnityEngine.Random.value < mapHordeChance;
 
-            if (horde)
+            // Düello: tek ANA düşman.
+            if (horde || duelEncounters)
                 count = 1;
 
             yield return SpawnWave(Mathf.Max(1, count), type == RoomType.Elite, 0f);
+
+            // Düello: ana düşman daha dayanıklı ve saldırgan.
+            if (duelEncounters)
+            {
+                for (int k = before; k < spawned.Count; k++)
+                    BoostDuelMain(spawned[k]);
+            }
 
             // Kalabalık: noktayı doldurur (zayıf, çabuk ölür, infaz barını doldurur).
             if (useArchetypes)
@@ -1955,6 +2003,17 @@ public class RunManager : MonoBehaviour
                             Mathf.Min(mapSwarmMin, mapSwarmMax),
                             Mathf.Max(mapSwarmMin, mapSwarmMax) + 1
                         ) + extra;
+
+                // Düello: eşlik eden az kalabalık (ana düşmanı gölgelemesin).
+                if (duelEncounters)
+                {
+                    int max = Mathf.Max(0, ActValue(duelSwarmMaxPerAct, 1));
+
+                    swarm =
+                        max > 0 && UnityEngine.Random.value < duelSwarmChance
+                            ? UnityEngine.Random.Range(1, max + 1)
+                            : 0;
+                }
 
                 if (swarm > 0)
                     yield return SpawnWave(swarm, false, 0f, EnemyArchetypeType.Swarm);
@@ -1985,6 +2044,9 @@ public class RunManager : MonoBehaviour
                     (mapPatrolGrowthEveryStages > 0 ? (Stage - 1) / mapPatrolGrowthEveryStages : 0)
                 );
 
+            if (duelEncounters)
+                patrols = Mathf.Max(0, duelPatrols);
+
             Transform[] patrolPoints = level.CreatePatrolPoints(patrols);
 
             for (int p = 0; p < patrolPoints.Length; p++)
@@ -1994,7 +2056,7 @@ public class RunManager : MonoBehaviour
 
                 int before = spawned.Count;
 
-                yield return SpawnWave(UnityEngine.Random.Range(1, 3), false, 0f, EnemyArchetypeType.Swarm);
+                yield return SpawnWave(duelEncounters ? 1 : UnityEngine.Random.Range(1, 3), false, 0f, EnemyArchetypeType.Swarm);
 
                 List<EnemyController> group = new List<EnemyController>();
 
@@ -2936,12 +2998,46 @@ public class RunManager : MonoBehaviour
     // HARİTA: nöbet noktası (arena) sayısı.
     private int LevelPostCount(RoomType type)
     {
+        if (duelEncounters)
+        {
+            if (type == RoomType.Elite)
+                return Mathf.Max(1, duelElitePosts);
+
+            return Mathf.Max(1, ActValue(duelPostsPerAct, 2));
+        }
+
         int total = LevelEnemyTotal(type);
 
         int posts =
             Mathf.CeilToInt(total / (float)Mathf.Max(1, mapEnemiesPerPost));
 
         return Mathf.Clamp(posts, Mathf.Max(1, mapMinPosts), Mathf.Max(mapMinPosts, mapMaxPosts));
+    }
+
+    private void BoostDuelMain(EnemyController enemy)
+    {
+        if (enemy == null)
+            return;
+
+        Health h = enemy.GetComponent<Health>();
+
+        if (h != null && !Mathf.Approximately(duelMainHealthMultiplier, 1f))
+            h.SetMaxHealth(Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * duelMainHealthMultiplier)), true);
+
+        EnemyBalance b = enemy.GetComponent<EnemyBalance>();
+
+        if (b != null && !Mathf.Approximately(duelMainBalanceMultiplier, 1f))
+            b.SetMaxBalance(Mathf.Max(1, Mathf.RoundToInt(b.MaxBalance * duelMainBalanceMultiplier)));
+
+        enemy.attackRecoveryTime *= Mathf.Max(0.2f, duelMainRecoveryMultiplier);
+    }
+
+    private int ActValue(int[] values, int fallback)
+    {
+        if (values == null || values.Length == 0)
+            return fallback;
+
+        return values[Mathf.Clamp(Act - 1, 0, values.Length - 1)];
     }
 
     private static Transform[] Shuffled(Transform[] points)
@@ -3138,7 +3234,7 @@ public class RunManager : MonoBehaviour
                 ? Mathf.Min(0.7f, bossPhase2At + 0.15f)
                 : bossPhase2At;
 
-        controller.Setup(bossName, phaseAt);
+        controller.Setup(bossName, phaseAt, Act);
 
         currentBoss = boss;
 
