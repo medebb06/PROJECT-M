@@ -94,6 +94,26 @@ public class RunManager : MonoBehaviour
         new Vector4(0.25f, 0.25f, 0.25f, 0.25f)
     };
 
+    [Header("Yeni düşman tipleri (40. adım)")]
+    [Tooltip("Perde başına: x = Kalkanlı ihtimali, y = Uçan ihtimali (önce bunlar zarlanır).")]
+    [SerializeField]
+    private Vector2[] specialTypeChancePerAct =
+    {
+        new Vector2(0.1f, 0.1f),
+        new Vector2(0.15f, 0.15f),
+        new Vector2(0.2f, 0.2f)
+    };
+
+    [Tooltip("Perde başına: kalabalık doğarken PATLAYAN olma ihtimali.")]
+    [SerializeField] private float[] bomberSwarmChancePerAct = { 0.15f, 0.25f, 0.35f };
+
+    [SerializeField] private Color shieldedTint = new Color(0.72f, 0.82f, 1f);
+    [SerializeField] private Color flyerTint = new Color(0.85f, 1f, 0.75f);
+    [SerializeField] private Color bomberTint = new Color(1f, 0.55f, 0.4f);
+
+    [Tooltip("Elit düşmanlara rastgele ek: Hızlı / Zırhlı / Kalkanlı / Patlayıcı.")]
+    [SerializeField] private bool eliteAffixes = true;
+
     // =========================================================
     // RASTGELE HARİTA
     // =========================================================
@@ -203,7 +223,11 @@ public class RunManager : MonoBehaviour
     // Odanın ana tipi (banner bunu yazar). Arayüz de okuyabilir.
     public EnemyArchetypeType RoomArchetype { get; private set; }
 
-    private readonly GameObject[] archetypeTemplates = new GameObject[5];
+    private readonly GameObject[] archetypeTemplates = new GameObject[8];
+
+    // Elit eki (oda başına bir tane).
+    private int eliteAffixStage = -1;
+    private int eliteAffix;
     private Transform variantRoot;
 
     // =========================================================
@@ -371,8 +395,16 @@ public class RunManager : MonoBehaviour
     [Header("Parry odaklı denge")]
     [SerializeField] private bool disablePlayerHealthRecovery = true;
 
+    [Tooltip("Düşman saldırısı uyarının bu oranından sonra vurarak KESİLEMEZ. " +
+             "0 = uyarı başladığı an zırhlı: cevap parry / block / dash. (Eski alan 0.15 idi.)")]
     [Range(0f, 1f)]
-    [SerializeField] private float runAttackCommitPoint = 0.15f;
+    [SerializeField] private float runAttackArmorPoint = 0f;
+
+    [Tooltip("Oyuncunun normal vuruş (kombo + slam) denge hasarı çarpanı.")]
+    [SerializeField] private float runPlayerAttackBalanceMultiplier = 0.75f;
+
+    [Tooltip("Düşmanın parry'den aldığı denge hasarı çarpanı.")]
+    [SerializeField] private float runParryBalanceMultiplier = 1.3f;
 
     [SerializeField] private float damageBonusPerStage = 0.06f;
     [SerializeField] private float maxDamageBonus = 1.5f;
@@ -391,12 +423,38 @@ public class RunManager : MonoBehaviour
 
     [SerializeField] private int postureRefundOnParry = 25;
 
+    [Header("Akış (geçişler)")]
+    [Tooltip("Oda temizlenince ödül/iyileşme öncesi bekleme (gerçek sn).")]
+    [SerializeField] private float clearedPause = 0.35f;
+    [Tooltip("Haritadan haritaya geçişte kararma süresi (gerçek sn).")]
+    [SerializeField] private float transitionFadeOut = 0.12f;
+    [SerializeField] private float transitionFadeIn = 0.25f;
+    [Tooltip("Tek kapı varsa (ÇIKIŞ / BOSS) içine girince [W] beklemeden geçilir.")]
+    [SerializeField] private bool autoEnterSingleDoor = true;
+
+    [Header("Harita nesneleri + meydan okuma")]
+    [SerializeField] private int chestGold = 30;
+    [Range(0f, 1f)] [SerializeField] private float chestCharmChance = 0.4f;
+    [Range(0f, 1f)] [SerializeField] private float chestHealChance = 0.3f;
+    [Range(0f, 1f)] [SerializeField] private float chestHealPercent = 0.15f;
+    [SerializeField] private int vaseGoldMin = 2;
+    [SerializeField] private int vaseGoldMax = 6;
+
+    [Tooltip("Normal dövüş odasının MEYDAN OKUMA olma ihtimali (süreli temizle → bonus charm).")]
+    [Range(0f, 1f)] [SerializeField] private float challengeChance = 0.3f;
+    [SerializeField] private float challengeBaseTime = 25f;
+    [SerializeField] private float challengeTimePerEnemy = 5f;
+    [SerializeField] private int challengeGold = 30;
+
     [Header("Ana menü")]
     [Tooltip("Lobide (ana menü) arkada rastgele bir orman haritası kurulur.")]
     [SerializeField] private bool menuBackgroundLevel = true;
 
     [Header("Yetenek (Q)")]
     [SerializeField] private bool abilityOfferAtStart = true;
+
+    [Tooltip("TEST: kilitli yetenekler de seçilebilir / dükkanda çıkar.")]
+    [SerializeField] private bool testUnlockAllAbilities = false;
     [SerializeField] private int abilityShopPrice = 70;
     [SerializeField] private int abilityUpgradeShopPrice = 80;
 
@@ -416,12 +474,24 @@ public class RunManager : MonoBehaviour
     public IReadOnlyList<AbilityType> AbilityOffers => abilityOffers;
     public PlayerAbility Ability { get; private set; }
 
+    // Yetenek bu koşuda kullanılabilir mi (kalıcı kilit ya da test anahtarı).
+    public bool IsAbilityAvailable(AbilityType type) =>
+        testUnlockAllAbilities || MetaProgress.IsAbilityUnlocked(type);
+
     // Öz: son koşuda kazanılan (sonuç ekranı / menü)
     public int LastEssence { get; private set; }
     public string LastEssenceBreakdown { get; private set; } = "";
 
     // Duraklatma menüsü (Esc)
     public bool IsPaused { get; private set; }
+
+    // Ekran kararması (RunUI çizer). 0 = yok, 1 = siyah.
+    public float FadeAlpha { get; private set; }
+
+    // Meydan okuma (süreli oda)
+    public bool ChallengeActive { get; private set; }
+    public float ChallengeTimeLeft => ChallengeActive ? Mathf.Max(0f, challengeEndTime - Time.time) : 0f;
+    private float challengeEndTime;
 
     public bool CanPause =>
         !IsPaused &&
@@ -710,6 +780,8 @@ public class RunManager : MonoBehaviour
 
         Ability = PlayerAbility.Ensure(player.gameObject);
 
+        PlayerDamage.AttackBalanceMultiplier = runPlayerAttackBalanceMultiplier;
+
         playerBaseMaxHealth = playerHealth.MaxHealth;
 
         if (includeDefaultCharms)
@@ -901,6 +973,10 @@ public class RunManager : MonoBehaviour
             return;
 
         if (index < 0 || index >= abilityOffers.Count)
+            return;
+
+        // Kilitli kart seçilemez.
+        if (!IsAbilityAvailable(abilityOffers[index]))
             return;
 
         chosenAbility = index;
@@ -1542,6 +1618,13 @@ public class RunManager : MonoBehaviour
 
     private IEnumerator RunRoom(RoomType type)
     {
+        // Haritadan yeni haritaya: kısa kararma, ışınlanma görünmesin.
+        if (LevelActive && level.HasLevel)
+        {
+            yield return FadeTo(1f, transitionFadeOut);
+            StartCoroutine(FadeInSoon());
+        }
+
         CurrentRoom = type;
 
         switch (type)
@@ -1708,7 +1791,7 @@ public class RunManager : MonoBehaviour
         if (!roomDamaged)
             AddGold(perfectRoomGold, "Hasarsız oda");
 
-        yield return new WaitForSecondsRealtime(1.0f);
+        yield return new WaitForSecondsRealtime(clearedPause);
 
         float heal =
             type == RoomType.Boss
@@ -1929,7 +2012,42 @@ public class RunManager : MonoBehaviour
             yield break;
         }
 
+        // MEYDAN OKUMA: süre içinde hepsini temizle → bonus charm + altın.
+        bool challenge =
+            type == RoomType.Fight &&
+            !(Act == 1 && RoomInAct == 1) &&
+            UnityEngine.Random.value < challengeChance;
+
+        if (challenge)
+        {
+            float limit = Mathf.Round(challengeBaseTime + challengeTimePerEnemy * spawned.Count);
+
+            challengeEndTime = Time.time + limit;
+            ChallengeActive = true;
+
+            ShowBanner("MEYDAN OKUMA  •  " + Mathf.RoundToInt(limit) + " SN İÇİNDE TEMİZLE", 2.4f);
+        }
+
         yield return WaitLevelCleared();
+
+        if (challenge)
+        {
+            bool success = Time.time <= challengeEndTime && !playerHealth.IsDead;
+
+            ChallengeActive = false;
+
+            if (success)
+            {
+                QueueOffer("MEYDAN OKUMA ÖDÜLÜ", offerChoices, true);
+                AddGold(challengeGold, "Meydan okuma");
+
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.4f, "MEYDAN OKUMA BAŞARILI!", new Color(1f, 0.85f, 0.3f), 1.1f);
+            }
+            else if (!playerHealth.IsDead)
+            {
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.4f, "SÜRE DOLDU", new Color(0.75f, 0.75f, 0.8f), 0.9f);
+            }
+        }
 
         level.ClearDoors();
     }
@@ -2148,7 +2266,8 @@ public class RunManager : MonoBehaviour
         {
             int door = level.DoorAt(player.transform.position);
 
-            if (door >= 0 && InteractPressed())
+            // Tek kapı: içine girmek yeter (akış). Birden fazla: [W] ile seç.
+            if (door >= 0 && (InteractPressed() || (autoEnterSingleDoor && options.Count == 1 && !IsPaused)))
                 chosenDoor = door;
 
             yield return null;
@@ -2373,7 +2492,7 @@ public class RunManager : MonoBehaviour
         {
             AbilityType t = AbilityInfo.All[i];
 
-            if (!MetaProgress.IsAbilityUnlocked(t))
+            if (!IsAbilityAvailable(t))
                 continue;
 
             if (Ability.HasAbility && t == Ability.Type)
@@ -2502,23 +2621,20 @@ public class RunManager : MonoBehaviour
         if (Ability == null)
             yield break;
 
+        // Ekranda TÜM yetenekler görünür; kilitliler gri (Demirci'den açılır).
         abilityOffers.Clear();
+        abilityOffers.AddRange(AbilityInfo.All);
 
-        for (int i = 0; i < AbilityInfo.All.Length; i++)
+        int available = 0;
+
+        for (int i = 0; i < abilityOffers.Count; i++)
         {
-            if (MetaProgress.IsAbilityUnlocked(AbilityInfo.All[i]))
-                abilityOffers.Add(AbilityInfo.All[i]);
+            if (IsAbilityAvailable(abilityOffers[i]))
+                available++;
         }
 
-        if (abilityOffers.Count == 0)
+        if (available == 0)
             yield break;
-
-        if (abilityOffers.Count == 1)
-        {
-            Ability.Equip(abilityOffers[0]);
-            ShowBanner("YETENEK: " + AbilityInfo.Name(abilityOffers[0]).ToUpperInvariant() + "  [Q]", 2.2f);
-            yield break;
-        }
 
         chosenAbility = -1;
 
@@ -2614,9 +2730,75 @@ public class RunManager : MonoBehaviour
         pausedByMenu = false;
 
         // Seçim tıklamasının saldırı tamponu sönsün, sonra kontrolü ver.
-        yield return new WaitForSecondsRealtime(0.3f);
+        PlayerCombatController combat = player.GetComponent<PlayerCombatController>();
+
+        if (combat != null)
+            combat.CancelAttack();
+
+        yield return new WaitForSecondsRealtime(0.1f);
 
         player.canControl = true;
+    }
+
+    // ---------------- HARİTA NESNELERİ (LevelProps) ----------------
+
+    public void OnVaseBroken(Vector3 at)
+    {
+        int gold = UnityEngine.Random.Range(Mathf.Min(vaseGoldMin, vaseGoldMax), Mathf.Max(vaseGoldMin, vaseGoldMax) + 1);
+
+        AddGold(gold, "Vazo");
+    }
+
+    public void OnChestOpened(Vector3 at)
+    {
+        AddGold(Mathf.RoundToInt(chestGold * (1f + 0.25f * (Mathf.Max(1, Act) - 1))), "Sandık");
+
+        float roll = UnityEngine.Random.value;
+
+        if (roll < chestCharmChance)
+        {
+            QueueOffer("SANDIK: CHARM", offerChoices, true);
+            CombatCallout.Popup(at + Vector3.up, "CHARM  (çıkışta)", new Color(0.75f, 0.6f, 1f), 1f);
+        }
+        else if (roll < chestCharmChance + chestHealChance)
+        {
+            HealPercent(chestHealPercent);
+            CombatCallout.Popup(at + Vector3.up, "+CAN", new Color(0.5f, 1f, 0.55f), 1f);
+        }
+        else
+        {
+            CombatCallout.Popup(at + Vector3.up, "ALTIN!", new Color(1f, 0.85f, 0.3f), 1f);
+        }
+    }
+
+    // ---------------- KARARMA ----------------
+
+    private IEnumerator FadeTo(float target, float duration)
+    {
+        float from = FadeAlpha;
+        float start = Time.unscaledTime;
+
+        if (duration <= 0f)
+        {
+            FadeAlpha = target;
+            yield break;
+        }
+
+        while (Time.unscaledTime - start < duration)
+        {
+            FadeAlpha = Mathf.Lerp(from, target, (Time.unscaledTime - start) / duration);
+            yield return null;
+        }
+
+        FadeAlpha = target;
+    }
+
+    // Yeni harita aynı karede kurulur; iki kare sonra açıl.
+    private IEnumerator FadeInSoon()
+    {
+        yield return null;
+        yield return null;
+        yield return FadeTo(0f, transitionFadeIn);
     }
 
     // =========================================================
@@ -2864,6 +3046,18 @@ public class RunManager : MonoBehaviour
                     ? forceType.Value
                     : (i == 0 ? RoomArchetype : PickArchetype(false));
 
+            // Kalabalığın bir kısmı PATLAYAN.
+            if (
+                useArchetypes &&
+                archetype == EnemyArchetypeType.Swarm &&
+                bomberSwarmChancePerAct != null &&
+                bomberSwarmChancePerAct.Length > 0 &&
+                UnityEngine.Random.value < bomberSwarmChancePerAct[Mathf.Clamp(Act - 1, 0, bomberSwarmChancePerAct.Length - 1)]
+            )
+            {
+                archetype = EnemyArchetypeType.Bomber;
+            }
+
             EnemyController enemy = SpawnOne(side, TemplateFor(archetype));
 
             if (enemy != null)
@@ -2968,6 +3162,57 @@ public class RunManager : MonoBehaviour
         enemy.chaseSpeed *= eliteSpeedMultiplier;
 
         enemy.transform.localScale *= eliteScale;
+
+        if (eliteAffixes)
+            ApplyEliteAffix(enemy);
+    }
+
+    private static readonly string[] EliteAffixNames = { "HIZLI", "ZIRHLI", "KALKANLI", "PATLAYICI" };
+
+    // Odadaki elitler aynı eki alır; ilk elitte banner'da duyurulur.
+    private void ApplyEliteAffix(EnemyController enemy)
+    {
+        if (eliteAffixStage != Stage)
+        {
+            eliteAffixStage = Stage;
+            eliteAffix = UnityEngine.Random.Range(0, EliteAffixNames.Length);
+
+            ShowBanner("ELİT  •  " + EliteAffixNames[eliteAffix], 2f);
+        }
+
+        switch (eliteAffix)
+        {
+            case 0: // HIZLI: hızlı koşar, kısa uyarı.
+                enemy.chaseSpeed *= 1.3f;
+                enemy.attackWarningTime *= 0.8f;
+                enemy.attackRecoveryTime *= 0.8f;
+                break;
+
+            case 1: // ZIRHLI: denge çok, az savrulur.
+                EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
+
+                if (balance != null)
+                    balance.SetMaxBalance(Mathf.RoundToInt(balance.MaxBalance * 1.6f));
+
+                enemy.balanceHitKnockbackForce *= 0.4f;
+                enemy.healthKnockbackForce *= 0.4f;
+                break;
+
+            case 2: // KALKANLI
+                if (enemy.GetComponent<EnemyShield>() == null)
+                    enemy.gameObject.AddComponent<EnemyShield>();
+                break;
+
+            case 3: // PATLAYICI: ölünce patlar (oyuncuya da vurur).
+                EnemyBomber bomber = enemy.GetComponent<EnemyBomber>();
+
+                if (bomber == null)
+                    bomber = enemy.gameObject.AddComponent<EnemyBomber>();
+
+                bomber.onlyOnDeath = true;
+                bomber.radius = 3f;
+                break;
+        }
     }
 
     private EnemyController SpawnOne(int side, GameObject template)
@@ -3055,7 +3300,10 @@ public class RunManager : MonoBehaviour
         enemy.alwaysHunt = true;
 
         enemy.attackCommitPoint =
-            Mathf.Min(enemy.attackCommitPoint, runAttackCommitPoint);
+            Mathf.Min(enemy.attackCommitPoint, runAttackArmorPoint);
+
+        enemy.parryBalanceDamage =
+            Mathf.Max(1, Mathf.RoundToInt(enemy.parryBalanceDamage * runParryBalanceMultiplier));
 
         float damageMultiplier =
             (1f + Mathf.Min(maxDamageBonus, damageBonusPerStage * t)) *
@@ -3330,6 +3578,15 @@ public class RunManager : MonoBehaviour
                 true,
                 swarmTint
             );
+
+        archetypeTemplates[(int)EnemyArchetypeType.Shielded] =
+            MakeVariantTemplate(enemyPrefab, EnemyArchetypeType.Shielded, true, shieldedTint);
+
+        archetypeTemplates[(int)EnemyArchetypeType.Flyer] =
+            MakeVariantTemplate(enemyPrefab, EnemyArchetypeType.Flyer, true, flyerTint);
+
+        archetypeTemplates[(int)EnemyArchetypeType.Bomber] =
+            MakeVariantTemplate(enemyPrefab, EnemyArchetypeType.Bomber, true, bomberTint);
     }
 
     // Kapalı (inaktif) bir kök altında kopya: Awake/OnEnable çalışmaz,
@@ -3415,6 +3672,20 @@ public class RunManager : MonoBehaviour
 
         if (forRoom && Stage <= 1)
             return EnemyArchetypeType.Duelist;
+
+        // Yeni tipler (Kalkanlı / Uçan) önce zarlanır.
+        if (specialTypeChancePerAct != null && specialTypeChancePerAct.Length > 0)
+        {
+            Vector2 sp = specialTypeChancePerAct[Mathf.Clamp(Act - 1, 0, specialTypeChancePerAct.Length - 1)];
+
+            float r = UnityEngine.Random.value;
+
+            if (r < sp.x)
+                return EnemyArchetypeType.Shielded;
+
+            if (r < sp.x + sp.y)
+                return EnemyArchetypeType.Flyer;
+        }
 
         if (archetypeWeightsPerAct == null || archetypeWeightsPerAct.Length == 0)
             return EnemyArchetypeType.Duelist;
@@ -3542,6 +3813,8 @@ public class RunManager : MonoBehaviour
             Ability.Clear();
 
         IsPaused = false;
+        FadeAlpha = 0f;
+        ChallengeActive = false;
 
         HitStop.ClearAll();
         EnemyTime.Clear();

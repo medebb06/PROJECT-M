@@ -91,6 +91,18 @@ public class PlayerController : MonoBehaviour
     [Header("Hit Freeze")]
     public float slamFreezeTime = 0.04f;
 
+    [Header("Ground Slam v2 (itme / sıçrama)")]
+    [Tooltip("Etki yarıçapı en az bu (Impact Settings yarıçapı daha büyükse o).")]
+    public float slamMinRadius = 3f;
+    [Tooltip("Bu yükseklikten (birim) düşünce slam tam güç (×2).")]
+    public float slamFullPowerDrop = 6f;
+    [Tooltip("Düşmanın MAX dengesinin bu oranı kadar denge hasarı (× güç).")]
+    [Range(0f, 1f)] public float slamBalancePercent = 0.18f;
+    public float slamPushForce = 10f;
+    public float slamLiftForce = 5f;
+    [Tooltip("Slam bir düşmana değerse oyuncu bu hızla yukarı sıçrar (0 = kapalı).")]
+    public float slamBounceVelocity = 10f;
+
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
     // Dokunulmazlık iki kaynaktan beslenir:

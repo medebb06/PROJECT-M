@@ -50,6 +50,10 @@ public class PlayerStats : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float baseCritChance = 0f;
 
+    [Tooltip("Kritik şansı tavanı (charm'lar ne kadar eklerse eklesin).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float critChanceCap = 0.5f;
+
     [Tooltip("Kritik vuruşta hasar çarpanı.")]
     [Min(1f)]
     [SerializeField] private float baseCritMultiplier = 2f;
@@ -187,7 +191,7 @@ public class PlayerStats : MonoBehaviour
     // ---------------------------------------------------------
 
     public float CritChance =>
-        Mathf.Clamp01(Get(StatType.CritChance, baseCritChance));
+        Mathf.Clamp(Get(StatType.CritChance, baseCritChance), 0f, critChanceCap);
 
     public float CritMultiplier =>
         Mathf.Max(1f, Get(StatType.CritMultiplier, baseCritMultiplier));

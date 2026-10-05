@@ -15,6 +15,16 @@ using UnityEngine;
 /// </summary>
 public static class PlayerDamage
 {
+    // Koşu dengesi (RunManager koyar): oyuncunun NORMAL vuruşlarının
+    // (kombo + slam) denge hasarı çarpanı. Parry ana denge kırıcı olsun.
+    public static float AttackBalanceMultiplier = 1f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        AttackBalanceMultiplier = 1f;
+    }
+
     public static HitResult HitEnemy(
         EnemyController enemy,
         DamageInfo info
@@ -28,6 +38,10 @@ public static class PlayerDamage
         Health health = enemy.GetComponent<Health>();
 
         if (health != null && health.IsDead)
+            return result;
+
+        // Kalkanlı düşman önden gelen normal vuruşu engeller.
+        if (EnemyShield.TryBlock(enemy, info))
             return result;
 
         EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
@@ -62,11 +76,16 @@ public static class PlayerDamage
 
         if (balance != null && !balance.IsBroken)
         {
+            float sourceMultiplier =
+                info.source == DamageSource.Attack || info.source == DamageSource.Slam
+                    ? AttackBalanceMultiplier
+                    : 1f;
+
             int amount =
                 Resolve(
                     StatType.BalanceDamage,
                     info.balanceDamage,
-                    critMultiplier,
+                    critMultiplier * sourceMultiplier,
                     stats
                 );
 

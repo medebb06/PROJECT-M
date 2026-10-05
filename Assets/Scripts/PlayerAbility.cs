@@ -31,7 +31,7 @@ public class PlayerAbility : MonoBehaviour
     public KeyCode key = KeyCode.Q;
 
     [Header("Şarj (bekleme kısaltma, sn)")]
-    public float parryCharge = 1.5f;
+    public float parryCharge = 2.5f;
     public float killCharge = 0.75f;
 
     [Tooltip("Boss'a karşı hasar / yanık çarpanı.")]
@@ -358,7 +358,13 @@ public class PlayerAbility : MonoBehaviour
 
             HitPercent(e, shockBalancePercent, shockHealthPercent, new Vector2(dir, 0f));
 
-            if (e == null || e.IsDead || e.IsAttackCommitted)
+            if (e == null || e.IsDead)
+                continue;
+
+            // Yetenek zırhı deler: zırhlı (kararlı) saldırıyı da keser.
+            BreakArmor(e);
+
+            if (e.IsAttackCommitted)
                 continue;
 
             Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
@@ -562,6 +568,8 @@ public class PlayerAbility : MonoBehaviour
             if (e == null || e.IsDead)
                 continue;
 
+            BreakArmor(e);
+
             e.StartAttackRecovery(frostFreeze * power);
             e.PlayTintFlash(c, 0.5f);
         }
@@ -652,6 +660,18 @@ public class PlayerAbility : MonoBehaviour
         return PlayerDamage.HitEnemy(e, info);
     }
 
+    // Kararlı saldırıyı keser (boss hariç). Normal vuruşlar artık
+    // uyarı boyunca kesemiyor; Şok ve Buz bunun cevabı.
+    private static void BreakArmor(EnemyController e)
+    {
+        if (e == null || e.IsDead || IsBoss(e) || !e.IsAttackCommitted)
+            return;
+
+        e.ChangeState(new EnemyHitState(e, 0.2f));
+
+        CombatCallout.PopupAbove(e, "KESİLDİ", new Color(0.8f, 0.9f, 1f), 0.7f);
+    }
+
     private static bool IsBoss(EnemyController e)
     {
         return e != null && e.GetComponent<BossController>() != null;
@@ -699,6 +719,12 @@ public class PlayerAbility : MonoBehaviour
 
     private int SortingLayer => player.playerSprite != null ? player.playerSprite.sortingLayerID : 0;
     private int SortingOrder => player.playerSprite != null ? player.playerSprite.sortingOrder + 5 : 50;
+
+    /// <summary>Genişleyen halka efekti (Ground Slam da kullanır).</summary>
+    public void SpawnRingFx(Vector2 center, float radius, Color color)
+    {
+        SpawnRing(center, radius, color);
+    }
 
     // Genişleyen halka (Şok Dalgası).
     private void SpawnRing(Vector2 center, float radius, Color color)

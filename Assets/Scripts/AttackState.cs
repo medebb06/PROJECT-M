@@ -359,6 +359,10 @@ public class AttackState : ICombatState
 
         bool hitSomething = false;
 
+        // Vazo / sandık.
+        if (LevelProps.HitArea(boxCenter, combat.hitBoxSize))
+            hitSomething = true;
+
         foreach (var h in hits)
         {
             if (h == null)

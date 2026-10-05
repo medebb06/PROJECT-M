@@ -26,6 +26,16 @@ public class ExecuteMeter : MonoBehaviour
     [Tooltip("Dengeyi KIRAN parry.")]
     [Range(0f, 1f)] public float parryBreakFill = 0.08f;
 
+    [Header("Boss (öldürme olmadığı için ayrı kaynaklar)")]
+    [Tooltip("Boss'un dengesini kırmak (vuruş ya da parry).")]
+    [Range(0f, 1f)] public float bossBreakFill = 0.5f;
+
+    [Tooltip("Boss'a her parry.")]
+    [Range(0f, 1f)] public float bossParryFill = 0.08f;
+
+    [Tooltip("Boss'a verilen can hasarı × bu = dolum (max canın %50'si → 0.3).")]
+    [Range(0f, 2f)] public float bossHealthDamageFill = 0.6f;
+
     [Tooltip("Koşu başında bar dolu başlasın (ilk infazı öğretmek için).")]
     public bool startFull = true;
 
@@ -86,12 +96,14 @@ public class ExecuteMeter : MonoBehaviour
     {
         CombatEvents.EnemyKilled += OnKilled;
         CombatEvents.ParrySucceeded += OnParry;
+        CombatEvents.EnemyHit += OnEnemyHit;
     }
 
     private void OnDisable()
     {
         CombatEvents.EnemyKilled -= OnKilled;
         CombatEvents.ParrySucceeded -= OnParry;
+        CombatEvents.EnemyHit -= OnEnemyHit;
     }
 
     private void OnKilled(EnemyController enemy)
@@ -105,7 +117,9 @@ public class ExecuteMeter : MonoBehaviour
 
         EnemyArchetype type = enemy != null ? enemy.GetComponent<EnemyArchetype>() : null;
 
-        bool swarm = type != null && type.type == EnemyArchetypeType.Swarm;
+        bool swarm =
+            type != null &&
+            (type.type == EnemyArchetypeType.Swarm || type.type == EnemyArchetypeType.Bomber);
 
         Add(swarm ? swarmKillFill : killFill);
     }
@@ -114,6 +128,37 @@ public class ExecuteMeter : MonoBehaviour
     {
         if (brokeBalance)
             Add(parryBreakFill);
+
+        if (IsBoss(enemy))
+        {
+            Add(bossParryFill);
+
+            if (brokeBalance)
+                Add(bossBreakFill);
+        }
+    }
+
+    // Boss: denge kırma + can hasarı barı doldurur.
+    private void OnEnemyHit(EnemyController enemy, DamageInfo info, HitResult result)
+    {
+        if (!result.hit || !IsBoss(enemy))
+            return;
+
+        if (result.brokeBalance)
+            Add(bossBreakFill);
+
+        if (!result.onBalance && result.amount > 0)
+        {
+            Health h = enemy.GetComponent<Health>();
+
+            if (h != null && h.MaxHealth > 0)
+                Add((float)result.amount / h.MaxHealth * bossHealthDamageFill);
+        }
+    }
+
+    private static bool IsBoss(EnemyController enemy)
+    {
+        return enemy != null && enemy.GetComponent<BossController>() != null;
     }
 
     public void Add(float amount)

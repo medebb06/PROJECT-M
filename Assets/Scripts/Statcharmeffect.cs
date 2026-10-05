@@ -5,7 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// İstatistik charm'ı: PlayerStats'a değiştirici ekler.
-/// Her istif için: ekleme = addPerStack × istif,  çarpan = multPerStack ^ istif.
+/// Her istif için: ekleme = addPerStack × istif,
+/// çarpan = 1 + (multPerStack − 1) × istif  (DOĞRUSAL; üstel yığılma
+/// 5 istifte ×4.5 can hasarına çıkıyordu).
 /// </summary>
 [CreateAssetMenu(menuName = "Charms/Effect/Stat", fileName = "StatEffect")]
 public class StatCharmEffect : CharmEffect
@@ -36,7 +38,7 @@ public class StatCharmEffect : CharmEffect
                 context.owner,
                 e.type,
                 e.addPerStack * stacks,
-                Mathf.Pow(e.multPerStack, stacks)
+                LinearMult(e.multPerStack, stacks)
             );
         }
     }
@@ -61,7 +63,7 @@ public class StatCharmEffect : CharmEffect
                 sb.Append(", ");
 
             float add = e.addPerStack * stacks;
-            float mult = Mathf.Pow(e.multPerStack, stacks);
+            float mult = LinearMult(e.multPerStack, stacks);
 
             switch (e.type)
             {
@@ -114,6 +116,11 @@ public class StatCharmEffect : CharmEffect
         }
 
         return sb.ToString();
+    }
+
+    private static float LinearMult(float perStack, int stacks)
+    {
+        return Mathf.Max(0f, 1f + (perStack - 1f) * stacks);
     }
 
     private static string Format(string label, float add, float mult)

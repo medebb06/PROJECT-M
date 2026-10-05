@@ -97,12 +97,11 @@ public static class AbilityInfo
         }
     }
 
-    // Kalıcı gelişimde kilit kimliği. Şok Dalgası baştan açık (boş).
+    // Kalıcı gelişimde kilit kimliği. Şok Dalgası ve Gölge Adım baştan açık (boş).
     public static string UnlockId(AbilityType type)
     {
         switch (type)
         {
-            case AbilityType.ShadowStep: return "ab_shadow";
             case AbilityType.Frost: return "ab_frost";
             case AbilityType.Fire: return "ab_fire";
             default: return "";

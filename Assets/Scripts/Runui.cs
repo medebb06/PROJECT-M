@@ -311,6 +311,7 @@ public class RunUI : MonoBehaviour
         if (run.State == RunState.Lobby)
         {
             DrawMainMenu(run, width, height);
+            DrawFade(run, width, height);
             return;
         }
 
@@ -374,6 +375,20 @@ public class RunUI : MonoBehaviour
             DrawPause(run, width, height);
         else
             pauseSettings = false;
+
+        DrawFade(run, width, height);
+    }
+
+    // Harita geçişi kararması (en üstte).
+    private static void DrawFade(RunManager run, float width, float height)
+    {
+        if (run.FadeAlpha <= 0.001f || Event.current.type != EventType.Repaint)
+            return;
+
+        Color old = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, run.FadeAlpha);
+        GUI.DrawTexture(new Rect(0, 0, width, height), Texture2D.whiteTexture);
+        GUI.color = old;
     }
 
     // =========================================================
@@ -814,8 +829,14 @@ public class RunUI : MonoBehaviour
 
         for (int i = 0; i < offers.Count; i++)
         {
-            if (GUI.Button(new Rect(x, cardY, cardWidth, cardHeight), AbilityCardText(offers[i], i + 1), cardStyle))
+            bool open = run.IsAbilityAvailable(offers[i]);
+
+            GUI.enabled = open;
+
+            if (GUI.Button(new Rect(x, cardY, cardWidth, cardHeight), AbilityCardText(offers[i], i + 1, open), cardStyle))
                 run.ChooseAbility(i);
+
+            GUI.enabled = true;
 
             x += cardWidth + gap;
         }
@@ -827,9 +848,22 @@ public class RunUI : MonoBehaviour
         );
     }
 
-    private static string AbilityCardText(AbilityType type, int number)
+    private static string AbilityCardText(AbilityType type, int number, bool open)
     {
         string color = "#" + ColorUtility.ToHtmlStringRGB(AbilityInfo.Color(type));
+
+        if (!open)
+        {
+            int cost = MetaProgress.AbilityUnlockCost(type);
+
+            return
+                "<size=11><color=#666666>" + number + "</color></size>  " +
+                "<b><color=#777777>" + AbilityInfo.Name(type) + "</color></b>\n\n" +
+                "<size=12><color=#777777>" + AbilityInfo.Description(type) + "</color></size>\n\n" +
+                "<size=12><b><color=#C9A0FF>KİLİTLİ</color></b></size>\n" +
+                "<size=11><color=#999999>Ana menü → Kalıcı Gelişim" +
+                (cost > 0 ? "  ◆ " + cost + " öz" : "") + "</color></size>";
+        }
 
         bool last = MetaProgress.SelectedAbility == (int)type;
 
@@ -986,6 +1020,15 @@ public class RunUI : MonoBehaviour
 
         if (run.State == RunState.Fighting)
             goldLine += "   <color=#BBBBBB>düşman " + run.AliveEnemies + "</color>";
+
+        if (run.ChallengeActive)
+        {
+            float left = run.ChallengeTimeLeft;
+
+            goldLine +=
+                "   <color=" + (left < 10f ? "#FF6A50" : "#FFD54A") + ">SÜRE " +
+                Mathf.CeilToInt(left) + " sn</color>";
+        }
 
         GUI.Label(
             new Rect(panel.x + 8f, panel.y + 24f, panelWidth - 12f, 18f),

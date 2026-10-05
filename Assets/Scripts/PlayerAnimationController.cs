@@ -207,6 +207,24 @@ public class PlayerAnimationController : MonoBehaviour
         );
     }
 
+    // Havada saldırı: Animator'da "AirAttack" / "DownAttack" state'i varsa
+    // onu, yoksa yerdeki kombo animasyonlarını oynatır.
+    public void PlayAirAttackAnimation(bool down, int step)
+    {
+        if (animator == null)
+            return;
+
+        string own = down ? "DownAttack" : "AirAttack";
+
+        if (animator.HasState(0, Animator.StringToHash(own)))
+        {
+            animator.CrossFadeInFixedTime(own, 0.03f, 0, 0f);
+            return;
+        }
+
+        PlayAttackAnimation(down ? 3 : (step <= 1 ? 1 : 2));
+    }
+
     public void PlayDeathAnimation()
     {
         if (animator == null)

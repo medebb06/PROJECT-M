@@ -120,6 +120,26 @@ public class JumpState : IPlayerState
         );
 
         // =====================================================
+        // GROUND SLAM (yükselirken de: ↓ + Space)
+        // =====================================================
+
+        if (
+            player.verticalInput < -0.5f &&
+            Input.GetKeyDown(KeyCode.Space) &&
+            !player.isGrounded
+        )
+        {
+            sm.ChangeState(
+                new GroundSlamState(
+                    player,
+                    sm
+                )
+            );
+
+            return;
+        }
+
+        // =====================================================
         // DASH
         // =====================================================
 

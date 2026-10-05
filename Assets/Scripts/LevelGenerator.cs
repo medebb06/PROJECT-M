@@ -56,8 +56,21 @@ public class LevelGenerator : MonoBehaviour
     [Min(0)] public int minFillers = 2;
     [Min(0)] public int maxFillers = 4;
 
-    [Tooltip("Yüzey başlangıçtan en fazla bu kadar kare yukarı/aşağı kayar.")]
+    [Tooltip("Ara parçalar (yokuş, basamak) o anki 'kat'tan en fazla bu kadar kayar.")]
     [Min(1)] public int maxDrift = 5;
+
+    [Header("Dikey rota (Dead Cells gibi aşağı-yukarı)")]
+    [Tooltip("Her arenadan önce kat değiştirme (duvar bacası / platform merdiveni / derin iniş) ihtimali.")]
+    [Range(0f, 1f)] public float verticalChance = 0.85f;
+
+    [Tooltip("Kat değişimi en az bu kadar kare.")]
+    [Min(2)] public int verticalMinChange = 8;
+
+    [Tooltip("Harita başlangıç katından en fazla bu kadar yukarı / aşağı gider.")]
+    [Min(4)] public int maxVerticalRange = 24;
+
+    [Tooltip("Bir kat değişiminde en fazla bu kadar dikey parça arka arkaya.")]
+    [Min(1)] public int maxClimbChunks = 3;
 
     [Tooltip("En alçak yüzeyin altındaki toprak kalınlığı (kare).")]
     [Min(1)] public int groundDepth = 6;
@@ -493,6 +506,7 @@ public class LevelGenerator : MonoBehaviour
 
         HashSet<Vector2Int> solids = new HashSet<Vector2Int>();
         HashSet<Vector2Int> platforms = new HashSet<Vector2Int>();   // '=' tek yönlü
+        Dictionary<Vector2Int, bool> slopes = new Dictionary<Vector2Int, bool>();   // true = yukarı (/)
         List<Marker> markers = new List<Marker>();
         List<Vector2Int> arenaSpans = new List<Vector2Int>();   // x başı, x sonu
         List<int> arenaFloors = new List<int>();
@@ -501,6 +515,7 @@ public class LevelGenerator : MonoBehaviour
 
         int cursorX = 0;
         int surface = 0;
+        int driftBase = 0;   // ara parçaların kaydığı "kat"
         LevelChunk previous = null;
 
         void Place(LevelChunk chunk, int arenaIndex)
@@ -512,7 +527,7 @@ public class LevelGenerator : MonoBehaviour
             {
                 // Zeminli sütunlar genişler; çukur sütunları aynı kalır.
                 int repeat =
-                    chunk.SurfaceAt(x) > 0
+                    chunk.stretch && chunk.SurfaceAt(x) > 0
                         ? Mathf.Max(1, horizontalStretch)
                         : 1;
 
@@ -524,12 +539,29 @@ public class LevelGenerator : MonoBehaviour
 
                         Vector2Int cell = new Vector2Int(cursorX + outX, offsetY + y);
 
+                        // Yokuş genişlerken: '/' ilk kopyada eğim, sonrakiler düz;
+                        // '\' son kopyada eğim, öncekiler düz.
+                        if (LevelChunk.IsSlope(c))
+                        {
+                            bool rising = c == '/';
+                            bool slopeHere = rising ? r == 0 : r == repeat - 1;
+
+                            solids.Add(cell);
+
+                            if (slopeHere)
+                                slopes[cell] = rising;
+
+                            continue;
+                        }
+
                         if (c == '#')
                             solids.Add(cell);
                         else if (c == '=')
                             platforms.Add(cell);
-                        else if (r == 0 && (c == 'E' || c == 'P' || c == 'X' || c == 'S' || c == 'R'))
+                        else if (r == 0 && (c == 'E' || c == 'P' || c == 'X' || c == 'S' || c == 'R' || c == 'C' || c == 'V'))
                             markers.Add(new Marker { kind = c, cell = cell, arenaIndex = arenaIndex });
+                        else if (c == '^')
+                            markers.Add(new Marker { kind = c, cell = cell, arenaIndex = arenaIndex });   // diken genişlerken çoğalır
                     }
 
                     outX++;
@@ -549,7 +581,38 @@ public class LevelGenerator : MonoBehaviour
         void PlaceFillers(int count)
         {
             for (int i = 0; i < count; i++)
-                Place(PickFiller(rng, surface, previous), -1);
+                Place(PickFiller(rng, surface - driftBase, previous), -1);
+        }
+
+        // DİKEY ROTA: ara parçalar + (çoğu zaman) kat değişimi. Hedef kat
+        // rastgele (en az verticalMinChange fark), sınır ±maxVerticalRange.
+        void PlaceRoute(int count)
+        {
+            if (rng.NextDouble() > verticalChance)
+            {
+                PlaceFillers(count);
+                return;
+            }
+
+            int before = Mathf.Max(1, count / 2);
+
+            PlaceFillers(before);
+
+            int target = PickTargetFloor(rng, surface);
+
+            for (int k = 0; k < maxClimbChunks && Mathf.Abs(target - surface) >= 4; k++)
+            {
+                LevelChunk climb = PickClimb(rng, target - surface, previous);
+
+                if (climb == null)
+                    break;
+
+                Place(climb, -1);
+            }
+
+            driftBase = surface;
+
+            PlaceFillers(Mathf.Max(1, count - before));
         }
 
         // ---------------- BAŞLANGIÇ ----------------
@@ -579,7 +642,10 @@ public class LevelGenerator : MonoBehaviour
                     ? 1
                     : rng.Next(Mathf.Min(minFillers, maxFillers), Mathf.Max(minFillers, maxFillers) + 1);
 
-            PlaceFillers(fillers);
+            if (boss)
+                PlaceFillers(fillers);
+            else
+                PlaceRoute(fillers);
 
             LevelChunk arena =
                 Pick(
@@ -681,7 +747,7 @@ public class LevelGenerator : MonoBehaviour
 
         // ---------------- BOYA ----------------
 
-        Paint(solids);
+        Paint(solids, slopes);
 
         PaintPlatforms(platforms, solids);
 
@@ -737,6 +803,10 @@ public class LevelGenerator : MonoBehaviour
                 arenas[m.arenaIndex].spawns.Add(point.transform);
             }
         }
+
+        // ---------------- NESNELER (sandık / vazo / diken) ----------------
+
+        SpawnProps(markers, cellSize.x, seed);
 
         // Arena duvarları (kapalı başlar).
         for (int i = 0; i < arenas.Count; i++)
@@ -855,6 +925,7 @@ public class LevelGenerator : MonoBehaviour
                     {
                         solids = solids,
                         platforms = platforms,
+                        slopes = new HashSet<Vector2Int>(slopes.Keys),
                         width = width,
                         bottom = paintBottom,
                         top = wallTop,
@@ -880,6 +951,44 @@ public class LevelGenerator : MonoBehaviour
         Debug.Log(
             "HARİTA (tohum " + seed + ", " + width + " kare): " + LastLayout
         );
+    }
+
+    private void SpawnProps(List<Marker> markers, float cell, int seed)
+    {
+        LevelProps props = LevelProps.Ensure(gameObject);
+
+        props.ResetLevel(ThemeOn ? theme : null, root != null ? root.transform : null);
+
+        TilemapRenderer tr = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
+
+        int layer = tr != null ? tr.sortingLayerID : 0;
+        int order = tr != null ? tr.sortingOrder + 1 : 1;
+
+        System.Random rng = new System.Random(seed * 31 + 7);
+
+        for (int i = 0; i < markers.Count; i++)
+        {
+            Marker m = markers[i];
+
+            if (m.kind != 'C' && m.kind != 'V' && m.kind != '^')
+                continue;
+
+            Vector3 ground = CellToWorld(m.cell);
+
+            try
+            {
+                if (m.kind == 'C')
+                    props.SpawnChest(ground, root.transform, cell, layer, order);
+                else if (m.kind == 'V')
+                    props.TrySpawnVase(ground, root.transform, cell, layer, order, rng);
+                else
+                    props.SpawnSpike(ground, root.transform, cell, layer, order);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
     }
 
     private LevelChunk Pick(System.Random rng, List<LevelChunk> list)
@@ -943,6 +1052,64 @@ public class LevelGenerator : MonoBehaviour
         return pool[pool.Count - 1];
     }
 
+    // Yeni kat: şimdikinden en az verticalMinChange farklı, sınır içinde.
+    private int PickTargetFloor(System.Random rng, int surface)
+    {
+        int range = Mathf.Max(verticalMinChange, maxVerticalRange);
+
+        for (int tries = 0; tries < 12; tries++)
+        {
+            int t = rng.Next(-range, range + 1);
+
+            if (Mathf.Abs(t - surface) >= verticalMinChange)
+                return t;
+        }
+
+        // Sınıra yakınsa ters yöne.
+        return surface > 0 ? surface - verticalMinChange : surface + verticalMinChange;
+    }
+
+    // İstenen yönde (yukarı/aşağı) ve fazla aşmayan dikey parça.
+    private LevelChunk PickClimb(System.Random rng, int need, LevelChunk previous)
+    {
+        List<LevelChunk> climbs = LevelChunkLibrary.OfKind(ChunkKind.Climb);
+
+        List<LevelChunk> pool = new List<LevelChunk>();
+
+        for (int i = 0; i < climbs.Count; i++)
+        {
+            LevelChunk c = climbs[i];
+
+            if (c.Delta == 0 || Mathf.Sign(c.Delta) != Mathf.Sign(need))
+                continue;
+
+            if (Mathf.Abs(c.Delta) > Mathf.Abs(need) + 4)
+                continue;
+
+            pool.Add(c);
+        }
+
+        if (pool.Count == 0)
+            return null;
+
+        float total = 0f;
+
+        for (int i = 0; i < pool.Count; i++)
+            total += WeightOf(pool[i], previous);
+
+        double roll = rng.NextDouble() * total;
+
+        for (int i = 0; i < pool.Count; i++)
+        {
+            roll -= WeightOf(pool[i], previous);
+
+            if (roll <= 0)
+                return pool[i];
+        }
+
+        return pool[pool.Count - 1];
+    }
+
     private static float WeightOf(LevelChunk c, LevelChunk previous)
     {
         float w = Mathf.Max(0f, c.weight);
@@ -950,7 +1117,7 @@ public class LevelGenerator : MonoBehaviour
         return c == previous ? w * 0.2f : w;
     }
 
-    private void Paint(HashSet<Vector2Int> solids)
+    private void Paint(HashSet<Vector2Int> solids, Dictionary<Vector2Int, bool> slopes)
     {
         Vector3Int[] positions = new Vector3Int[solids.Count];
         TileBase[] tiles = new TileBase[solids.Count];
@@ -968,7 +1135,17 @@ public class LevelGenerator : MonoBehaviour
 
             positions[i] = new Vector3Int(origin.x + c.x, origin.y + c.y, 0);
 
-            if (themed)
+            if (themed && slopes.TryGetValue(c, out bool rising))
+            {
+                // Yokuş: eğimli sprite, çarpışma sprite şeklinden.
+                tiles[i] = theme.SlopeTile(rising) ?? theme.GroundTile(up, down, left, right, c.x, c.y);
+            }
+            else if (themed && slopes.TryGetValue(c + Vector2Int.up, out bool risingAbove))
+            {
+                // Yokuşun altı: tepe setinin çimli alt hücresi.
+                tiles[i] = theme.SlopeBaseTile(risingAbove) ?? theme.GroundTile(up, down, left, right, c.x, c.y);
+            }
+            else if (themed)
             {
                 tiles[i] = theme.GroundTile(up, down, left, right, c.x, c.y);
             }

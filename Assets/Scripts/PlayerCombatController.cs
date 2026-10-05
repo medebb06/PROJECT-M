@@ -19,9 +19,28 @@ public class PlayerCombatController : MonoBehaviour
     [Range(0f, 1f)]
     public float comboCancelPoint = 0.6f;
 
+    [Header("Havada saldırı")]
+    [Tooltip("İnişe kadar yan vuruş hakkı (aşağı vuruş sınırsız, pogo hakları yeniler).")]
+    [Min(0)] public int maxAirAttacks = 2;
+    public float airAttackDuration = 0.28f;
+    [Range(0f, 1f)] public float airAttackHitTime = 0.35f;
+    [Tooltip("Yan vuruş sırasında en yüksek düşüş hızı (asılı kalma hissi).")]
+    public float airAttackMaxFallSpeed = 3f;
+
+    [Header("Aşağı vuruş (↓ + saldırı, havada) / pogo")]
+    public float downAttackDuration = 0.3f;
+    [Range(0f, 1f)] public float downAttackHitTime = 0.25f;
+    public Vector2 downAttackBoxSize = new Vector2(1.4f, 1.7f);
+    public float downAttackBalanceMultiplier = 1.2f;
+    [Tooltip("Aşağı vuruş isabet edince yukarı sıçrama hızı.")]
+    public float pogoBounceVelocity = 15f;
+
     private float bufferTimer;
     private float comboTimer;
     private int comboStep;
+    private int airAttacksLeft;
+    private int airStep;
+    private PlayerAnimationController animationController;
 
     // Aktif saldırının zamanlaması (iptal / zıplama kuralları için).
     private float attackStartTime;
@@ -160,6 +179,10 @@ public class PlayerCombatController : MonoBehaviour
         if (defenseController == null)
             defenseController =
                 GetComponent<PlayerDefenseController>();
+
+        animationController = GetComponent<PlayerAnimationController>();
+
+        airAttacksLeft = maxAirAttacks;
     }
 
     void OnDisable()
@@ -202,6 +225,27 @@ public class PlayerCombatController : MonoBehaviour
         if (comboTimer <= 0f && currentState == null)
             comboStep = 0;
 
+        // Yerdeyken havada saldırı hakları dolar.
+        if (player.IsGrounded())
+        {
+            airAttacksLeft = maxAirAttacks;
+            airStep = 0;
+        }
+
+        // =====================================================
+        // HAVADA SALDIRI: basınca hemen (inişi beklemez).
+        // =====================================================
+
+        if (
+            bufferTimer > 0f &&
+            currentState == null &&
+            CanStartAirAttack(out bool downAttack)
+        )
+        {
+            bufferTimer = 0f;
+            StartAirAttack(downAttack);
+        }
+
         // =====================================================
         // KOMBO İPTAL PENCERESİ
         // Vuruş karesi geçtiyse ve saldırı yeterince ilerlediyse,
@@ -211,6 +255,7 @@ public class PlayerCombatController : MonoBehaviour
         if (
             bufferTimer > 0f &&
             currentState != null &&
+            !(currentState is AirAttackState) &&
             AttackProgress >= Mathf.Max(comboCancelPoint, attackHitTimeNow) &&
             CanStartAttack()
         )
@@ -246,6 +291,73 @@ public class PlayerCombatController : MonoBehaviour
             player.canControl &&
             player.canAttack &&
             !player.inputLocked;
+    }
+
+    private bool CanStartAirAttack(out bool down)
+    {
+        down = false;
+
+        if (player.IsGrounded())
+            return false;
+
+        if (!player.canControl || !player.canAttack || player.inputLocked)
+            return false;
+
+        if (defenseController != null && defenseController.IsDefending)
+            return false;
+
+        down = player.verticalInput < -0.5f;
+
+        // Aşağı vuruş sınırsız; yan vuruş hakla.
+        return down || airAttacksLeft > 0;
+    }
+
+    private void StartAirAttack(bool down)
+    {
+        if (!down)
+            airAttacksLeft--;
+
+        airStep = airStep % 2 + 1;
+
+        float duration = down ? downAttackDuration : airAttackDuration;
+        float hit = down ? downAttackHitTime : airAttackHitTime;
+
+        attackStartTime = Time.time;
+        attackDurationNow = duration;
+        attackHitTimeNow = hit;
+
+        currentState =
+            new AirAttackState(
+                player,
+                this,
+                enemyLayer,
+                down,
+                airStep,
+                duration,
+                hit,
+                OnAirAttackEnd
+            );
+
+        currentState.Enter();
+    }
+
+    private void OnAirAttackEnd()
+    {
+        currentState = null;
+    }
+
+    /// <summary>Pogo: havada yan vuruş hakları yenilenir.</summary>
+    public void RefillAirAttacks()
+    {
+        airAttacksLeft = maxAirAttacks;
+    }
+
+    public void PlayAirAttackAnimation(bool down, int step)
+    {
+        if (animationController != null)
+            animationController.PlayAirAttackAnimation(down, step);
+        else
+            player.PlayAttackAnimation(down ? 3 : step);
     }
 
     // =========================================================

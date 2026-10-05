@@ -62,6 +62,15 @@ public class EnemyArchetype : MonoBehaviour
             case EnemyArchetypeType.Swarm:
                 return "Kalabalık";
 
+            case EnemyArchetypeType.Shielded:
+                return "Kalkanlı";
+
+            case EnemyArchetypeType.Flyer:
+                return "Uçan";
+
+            case EnemyArchetypeType.Bomber:
+                return "Patlayan";
+
             default:
                 return "Düellocu";
         }
@@ -143,6 +152,57 @@ public class EnemyArchetype : MonoBehaviour
                     attackKnockback = 0.7f,
                     knockbackTaken = 1.4f,
                     scale = 0.8f
+                };
+
+            case EnemyArchetypeType.Shielded:
+                // Önden kapalı: arkasına geç / yukarıdan vur / parry.
+                return new ArchetypeProfile
+                {
+                    health = 1.1f,
+                    maxBalance = 1.2f,
+                    chaseSpeed = 0.85f,
+                    attackDamage = 1.1f,
+                    unblockableDamage = 0.9f,
+                    attackRecovery = 1.15f,
+                    parryBalanceDamage = 1.25f,
+                    blockPostureDamage = 1.2f,
+                    attackKnockback = 1.1f,
+                    knockbackTaken = 0.6f,
+                    scale = 1.05f
+                };
+
+            case EnemyArchetypeType.Flyer:
+                // Havada: pogo / havada vuruş / parry ile düşür.
+                return new ArchetypeProfile
+                {
+                    health = 0.6f,
+                    maxBalance = 0.6f,
+                    chaseSpeed = 1.2f,
+                    attackDamage = 0.8f,
+                    unblockableDamage = 0.7f,
+                    attackRecovery = 1f,
+                    parryBalanceDamage = 1.4f,
+                    blockPostureDamage = 0.8f,
+                    attackKnockback = 0.8f,
+                    knockbackTaken = 1.2f,
+                    scale = 0.85f
+                };
+
+            case EnemyArchetypeType.Bomber:
+                // Çok zayıf, hızlı; yaklaşınca patlar.
+                return new ArchetypeProfile
+                {
+                    health = 0.35f,
+                    maxBalance = 0.4f,
+                    chaseSpeed = 1.35f,
+                    attackDamage = 0.5f,
+                    unblockableDamage = 0.5f,
+                    attackRecovery = 1.3f,
+                    parryBalanceDamage = 1.5f,
+                    blockPostureDamage = 0.5f,
+                    attackKnockback = 0.6f,
+                    knockbackTaken = 1.6f,
+                    scale = 0.75f
                 };
 
             default:
@@ -256,6 +316,22 @@ public class EnemyArchetype : MonoBehaviour
                 gameObject.AddComponent<EnemyArcher>();
         }
 
+        // ---------------- ÖZEL TİPLER ----------------
+
+        if (type == EnemyArchetypeType.Shielded && GetComponent<EnemyShield>() == null)
+            gameObject.AddComponent<EnemyShield>();
+
+        if (type == EnemyArchetypeType.Flyer && GetComponent<EnemyFlyer>() == null)
+        {
+            gameObject.AddComponent<EnemyFlyer>();
+
+            // Havada sıra beklemez; standby halkası yere göre.
+            enemy.useStandby = false;
+        }
+
+        if (type == EnemyArchetypeType.Bomber && GetComponent<EnemyBomber>() == null)
+            gameObject.AddComponent<EnemyBomber>();
+
         // ---------------- SAVRULMA (ağır az savrulur) ----------------
 
         enemy.balanceHitKnockbackForce *= p.knockbackTaken;
@@ -270,6 +346,15 @@ public class EnemyArchetype : MonoBehaviour
 
         if (applyScale && !Mathf.Approximately(p.scale, 1f))
             transform.localScale *= p.scale;
+
+        // ---------------- BASİT GÖVDE (sprite'ı olmayan tipler) ----------------
+        // Kendi prefab'ı yoksa (renklendirilmiş kopya) kapsül / daire çizilir.
+
+        if (applyScale && type == EnemyArchetypeType.Flyer)
+            EnemyShape.Apply(enemy, EnemyShape.Kind.Capsule, new Color(0.6f, 0.95f, 1f), false);
+
+        if (applyScale && type == EnemyArchetypeType.Bomber)
+            EnemyShape.Apply(enemy, EnemyShape.Kind.Circle, new Color(1f, 0.55f, 0.4f), true);
 
         // ---------------- HAMLE SETİ ----------------
 
@@ -295,7 +380,13 @@ public class EnemyArchetype : MonoBehaviour
                     break;
 
                 case EnemyArchetypeType.Swarm:
+                case EnemyArchetypeType.Flyer:
+                case EnemyArchetypeType.Bomber:
                     moveset.moves = EnemyMoveset.CreateSwarmMoves();
+                    break;
+
+                case EnemyArchetypeType.Shielded:
+                    moveset.moves = EnemyMoveset.CreateDuelistMoves();
                     break;
             }
         }
@@ -318,7 +409,10 @@ public enum EnemyArchetypeType
     Quick,
     Heavy,
     Archer,
-    Swarm       // SONA eklendi (kayıtlı değerler kaymasın)
+    Swarm,      // SONA eklendi (kayıtlı değerler kaymasın)
+    Shielded,   // 40. adım: önden vuruşu kalkanla engeller
+    Flyer,      // 40. adım: uçar, dalış saldırısı
+    Bomber      // 40. adım: yaklaşınca fitil + patlama
 }
 
 // Tipin çarpanları (1 = değişiklik yok).

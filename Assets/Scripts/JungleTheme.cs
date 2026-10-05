@@ -264,6 +264,50 @@ public class JungleTheme : MonoBehaviour
         return s;
     }
 
+    private readonly Dictionary<int, Sprite> propCache = new Dictionary<int, Sprite>();
+
+    /// <summary>
+    /// Birden çok hücreli nesne sprite'ı (sandık, vazo, diken). Pivot ALT-ORTA,
+    /// 1 hücre = 1 birim (ölçek: hücre boyu). Sayfa dışındaysa null.
+    /// </summary>
+    public Sprite PropSprite(int col, int row, int w, int h)
+    {
+        if (sheet == null || w <= 0 || h <= 0)
+            return null;
+
+        if (col < 0 || row < 0 || col + w > Columns || row + h > Rows)
+            return null;
+
+        int k = ((col * 64 + row) * 16 + w) * 16 + h;
+
+        if (propCache.TryGetValue(k, out Sprite cached) && cached != null)
+            return cached;
+
+        Rect r =
+            new Rect(
+                col * cellPixels,
+                sheet.height - (row + h) * cellPixels,
+                w * cellPixels,
+                h * cellPixels
+            );
+
+        Sprite s =
+            Sprite.Create(
+                sheet,
+                r,
+                new Vector2(0.5f, 0f),
+                pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect
+            );
+
+        s.name = "Orman nesne " + col + "," + row;
+
+        propCache[k] = s;
+
+        return s;
+    }
+
     /// <summary>(sütun, satır) hücresinin tile'ı; yoksa null.</summary>
     public TileBase Get(int col, int row, bool solid)
     {
@@ -404,12 +448,62 @@ public class JungleTheme : MonoBehaviour
             return Get(col, 9, true) ?? Get(6, 6, true);
         }
 
-        col = x == run.x0 ? 5 : (x == run.x1 ? 7 : 6);
+        // UÇAN PLATFORM: çim setinin yüzey satırı (sol köşe / orta / sağ köşe);
+        // uçları ayrıca çim ucu katmanında çizilir. (Tahta artık kullanılmıyor.)
+        col = x == run.x0 ? 0 : (x == run.x1 ? 4 : 1 + Hash(x, run.y) % 3);
 
         if (run.x0 == run.x1)
-            col = 6;
+            col = 1 + Hash(x, run.y) % 3;
 
-        return Get(col, 6, true);
+        return Get(col, BaseRow + 1, true) ?? Get(6, 6, true);
+    }
+
+    // =========================================================
+    // YOKUŞ (tepe seti: 5,1 yükselen / 8,1 alçalan; altları 5,2 / 8,2)
+    // =========================================================
+
+    [Header("Yokuş hücreleri (sütun, satır)")]
+    public Vector2Int slopeUpCell = new Vector2Int(5, 1);
+    public Vector2Int slopeDownCell = new Vector2Int(8, 1);
+    public Vector2Int slopeUpBaseCell = new Vector2Int(5, 2);
+    public Vector2Int slopeDownBaseCell = new Vector2Int(8, 2);
+
+    private Tile slopeUpTile;
+    private Tile slopeDownTile;
+
+    /// <summary>Eğimli zemin: çarpışma SPRITE şeklinden (yokuşta kayarak çıkılır).</summary>
+    public TileBase SlopeTile(bool rising)
+    {
+        Tile cached = rising ? slopeUpTile : slopeDownTile;
+
+        if (cached != null)
+            return cached;
+
+        Vector2Int cell = rising ? slopeUpCell : slopeDownCell;
+
+        Sprite s = SpriteAt(cell.x, cell.y);
+
+        if (s == null)
+            return null;
+
+        Tile t = ScriptableObject.CreateInstance<Tile>();
+        t.name = rising ? "Yokuş yukarı" : "Yokuş aşağı";
+        t.sprite = s;
+        t.colliderType = Tile.ColliderType.Sprite;
+
+        if (rising)
+            slopeUpTile = t;
+        else
+            slopeDownTile = t;
+
+        return t;
+    }
+
+    public TileBase SlopeBaseTile(bool rising)
+    {
+        Vector2Int cell = rising ? slopeUpBaseCell : slopeDownBaseCell;
+
+        return Get(cell.x, cell.y, true);
     }
 
     // =========================================================
@@ -420,6 +514,7 @@ public class JungleTheme : MonoBehaviour
     {
         public HashSet<Vector2Int> solids;
         public HashSet<Vector2Int> platforms;
+        public HashSet<Vector2Int> slopes;   // yokuş hücreleri (üstlerine çim ucu konmaz)
         public int width;
         public int bottom;
         public int top;
@@ -542,6 +637,10 @@ public class JungleTheme : MonoBehaviour
                 if (info.solids.Contains(above) || info.platforms.Contains(above))
                     continue;
 
+                // Yokuşun üstüne çim ucu konmaz (eğimin üstünde havada kalırdı).
+                if (info.slopes != null && info.slopes.Contains(c))
+                    continue;
+
                 bool left = info.solids.Contains(c + Vector2Int.left);
                 bool right = info.solids.Contains(c + Vector2Int.right);
 
@@ -554,6 +653,30 @@ public class JungleTheme : MonoBehaviour
         // ---------------- KÖPRÜ İPLERİ / DİREKLERİ ----------------
 
         List<Run> runs = FindRuns(info.platforms, info.solids);
+
+        // Uçan (köprü olmayan) platformların üstüne de çim uçları.
+        if (grassOverhang)
+        {
+            Tilemap overP = Layer("Platform Çim Uçları", overhangOrder, Color.white);
+
+            for (int i = 0; i < runs.Count; i++)
+            {
+                Run r = runs[i];
+
+                if (r.bridge)
+                    continue;
+
+                for (int x = r.x0; x <= r.x1; x++)
+                {
+                    int col = x == r.x0 ? 0 : (x == r.x1 ? 4 : 1 + Hash(x, r.y) % 3);
+
+                    if (r.x0 == r.x1)
+                        col = 1 + Hash(x, r.y) % 3;
+
+                    Set(overP, info, new Vector2Int(x, r.y + 1), col, BaseRow);
+                }
+            }
+        }
 
         Tilemap bridgeMap = null;
 

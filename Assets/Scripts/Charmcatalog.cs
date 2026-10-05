@@ -46,8 +46,8 @@ public static class CharmCatalog
             Make(
                 "Keskin Gözler",
                 "Vuruşların kritik olma şansı artar. Kritik vuruş hasarı katlar.",
-                5,
-                Stat(StatType.CritChance, add: 0.15f)
+                3,
+                Stat(StatType.CritChance, add: 0.10f)
             )
         );
 
@@ -57,8 +57,8 @@ public static class CharmCatalog
             Make(
                 "Ölümcül Darbe",
                 "Kritik vuruşlar çok daha fazla hasar verir.",
-                5,
-                Stat(StatType.CritMultiplier, add: 0.5f)
+                3,
+                Stat(StatType.CritMultiplier, add: 0.35f)
             )
         );
 
@@ -69,8 +69,8 @@ public static class CharmCatalog
                 "Keskin Uçlar",
                 "Vuruşların düşmanın dengesini daha çok bozar: " +
                 "daha çabuk sersemler.",
-                5,
-                Stat(StatType.BalanceDamage, mult: 1.25f)
+                3,
+                Stat(StatType.BalanceDamage, mult: 1.15f)
             )
         );
 
@@ -80,8 +80,8 @@ public static class CharmCatalog
             Make(
                 "Ağır Darbe",
                 "Sersemlemiş düşmana daha çok can hasarı verirsin.",
-                5,
-                Stat(StatType.HealthDamage, mult: 1.35f)
+                3,
+                Stat(StatType.HealthDamage, mult: 1.2f)
             )
         );
 

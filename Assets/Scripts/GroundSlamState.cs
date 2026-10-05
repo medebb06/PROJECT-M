@@ -7,6 +7,7 @@ public class GroundSlamState : IPlayerState
     private PlayerStateMachine sm;
 
     private bool impactTriggered;
+    private float startY;
 
     public GroundSlamState(
         PlayerController player,
@@ -20,6 +21,12 @@ public class GroundSlamState : IPlayerState
     public void Enter()
     {
         impactTriggered = false;
+
+        startY = player.transform.position.y;
+
+        // Slam'i başlatan Space zıplama tamponuna da yazıldı: inişte
+        // istemeden zıplamasın.
+        player.Movement.jumpBufferCounter = 0f;
 
         player.canControl = false;
 
@@ -74,11 +81,19 @@ public class GroundSlamState : IPlayerState
         {
             impactTriggered = true;
 
-            SlamImpact();
+            bool hitEnemy = SlamImpact();
 
-            sm.ChangeState(
-                new GroundedState(player, sm)
-            );
+            // Düşmana değdiyse sıçra (havada zincir), değmediyse in.
+            if (hitEnemy && player.slamBounceVelocity > 0f)
+            {
+                sm.ChangeState(new AirState(player, sm));
+
+                player.SetVelocity(new Vector2(0f, player.slamBounceVelocity));
+            }
+            else
+            {
+                sm.ChangeState(new GroundedState(player, sm));
+            }
         }
     }
 
@@ -103,25 +118,22 @@ public class GroundSlamState : IPlayerState
     // IMPACT
     // =========================================================
 
-    void SlamImpact()
+    // Düşmana değdiyse true.
+    bool SlamImpact()
     {
         // =====================================================
-        // INPUT LOCK
+        // GÜÇ: düşüş yüksekliğine göre ×1..×2
         // =====================================================
 
-        player.inputLocked = true;
+        float drop = Mathf.Max(0f, startY - player.transform.position.y);
 
-        player.inputLockTimer =
-            player.inputLockDuration;
+        float k = Mathf.Clamp01(drop / Mathf.Max(0.5f, player.slamFullPowerDrop));
 
-        // =====================================================
-        // GROUND LOCK
-        // =====================================================
+        float power = 1f + k;
 
-        player.slamGroundLock = true;
-
-        player.slamLockTimer =
-            player.slamLockDuration;
+        float radius =
+            Mathf.Max(player.impactSettings.slamDamageRadius, player.slamMinRadius) *
+            (1f + 0.3f * k);
 
         // =====================================================
         // HARD STOP
@@ -135,75 +147,58 @@ public class GroundSlamState : IPlayerState
         );
 
         // =====================================================
-        // FREEZE FRAME
+        // FREEZE FRAME + SARSINTI + TOZ
         // =====================================================
 
         HitStop.Request(
-            player.slamFreezeTime,
+            player.slamFreezeTime * (0.75f + 0.5f * k),
             0f
         );
-
-        // =====================================================
-        // CAMERA SHAKE
-        // =====================================================
 
         if (player.impulseSource)
         {
             player.impulseSource.GenerateImpulse(
-                1.5f
+                1.2f + 0.8f * k
             );
         }
 
-        // =====================================================
-        // DUST
-        // =====================================================
-
         player.SpawnDust();
 
+        Vector2 feet = player.col != null
+            ? new Vector2(player.transform.position.x, player.col.bounds.min.y)
+            : (Vector2)player.transform.position;
+
+        if (PlayerAbility.Instance != null)
+            PlayerAbility.Instance.SpawnRingFx(feet + Vector2.up * 0.3f, radius, new Color(1f, 0.9f, 0.7f, 0.8f));
+
         // =====================================================
-        // ENEMY HIT
+        // DÜŞMANLAR (yarıçap içi, katmandan bağımsız)
+        // =====================================================
+
+        List<EnemyController> enemies =
+            CharmUtil.EnemiesInRadius(feet + Vector2.up * 0.5f, radius);
+
+        for (int i = 0; i < enemies.Count; i++)
+            DamageEnemy(enemies[i], power, radius);
+
+        // =====================================================
+        // DÜŞMAN OLMAYAN, CAN'I OLAN NESNE (eski davranış)
         // =====================================================
 
         Collider2D[] hits =
             Physics2D.OverlapCircleAll(
                 player.transform.position,
-                player.impactSettings.slamDamageRadius,
+                radius,
                 player.impactSettings.enemyLayer
             );
-
-        // Aynı düşmanda birden fazla collider varsa
-        // aynı slam'in birden fazla kez vurmasını engeller.
-        HashSet<EnemyController> processedEnemies =
-            new HashSet<EnemyController>();
 
         HashSet<Health> processedHealth =
             new HashSet<Health>();
 
         foreach (Collider2D hit in hits)
         {
-            if (hit == null)
+            if (hit == null || hit.GetComponentInParent<EnemyController>() != null)
                 continue;
-
-            EnemyController enemy =
-                hit.GetComponentInParent<EnemyController>();
-
-            // -------------------------------------------------
-            // DÜŞMAN (EnemyController var)
-            // -------------------------------------------------
-
-            if (enemy != null)
-            {
-                if (processedEnemies.Add(enemy))
-                {
-                    DamageEnemy(enemy);
-                }
-
-                continue;
-            }
-
-            // -------------------------------------------------
-            // DÜŞMAN OLMAYAN, CAN'I OLAN NESNE
-            // -------------------------------------------------
 
             Health health =
                 hit.GetComponentInParent<Health>();
@@ -218,6 +213,23 @@ public class GroundSlamState : IPlayerState
                 );
             }
         }
+
+        // Vazo / sandık.
+        LevelProps.HitArea(feet + Vector2.up * 0.6f, new Vector2(radius * 2f, 1.6f));
+
+        bool hitEnemy = enemies.Count > 0;
+
+        // Sıçramayacaksa eski iniş kilidi (kısa).
+        if (!hitEnemy || player.slamBounceVelocity <= 0f)
+        {
+            player.inputLocked = true;
+            player.inputLockTimer = player.inputLockDuration;
+
+            player.slamGroundLock = true;
+            player.slamLockTimer = player.slamLockDuration;
+        }
+
+        return hitEnemy;
     }
 
     // =========================================================
@@ -227,8 +239,11 @@ public class GroundSlamState : IPlayerState
     // - Denge kırıksa (stagger): HEALTH hasarı
     // =========================================================
 
-    void DamageEnemy(EnemyController enemy)
+    void DamageEnemy(EnemyController enemy, float power, float radius)
     {
+        if (enemy == null || enemy.IsDead)
+            return;
+
         // Slam yönü: düşman oyuncunun neresindeyse o tarafa.
         float deltaX =
             enemy.transform.position.x -
@@ -239,18 +254,54 @@ public class GroundSlamState : IPlayerState
                 ? Mathf.Sign(deltaX)
                 : (player.facingDir >= 0f ? 1f : -1f);
 
-        // Aynı kural (denge kırık değilse denge, kırıksa can) ve aynı
-        // stat/kritik/olay akışı: PlayerDamage.
+        EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
+
+        int balanceDamage = enemy.slamBalanceDamage;
+
+        if (balance != null)
+        {
+            balanceDamage =
+                Mathf.Max(
+                    balanceDamage,
+                    Mathf.RoundToInt(balance.MaxBalance * player.slamBalancePercent * power)
+                );
+        }
+
         PlayerDamage.HitEnemy(
             enemy,
             new DamageInfo
             {
                 source = DamageSource.Slam,
-                balanceDamage = enemy.slamBalanceDamage,
+                balanceDamage = balanceDamage,
                 healthDamage = player.impactSettings.slamDamage,
                 direction = new Vector2(directionX, 0f),
                 hitPosition = enemy.transform.position
             }
         );
+
+        if (enemy == null || enemy.IsDead)
+            return;
+
+        bool boss = enemy.GetComponent<BossController>() != null;
+
+        // Slam zırhı deler: kararlı saldırıyı keser (boss hariç).
+        if (!boss && enemy.IsAttackCommitted)
+            enemy.ChangeState(new EnemyHitState(enemy, 0.25f));
+
+        // GERİ İTME + havaya kaldırma (merkeze yakın daha güçlü).
+        Rigidbody2D rb = enemy.GetComponent<Rigidbody2D>();
+
+        if (rb == null)
+            return;
+
+        float dist = Mathf.Abs(deltaX);
+        float falloff = 1f - 0.5f * Mathf.Clamp01(dist / Mathf.Max(0.1f, radius));
+        float scale = boss ? 0.25f : 1f;
+
+        rb.linearVelocity =
+            new Vector2(
+                directionX * player.slamPushForce * falloff * power * 0.75f * scale * EnemyTime.Scale,
+                player.slamLiftForce * scale
+            );
     }
 }

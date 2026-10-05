@@ -33,6 +33,9 @@ public struct DamageInfo
     // true ise kritik atılmaz (zehir tiki gibi).
     public bool disallowCrit;
 
+    // Yukarıdan (aşağı vuruş / pogo): kalkan engellemez.
+    public bool fromAbove;
+
     // Pipeline tarafından doldurulur.
     public EnemyController target;
 }
