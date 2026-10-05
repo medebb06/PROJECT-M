@@ -204,7 +204,7 @@ public class PlayerCombatController : MonoBehaviour
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
         if (Input.GetMouseButtonDown(0))
-            bufferTimer = inputBufferTime;
+            bufferTimer = Mathf.Max(inputBufferTime, player.minInputBuffer);
 
         if (
             defenseController != null &&
@@ -316,14 +316,57 @@ public class PlayerCombatController : MonoBehaviour
 
         down = player.verticalInput < -0.5f;
 
+        // İnmek üzereyken yan vuruş başlatma: tampon bekler, yere değince
+        // YER KOMBOSU başlar (havada başlayıp hemen kesilmesin).
+        if (!down && AboutToLand())
+            return false;
+
         // Aşağı vuruş sınırsız; yan vuruş hakla.
         return down || airAttacksLeft > 0;
+    }
+
+    private bool AboutToLand()
+    {
+        if (player.rb == null || player.col == null || player.Movement == null)
+            return false;
+
+        if (player.rb.linearVelocity.y > -0.5f)
+            return false;
+
+        Bounds b = player.col.bounds;
+
+        RaycastHit2D hit =
+            Physics2D.BoxCast(
+                new Vector2(b.center.x, b.min.y + 0.05f),
+                new Vector2(b.size.x * 0.8f, 0.05f),
+                0f,
+                Vector2.down,
+                0.7f,
+                player.Movement.groundMask
+            );
+
+        return hit.collider != null;
+    }
+
+    // Yeni vuruş başlarken basılı yön tuşuna dön (kombo ortasında arkaya
+    // dönebilmek için; saldırı sırasında yön kilitli olduğundan).
+    private void FaceInputDirection()
+    {
+        if (Mathf.Abs(player.moveInput) < 0.1f)
+            return;
+
+        player.facingDir = Mathf.Sign(player.moveInput);
+
+        if (player.playerSprite != null)
+            player.playerSprite.flipX = player.facingDir < 0f;
     }
 
     private void StartAirAttack(bool down)
     {
         if (!down)
             airAttacksLeft--;
+
+        FaceInputDirection();
 
         airStep = airStep % 2 + 1;
 
@@ -411,6 +454,8 @@ public class PlayerCombatController : MonoBehaviour
 
         if (!player.canAttack)
             return;
+
+        FaceInputDirection();
 
         // =====================================================
         // COMBO STEP

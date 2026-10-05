@@ -31,7 +31,7 @@ public class PlayerInputHandler : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
-            player.dashBufferTimer = player.dashBufferTime;
+            player.dashBufferTimer = Mathf.Max(player.dashBufferTime, player.minInputBuffer);
         }
         else if (player.dashBufferTimer > 0f)
         {

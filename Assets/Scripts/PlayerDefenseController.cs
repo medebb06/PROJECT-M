@@ -165,7 +165,9 @@ public class PlayerDefenseController : MonoBehaviour
         if (Input.GetMouseButtonDown(1))
         {
             suppressHeld = false;
-            bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
+            float minBuffer = player != null ? player.minInputBuffer : 0f;
+
+            bufferTimer = Mathf.Max(inputBuffer, minBuffer, 0.0001f);
         }
 
         if (Input.GetMouseButtonUp(1))

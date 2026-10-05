@@ -157,6 +157,23 @@ public class PlayerHurtState : IPlayerState
             );
         }
 
+        // (46. adım) Sersemlemenin ikinci yarısında dash ile çık
+        // (korumalı dönem devam eder).
+        if (
+            timer > 0f &&
+            timer <= lockDuration * (1f - player.hurtDashCancelAfter) &&
+            player.dashBufferTimer > 0f &&
+            player.dashCooldownTimer <= 0f &&
+            (player.GetComponent<Health>() == null || !player.GetComponent<Health>().IsDead)
+        )
+        {
+            // Kilitliyken yön girişi sıfırlanıyor: dash yönü için tuşu oku.
+            player.moveInput = Input.GetAxisRaw("Horizontal");
+
+            sm.ChangeState(new DashState(player, sm));
+            return;
+        }
+
         if (timer <= 0f)
         {
             // Havadaysan GroundedState'e dönmek bedava coyote jump

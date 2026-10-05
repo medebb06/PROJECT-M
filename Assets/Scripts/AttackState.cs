@@ -126,6 +126,15 @@ public class AttackState : ICombatState
         // ATTACK TARGET
         // =====================================================
 
+        // Koşarken ilk vuruş: hızın bir kısmı ileri taşınır (dur-kalk olmasın).
+        float vx = player.rb.linearVelocity.x;
+
+        if (step == 1 && Mathf.Abs(vx) > 0.5f && Mathf.Sign(vx) == attackDirection)
+        {
+            moveDistance +=
+                Mathf.Min(Mathf.Abs(vx) * player.attackMomentumCarry, player.attackMomentumMax);
+        }
+
         target =
             start +
             dir * moveDistance;

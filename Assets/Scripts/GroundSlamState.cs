@@ -223,10 +223,10 @@ public class GroundSlamState : IPlayerState
         if (!hitEnemy || player.slamBounceVelocity <= 0f)
         {
             player.inputLocked = true;
-            player.inputLockTimer = player.inputLockDuration;
+            player.inputLockTimer = player.slamLandLock;
 
             player.slamGroundLock = true;
-            player.slamLockTimer = player.slamLockDuration;
+            player.slamLockTimer = Mathf.Min(player.slamLockDuration, player.slamLandLock);
         }
 
         return hitEnemy;

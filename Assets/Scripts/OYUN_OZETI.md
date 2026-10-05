@@ -305,3 +305,11 @@
 - 43: UÇAN ve PATLAYAN şimdilik KAPALI (kafa karıştırıyordu): RunManager `enableFlyers` / `enableBombers` false (yeni alanlar). Kod duruyor (EnemyFlyer, EnemyBomber, EnemyShape); açınca geri gelir. Patlayıcı elit eki de Patlayan kapalıyken çıkmaz. Kalkanlı + diğer ekler (Hızlı/Zırhlı/Kalkanlı) aktif.
 - 44: Dikey haritalar çok sıkışıktı → dar Climb parçaları (duvar bacaları, 3'lük platform merdiveni, 3'lük basamaklar, derin iniş) SİLİNDİ; yerine GENİŞ olanlar: Geniş Merdiven Yukarı/Aşağı (±8, 5'lik platformlar, +2 aralık), Geniş Basamaklar Yukarı/Aşağı (±6, 6 genişlik), Geniş Kule Yukarı/Aşağı (±10, karşılıklı 5'lik platformlar), Geniş İniş (−10). Duvar zıplaması GEREKMEZ. LevelGenerator yeni alan adları (eski değerler ezmesin): `verticalRouteChance` 0.6 (0 = dümdüz harita), `verticalStep` 6, `verticalRange` 14, `maxClimbChunks` 2.
 - 45: PARRY SONRASI TEPKİ: (1) savunmadayken saldırı tamponu artık SİLİNMİYOR (eskiden parry penceresi açıkken basılan saldırı kayboluyordu). (2) Başarılı parry'de pencere `postParryGrace` 0.06 sn içinde kapanır. (3) Başarılı parry'den sonra `parryCancelTime` 0.45 sn içinde saldırı tuşu parry/block'u keser ve saldırı ANINDA başlar (PlayerDefenseController.RecentlyParried). Basılı tutmak hâlâ block (kombo güvenliği), boşa giden parry hâlâ saldırıyla kesilemez.
+- 46: AKIŞ DÜZELTMELERİ (PlayerController "Akış v2" yeni alanlar):
+  1) Tampon: dash / parry / saldırı tamponu en az `minInputBuffer` 0.3 sn (hasar sersemlemesi 0.22 sn tuş yutmasın).
+  2) Kombo ortasında dönme: her yeni vuruş (yer ve hava) başlarken basılı yön tuşuna döner (PlayerCombatController.FaceInputDirection).
+  3) Zıplama saldırıyı HER AN keser (vuruş karesini beklemez).
+  4) Hasar sersemlemesinin ikinci yarısında (`hurtDashCancelAfter` 0.5) dash ile çıkılır; yön tuşu okunur, korumalı dönem sürer.
+  5) Koşarken ilk vuruş momentum taşır: hız × `attackMomentumCarry` 0.12 (en çok `attackMomentumMax` 1 birim) vuruş ilerlemesine eklenir.
+  6) İnişe 0.7 birimden yakınken yan hava vuruşu başlamaz → tampon bekler, yere değince YER kombosu çıkar (AboutToLand).
+  7) Slam düşmana değmeden inince kilit `slamLandLock` 0.05 sn (0.12 idi).

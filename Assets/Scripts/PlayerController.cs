@@ -71,6 +71,18 @@ public class PlayerController : MonoBehaviour
     [Min(0f)]
     public float dashBufferTime = 0.15f;
 
+    [Header("Akış v2 (46. adım)")]
+    [Tooltip("Dash / parry / saldırı tamponu en az bu kadar (vurulunca 0.22 sn sersemleme tuşu yutmasın).")]
+    public float minInputBuffer = 0.3f;
+    [Tooltip("Hasar sersemlemesinin bu oranından sonra dash ile çıkılabilir (0.5 = ikinci yarı).")]
+    [Range(0f, 1f)] public float hurtDashCancelAfter = 0.5f;
+    [Tooltip("Ground slam düşmana değmeden inince kilit (sn). Eski: Input Lock Duration.")]
+    public float slamLandLock = 0.05f;
+    [Tooltip("Koşarken ilk vuruş: hızın bu kadar saniyelik mesafesi vuruş ilerlemesine eklenir.")]
+    public float attackMomentumCarry = 0.12f;
+    [Tooltip("Momentumla eklenen en fazla mesafe (birim).")]
+    public float attackMomentumMax = 1f;
+
     [Header("Dash FX")]
     public GameObject afterImagePrefab;
     public float afterImageSpacing = 0.05f;
@@ -349,9 +361,8 @@ public class PlayerController : MonoBehaviour
         if (jumpConsumed)
             return;
 
-        // Saldırı vuruş karesine gelmeden zıplanmaz: tampon bekler.
-        if (combat != null && combat.IsAttackCommitted)
-            return;
+        // (46. adım) Zıplama saldırıyı HER AN keser (eskiden vuruş karesine
+        // kadar bekliyordu; süpürmeye zıplamak gecikiyordu).
 
         // Savunmadan zıplayarak çık (ör. süpürmeye karşı).
         if (defenseController != null &&
