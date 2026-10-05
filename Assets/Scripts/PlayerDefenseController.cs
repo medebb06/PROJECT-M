@@ -58,6 +58,15 @@ public class PlayerDefenseController : MonoBehaviour
     [Min(1f)]
     [SerializeField] private float chainParryWindowMultiplier = 1.5f;
 
+    [Header("Parry sonrası tepki")]
+    [Tooltip("Başarılı parry'den sonra pencere bu kadar sn içinde kapanır (aynı anda gelen ikinci vuruş için kısa pay).")]
+    [Min(0f)]
+    [SerializeField] private float postParryGrace = 0.06f;
+
+    [Tooltip("Başarılı parry'den sonra bu süre içinde saldırı / zıplama savunmayı keser.")]
+    [Min(0f)]
+    [SerializeField] private float parryCancelTime = 0.45f;
+
     [Header("Boşa Basma Cezası (mash'e karşı)")]
     [Tooltip(
         "Boşa giden parry penceresi bittikten sonra bu süre içinde tekrar " +
@@ -104,6 +113,10 @@ public class PlayerDefenseController : MonoBehaviour
             0.02f,
             PlayerStats.GetOr(StatType.ParryWindow, parryWindow)
         );
+
+    // Az önce başarılı parry yapıldı mı? (saldırı savunmayı kesebilir)
+    public bool RecentlyParried =>
+        Time.time - lastSuccessTime <= parryCancelTime;
 
     // Zincirde mi? (Arayüz / efekt için.)
     public bool InParryChain =>
@@ -254,6 +267,11 @@ public class PlayerDefenseController : MonoBehaviour
     private void OnParrySucceeded(EnemyController enemy, bool brokeBalance)
     {
         lastSuccessTime = Time.time;
+
+        // Parry işini yaptı: pencere kısa payla kapanır, oyuncu hemen
+        // saldırabilir / hareket edebilir.
+        if (currentState is PlayerParryState parry)
+            parry.ShortenTo(postParryGrace);
     }
 
     // PlayerParryState pencere bitince çağırır.

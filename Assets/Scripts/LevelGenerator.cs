@@ -60,17 +60,17 @@ public class LevelGenerator : MonoBehaviour
     [Min(1)] public int maxDrift = 5;
 
     [Header("Dikey rota (Dead Cells gibi aşağı-yukarı)")]
-    [Tooltip("Her arenadan önce kat değiştirme (duvar bacası / platform merdiveni / derin iniş) ihtimali.")]
-    [Range(0f, 1f)] public float verticalChance = 0.85f;
+    [Tooltip("Her arenadan önce kat değiştirme ihtimali (geniş merdiven / basamak / kule / iniş). 0 = dümdüz harita.")]
+    [Range(0f, 1f)] public float verticalRouteChance = 0.6f;
 
     [Tooltip("Kat değişimi en az bu kadar kare.")]
-    [Min(2)] public int verticalMinChange = 8;
+    [Min(2)] public int verticalStep = 6;
 
     [Tooltip("Harita başlangıç katından en fazla bu kadar yukarı / aşağı gider.")]
-    [Min(4)] public int maxVerticalRange = 24;
+    [Min(4)] public int verticalRange = 14;
 
     [Tooltip("Bir kat değişiminde en fazla bu kadar dikey parça arka arkaya.")]
-    [Min(1)] public int maxClimbChunks = 3;
+    [Min(1)] public int maxClimbChunks = 2;
 
     [Tooltip("En alçak yüzeyin altındaki toprak kalınlığı (kare).")]
     [Min(1)] public int groundDepth = 6;
@@ -585,10 +585,10 @@ public class LevelGenerator : MonoBehaviour
         }
 
         // DİKEY ROTA: ara parçalar + (çoğu zaman) kat değişimi. Hedef kat
-        // rastgele (en az verticalMinChange fark), sınır ±maxVerticalRange.
+        // rastgele (en az verticalStep fark), sınır ±verticalRange.
         void PlaceRoute(int count)
         {
-            if (rng.NextDouble() > verticalChance)
+            if (rng.NextDouble() > verticalRouteChance)
             {
                 PlaceFillers(count);
                 return;
@@ -1052,21 +1052,21 @@ public class LevelGenerator : MonoBehaviour
         return pool[pool.Count - 1];
     }
 
-    // Yeni kat: şimdikinden en az verticalMinChange farklı, sınır içinde.
+    // Yeni kat: şimdikinden en az verticalStep farklı, sınır içinde.
     private int PickTargetFloor(System.Random rng, int surface)
     {
-        int range = Mathf.Max(verticalMinChange, maxVerticalRange);
+        int range = Mathf.Max(verticalStep, verticalRange);
 
         for (int tries = 0; tries < 12; tries++)
         {
             int t = rng.Next(-range, range + 1);
 
-            if (Mathf.Abs(t - surface) >= verticalMinChange)
+            if (Mathf.Abs(t - surface) >= verticalStep)
                 return t;
         }
 
         // Sınıra yakınsa ters yöne.
-        return surface > 0 ? surface - verticalMinChange : surface + verticalMinChange;
+        return surface > 0 ? surface - verticalStep : surface + verticalStep;
     }
 
     // İstenen yönde (yukarı/aşağı) ve fazla aşmayan dikey parça.

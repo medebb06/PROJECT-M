@@ -27,6 +27,12 @@ public class PlayerParryState : IPlayerDefenseState
 
     public float StartTime => startTime;
 
+    // Başarılı parry: kalan süreyi kısalt.
+    public void ShortenTo(float seconds)
+    {
+        timer = Mathf.Min(timer, Mathf.Max(0f, seconds));
+    }
+
     public void Enter()
     {
         timer = window;
@@ -46,6 +52,8 @@ public class PlayerParryState : IPlayerDefenseState
         // Pencere bitti: başarılı mıydı? (spam cezası için)
         defense.NotifyParryWindowEnded(startTime);
 
+        // Basılıysa block (kombonun sonraki vuruşu için güvenli). Başarılı
+        // parry'den sonra saldırı tuşu bu block'u keser (PlayerCombatController).
         if (Input.GetMouseButton(1))
         {
             defense.ChangeState(

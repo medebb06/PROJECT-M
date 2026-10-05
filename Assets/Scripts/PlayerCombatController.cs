@@ -201,16 +201,27 @@ public class PlayerCombatController : MonoBehaviour
         // DEFENSE LOCK
         // =====================================================
 
+        // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
+        // parry'den hemen sonra basılan saldırı kayboluyordu).
+        if (Input.GetMouseButtonDown(0))
+            bufferTimer = inputBufferTime;
+
         if (
             defenseController != null &&
             defenseController.IsDefending
         )
         {
-            bufferTimer = 0f;
-
-            currentState?.Tick();
-
-            return;
+            // PARRY → SALDIRI: başarılı parry'den hemen sonra saldırı
+            // savunmayı keser ve ANINDA başlar (riposte akışı).
+            if (bufferTimer > 0f && defenseController.RecentlyParried)
+            {
+                defenseController.CancelDefense();
+            }
+            else
+            {
+                currentState?.Tick();
+                return;
+            }
         }
 
         // =====================================================
@@ -218,9 +229,6 @@ public class PlayerCombatController : MonoBehaviour
         // Havadayken basılan saldırı da tampona yazılır: yere
         // inince (süre dolmadıysa) başlar.
         // =====================================================
-
-        if (Input.GetMouseButtonDown(0))
-            bufferTimer = inputBufferTime;
 
         if (comboTimer <= 0f && currentState == null)
             comboStep = 0;

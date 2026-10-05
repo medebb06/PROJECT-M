@@ -111,6 +111,12 @@ public class RunManager : MonoBehaviour
     [SerializeField] private Color flyerTint = new Color(0.85f, 1f, 0.75f);
     [SerializeField] private Color bomberTint = new Color(1f, 0.55f, 0.4f);
 
+    [Tooltip("UÇAN düşman doğsun mu (şimdilik KAPALI; kod duruyor).")]
+    [SerializeField] private bool enableFlyers = false;
+
+    [Tooltip("PATLAYAN düşman ve 'Patlayıcı' elit eki (şimdilik KAPALI; kod duruyor).")]
+    [SerializeField] private bool enableBombers = false;
+
     [Tooltip("Elit düşmanlara rastgele ek: Hızlı / Zırhlı / Kalkanlı / Patlayıcı.")]
     [SerializeField] private bool eliteAffixes = true;
 
@@ -3049,6 +3055,7 @@ public class RunManager : MonoBehaviour
             // Kalabalığın bir kısmı PATLAYAN.
             if (
                 useArchetypes &&
+                enableBombers &&
                 archetype == EnemyArchetypeType.Swarm &&
                 bomberSwarmChancePerAct != null &&
                 bomberSwarmChancePerAct.Length > 0 &&
@@ -3175,7 +3182,8 @@ public class RunManager : MonoBehaviour
         if (eliteAffixStage != Stage)
         {
             eliteAffixStage = Stage;
-            eliteAffix = UnityEngine.Random.Range(0, EliteAffixNames.Length);
+            // Patlayıcı (3) sadece Patlayan açıkken.
+            eliteAffix = UnityEngine.Random.Range(0, enableBombers ? EliteAffixNames.Length : EliteAffixNames.Length - 1);
 
             ShowBanner("ELİT  •  " + EliteAffixNames[eliteAffix], 2f);
         }
@@ -3683,7 +3691,7 @@ public class RunManager : MonoBehaviour
             if (r < sp.x)
                 return EnemyArchetypeType.Shielded;
 
-            if (r < sp.x + sp.y)
+            if (enableFlyers && r < sp.x + sp.y)
                 return EnemyArchetypeType.Flyer;
         }
 
