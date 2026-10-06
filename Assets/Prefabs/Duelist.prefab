@@ -510,6 +510,11 @@ MonoBehaviour:
   canRecover: 1
   recoveryDelay: 2
   recoverySpeed: 15
+  scaleByHealth: 1
+  fullHealthDamageMultiplier: 0.6
+  lowHealthDamageMultiplier: 1.6
+  fullHealthRecoveryMultiplier: 1.6
+  lowHealthRecoveryMultiplier: 0.4
 --- !u!82 &1683981631884351114
 AudioSource:
   m_ObjectHideFlags: 0
@@ -639,8 +644,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d1bdd621bb81b64b8ae4e7746ea6b26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FinisherTargetHighlight
-  outlineColor: {r: 1, g: 1, b: 1, a: 1}
-  outlineSize: 0.08
+  markerColor: {r: 1, g: 0.1, b: 0.08, a: 1}
+  sizeFactor: 0.55
+  minSize: 0.7
+  maxSize: 2.2
+  blinkRate: 4
   sortingOrderOffset: -1
 --- !u!95 &2656089177797109659
 Animator:

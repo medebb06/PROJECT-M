@@ -114,11 +114,6 @@ public class PlayerController : MonoBehaviour
     public float slamLiftForce = 5f;
     [Tooltip("Slam bir düşmana değerse oyuncu bu hızla yukarı sıçrar (0 = kapalı).")]
     public float slamBounceVelocity = 10f;
-    [Tooltip("Yer vuruşu (↓ + Space) bittikten sonra tekrar kullanılabilmesi için gereken süre (sn).")]
-    public float slamCooldown = 3f;
-    [HideInInspector] public float slamReadyTime;
-
-    public bool CanGroundSlam => Time.time >= slamReadyTime;
 
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;
@@ -138,6 +133,14 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public bool isAttackLocked;
     [HideInInspector] public bool slamGroundLock;
     [HideInInspector] public float slamLockTimer;
+
+    [Header("Ground Slam bekleme")]
+    [Tooltip("Slam başladıktan sonra tekrar kullanılabilmesi için gereken süre (sn).")]
+    public float slamCooldown = 1.0f;
+
+    [HideInInspector] public float slamReadyTime;
+
+    public bool CanGroundSlam => Time.time >= slamReadyTime;
     [HideInInspector] public float dashCooldownTimer;
     [HideInInspector] public bool dashPressed;
     [HideInInspector] public float dashBufferTimer;
@@ -487,7 +490,7 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            feedback.SpawnDust();
+            SpawnDust();
         }
 
         movement.ResetAirData();
@@ -495,6 +498,17 @@ public class PlayerController : MonoBehaviour
 
     public void SpawnDust()
     {
+        Collider2D col = GetComponent<Collider2D>();
+
+        Vector3 feet =
+            col != null
+                ? new Vector3(col.bounds.center.x, col.bounds.min.y, 0f)
+                : transform.position;
+
+        // Çizilmiş "dust" efekti tanımlıysa onu oynat; yoksa eski toz.
+        if (SpriteFxLibrary.Play("dust", feet, new Vector2(transform.localScale.x, 0f)))
+            return;
+
         feedback.SpawnDust();
     }
 

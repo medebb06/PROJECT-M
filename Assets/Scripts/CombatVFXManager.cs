@@ -42,6 +42,9 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayHealthHit(Vector3 position, Vector2 direction)
     {
+        if (SpriteFxLibrary.Play("hit_health", position, direction))
+            return;
+
         if (healthHitVFX == null)
         {
             Debug.LogWarning("HEALTH HIT VFX ASSIGNED DEĞİL!");
@@ -53,6 +56,9 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayBalanceHit(Vector3 position, Vector2 direction)
     {
+        if (SpriteFxLibrary.Play("hit_balance", position, direction))
+            return;
+
         if (balanceHitVFX == null)
         {
             Debug.LogWarning("BALANCE HIT VFX ASSIGNED DEĞİL!");
@@ -64,6 +70,9 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayParry(Vector3 position, Vector2 direction)
     {
+        if (SpriteFxLibrary.Play("parry", position, direction))
+            return;
+
         if (proceduralParryVFX)
         {
             ParryVFX.Play(position, direction, vfxSortingLayer, vfxSortingOrder + 20);
@@ -83,6 +92,9 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayBlock(Vector3 position, Vector2 direction)
     {
+        if (SpriteFxLibrary.Play("block", position, direction))
+            return;
+
         if (blockVFX == null)
         {
             Debug.LogWarning("BLOCK VFX ASSIGNED DEĞİL!");
@@ -94,6 +106,9 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayBalanceBreak(Vector3 position, Vector2 direction)
     {
+        if (SpriteFxLibrary.Play("balance_break", position, direction))
+            return;
+
         if (balanceBreakVFX == null)
         {
             Debug.LogWarning("BALANCE BREAK VFX ASSIGNED DEĞİL!");
