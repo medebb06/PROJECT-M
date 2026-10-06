@@ -154,6 +154,41 @@ public class EnemyBalance : MonoBehaviour
         );
     }
 
+    /// <summary>Parry'nin denge hasarı çarpanı (parry çok güçlü olmasın). Kesir birikir.</summary>
+    public static float ParryScale = 0.5f;
+
+    [System.NonSerialized] public float parryCarry;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetParryScale()
+    {
+        ParryScale = 0.5f;
+    }
+
+    /// <summary>Parry / yansıyan ok denge hasarı: ParryScale ile ölçeklenir.</summary>
+    public bool AddParryBalanceDamage(int amount)
+    {
+        float scaled = Mathf.Max(0, amount) * ParryScale + parryCarry;
+
+        int whole = Mathf.FloorToInt(scaled);
+
+        parryCarry = scaled - whole;
+
+        if (whole <= 0)
+        {
+            // Bu parry sadece kesir biriktirdi: baskı sürüyor (toparlanma beklesin).
+            if (!isBroken)
+            {
+                recoveryTimer = recoveryDelay;
+                recoveryAccumulator = 0f;
+            }
+
+            return true;
+        }
+
+        return AddBalanceDamage(whole);
+    }
+
     public bool AddBalanceDamage(int amount, bool useHealthScaling = true)
     {
         if (isBroken)

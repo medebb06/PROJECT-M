@@ -233,7 +233,7 @@ public class EnemyProjectile : MonoBehaviour
             EnemyBalance balance = owner.GetComponent<EnemyBalance>();
 
             if (balance != null && !balance.IsBroken)
-                balance.AddBalanceDamage(owner.parryBalanceDamage);
+                balance.AddParryBalanceDamage(owner.parryBalanceDamage);
 
             broke = balance != null && balance.IsBroken;
 

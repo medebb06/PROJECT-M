@@ -1409,7 +1409,7 @@ public class EnemyAttackState : IEnemyState
         int parryDamage =
             Mathf.Max(1, Mathf.RoundToInt(enemy.parryBalanceDamage * Mathf.Max(0f, reward)));
 
-        balance.AddBalanceDamage(parryDamage);
+        balance.AddParryBalanceDamage(parryDamage);
 
         if (reward >= 2f)
         {

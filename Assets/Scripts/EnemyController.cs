@@ -1649,9 +1649,27 @@ public class EnemyController : MonoBehaviour
     // Denge kırılırsa yine stagger olur ve saldırı iptal edilir.
     // =========================================================
 
+    private bool bossChecked;
+    private bool isBossEnemy;
+
+    // Boss: hiçbir düz vuruş hareketini bozmaz (savrulma / hit state yok); karar verdi mi sonuna kadar yapar.
+    private bool IsBossEnemy
+    {
+        get
+        {
+            if (!bossChecked)
+            {
+                bossChecked = true;
+                isBossEnemy = GetComponent<BossController>() != null;
+            }
+
+            return isBossEnemy;
+        }
+    }
+
     private bool TryAbsorbCommittedHit()
     {
-        if (!IsAttackCommitted)
+        if (!IsAttackCommitted && !IsBossEnemy)
             return false;
 
         // Telegraph rengi her karede sprite'ı ezdiği için
