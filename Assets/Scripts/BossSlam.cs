@@ -66,6 +66,7 @@ public class BossSlam : MonoBehaviour
     private Rigidbody2D rb;
     private BossController boss;
     private Collider2D bodyCol;
+    private BossAura aura;
 
     private bool busy;
     private bool overrideVelocity;
@@ -84,6 +85,11 @@ public class BossSlam : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         boss = GetComponent<BossController>();
         bodyCol = GetComponent<Collider2D>();
+
+        aura = GetComponent<BossAura>();
+
+        if (aura == null)
+            aura = gameObject.AddComponent<BossAura>();
 
         nextTime = Time.time + firstDelay;
     }
@@ -249,6 +255,9 @@ public class BossSlam : MonoBehaviour
 
     private void Finish()
     {
+        if (aura != null)
+            aura.SetActive(false);
+
         overrideVelocity = false;
         RestoreCollisions();
         busy = false;
@@ -305,6 +314,10 @@ public class BossSlam : MonoBehaviour
         GameObject lane = MakeLane(groundY);
 
         enemy.PlayAlertFlash();
+
+        // Geri çekilme + odaklanma boyunca koruyucu aura (hasar yemez, içeri giren hasar alır).
+        if (aura != null)
+            aura.SetActive(true);
 
         float dir;
 
@@ -420,6 +433,9 @@ public class BossSlam : MonoBehaviour
         }
 
         // ---------- 2) KOŞU ----------
+        if (aura != null)
+            aura.SetActive(false);
+
         IgnorePlayerCollisions(player);
 
         if (CameraShake.Instance != null)
@@ -561,6 +577,9 @@ public class BossSlam : MonoBehaviour
 
     private void Abort(GameObject lane)
     {
+        if (aura != null)
+            aura.SetActive(false);
+
         if (lane != null)
             Destroy(lane);
 

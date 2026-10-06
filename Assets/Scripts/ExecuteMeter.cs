@@ -24,32 +24,32 @@ public class ExecuteMeter : MonoBehaviour
 
     [Header("Dolma (barın tamamı = 1, bir parça ≈ 0.333)")]
     [Tooltip("Normal düşman öldürünce (4 öldürme ≈ dolu).")]
-    [Range(0f, 1f)] public float killFill = 0.2f;
+    [Range(0f, 1f)] public float killFill = 0.08f;
 
     [Tooltip("Kalabalık (zayıf) düşman öldürünce.")]
-    [Range(0f, 1f)] public float swarmKillFill = 0.06f;
+    [Range(0f, 1f)] public float swarmKillFill = 0.025f;
 
     [Tooltip("Dengeyi KIRAN parry.")]
-    [Range(0f, 1f)] public float parryBreakFill = 0.1f;
+    [Range(0f, 1f)] public float parryBreakFill = 0.04f;
 
     [Tooltip("Her başarılı parry.")]
-    [Range(0f, 1f)] public float parryFill = 0.05f;
+    [Range(0f, 1f)] public float parryFill = 0.02f;
 
     [Tooltip("Kusursuz kaçış (dash ile saldırıdan kurtulma).")]
-    [Range(0f, 1f)] public float dodgeFill = 0.06f;
+    [Range(0f, 1f)] public float dodgeFill = 0.025f;
 
     [Tooltip("Düşmana isabet eden her vuruş (az: savunma daha çok verir).")]
-    [Range(0f, 1f)] public float hitFill = 0.012f;
+    [Range(0f, 1f)] public float hitFill = 0.005f;
 
     [Header("Boss (öldürme olmadığı için ayrı kaynaklar)")]
     [Tooltip("Boss'un dengesini kırmak (vuruş ya da parry).")]
-    [Range(0f, 1f)] public float bossBreakFill = 0.2f;
+    [Range(0f, 1f)] public float bossBreakFill = 0.1f;
 
     [Tooltip("Boss'a her parry.")]
-    [Range(0f, 1f)] public float bossParryFill = 0.04f;
+    [Range(0f, 1f)] public float bossParryFill = 0.015f;
 
     [Tooltip("Boss'a verilen can hasarı × bu = dolum (max canın %50'si → 0.3).")]
-    [Range(0f, 2f)] public float bossHealthDamageFill = 0.3f;
+    [Range(0f, 2f)] public float bossHealthDamageFill = 0.12f;
 
     [Tooltip("Koşu başında bar dolu başlasın (ilk infazı öğretmek için).")]
     public bool startFull = true;

@@ -129,13 +129,13 @@ public class BossController : MonoBehaviour
     public float defaultExecutePercent = 0.28f;
 
     [Tooltip("İnfazda harcanan parçaya göre boss canından alınan oran (1, 2, 3 parça).")]
-    public float[] executePercentBySegments = { 0.05f, 0.10f, 0.18f };
+    public float[] executePercentBySegments = { 0.08f, 0.16f, 0.30f };
 
-    [Tooltip("Parça başına: infazın denge barına ittiği oran (barın tamamına göre).")]
-    public float[] executeBalancePushBySegments = { 0.15f, 0.30f, 0.50f };
+    [Tooltip("Parça başına: infazın denge barına ittiği oran (1 = bar tamamen dolar ve denge kırılır; 3 parça = garanti kırılma, toplam ≈ %55 can).")]
+    public float[] executeBalancePushBySegments = { 0.25f, 0.50f, 1.0f };
 
     [Tooltip("Parça başına: boss'un can oranı bunun ALTINDAYSA infaz öldürür (bitirici vuruş).")]
-    public float[] executeKillBelowBySegments = { 0.06f, 0.12f, 0.20f };
+    public float[] executeKillBelowBySegments = { 0.10f, 0.18f, 0.30f };
 
     /// <summary>
     /// İnfazın boss'a etkisi: cana doğrudan hasar + denge barına itme.

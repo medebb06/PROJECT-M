@@ -268,6 +268,7 @@ public class PlayerFinisher : MonoBehaviour
         if (
             chargeTarget == null ||
             chargeTarget.IsDead ||
+            IsShielded(chargeTarget) ||
             !(player.stateMachine.CurrentState is PlayerExecuteChargeState) ||
             Vector2.Distance(transform.position, chargeTarget.transform.position) > longReach * rangeSlack
         )
@@ -389,6 +390,13 @@ public class PlayerFinisher : MonoBehaviour
 
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(0.3f);
+    }
+
+    private static bool IsShielded(EnemyController e)
+    {
+        BossAura a = e != null ? e.GetComponent<BossAura>() : null;
+
+        return a != null && a.Active;
     }
 
     private void CancelCharge()
@@ -523,6 +531,12 @@ public class PlayerFinisher : MonoBehaviour
 
             // Her canlı düşman denenebilir (ölü / infaz edilen hariç).
             if (enemy.IsDead || enemy.CurrentState is EnemyExecuteState)
+                continue;
+
+            // Aura açıkken (korumalı) infaz hedeflenemez.
+            BossAura shield = enemy.GetComponent<BossAura>();
+
+            if (shield != null && shield.Active)
                 continue;
 
             Vector2 enemyPosition =

@@ -11,7 +11,7 @@ public class EnemyExecuteState : IEnemyState
 
     // Sersemlik yokken (sadece "açık an"da) atılan infaz daha az hasar verir.
     private readonly bool openOnly;
-    private const float OpenOnlyDamageMultiplier = 0.75f;
+    private const float OpenOnlyDamageMultiplier = 1f; // düşmanın durumundan bağımsız: aynı hasar
 
     // Geçiş süresi (GERÇEK sn): dünya ağır çekimdeyken bile oyuncu hızlı geçer.
     // Hat uzadıkça sabit hızla uzar (min..max).
