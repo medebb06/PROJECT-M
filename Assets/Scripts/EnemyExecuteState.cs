@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyExecuteState : IEnemyState
@@ -13,7 +14,18 @@ public class EnemyExecuteState : IEnemyState
     private const float OpenOnlyDamageMultiplier = 0.75f;
 
     // Geçiş süresi (GERÇEK sn): dünya ağır çekimdeyken bile oyuncu hızlı geçer.
-    private const float PassRealTime = 0.2f;
+    // Hat uzadıkça sabit hızla uzar (min..max).
+    private float passTime = 0.2f;
+    private const float PassSpeed = 34f;
+    private const float MinPassTime = 0.2f;
+    private const float MaxPassTime = 0.6f;
+
+    // Düz zeminde: karşıdaki bu mesafedeki, aynı hizadaki TÜM düşmanlar da vurulur.
+    private const float LineRange = 18f;
+    private const float LineHeight = 1.6f;
+
+    private readonly List<EnemyController> extras = new List<EnemyController>();
+    private readonly List<Collider2D> extraColliders = new List<Collider2D>();
 
     // Geçiş mesafesi en az bu kadar olsun (görünür bir "içinden geçiş").
     private const float MinPassDistance = 2.2f;
@@ -103,9 +115,47 @@ public class EnemyExecuteState : IEnemyState
         float passDistance =
             Mathf.Max(enemy.executeDistance, MinPassDistance);
 
+        // Çizgi: düz zeminde aynı yöndeki tüm düşmanlar da hattın içine girer.
+        float farthestX = enemy.transform.position.x;
+
+        extras.Clear();
+        extraColliders.Clear();
+
+        if (player.IsGrounded())
+        {
+            for (int i = 0; i < EnemyController.All.Count; i++)
+            {
+                EnemyController other = EnemyController.All[i];
+
+                if (other == null || other == enemy || other.IsDead || other.CurrentState is EnemyExecuteState)
+                    continue;
+
+                float dx = other.transform.position.x - player.transform.position.x;
+                float dy = other.transform.position.y - player.transform.position.y;
+
+                if (Mathf.Sign(dx) != direction || Mathf.Abs(dx) > LineRange || Mathf.Abs(dy) > LineHeight)
+                    continue;
+
+                extras.Add(other);
+
+                Collider2D oc = other.GetComponent<Collider2D>();
+
+                if (oc != null)
+                {
+                    extraColliders.Add(oc);
+
+                    if (playerCollider != null)
+                        Physics2D.IgnoreCollision(playerCollider, oc, true);
+                }
+
+                if (direction * other.transform.position.x > direction * farthestX)
+                    farthestX = other.transform.position.x;
+            }
+        }
+
         Vector2 targetPosition =
             new Vector2(
-                enemy.transform.position.x +
+                farthestX +
                 direction * passDistance,
                 player.rb.position.y
             );
@@ -114,7 +164,13 @@ public class EnemyExecuteState : IEnemyState
         // EXECUTE
         // =====================================================
 
-        float duration = PassRealTime;
+        passTime = Mathf.Clamp(
+            Mathf.Abs(targetPosition.x - player.rb.position.x) / PassSpeed,
+            MinPassTime,
+            MaxPassTime
+        );
+
+        float duration = passTime;
 
         player.stateMachine.ChangeState(
             new PlayerExecuteState(
@@ -150,7 +206,7 @@ public class EnemyExecuteState : IEnemyState
         // Gerçek zaman: ağır çekimde de geçişle aynı anda biter.
         timer += Time.unscaledDeltaTime;
 
-        if (timer >= PassRealTime)
+        if (timer >= passTime)
         {
             FinishExecute();
         }
@@ -222,6 +278,13 @@ public class EnemyExecuteState : IEnemyState
         if (health != null)
             health.TakeDamage(damage);
 
+        // Hattaki diğer düşmanlar aynı güçle vurulur.
+        if (segs > 0)
+        {
+            for (int i = 0; i < extras.Count; i++)
+                HitExtra(extras[i], segs);
+        }
+
         // Sinematik: öldürme anı (kısa sarsıntı) + kamera açılmaya başlar.
         ExecuteCinematic.End(health != null && health.IsDead);
 
@@ -229,15 +292,7 @@ public class EnemyExecuteState : IEnemyState
         // COLLISION GERİ AÇ
         // =====================================================
 
-        if (playerCollider != null &&
-            enemyCollider != null)
-        {
-            Physics2D.IgnoreCollision(
-                playerCollider,
-                enemyCollider,
-                false
-            );
-        }
+        RestoreCollisions();
 
         // =====================================================
         // ENEMY ÖLDÜYSE CHASE'E DÖNME
@@ -262,14 +317,54 @@ public class EnemyExecuteState : IEnemyState
 
         ExecuteCinematic.End(false);
 
-        if (playerCollider != null &&
-            enemyCollider != null)
+        RestoreCollisions();
+    }
+
+    private void RestoreCollisions()
+    {
+        if (playerCollider == null)
+            return;
+
+        if (enemyCollider != null)
+            Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
+
+        for (int i = 0; i < extraColliders.Count; i++)
         {
-            Physics2D.IgnoreCollision(
-                playerCollider,
-                enemyCollider,
-                false
-            );
+            if (extraColliders[i] != null)
+                Physics2D.IgnoreCollision(playerCollider, extraColliders[i], false);
         }
+
+        extraColliders.Clear();
+    }
+
+    private void HitExtra(EnemyController other, int segs)
+    {
+        if (other == null || other.IsDead)
+            return;
+
+        Health h = other.GetComponent<Health>();
+
+        if (h == null)
+            return;
+
+        BossController boss = other.GetComponent<BossController>();
+
+        int dmg;
+
+        if (boss != null)
+            dmg = Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * boss.ExecutePercentFor(segs)));
+        else
+            dmg = segs >= 2
+                ? Mathf.Max(1, h.CurrentHealth)
+                : Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * 0.5f));
+
+        CombatCallout.Popup(
+            other.transform.position + Vector3.up * 2.4f,
+            "İNFAZ ×" + segs + "!",
+            new Color(1f, 0.8f, 0.3f),
+            1.1f
+        );
+
+        h.TakeDamage(dmg);
     }
 }

@@ -1753,9 +1753,9 @@ public class EnemyController : MonoBehaviour
     // EXECUTE
     // =========================================================
 
-    public void Execute()
+    public void Execute(bool force = false)
     {
-        if (!IsOpen)
+        if (!force && !IsOpen)
             return;
 
         Debug.Log(

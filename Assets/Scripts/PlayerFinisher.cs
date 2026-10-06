@@ -8,8 +8,11 @@ using UnityEngine;
 public class PlayerFinisher : MonoBehaviour
 {
     [Header("Finisher")]
-    [SerializeField] private float finisherRange = 2.5f;
+    [SerializeField] private float longReach = 9f;
     [SerializeField] private float forwardPriority = 1.5f;
+
+    [Tooltip("Açıksa infaz düşmanın durumundan bağımsız HER ZAMAN vurur (saldırıda, sersemlemiş, hasarlı...). Kapalıysa açık anı tutturmak gerekir.")]
+    [SerializeField] private bool alwaysHit = true;
 
     [Header("Input")]
     [SerializeField] private KeyCode executeKey = KeyCode.E;
@@ -27,11 +30,11 @@ public class PlayerFinisher : MonoBehaviour
 
     [Tooltip("Odaklanırken dünyanın zaman hızı (ağır çekim).")]
     [Range(0.02f, 1f)]
-    [SerializeField] private float focusTimeScale = 0.12f;
+    [SerializeField] private float focusStartScale = 0.04f;
 
-    [Tooltip("Uzun tutarken zaman hızı yavaş yavaş buna çıkar (uzun odak = daha çok maruz kalma).")]
+    [Tooltip("Odak çok yavaş başlar, tutuldukça bu hıza doğru hızlanır (uzun odak = daha çok maruz kalma).")]
     [Range(0.02f, 1f)]
-    [SerializeField] private float focusTimeScaleMax = 0.4f;
+    [SerializeField] private float focusEndScale = 0.5f;
 
     [Tooltip("Hedef bu çarpanla menzili aşarsa odak iptal.")]
     [SerializeField] private float rangeSlack = 1.8f;
@@ -172,7 +175,7 @@ public class PlayerFinisher : MonoBehaviour
             chargeTarget == null ||
             chargeTarget.IsDead ||
             !(player.stateMachine.CurrentState is PlayerExecuteChargeState) ||
-            Vector2.Distance(transform.position, chargeTarget.transform.position) > finisherRange * rangeSlack
+            Vector2.Distance(transform.position, chargeTarget.transform.position) > longReach * rangeSlack
         )
         {
             CancelCharge();
@@ -186,7 +189,7 @@ public class PlayerFinisher : MonoBehaviour
         // Odaklanma: dünya ağır çekimde (her kare yenilenir).
         float prog = Mathf.Clamp01(MaxHold > 0f ? holdTime / MaxHold : 1f);
 
-        HitStop.Request(0.12f, Mathf.Lerp(focusTimeScale, focusTimeScaleMax, prog), 8);
+        HitStop.Request(0.12f, Mathf.Lerp(focusStartScale, focusEndScale, prog * prog), 8);
 
         ChargingSegments = holdTime >= minHold ? SegsFor(holdTime) : 1;
 
@@ -239,13 +242,13 @@ public class PlayerFinisher : MonoBehaviour
             return;
         }
 
-        if (target.IsOpen)
+        if (alwaysHit || target.IsOpen)
         {
             // =================================================
             // TUTTU: EnemyExecuteState → hızlı geçiş + ağır çekim + hasar.
             // =================================================
 
-            target.Execute();
+            target.Execute(alwaysHit);
 
             return;
         }
@@ -424,7 +427,7 @@ public class PlayerFinisher : MonoBehaviour
                 offset.magnitude;
 
             // Finisher menzili dışında
-            if (distance > finisherRange)
+            if (distance > longReach)
                 continue;
 
             float directionToEnemy =
@@ -441,7 +444,7 @@ public class PlayerFinisher : MonoBehaviour
                 1f -
                 Mathf.Clamp01(
                     distance /
-                    finisherRange
+                    longReach
                 );
 
             // Ön taraftaki enemy'ye öncelik

@@ -81,6 +81,9 @@ public class ExecuteCinematic : MonoBehaviour
         Get().DoBeginStrike();
     }
 
+    /// <summary>Vuruş sinematiği (geçiş + bekleme) hâlâ sürüyor mu?</summary>
+    public static bool IsStriking => instance != null && instance.mode == Mode.Strike;
+
     public static void End(bool killed)
     {
         if (instance != null)
