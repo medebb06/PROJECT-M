@@ -20,12 +20,21 @@ public static class PlayerDamage
     public static float AttackBalanceMultiplier = 1f;
 
     // Silah (PlayerWeapon koyar): sadece normal vuruşlar (kombo + havada).
+    // Düz vuruşların CAN hasarı: posture barının tamamını vuruşlarla doldurmak,
+    // düşmanın MAX canının bu oranını götürür (parry'den dolan posture can götürmez).
+    public static float PostureToHealthRatio = 0.375f;
+
+    // Düz vuruşların (kombo, havada, slam) denge hasarı çarpanı. Kesirli: 2 → ortalama vuruş başına 2.
+    public static float NormalHitBalanceBoost = 2f;
+
     public static float WeaponBalanceMultiplier = 1f;
     public static float WeaponHealthMultiplier = 1f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        PostureToHealthRatio = 0.375f;
+        NormalHitBalanceBoost = 2f;
         AttackBalanceMultiplier = 1f;
         WeaponBalanceMultiplier = 1f;
         WeaponHealthMultiplier = 1f;
@@ -107,8 +116,35 @@ public static class PlayerDamage
                     stats
                 );
 
+            // Düz vuruşlara ek denge hasarı (kesir birikir, yuvarlamada kaybolmaz).
+            if ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) && NormalHitBalanceBoost != 1f)
+            {
+                float scaled = amount * NormalHitBalanceBoost + balance.hitCarry;
+
+                amount = Mathf.Max(1, Mathf.FloorToInt(scaled));
+                balance.hitCarry = Mathf.Max(0f, scaled - amount);
+            }
+
+            int balanceBefore = balance.CurrentBalance;
+
             if (!balance.AddBalanceDamage(amount))
                 return result;
+
+            // Düz vuruş posture ilerlemesiyle orantılı küçük can hasarı da verir.
+            if (health != null && !health.IsDead && PostureToHealthRatio > 0f && balance.MaxBalance > 0)
+            {
+                float progress = (balance.CurrentBalance - balanceBefore) / (float)balance.MaxBalance;
+
+                balance.chipCarry += Mathf.Max(0f, progress) * PostureToHealthRatio * health.MaxHealth;
+
+                int chip = Mathf.FloorToInt(balance.chipCarry);
+
+                if (chip > 0)
+                {
+                    balance.chipCarry -= chip;
+                    health.TakeDamage(chip);
+                }
+            }
 
             if (feedback != null)
             {
@@ -122,7 +158,13 @@ public static class PlayerDamage
 
             bool broke = balance.IsBroken;
 
-            if (!broke)
+            bool diedFromChip = health != null && health.IsDead;
+
+            if (diedFromChip)
+            {
+                // Can hasarı öldürdü: ayrı savrulma yok.
+            }
+            else if (!broke)
             {
                 enemy.ApplyBalanceHit(info.direction);
             }
@@ -140,7 +182,7 @@ public static class PlayerDamage
                 amount = amount,
                 critical = critical,
                 brokeBalance = broke,
-                killed = false
+                killed = diedFromChip
             };
 
             Finish(enemy, info, result, stats);

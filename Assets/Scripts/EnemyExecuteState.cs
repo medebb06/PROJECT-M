@@ -11,6 +11,7 @@ public class EnemyExecuteState : IEnemyState
 
     // Sersemlik yokken (sadece "açık an"da) atılan infaz daha az hasar verir.
     private readonly bool openOnly;
+    private readonly bool finalBlow;
     private const float OpenOnlyDamageMultiplier = 1f; // düşmanın durumundan bağımsız: aynı hasar
 
     // Geçiş süresi (GERÇEK sn): dünya ağır çekimdeyken bile oyuncu hızlı geçer.
@@ -40,6 +41,10 @@ public class EnemyExecuteState : IEnemyState
 
         // Düşman açık anda / sersemlemişse tam hasar; değilse (kör vuruş) ×0.75.
         openOnly = enemy != null && !enemy.IsOpen;
+
+        BossController bc = enemy != null ? enemy.GetComponent<BossController>() : null;
+
+        finalBlow = bc != null && bc.FinalBlowOpen;
     }
 
     public void Enter()
@@ -126,7 +131,7 @@ public class EnemyExecuteState : IEnemyState
             {
                 EnemyController other = EnemyController.All[i];
 
-                if (other == null || other == enemy || other.IsDead || other.CurrentState is EnemyExecuteState)
+                if (other == null || other == enemy || other.IsDead || !other.IsStaggered || other.CurrentState is EnemyExecuteState)
                     continue;
 
                 float dx = other.transform.position.x - player.transform.position.x;
@@ -255,7 +260,9 @@ public class EnemyExecuteState : IEnemyState
             {
                 // Boss: infaz tek atmaz, canın bir yüzdesini alır (faz atlatmaz).
                 // Cana doğrudan hasar + denge itmesi; canı azsa bitirici vuruş.
-                damage = boss.ExecuteHealthDamage(segs, openOnly ? OpenOnlyDamageMultiplier : 1f);
+                damage = finalBlow
+                    ? boss.CompleteFinalBlow()
+                    : boss.ExecuteHealthDamage(segs, openOnly ? OpenOnlyDamageMultiplier : 1f);
             }
             else
             {
@@ -267,7 +274,7 @@ public class EnemyExecuteState : IEnemyState
 
             CombatCallout.Popup(
                 enemy.transform.position + Vector3.up * 2.4f,
-                segs >= ExecuteMeter.Segments ? "İNFAZ ×" + segs + "!!" : "İNFAZ ×" + segs + "!",
+                finalBlow ? "SON VURUŞ!" : (segs >= ExecuteMeter.Segments ? "İNFAZ ×" + segs + "!!" : "İNFAZ ×" + segs + "!"),
                 new Color(1f, 0.8f, 0.3f),
                 1.3f
             );

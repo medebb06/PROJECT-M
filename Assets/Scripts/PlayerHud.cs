@@ -246,58 +246,64 @@ public class PlayerHud : MonoBehaviour
 
         y += healthHeight + 6f;
 
-        ExecuteMeter meter = ExecuteMeter.Instance;
-
-        float fill = meter != null ? meter.Fill : 0f;
-        bool full = meter != null && meter.FullSegments >= 1;
-
-        GUI.color = backColor;
-        GUI.DrawTexture(new Rect(x - 1f, y - 1f, barWidth + 2f, executeHeight + 2f), Texture2D.whiteTexture);
-
-        Color ec = executeColor;
-
-        if (full)
+        if (ExecuteMeter.Enabled)
         {
-            float pulse = 0.75f + 0.25f * Mathf.Sin(now * 6f);
-            ec = Color.Lerp(executeColor, Color.white, 0.35f * pulse);
+
+            ExecuteMeter meter = ExecuteMeter.Instance;
+
+            float fill = meter != null ? meter.Fill : 0f;
+            bool full = meter != null && meter.FullSegments >= 1;
+
+            GUI.color = backColor;
+            GUI.DrawTexture(new Rect(x - 1f, y - 1f, barWidth + 2f, executeHeight + 2f), Texture2D.whiteTexture);
+
+            Color ec = executeColor;
+
+            if (full)
+            {
+                float pulse = 0.75f + 0.25f * Mathf.Sin(now * 6f);
+                ec = Color.Lerp(executeColor, Color.white, 0.35f * pulse);
+            }
+            else
+            {
+                ec.a = 0.85f;
+            }
+
+            GUI.color = ec;
+            GUI.DrawTexture(new Rect(x, y, barWidth * fill, executeHeight), Texture2D.whiteTexture);
+
+            // Odakta harcanacak parçalar yanıp söner (önizleme).
+            int spending = PlayerFinisher.ChargingSegments;
+
+            if (spending > 0 && meter != null)
+            {
+                float from = Mathf.Max(0f, fill - spending / (float)ExecuteMeter.Segments);
+
+                GUI.color = new Color(1f, 1f, 1f, 0.4f + 0.4f * Mathf.Sin(now * 18f));
+                GUI.DrawTexture(new Rect(x + barWidth * from, y, barWidth * (fill - from), executeHeight), Texture2D.whiteTexture);
+            }
+
+            // Bölme çizgileri (her parça bir infaz hakkı).
+            GUI.color = new Color(0f, 0f, 0f, 0.7f);
+
+            for (int i = 1; i < 3; i++)
+                GUI.DrawTexture(new Rect(x + barWidth * i / 3f - 1f, y, 2f, executeHeight), Texture2D.whiteTexture);
+
+            // Dolunca kısa parlama.
+            if (meter != null && now - meter.LastFilledTime < 0.4f)
+            {
+                float a = 1f - (now - meter.LastFilledTime) / 0.4f;
+
+                GUI.color = new Color(1f, 1f, 1f, 0.6f * a);
+                GUI.DrawTexture(new Rect(x - 3f, y - 3f, barWidth + 6f, executeHeight + 6f), Texture2D.whiteTexture);
+            }
+
+            // Etiket.
+            GUI.color = full ? executeColor : new Color(0.8f, 0.8f, 0.8f, 0.7f);
+            GUI.Label(new Rect(x + barWidth + 10f, y - 4f, 140f, executeHeight + 8f), full ? "[E] İNFAZ ×" + meter.FullSegments : "İNFAZ", labelStyle);
+
+
         }
-        else
-        {
-            ec.a = 0.85f;
-        }
-
-        GUI.color = ec;
-        GUI.DrawTexture(new Rect(x, y, barWidth * fill, executeHeight), Texture2D.whiteTexture);
-
-        // Odakta harcanacak parçalar yanıp söner (önizleme).
-        int spending = PlayerFinisher.ChargingSegments;
-
-        if (spending > 0 && meter != null)
-        {
-            float from = Mathf.Max(0f, fill - spending / (float)ExecuteMeter.Segments);
-
-            GUI.color = new Color(1f, 1f, 1f, 0.4f + 0.4f * Mathf.Sin(now * 18f));
-            GUI.DrawTexture(new Rect(x + barWidth * from, y, barWidth * (fill - from), executeHeight), Texture2D.whiteTexture);
-        }
-
-        // Bölme çizgileri (her parça bir infaz hakkı).
-        GUI.color = new Color(0f, 0f, 0f, 0.7f);
-
-        for (int i = 1; i < 3; i++)
-            GUI.DrawTexture(new Rect(x + barWidth * i / 3f - 1f, y, 2f, executeHeight), Texture2D.whiteTexture);
-
-        // Dolunca kısa parlama.
-        if (meter != null && now - meter.LastFilledTime < 0.4f)
-        {
-            float a = 1f - (now - meter.LastFilledTime) / 0.4f;
-
-            GUI.color = new Color(1f, 1f, 1f, 0.6f * a);
-            GUI.DrawTexture(new Rect(x - 3f, y - 3f, barWidth + 6f, executeHeight + 6f), Texture2D.whiteTexture);
-        }
-
-        // Etiket.
-        GUI.color = full ? executeColor : new Color(0.8f, 0.8f, 0.8f, 0.7f);
-        GUI.Label(new Rect(x + barWidth + 10f, y - 4f, 140f, executeHeight + 8f), full ? "[E] İNFAZ ×" + meter.FullSegments : "İNFAZ", labelStyle);
 
         // ---------------- YETENEK YUVASI ----------------
 

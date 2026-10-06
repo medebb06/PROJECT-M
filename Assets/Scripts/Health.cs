@@ -24,6 +24,9 @@ public class Health : MonoBehaviour
     public int MaxHealth => maxHealth;
     public bool IsDead { get; private set; }
 
+    /// <summary>0'dan büyükse can bunun altına İNEMEZ (boss can kilidi / son vuruş eşiği).</summary>
+    public int MinHealth { get; set; }
+
     public event Action<int, int> OnHealthChanged;
     public event Action OnDeath;
 
@@ -138,6 +141,8 @@ public class Health : MonoBehaviour
         if (damage <= 0)
             return;
 
+        int before = currentHealth;
+
         currentHealth -= damage;
 
         currentHealth =
@@ -145,6 +150,10 @@ public class Health : MonoBehaviour
                 currentHealth,
                 0
             );
+
+        // Can kilidi: eşiğin altına inmez.
+        if (MinHealth > 0 && currentHealth < MinHealth)
+            currentHealth = Mathf.Max(currentHealth, Mathf.Min(MinHealth, before));
 
         recoveryTimer =
             recoveryDelay;

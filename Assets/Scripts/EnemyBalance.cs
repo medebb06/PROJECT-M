@@ -29,6 +29,12 @@ public class EnemyBalance : MonoBehaviour
 
     private Health healthRef;
 
+    /// <summary>Düz vuruşların posture'a bağlı can hasarından artan kesir (PlayerDamage kullanır).</summary>
+    [System.NonSerialized] public float chipCarry;
+
+    /// <summary>Düz vuruş denge çarpanının kesir artığı (PlayerDamage kullanır).</summary>
+    [System.NonSerialized] public float hitCarry;
+
     // Kesirli denge hasarı birikir (aksi halde 1 × 0.6 gibi küçük hasarlar yuvarlanıp etkisiz kalır).
     private float damageRemainder;
 

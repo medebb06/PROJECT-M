@@ -114,7 +114,10 @@ public class ExecuteReadyIndicator : MonoBehaviour
         if (h != null && h.IsDead)
             return false;
 
-        return ExecuteMeter.CanExecute && ExecuteMeter.Instance != null;
+        // Sadece sersemlemiş bir düşman menzildeyken ve (bar dolu ya da ölümcül vuruş açıkken).
+        return ExecuteMeter.CanExecute &&
+               ExecuteMeter.Instance != null &&
+               PlayerFinisher.AnyStaggeredInReach(player.transform.position, 9f);
     }
 
     private void LateUpdate()

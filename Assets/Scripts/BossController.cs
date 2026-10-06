@@ -72,6 +72,72 @@ public class BossController : MonoBehaviour
     [Tooltip("Gölge Hilali'nin vuruşları bloğa bu kadar kat posture hasarı verir (blok riskli olsun).")]
     public float trialBlockPostureMultiplier = 1.6f;
 
+    [Header("Ölümcül vuruş (Sekiro gibi)")]
+    [Tooltip("Denge dolunca boss bu kadar sn sersemler; E ile ÖLÜMCÜL VURUŞ atılır (bar harcamaz).")]
+    public float finalBlowWindow = 4f;
+
+    [Tooltip("Ölümcül vuruşun alacağı can oranı. Can bundan azsa can çubuğu tamamen biter (faz 1: yeniden doğuş, faz 2: ölüm).")]
+    [Range(0.1f, 1f)] public float finalBlowPercent = 0.5f;
+
+    [Tooltip("Faz geçişi sinematiği: boss aura yayıp canını yenilerken geçen süre (sn).")]
+    public float rebirthTime = 2.6f;
+
+    private bool finalOpenPrev;
+    private bool rebirthing;
+
+    /// <summary>Boss yeniden doğuş sahnesinde mi (hasar almaz, saldırmaz).</summary>
+    public bool Rebirthing => rebirthing;
+
+    /// <summary>Denge kırıldı, boss sersemledi: ölümcül vuruş atılabilir.</summary>
+    public bool FinalBlowOpen =>
+        PercentExecute && !rebirthing && enemy != null && !enemy.IsDead && enemy.IsStaggered;
+
+    public static bool FinalBlowAvailable => Current != null && Current.FinalBlowOpen;
+
+    /// <summary>
+    /// Ölümcül vuruş indi. Can bar'ın yarısından fazlaysa yarısını götürür;
+    /// azsa can çubuğu biter: faz 1'de aura ile TAM canla faz 2, faz 2'de ölüm.
+    /// Dönen değer: cana uygulanacak hasar.
+    /// </summary>
+    public int CompleteFinalBlow()
+    {
+        if (Health == null)
+            return 0;
+
+        int part = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * finalBlowPercent));
+
+        if (Health.CurrentHealth > part)
+            return part;
+
+        if (!InPhase2)
+        {
+            EnterPhase2();
+
+            // Can 1'e iner (MinHealth), yeniden doğuş sahnesi canı doldurur.
+            return Mathf.Max(1, Health.CurrentHealth);
+        }
+
+        Health.MinHealth = 0;
+
+        return Mathf.Max(1, Health.CurrentHealth);
+    }
+
+    private void UpdateFinalBlow()
+    {
+        bool open = FinalBlowOpen;
+
+        if (open && !finalOpenPrev)
+        {
+            CombatCallout.PopupAbove(enemy, "ÖLÜMCÜL VURUŞ! [E]", new Color(1f, 0.25f, 0.2f), 1.6f);
+            HitStop.Request(0.12f, 0.1f);
+
+            if (CameraShake.Instance != null)
+                CameraShake.Instance.Shake(0.6f);
+        }
+
+        finalOpenPrev = open;
+    }
+
     // ---------- DÖVÜŞ ALANI (Gölge Hilali) ----------
     // Boss çağrıldığı anda kameranın gördüğü alan dövüş alanı olur;
     // boss bu alanın dışına çıkmaz (koşu atağı da burada biter).
@@ -164,6 +230,9 @@ public class BossController : MonoBehaviour
         {
             int units = Mathf.RoundToInt(balance.MaxBalance * executeBalancePushBySegments[idx] * multiplier);
 
+            // İnfaz dengeyi KIRAMAZ (ölümcül vuruş penceresini bedavaya açmasın).
+            units = Mathf.Min(units, balance.MaxBalance - 1 - balance.CurrentBalance);
+
             if (units > 0)
                 balance.AddBalanceDamage(units, false);
         }
@@ -195,9 +264,8 @@ public class BossController : MonoBehaviour
         if (!PercentExecute || Health == null || Health.IsDead)
             return false;
 
-        int damage = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialPostureBreakPercent));
-
-        return Health.CurrentHealth > damage;
+        // Sadece GERÇEK denge kırılması sersemletir (başka kaynaklar sersemletemez).
+        return balance == null || !balance.IsBroken;
     }
 
     public bool TryPostureBreak()
@@ -208,29 +276,8 @@ public class BossController : MonoBehaviour
             return false;
         }
 
-        int damage = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialPostureBreakPercent));
-
-        if (Health.CurrentHealth <= damage)
-            return false;
-
-        Debug.Log("DENGE KIRILDI → sersemleme yok, can -" + damage);
-
-        BossStats.postureBreaks++;
-
-        balance.RecoverBalance();
-
-        Health.TakeDamage(damage);
-
-        enemy.PlayBalanceDamageFlash();
-
-        CombatCallout.PopupAbove(enemy, "DENGE KIRILDI", new Color(1f, 0.85f, 0.2f), 1.4f);
-
-        HitStop.Request(0.14f, 0.04f);
-
-        if (CameraShake.Instance != null)
-            CameraShake.Instance.Shake(0.9f);
-
-        return true;
+        // Denge dolunca sersemleme + ölümcül vuruş penceresi (can hasarı yok).
+        return false;
     }
 
     /// <summary>Yansıtılan ok boss'a değdi: doğrudan can hasarı.</summary>
@@ -302,6 +349,12 @@ public class BossController : MonoBehaviour
 
             enemy.executeDamage =
                 Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialExecutePercent));
+
+            // Can kilidi: faz 1'de faz 2 eşiğinin altına inemez (son vuruş gerekir).
+            // Normal hasar boss'u öldüremez: sadece ölümcül vuruş can çubuğunu bitirir.
+            Health.MinHealth = 1;
+
+            enemy.staggerDuration = finalBlowWindow;
         }
 
         // Perdeye göre karakter.
@@ -424,6 +477,86 @@ public class BossController : MonoBehaviour
             Current = null;
     }
 
+    // Faz 2 yeniden doğuşu: kamera boss'a odaklanır, boss aura yayıp canını toplar, TAM canla faz 2 başlar.
+    private System.Collections.IEnumerator Phase2Rebirth()
+    {
+        rebirthing = true;
+
+        BossSkillGate.Block(rebirthTime + 2.5f);
+
+        BossAura aura = GetComponent<BossAura>();
+
+        if (aura != null)
+            aura.SetActive(true);
+
+        enemy.StartAttackRecovery(2.5f);
+
+        BossStats.phase2At = Time.time - startTime;
+
+        // Ölümcül vuruş sinematiği bitsin.
+        yield return new WaitForSecondsRealtime(0.7f);
+
+        if (enemy == null || enemy.IsDead)
+        {
+            rebirthing = false;
+            yield break;
+        }
+
+        if (RunManager.Instance != null)
+            RunManager.Instance.ShowBanner("GÖLGE UYANDI", 2f);
+
+        CombatCallout.PopupAbove(enemy, "GÖLGE UYANDI", new Color(0.75f, 0.55f, 1f), 1.8f);
+
+        enemy.PlayTintFlash(new Color(0.6f, 0.4f, 1f), rebirthTime);
+
+        HitStop.Request(0.25f, 0.06f);
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(1.2f);
+
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+
+        if (pc != null)
+            ExecuteCinematic.BeginFocus(pc.transform, transform);
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+
+        int startHp = Health != null ? Health.CurrentHealth : 0;
+
+        float t = 0f;
+
+        while (t < rebirthTime && enemy != null && !enemy.IsDead)
+        {
+            float p = Mathf.Clamp01(t / rebirthTime);
+
+            enemy.StartAttackRecovery(0.5f);
+
+            if (rb != null)
+                rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            if (Health != null)
+                Health.SetHealth(Mathf.RoundToInt(Mathf.Lerp(startHp, Health.MaxHealth, p)));
+
+            ExecuteCinematic.SetFocusProgress(p);
+
+            t += Time.unscaledDeltaTime;
+
+            yield return null;
+        }
+
+        ExecuteCinematic.CancelFocus();
+
+        if (Health != null && !enemy.IsDead)
+            Health.SetHealth(Health.MaxHealth);
+
+        if (aura != null)
+            aura.SetActive(false);
+
+        enemy.StartAttackRecovery(0.6f);
+
+        rebirthing = false;
+    }
+
     // Faz 2 sahnesi: boss kükrer, kısa süre saldırmaz; oyuncu ne olduğunu görür.
     private System.Collections.IEnumerator Phase2Scene()
     {
@@ -464,6 +597,13 @@ public class BossController : MonoBehaviour
 
     private void Update()
     {
+        // Gölge Hilali: faz 2'ye geçiş / ölüm 'son vuruş' ile olur.
+        if (PercentExecute && Health != null && enemy != null && !enemy.IsDead)
+        {
+            UpdateFinalBlow();
+            return;
+        }
+
         if (InPhase2 || Health == null || enemy == null || enemy.IsDead)
             return;
 
@@ -502,7 +642,7 @@ public class BossController : MonoBehaviour
         PhaseChanged?.Invoke();
 
         if (PercentExecute)
-            StartCoroutine(Phase2Scene());
+            StartCoroutine(Phase2Rebirth());
 
         Debug.Log("BOSS FAZ 2: " + BossName);
     }

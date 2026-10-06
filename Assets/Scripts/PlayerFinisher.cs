@@ -11,8 +11,25 @@ public class PlayerFinisher : MonoBehaviour
     [SerializeField] private float longReach = 9f;
     [SerializeField] private float forwardPriority = 1.5f;
 
-    [Tooltip("Açıksa infaz düşmanın durumundan bağımsız HER ZAMAN vurur (saldırıda, sersemlemiş, hasarlı...). Kapalıysa açık anı tutturmak gerekir.")]
-    [SerializeField] private bool alwaysHit = true;
+    [Tooltip("Açıksa infaz SADECE sersemlemiş (denge kırılmış) düşmana atılır; boss'ta bu ölümcül vuruştur.")]
+    [SerializeField] private bool staggerOnly = true;
+
+    /// <summary>Menzilde infaz edilebilir (sersemlemiş) bir düşman var mı? (gösterge için)</summary>
+    public static bool AnyStaggeredInReach(Vector2 from, float reach)
+    {
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            EnemyController e = EnemyController.All[i];
+
+            if (e == null || e.IsDead || !e.IsStaggered)
+                continue;
+
+            if (Vector2.Distance(from, e.transform.position) <= reach)
+                return true;
+        }
+
+        return false;
+    }
 
     [Header("Çizgi alanı (basılı tuttukça büyür)")]
     [Tooltip("Hemen bırakınca vurulan çizgi uzunluğu.")]
@@ -228,7 +245,7 @@ public class PlayerFinisher : MonoBehaviour
             return false;
 
         // İNFAZ BARI dolu değilse infaz yok (uyarı; tampon boşalır).
-        if (!ExecuteMeter.CanExecute)
+        if (!IsFinalBlow(target) && !ExecuteMeter.CanExecute)
         {
             ExecuteMeter.WarnNotReady(target);
             return true;
@@ -241,7 +258,9 @@ public class PlayerFinisher : MonoBehaviour
         charging = true;
         holdTime = 0f;
         chargeTarget = target;
-        availSegs = Mathf.Max(1, ExecuteMeter.Instance != null ? ExecuteMeter.Instance.FullSegments : ExecuteMeter.Segments);
+        availSegs = IsFinalBlow(target)
+            ? ExecuteMeter.Segments
+            : Mathf.Max(1, ExecuteMeter.Instance != null ? ExecuteMeter.Instance.FullSegments : ExecuteMeter.Segments);
         ChargingSegments = 1;
 
         // Hedefe dön.
@@ -269,6 +288,7 @@ public class PlayerFinisher : MonoBehaviour
             chargeTarget == null ||
             chargeTarget.IsDead ||
             IsShielded(chargeTarget) ||
+            (staggerOnly && !chargeTarget.IsStaggered) ||
             !(player.stateMachine.CurrentState is PlayerExecuteChargeState) ||
             Vector2.Distance(transform.position, chargeTarget.transform.position) > longReach * rangeSlack
         )
@@ -339,7 +359,10 @@ public class PlayerFinisher : MonoBehaviour
         chargeTarget = null;
         ChargingSegments = 0;
 
-        if (target == null || !ExecuteMeter.TrySpend(target, segs))
+        // Boss'un SON VURUŞU bar harcamaz.
+        bool free = IsFinalBlow(target);
+
+        if (target == null || !(free ? ExecuteMeter.TrySpendFree(target, segs) : ExecuteMeter.TrySpend(target, segs)))
         {
             ExecuteCinematic.CancelFocus();
 
@@ -348,13 +371,13 @@ public class PlayerFinisher : MonoBehaviour
             return;
         }
 
-        if (alwaysHit || target.IsOpen)
+        if (!staggerOnly || target.IsStaggered)
         {
             // =================================================
             // TUTTU: EnemyExecuteState → hızlı geçiş + ağır çekim + hasar.
             // =================================================
 
-            target.Execute(alwaysHit);
+            target.Execute(true);
 
             return;
         }
@@ -390,6 +413,13 @@ public class PlayerFinisher : MonoBehaviour
 
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(0.3f);
+    }
+
+    private static bool IsFinalBlow(EnemyController e)
+    {
+        BossController b = e != null ? e.GetComponent<BossController>() : null;
+
+        return b != null && b.FinalBlowOpen;
     }
 
     private static bool IsShielded(EnemyController e)
@@ -533,6 +563,10 @@ public class PlayerFinisher : MonoBehaviour
             if (enemy.IsDead || enemy.CurrentState is EnemyExecuteState)
                 continue;
 
+            // Sadece sersemlemiş (denge kırılmış) düşmana infaz.
+            if (staggerOnly && !enemy.IsStaggered)
+                continue;
+
             // Aura açıkken (korumalı) infaz hedeflenemez.
             BossAura shield = enemy.GetComponent<BossAura>();
 
@@ -580,7 +614,8 @@ public class PlayerFinisher : MonoBehaviour
             float score =
                 directionScore +
                 distanceScore +
-                (enemy.IsOpen ? 0.4f : 0f);
+                (enemy.IsOpen ? 0.4f : 0f) +
+                (IsFinalBlow(enemy) ? 3f : 0f);
 
             if (score > bestScore)
             {

@@ -22,6 +22,12 @@ public class ExecuteMeter : MonoBehaviour
     /// <summary>Barın parça sayısı. Her parça bir infaz hakkıdır.</summary>
     public const int Segments = 3;
 
+    /// <summary>
+    /// false: infaz barı KAPALI. İnfaz sadece sersemlemiş düşmana atılır ve bar gerektirmez
+    /// (sersemletmek zaten maliyet). Odak süresi hâlâ hasar kademesini belirler.
+    /// </summary>
+    public const bool Enabled = false;
+
     [Header("Dolma (barın tamamı = 1, bir parça ≈ 0.333)")]
     [Tooltip("Normal düşman öldürünce (4 öldürme ≈ dolu).")]
     [Range(0f, 1f)] public float killFill = 0.08f;
@@ -66,7 +72,8 @@ public class ExecuteMeter : MonoBehaviour
     public bool IsFull => Fill >= 0.999f;
 
     /// <summary>Tamamen dolmuş parça sayısı (0..3).</summary>
-    public int FullSegments => Mathf.Clamp(Mathf.FloorToInt(Fill * Segments + 0.001f), 0, Segments);
+    public int FullSegments =>
+        Enabled ? Mathf.Clamp(Mathf.FloorToInt(Fill * Segments + 0.001f), 0, Segments) : Segments;
 
     // Arayüz: son dolma zamanı (parlama efekti için).
     public float LastFilledTime { get; private set; } = -99f;
@@ -201,6 +208,9 @@ public class ExecuteMeter : MonoBehaviour
         if (amount <= 0f)
             return;
 
+        if (!Enabled)
+            return;
+
         int segsBefore = FullSegments;
 
         // Kalıcı gelişim: Cellat (dolum hızı). Charm: İnfazcı.
@@ -233,7 +243,8 @@ public class ExecuteMeter : MonoBehaviour
     // =========================================================
 
     /// <summary>En az bir parça dolu mu? (infaz denenebilir)</summary>
-    public static bool CanExecute => Instance == null || Instance.FullSegments >= 1;
+    public static bool CanExecute =>
+        !Enabled || Instance == null || Instance.FullSegments >= 1 || BossController.FinalBlowAvailable;
 
     public static float StaggeredHealthMultiplier =>
         Instance != null ? Instance.staggeredHealthMultiplier : 1f;
@@ -243,7 +254,7 @@ public class ExecuteMeter : MonoBehaviour
     {
         segs = Mathf.Clamp(segs, 1, Segments);
 
-        if (Instance != null)
+        if (Enabled && Instance != null)
         {
             if (Instance.FullSegments < segs)
                 return false;
@@ -256,6 +267,18 @@ public class ExecuteMeter : MonoBehaviour
             power[target] = segs;
             lastExecuted = target;
         }
+
+        return true;
+    }
+
+    /// <summary>Bar harcamadan işaretle (boss'un son vuruşu).</summary>
+    public static bool TrySpendFree(EnemyController target, int segs)
+    {
+        if (target == null)
+            return false;
+
+        power[target] = Mathf.Clamp(segs, 1, Segments);
+        lastExecuted = target;
 
         return true;
     }

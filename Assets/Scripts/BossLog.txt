@@ -26,3 +26,46 @@ Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 1 / 1 / 0
 Boss canı (bitişte): %0   Denge: %0   (faz 2)
   slam: 1 isabet, 40 hasar, 0 öldürme
 
+2026-10-06 20:34:20
+===== BOSS ÖZETİ: BOSS ÖLDÜ =====
+Süre: 49 sn  (faz 2: 26. sn)   Denge kırma: 3   Yansıtılan ok: 0
+Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 0 / 1 / 1
+Boss canı (bitişte): %0   Denge: %0   (faz 2)
+  Gölge Zinciri: 1 isabet, 29 hasar, 0 öldürme
+
+2026-10-06 20:40:15
+===== BOSS ÖZETİ: BOSS ÖLDÜ =====
+Süre: 43 sn  (faz 2: 22. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 0 / 0 / 2
+Boss canı (bitişte): %0   Denge: %0   (faz 2)
+  nova: 1 isabet, 40 hasar, 0 öldürme
+  Keşiş Seli: 1 isabet, 40 hasar, 0 öldürme
+
+2026-10-06 20:43:55
+===== BOSS ÖZETİ: BOSS ÖLDÜ =====
+Süre: 67 sn  (faz 2: 31. sn)   Denge kırma: 0   Yansıtılan ok: 1
+Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 0 / 0 / 0
+Boss canı (bitişte): %0   Denge: %0   (faz 2)
+  Kırık Tempo: 3 isabet, 93 hasar, 0 öldürme
+  nova: 1 isabet, 40 hasar, 0 öldürme
+  Gölge Zinciri: 1 isabet, 29 hasar, 0 öldürme
+
+2026-10-06 20:57:44
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 48 sn  (faz 2: 32. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 0 / 0 / 0
+Boss canı (bitişte): %98   Denge: %71   (faz 2)
+  Keşiş Seli: 1 isabet, 29 hasar, 0 öldürme
+  Ritim Kırıcı: 1 isabet, 29 hasar, 0 öldürme
+  Kırık Tempo: 2 isabet, 42 hasar, 1 öldürme
+  slam: 1 isabet, 40 hasar, 0 öldürme
+
+2026-10-06 21:00:49
+===== BOSS ÖZETİ: BOSS ÖLDÜ =====
+Süre: 52 sn  (faz 2: 23. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 0   Kusursuz kaçış: 0   İnfaz (1/2/3 parça): 0 / 0 / 0
+Boss canı (bitişte): %0   Denge: %0   (faz 2)
+  Keşiş Seli: 1 isabet, 40 hasar, 0 öldürme
+  Kırık Tempo: 1 isabet, 29 hasar, 0 öldürme
+  slam: 1 isabet, 40 hasar, 0 öldürme
+
