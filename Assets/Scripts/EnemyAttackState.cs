@@ -672,10 +672,6 @@ public class EnemyAttackState : IEnemyState
                     DoAttack();
 
                 resolvingHit = false;
-
-                // Son vuruş parry/block/isabet fark etmez oyuncuyu kaydırarak iter.
-                if (currentHit != null && currentHit.parryKnockback > 0f)
-                    PushPlayerBack(currentHit.parryKnockback);
             }
 
             // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
@@ -854,11 +850,7 @@ public class EnemyAttackState : IEnemyState
 
         PlayerController p = enemy.target.GetComponent<PlayerController>();
 
-        if (p == null || p.rb == null || p.isDashing)
-            return;
-
-        // Vuruş boşa gittiyse (oyuncu uzaktaysa) itme yok.
-        if (Mathf.Abs(p.transform.position.x - enemy.transform.position.x) > 6f)
+        if (p == null || p.rb == null)
             return;
 
         float dir = Mathf.Sign(p.transform.position.x - enemy.transform.position.x);
@@ -871,33 +863,54 @@ public class EnemyAttackState : IEnemyState
 
     private System.Collections.IEnumerator PushRoutine(PlayerController p, float dir, float force)
     {
-        const float Duration = 0.5f;
+        // force -> toplam kayma mesafesi (24 ≈ 3.6 birim ≈ 4 adım).
+        float distance = force * 0.15f;
+        const float Duration = 0.35f;
 
         float t = 0f;
         p.inputLockTimer = Mathf.Max(p.inputLockTimer, Duration);
 
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.useTriggers = false;
+        filter.SetLayerMask(Physics2D.AllLayers);
+        filter.useLayerMask = true;
+        RaycastHit2D[] hits = new RaycastHit2D[4];
+
         while (t < Duration && p != null && p.rb != null)
         {
-            // Hem fizikten önce hem tüm Update'lerden sonra yaz:
-            // parry/block/hurt durumları hızı sıfırlayabilir.
             yield return new WaitForFixedUpdate();
 
             if (p == null || p.rb == null || p.isDashing)
                 yield break;
 
-            float k = 1f - t / Duration;
-            k *= k; // ease-out: hızlı başlar, sürünerek durur
-            p.rb.linearVelocity = new Vector2(dir * force * (0.25f + 0.75f * k), p.rb.linearVelocity.y);
+            float prev = t / Duration;
+            t += Time.fixedDeltaTime;
+            float next = Mathf.Min(1f, t / Duration);
 
-            yield return new WaitForEndOfFrame();
+            // Yavaşlayarak duran sabit toplam mesafe (hıza değil konuma dayalı:
+            // block/parry durumları hızı sıfırlasa da çalışır).
+            float f0 = 1f - (1f - prev) * (1f - prev);
+            float f1 = 1f - (1f - next) * (1f - next);
+            float step = distance * (f1 - f0);
 
-            if (p == null || p.rb == null || p.isDashing)
-                yield break;
+            Vector2 d = new Vector2(dir, 0f);
+            int n = p.rb.Cast(d, filter, hits, step + 0.02f);
 
-            p.rb.linearVelocity = new Vector2(dir * force * (0.25f + 0.75f * k), p.rb.linearVelocity.y);
+            for (int k = 0; k < n; k++)
+            {
+                if (hits[k].collider != null && !hits[k].collider.isTrigger)
+                {
+                    step = Mathf.Max(0f, hits[k].distance - 0.02f);
+                    break;
+                }
+            }
 
-            t += Time.deltaTime;
+            p.rb.position += d * step;
+            p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
         }
+
+        if (p != null && p.rb != null)
+            p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
     }
 
     private void StopMovement()
@@ -1351,6 +1364,10 @@ public class EnemyAttackState : IEnemyState
             enemy.PlayParrySlowMotion(balance.IsBroken);
 
         CombatEvents.RaiseParry(enemy, balance.IsBroken);
+
+        // Parry'lense bile geri iten vuruş (Keşiş Seli'nin son vuruşu).
+        if (currentHit != null && currentHit.parryKnockback > 0f)
+            PushPlayerBack(currentHit.parryKnockback);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()
