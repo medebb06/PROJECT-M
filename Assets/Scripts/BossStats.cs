@@ -30,29 +30,13 @@ public static class BossStats
     public static int dodges;
     public static readonly int[] executes = new int[4]; // [1..3] = harcanan parça
 
-    private static bool subscribed;
+    public static int finalBlows;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Boot()
     {
         Reset();
 
-        if (!subscribed)
-        {
-            subscribed = true;
-
-            CombatEvents.ParrySucceeded += (enemy, broke) =>
-            {
-                if (IsBoss(enemy))
-                    parries++;
-            };
-
-            CombatEvents.Dodged += (enemy, unblockable) =>
-            {
-                if (IsBoss(enemy))
-                    dodges++;
-            };
-        }
     }
 
     private static bool IsBoss(EnemyController e)
@@ -74,6 +58,7 @@ public static class BossStats
         parries = 0;
         dodges = 0;
         Array.Clear(executes, 0, executes.Length);
+        finalBlows = 0;
     }
 
     public static void Record(string skill, int damage, bool lethal)
@@ -109,7 +94,7 @@ public static class BossStats
 
         sb.AppendLine(
             "Parry: " + parries + "   Kusursuz kaçış: " + dodges +
-            "   İnfaz (1/2/3 parça): " + executes[1] + " / " + executes[2] + " / " + executes[3]
+            "   Ölümcül vuruş: " + finalBlows
         );
 
         BossController bc = BossController.Current;

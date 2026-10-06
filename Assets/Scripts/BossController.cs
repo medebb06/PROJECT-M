@@ -104,6 +104,8 @@ public class BossController : MonoBehaviour
         if (Health == null)
             return 0;
 
+        BossStats.finalBlows++;
+
         int part = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * finalBlowPercent));
 
         if (Health.CurrentHealth > part)
@@ -445,11 +447,27 @@ public class BossController : MonoBehaviour
     private void OnEnable()
     {
         CombatEvents.PlayerDamaged += OnPlayerDamaged;
+        CombatEvents.ParrySucceeded += OnParryStat;
+        CombatEvents.Dodged += OnDodgeStat;
     }
 
     private void OnDisable()
     {
         CombatEvents.PlayerDamaged -= OnPlayerDamaged;
+        CombatEvents.ParrySucceeded -= OnParryStat;
+        CombatEvents.Dodged -= OnDodgeStat;
+    }
+
+    private void OnParryStat(EnemyController e, bool broke)
+    {
+        if (e == enemy && PercentExecute)
+            BossStats.parries++;
+    }
+
+    private void OnDodgeStat(EnemyController e, bool unblockable)
+    {
+        if (e == enemy && PercentExecute)
+            BossStats.dodges++;
     }
 
     private void OnPlayerDamaged(PlayerDamageReport report)
