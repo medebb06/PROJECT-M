@@ -69,6 +69,57 @@ public class BossController : MonoBehaviour
     /// <summary>Gölge Hilali: infaz barı ölümcül değil, canın % kadarını alır.</summary>
     public bool PercentExecute => act >= 4;
 
+    // ---------- DÖVÜŞ ALANI (Gölge Hilali) ----------
+    // Boss çağrıldığı anda kameranın gördüğü alan dövüş alanı olur;
+    // boss bu alanın dışına çıkmaz (koşu atağı da burada biter).
+    public bool HasArena { get; private set; }
+    public float ArenaMinX { get; private set; }
+    public float ArenaMaxX { get; private set; }
+
+    private Rigidbody2D arenaRb;
+
+    private void SetupArena()
+    {
+        Camera cam = Camera.main;
+
+        if (cam == null || !cam.orthographic)
+            return;
+
+        float half = cam.orthographicSize * cam.aspect;
+
+        // Kenarlardan biraz içeride: boss ekranın tam kenarına yapışmasın.
+        float pad = 1.5f;
+
+        ArenaMinX = cam.transform.position.x - half + pad;
+        ArenaMaxX = cam.transform.position.x + half - pad;
+
+        HasArena = ArenaMaxX > ArenaMinX + 6f;
+
+        arenaRb = GetComponent<Rigidbody2D>();
+
+        Debug.Log("BOSS ALANI: x = " + ArenaMinX.ToString("F1") + " … " + ArenaMaxX.ToString("F1"));
+    }
+
+    private void LateUpdate()
+    {
+        if (!HasArena || arenaRb == null)
+            return;
+
+        float x = arenaRb.position.x;
+        float cl = Mathf.Clamp(x, ArenaMinX, ArenaMaxX);
+
+        if (Mathf.Abs(cl - x) > 0.001f)
+        {
+            arenaRb.position = new Vector2(cl, arenaRb.position.y);
+
+            Vector2 v = arenaRb.linearVelocity;
+
+            // Duvara yaslanan boss dışarı doğru hız biriktirmesin.
+            if ((x < ArenaMinX && v.x < 0f) || (x > ArenaMaxX && v.x > 0f))
+                arenaRb.linearVelocity = new Vector2(0f, v.y);
+        }
+    }
+
     public float ExecutePercent => trialExecutePercent;
 
     /// <summary>
@@ -212,6 +263,8 @@ public class BossController : MonoBehaviour
             archer.matchTargetHeight = true;
 
             // Zıpla-Ez: alan saldırısı.
+            SetupArena();
+
             if (GetComponent<BossSlam>() == null)
                 gameObject.AddComponent<BossSlam>();
 

@@ -1,19 +1,20 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// BOSS: ZIPLA-EZ (alan saldırısı). BossController, Gölge Hilali'ne ekler.
+/// BOSS: KOŞU ATAĞI (eski adıyla Zıpla-Ez; sınıf adı BossController uyumu için aynı).
+/// BossController, Gölge Hilali'ne ekler.
 ///
-/// Akış (okunur → ani):
-///   1) UYARI : yerde kırmızı alan belirir, boss çömelir ("ALANDAN ÇIK!").
-///   2) YÜKSEL: boss çok yükseğe fırlar.
-///   3) ASILI : havada, alanın tepesinde durur. Alan ve boss oyuncuyu takip
-///              eder, havaya çıkarken KİLİTLENİR (alan beyaza döner).
-///   4) DÜŞÜŞ : süre dolunca boss çok hızlı çakılır.
-///   5) İNİŞ  : alanda ve YERDEYSEN engellenemez hasar (parry/block kurtarmaz).
-///              Kurtaran: ALANDAN ÇIKMAK, ZIPLAMAK ("VUR!" penceresi), dash.
-///   6) AÇIK  : boss kısa süre sersemler.
-///   Faz 2: art arda iki çakılma.
+/// Akış:
+///   0) KAÇIŞ : boss oyuncudan hızla uzaklaşır (duvar / zemin sonuna dek).
+///   1) UYARI : döner, oyuncuya doğru çok KISA bir uyarı şeridi belirir ("ZIPLA!"),
+///              hemen KİLİTLENİR (beyaz).
+///   2) KOŞU  : boss şeridi çok hızlı koşar, oyuncunun İÇİNDEN geçer.
+///              Parry / block / dash dokunulmazlığı KURTARMAZ; tek çözüm ÜSTÜNDEN ZIPLAMAK.
+///              (Oyuncuyu geçerken yerdeyse engellenemez hasar.)
+///   3) AÇIK  : boss durur, sersemler; üstünden atlandıysa "VUR!" karşı vuruş penceresi açılır.
+///   Faz 2: art arda iki koşu (gidiş-dönüş).
 /// </summary>
 [RequireComponent(typeof(EnemyController))]
 public class BossSlam : MonoBehaviour
@@ -23,57 +24,43 @@ public class BossSlam : MonoBehaviour
     public float cooldown = 6f;
     public float cooldownPhase2 = 4f;
 
-    [Tooltip("Çömelme/uyarı (sn).")]
-    public float windup = 0.55f;
+    [Tooltip("İlk uyarı süresi (sn). Şerit bu sürenin ilk kısmında oyuncuyu izler.")]
+    public float windup = 0.5f;
 
-    [Tooltip("Yükselme süresi (sn).")]
-    public float riseTime = 0.7f;
+    [Tooltip("Şeridin oyuncuyu izlediği kısım (uyarının yüzdesi). Kalanında KİLİTLİ beklenir = zıplama hazırlığı.")]
+    [Range(0.2f, 0.9f)] public float trackFraction = 0.4f;
 
-    [Tooltip("Yükseldiği yükseklik (birim).")]
-    public float riseHeight = 11f;
+    [Tooltip("Koşu hızı (birim/sn).")]
+    public float dashSpeed = 90f;
 
-    [Tooltip("Havada asılı kalma (sn).")]
-    public float hangTime = 0.35f;
+    [Tooltip("Kaçış (geri çekilme) hızı çarpanı: boss'un normal koşu hızı × bu değer. 1 = normal hız.")]
+    public float retreatSpeedMultiplier = 1f;
 
-    [Tooltip("Boss'un çapraz inişe başladığı yatay uzaklık (inecek alana göre, birim).")]
-    public float diagonalOffset = 6f;
+    [Tooltip("Boss koşuya başlamadan önce oyuncudan kaç birim uzağa kaçar (duvar/zemin sonu izin verdiği kadar).")]
+    public float retreatDistance = 16f;
 
-    [Tooltip("Havadayken inecek alana doğru en fazla yatay hız (birim/sn). Alan, boss'un yetişebileceği menzille sınırlıdır.")]
-    public float moveSpeed = 9f;
+    [Tooltip("Boss oyuncunun kaç birim ötesine kadar koşar.")]
+    public float overshoot = 7f;
 
-    [Tooltip("Çakılma hızı (birim/sn).")]
-    public float plungeSpeed = 70f;
-
-    [Tooltip("İnişten sonra boss'un hareketsiz kaldığı süre (sn): ceza penceresi.")]
-    public float exhaustTime = 1.5f;
+    [Tooltip("Koşu sonrası boss'un hareketsiz kaldığı süre (sn): ceza penceresi.")]
+    public float exhaustTime = 1.0f;
 
     [Header("Menzil")]
-    public float minDistance = 2.5f;
-    public float maxDistance = 11f;
-
-    [Tooltip("Hasar alanı yarıçapı (yatay, birim).")]
-    public float radius = 6f;
-
-    [Tooltip("Açıkken alan yarıçapı oyuncunun DASH mesafesinden hesaplanır: bir dash (A/D + Shift) ile alanın kenarından 'ucu ucuna' çıkılır. Kapalıysa 'radius' kullanılır.")]
-    public bool radiusFromDash = true;
-
-    [Tooltip("Dash mesafesinden çıkarılan pay (birim): büyük = daha kolay kaçış.")]
-    public float escapeFactor = 0.9f;
-
-    [Tooltip("Alan yarıçapı üst sınırı (birim).")]
-    public float maxZoneRadius = 12f;
-
-    private float zoneRadius = 6f;
+    public float minDistance = 3.5f;
+    public float maxDistance = 40f;
 
     [Tooltip("Oyuncunun ayağı zeminden bu kadar yukarıdaysa 'zıpladı' sayılır.")]
-    public float jumpClearance = 0.8f;
+    public float jumpClearance = 0.9f;
+
+    [Tooltip("Boss'un yatay çarpma payı (gövde yarı genişliğine eklenir).")]
+    public float hitPadding = 0.5f;
 
     [Header("Hasar")]
-    public float damageMultiplier = 1.2f;
-    public float shake = 1.0f;
+    public float damageMultiplier = 1.1f;
+    public float shake = 0.8f;
 
-    public Color zoneColor = new Color(1f, 0.15f, 0.1f, 0.45f);
-    public Color lockedColor = new Color(1f, 0.95f, 0.85f, 0.8f);
+    public Color laneColor = new Color(1f, 0.15f, 0.1f, 0.5f);
+    public Color lockedColor = new Color(1f, 0.95f, 0.85f, 0.85f);
 
     private EnemyController enemy;
     private Rigidbody2D rb;
@@ -84,8 +71,8 @@ public class BossSlam : MonoBehaviour
     private bool overrideVelocity;
     private Vector2 forcedVelocity;
     private float nextTime;
-    private float originalGravity;
-    private bool gravityOverridden;
+
+    private readonly List<Collider2D[]> ignoredPairs = new List<Collider2D[]>();
 
     public bool IsBusy => busy;
 
@@ -143,7 +130,7 @@ public class BossSlam : MonoBehaviour
 
         BossSkillGate.Begin("slam");
 
-        StartCoroutine(SlamRoutine());
+        StartCoroutine(ChargeRoutine());
     }
 
     private bool Interrupted()
@@ -151,307 +138,29 @@ public class BossSlam : MonoBehaviour
         return enemy == null || enemy.IsDead || enemy.IsStaggered || enemy.IsTargetDead;
     }
 
-    private void SetGravity(bool off)
-    {
-        if (rb == null)
-            return;
-
-        if (off && !gravityOverridden)
-        {
-            originalGravity = rb.gravityScale;
-            rb.gravityScale = 0f;
-            gravityOverridden = true;
-        }
-        else if (!off && gravityOverridden)
-        {
-            rb.gravityScale = originalGravity;
-            gravityOverridden = false;
-        }
-    }
-
-    private IEnumerator SlamRoutine()
-    {
-        busy = true;
-
-        int jumps = boss != null && boss.InPhase2 ? 2 : 1;
-
-        for (int i = 0; i < jumps; i++)
-        {
-            bool ok = true;
-
-            yield return SingleSlam(i == 0, r => ok = r);
-
-            if (!ok)
-                break;
-        }
-
-        overrideVelocity = false;
-        SetGravity(false);
-        busy = false;
-
-        BossSkillGate.End("slam");
-
-        bool p2 = boss != null && boss.InPhase2;
-
-        nextTime = Time.time + (p2 ? cooldownPhase2 : cooldown);
-    }
-
-    // Hedefe doğru yatay hız (ani tepkili takip).
-    private float TrackVelocity(float targetX)
-    {
-        return Mathf.Clamp((targetX - rb.position.x) * 12f, -16f, 16f);
-    }
-
-    private void Abort(GameObject zone)
-    {
-        if (zone != null)
-            Destroy(zone);
-
-        overrideVelocity = false;
-        SetGravity(false);
-    }
-
-    private IEnumerator SingleSlam(bool first, System.Action<bool> done)
-    {
-        Transform target = enemy.target;
-        Collider2D tcol = target.GetComponent<Collider2D>();
-
-        // Zemin = BOSS'un bastığı zemin (oyuncu havadaysa bile alan yerde olur).
-        float groundY =
-            bodyCol != null ? bodyCol.bounds.min.y : transform.position.y;
-
-        float feetOffset =
-            bodyCol != null
-                ? transform.position.y - bodyCol.bounds.min.y
-                : 1f;
-
-        float lockedX = target.position.x;
-
-        float windupTime = first ? windup : windup * 0.4f;
-        float hang = first ? hangTime : hangTime * 0.6f;
-
-        // Alan, boss'un havadayken yetişebileceği menzille sınırlı.
-        float startX = rb.position.x;
-
-        zoneRadius = ComputeRadius(target, riseTime + hang);
-        // Boss yatayda hareket etmez (dikey yükselir); alan boss'a göre sınırlı.
-        float reach = maxDistance + 1f;
-
-        // Karar çömelmenin ilk %45'inde verilir; sonra alan sabit.
-        float lockAt = first ? windupTime * 0.45f : 0f;
-
-        bool locked = false;
-
-        float hangX = rb.position.x;
-
-        lockedX = Mathf.Clamp(target.position.x, startX - reach, startX + reach);
-
-        GameObject zone = MakeZone(groundY);
-
-        enemy.PlayAlertFlash();
-
-        if (first)
-            CombatCallout.PopupAbove(enemy, "ALANDAN ÇIK!", new Color(1f, 0.3f, 0.2f), 1.3f);
-
-        // ---------- 1) UYARI (çömelme) ----------
-        float t = 0f;
-
-        while (t < windupTime)
-        {
-            if (Interrupted())
-            {
-                Abort(zone);
-                done(false);
-                yield break;
-            }
-
-            enemy.StartAttackRecovery(0.5f);
-
-            overrideVelocity = true;
-            forcedVelocity = new Vector2(0f, rb.linearVelocity.y);
-
-            bool tracking = t < lockAt;
-
-            if (tracking)
-                lockedX = Mathf.Clamp(target.position.x, startX - reach, startX + reach);
-
-            UpdateZone(zone, lockedX, groundY, 0.2f + 0.2f * (t / Mathf.Max(0.01f, windupTime)), !tracking);
-
-            t += Time.deltaTime;
-
-            yield return null;
-        }
-
-        // ---------- KARAR: havaya çıkarken alan ve iniş noktası KİLİTLENİR ----------
-        locked = true;
-
-        {
-            hangX = startX;
-        }
-
-        // ---------- 2) YÜKSEL ----------
-        float h = RiseClearance(riseHeight);
-
-        SetGravity(true);
-
-        t = 0f;
-
-        while (t < riseTime)
-        {
-            if (Interrupted())
-            {
-                Abort(zone);
-                done(false);
-                yield break;
-            }
-
-            enemy.StartAttackRecovery(0.5f);
-
-            overrideVelocity = true;
-            forcedVelocity =
-                new Vector2(
-                    Mathf.Clamp((hangX - rb.position.x) * 6f, -moveSpeed * 1.4f, moveSpeed * 1.4f),
-                    h / riseTime
-                );
-
-            UpdateZone(zone, lockedX, groundY, 0.4f + 0.2f * (t / riseTime), true);
-
-            t += Time.deltaTime;
-
-            yield return null;
-        }
-
-        // ---------- 3) ASILI (takip → kilit) ----------
-        t = 0f;
-
-        while (t < hang)
-        {
-            if (Interrupted())
-            {
-                Abort(zone);
-                done(false);
-                yield break;
-            }
-
-            enemy.StartAttackRecovery(0.5f);
-
-            overrideVelocity = true;
-            float dxv = hangX - rb.position.x;
-
-            forcedVelocity =
-                new Vector2(
-                    Mathf.Clamp(dxv * 6f, -moveSpeed * 1.4f, moveSpeed * 1.4f),
-                    0f
-                );
-
-            UpdateZone(zone, lockedX, groundY, 0.4f + 0.6f * (t / hang), locked);
-
-            t += Time.deltaTime;
-
-            yield return null;
-        }
-
-        // ---------- 4) DÜŞÜŞ ----------
-        float fall = 0f;
-
-        while (fall < 1.2f)
-        {
-            if (enemy == null || enemy.IsDead)
-            {
-                Abort(zone);
-                done(false);
-                yield break;
-            }
-
-            overrideVelocity = true;
-            Vector2 to =
-                new Vector2(lockedX, groundY + feetOffset) - rb.position;
-
-            forcedVelocity = to.normalized * plungeSpeed;
-
-            fall += Time.deltaTime;
-
-            float feet = transform.position.y - feetOffset;
-
-            if (feet <= groundY + 0.15f)
-                break;
-
-            yield return null;
-        }
-
-        // ---------- 5) İNİŞ ----------
-        rb.linearVelocity = Vector2.zero;
-        overrideVelocity = true;
-        forcedVelocity = Vector2.zero;
-
-        SetGravity(false);
-
-        Impact(lockedX, groundY);
-
-        FlashZone(zone, lockedX, groundY);
-
-        // ---------- 6) AÇIK ----------
-        float e = 0f;
-
-        while (e < exhaustTime)
-        {
-            if (enemy == null || enemy.IsDead || enemy.IsStaggered)
-                break;
-
-            enemy.StartAttackRecovery(0.5f);
-
-            overrideVelocity = true;
-            forcedVelocity = new Vector2(0f, rb.linearVelocity.y);
-
-            e += Time.deltaTime;
-
-            yield return null;
-        }
-
-        overrideVelocity = false;
-
-        enemy.StartAttackRecovery(1.2f);
-
-        done(true);
-    }
-
-    private float ComputeRadius(Transform target, float airTime)
-    {
-        if (!radiusFromDash || target == null)
-            return radius;
-
-        PlayerController p = target.GetComponent<PlayerController>();
-
-        if (p == null || p.dashDistance <= 0.5f)
-            return radius;
-
-        // Kilitten çarpmaya kadar süre içinde: bir dash + yürüyüş (verimi ~%50)
-        // + süre izin veriyorsa ikinci dash. Alan, bunların %90'ı kadar:
-        // kaçış 'ucu ucuna' olur.
-        float dashCycle = Mathf.Max(0.05f, p.dashTime + p.dashCooldown);
-        int dashes = 1 + Mathf.FloorToInt(airTime / dashCycle);
-
-        float reachable = p.dashDistance * dashes + p.moveSpeed * 0.5f * airTime;
-
-        return Mathf.Clamp(reachable * escapeFactor, 4f, maxZoneRadius);
-    }
-
-    // Tavan varsa yükselme yüksekliğini kıs.
-    private float RiseClearance(float wanted)
+    // Yönde ilerlenebilecek mesafe: duvara çarpmadan ve ZEMİN BİTMEDEN (uçuruma düşmeden).
+    private float ClearDistance(float dir, float wanted)
     {
         if (bodyCol == null)
             return wanted;
 
-        Bounds b = bodyCol.bounds;
-
-        RaycastHit2D[] hits =
-            Physics2D.RaycastAll(
-                new Vector2(b.center.x, b.max.y),
-                Vector2.up,
-                wanted + 0.5f
-            );
+        Bounds bb = bodyCol.bounds;
 
         float best = wanted;
+
+        // Dövüş alanı sınırı
+        if (boss != null && boss.HasArena)
+        {
+            float room = dir > 0f
+                ? boss.ArenaMaxX - bb.center.x
+                : bb.center.x - boss.ArenaMinX;
+
+            best = Mathf.Min(best, Mathf.Max(0f, room));
+        }
+
+        // Duvar
+        RaycastHit2D[] hits =
+            Physics2D.RaycastAll(bb.center, new Vector2(dir, 0f), wanted + bb.extents.x + 0.3f);
 
         for (int i = 0; i < hits.Length; i++)
         {
@@ -466,57 +175,412 @@ public class BossSlam : MonoBehaviour
             if (c.GetComponentInParent<PlayerController>() != null)
                 continue;
 
-            best = Mathf.Min(best, Mathf.Max(1.5f, hits[i].distance - 0.5f));
+            best = Mathf.Min(best, Mathf.Max(0f, hits[i].distance - bb.extents.x - 0.3f));
+        }
+
+        // Zemin: 1 birimlik adımlarla ileriye bak, zemin biterse orada dur.
+        float footY = bb.min.y + 0.2f;
+
+        for (float d = 1f; d <= best; d += 1f)
+        {
+            Vector2 p = new Vector2(bb.center.x + dir * (d + bb.extents.x), footY);
+
+            RaycastHit2D[] g = Physics2D.RaycastAll(p, Vector2.down, 2.5f);
+
+            bool ground = false;
+
+            for (int i = 0; i < g.Length; i++)
+            {
+                Collider2D c = g[i].collider;
+
+                if (c == null || c.isTrigger)
+                    continue;
+
+                if (c.transform.IsChildOf(transform) || c.GetComponentInParent<EnemyController>() != null)
+                    continue;
+
+                if (c.GetComponentInParent<PlayerController>() != null)
+                    continue;
+
+                // Boss'un bastığı seviyede olmalı (altta bir kat varsa uçurumdur).
+                if (g[i].point.y < bb.min.y - 0.7f)
+                    continue;
+
+                ground = true;
+                break;
+            }
+
+            if (!ground)
+            {
+                best = Mathf.Max(0f, d - 1.5f);
+                break;
+            }
         }
 
         return best;
     }
 
-    private void Impact(float centerX, float groundY)
+    private IEnumerator ChargeRoutine()
+    {
+        busy = true;
+
+        int runs = boss != null && boss.InPhase2 ? 2 : 1;
+
+        for (int i = 0; i < runs; i++)
+        {
+            bool ok = true;
+
+            yield return SingleCharge(i == 0, i == runs - 1, r => ok = r);
+
+            if (!ok)
+                break;
+        }
+
+        Finish();
+
+        bool p2 = boss != null && boss.InPhase2;
+
+        nextTime = Time.time + (p2 ? cooldownPhase2 : cooldown);
+    }
+
+    private void Finish()
+    {
+        overrideVelocity = false;
+        RestoreCollisions();
+        busy = false;
+
+        BossSkillGate.End("slam");
+    }
+
+    // Oyuncunun içinden geçebilmek için boss ↔ oyuncu çarpışmasını kapat.
+    private void IgnorePlayerCollisions(PlayerController player)
+    {
+        RestoreCollisions();
+
+        if (player == null)
+            return;
+
+        Collider2D[] pc = player.GetComponentsInChildren<Collider2D>();
+        Collider2D[] bc = GetComponentsInChildren<Collider2D>();
+
+        for (int i = 0; i < pc.Length; i++)
+        {
+            for (int j = 0; j < bc.Length; j++)
+            {
+                if (pc[i] == null || bc[j] == null)
+                    continue;
+
+                Physics2D.IgnoreCollision(pc[i], bc[j], true);
+
+                ignoredPairs.Add(new[] { pc[i], bc[j] });
+            }
+        }
+    }
+
+    private void RestoreCollisions()
+    {
+        for (int i = 0; i < ignoredPairs.Count; i++)
+        {
+            Collider2D a = ignoredPairs[i][0];
+            Collider2D b = ignoredPairs[i][1];
+
+            if (a != null && b != null)
+                Physics2D.IgnoreCollision(a, b, false);
+        }
+
+        ignoredPairs.Clear();
+    }
+
+    private IEnumerator SingleCharge(bool first, bool last, System.Action<bool> done)
+    {
+        Transform target = enemy.target;
+        PlayerController player = target.GetComponent<PlayerController>();
+
+        float groundY = bodyCol != null ? bodyCol.bounds.min.y : transform.position.y;
+
+        GameObject lane = MakeLane(groundY);
+
+        enemy.PlayAlertFlash();
+
+        float dir;
+
+        // ---------- 0) UZAĞA KOŞ (ilk koşuda): oyuncudan uzaklaş, arkaya geç ----------
+        if (first)
+        {
+            float away = Mathf.Sign(rb.position.x - target.position.x);
+
+            if (away == 0f)
+                away = -enemy.FacingDirection;
+
+            float retreat = ClearDistance(away, retreatDistance);
+
+            float fromX = rb.position.x + away * retreat;
+
+            IgnorePlayerCollisions(player);
+
+            // Normal koşu hızında geri çekil (hızlı olan sadece asıl koşu).
+            float sprintSpeed = Mathf.Max(3f, enemy.chaseSpeed * retreatSpeedMultiplier);
+
+            float maxSprint = retreat / sprintSpeed + 1f;
+
+            float s = 0f;
+
+            while ((fromX - rb.position.x) * away > 0.3f && s < maxSprint)
+            {
+                if (Interrupted())
+                {
+                    Abort(lane);
+                    done(false);
+                    yield break;
+                }
+
+                enemy.StartAttackRecovery(0.5f);
+
+                overrideVelocity = true;
+                forcedVelocity = new Vector2(away * sprintSpeed, 0f);
+
+                s += Time.deltaTime;
+
+                yield return null;
+            }
+
+            RestoreCollisions();
+
+            dir = -away;
+        }
+        else
+        {
+            dir = Mathf.Sign(target.position.x - rb.position.x);
+
+            if (dir == 0f)
+                dir = enemy.FacingDirection;
+        }
+
+        // Dur, oyuncuya dön.
+        rb.linearVelocity = Vector2.zero;
+        forcedVelocity = Vector2.zero;
+        overrideVelocity = true;
+
+        enemy.RetargetFacing();
+
+        if (first)
+            CombatCallout.PopupAbove(enemy, "ZIPLA!", new Color(1f, 0.35f, 0.2f), 1.0f);
+
+        // ---------- 1) UYARI: kısa. Şerit oyuncuyu izler, sonra KİLİTLENİR ----------
+        float windupTime = first ? windup : windup * 0.7f;
+        float lockAt = windupTime * trackFraction;
+
+        float endX = rb.position.x;
+
+        float t = 0f;
+
+        while (t < windupTime)
+        {
+            if (Interrupted())
+            {
+                Abort(lane);
+                done(false);
+                yield break;
+            }
+
+            enemy.StartAttackRecovery(0.5f);
+
+            overrideVelocity = true;
+            forcedVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            float startX = rb.position.x;
+
+            bool tracking = t < lockAt;
+
+            if (tracking)
+            {
+                float d = Mathf.Sign(target.position.x - startX);
+
+                if (d != 0f)
+                    dir = d;
+
+                float want = Mathf.Abs(target.position.x - startX) + overshoot;
+
+                endX = startX + dir * ClearDistance(dir, want);
+
+                enemy.RetargetFacing();
+            }
+
+            float progress = t / Mathf.Max(0.01f, windupTime);
+
+            UpdateLane(lane, startX, endX, groundY, progress, !tracking);
+
+            t += Time.deltaTime;
+
+            yield return null;
+        }
+
+        // ---------- 2) KOŞU ----------
+        IgnorePlayerCollisions(player);
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(shake * 0.5f);
+
+        bool hit = false;
+        bool cleared = false;
+
+        float halfW = (bodyCol != null ? bodyCol.bounds.extents.x : 0.8f) + hitPadding;
+
+        float prevX = rb.position.x;
+
+        float maxRun = Mathf.Abs(endX - rb.position.x) / Mathf.Max(1f, dashSpeed) + 0.5f;
+
+        float run = 0f;
+
+        while (run < maxRun)
+        {
+            if (enemy == null || enemy.IsDead)
+            {
+                Abort(lane);
+                done(false);
+                yield break;
+            }
+
+            enemy.StartAttackRecovery(0.5f);
+
+            overrideVelocity = true;
+            forcedVelocity = new Vector2(dir * dashSpeed, 0f);
+
+            UpdateLane(lane, rb.position.x, endX, groundY, 1f, true);
+
+            float curX = rb.position.x;
+
+            if (player != null && !hit)
+            {
+                // Bu karede boss'un süpürdüğü aralık (hızlı koşuda kare atlamasın).
+                float lo = Mathf.Min(prevX, curX) - halfW;
+                float hi = Mathf.Max(prevX, curX) + halfW;
+
+                float px = player.transform.position.x;
+
+                if (px >= lo && px <= hi)
+                {
+                    Collider2D pc = player.GetComponent<Collider2D>();
+
+                    float feet = pc != null ? pc.bounds.min.y : player.transform.position.y;
+
+                    if (feet >= groundY + jumpClearance)
+                    {
+                        cleared = true; // üstünden atladı
+                    }
+                    else if (player.hitInvincibilityTimer <= 0f)
+                    {
+                        hit = true;
+
+                        DealHit(player, dir);
+                    }
+                }
+            }
+
+            prevX = curX;
+
+            run += Time.deltaTime;
+
+            if ((curX - endX) * dir >= 0f)
+                break;
+
+            yield return null;
+        }
+
+        // ---------- 3) DUR ----------
+        rb.linearVelocity = Vector2.zero;
+        overrideVelocity = true;
+        forcedVelocity = Vector2.zero;
+
+        RestoreCollisions();
+
+        if (lane != null)
+            Destroy(lane);
+
+        if (cleared && !hit)
+        {
+            UnblockableCounter counter = GetComponent<UnblockableCounter>();
+
+            if (counter != null)
+                counter.OpenJumpWindow();
+        }
+
+        if (last)
+        {
+            float e = 0f;
+
+            while (e < exhaustTime)
+            {
+                if (enemy == null || enemy.IsDead || enemy.IsStaggered)
+                    break;
+
+                enemy.StartAttackRecovery(0.5f);
+
+                overrideVelocity = true;
+                forcedVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+                e += Time.deltaTime;
+
+                yield return null;
+            }
+
+            overrideVelocity = false;
+
+            enemy.StartAttackRecovery(1.0f);
+        }
+        else
+        {
+            // Gidiş-dönüş arası çok kısa nefes: boss döner.
+            float e = 0f;
+
+            while (e < 0.12f)
+            {
+                if (Interrupted())
+                    break;
+
+                enemy.StartAttackRecovery(0.5f);
+
+                overrideVelocity = true;
+                forcedVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+                e += Time.deltaTime;
+
+                yield return null;
+            }
+        }
+
+        done(true);
+    }
+
+    private void Abort(GameObject lane)
+    {
+        if (lane != null)
+            Destroy(lane);
+
+        overrideVelocity = false;
+        RestoreCollisions();
+    }
+
+    private void DealHit(PlayerController player, float dir)
     {
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(shake);
 
         HitStop.Request(0.08f, 0.05f);
 
-        if (enemy.target == null)
-            return;
-
-        PlayerController player = enemy.target.GetComponent<PlayerController>();
-
-        if (player == null)
-            return;
-
-        Collider2D col = player.GetComponent<Collider2D>();
-
-        float feet = col != null ? col.bounds.min.y : player.transform.position.y;
-
-        bool inside = Mathf.Abs(player.transform.position.x - centerX) <= zoneRadius;
-
-        if (!inside)
-            return;
-
-        // Havadayken de vurur: kurtulmanın tek yolu ALANDAN ÇIKMAK (yatay).
-
-        // Dash i-frame'i ve zıplama KURTARMAZ: alandan dışarı çıkmak gerekir.
-        if (player.hitInvincibilityTimer > 0f)
-            return;
-
         PlayerDamageReceiver receiver = player.GetComponent<PlayerDamageReceiver>();
 
         if (receiver == null)
             return;
 
-        Vector2 dir =
-            new Vector2(Mathf.Sign(player.transform.position.x - centerX), 0f);
-
         int damage = Mathf.Max(1, Mathf.RoundToInt(enemy.unblockableDamage * damageMultiplier));
 
+        // Engellenemez: parry/block işe yaramaz, dash dokunulmazlığı da saymaz.
         receiver.TakeDamage(
             damage,
-            dir,
-            4f,
-            2f,
+            new Vector2(dir, 0f),
+            6f,
+            3f,
             0.12f,
             40f,
             enemy,
@@ -542,10 +606,10 @@ public class BossSlam : MonoBehaviour
         {
             float dist = player.rb.position.x - x0;
 
-            if (Mathf.Abs(dist) > 2.5f)
+            if (Mathf.Abs(dist) > 3f)
             {
                 player.rb.position =
-                    new Vector2(x0 + Mathf.Sign(dist) * 2.5f, player.rb.position.y);
+                    new Vector2(x0 + Mathf.Sign(dist) * 3f, player.rb.position.y);
 
                 player.rb.linearVelocity =
                     new Vector2(0f, player.rb.linearVelocity.y);
@@ -557,9 +621,9 @@ public class BossSlam : MonoBehaviour
         }
     }
 
-    // ---------------- Uyarı alanı ----------------
+    // ---------------- Uyarı şeridi ----------------
 
-    private GameObject MakeZone(float groundY)
+    private GameObject MakeLane(float groundY)
     {
         if (whiteSprite == null)
         {
@@ -570,11 +634,11 @@ public class BossSlam : MonoBehaviour
             whiteSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
         }
 
-        GameObject go = new GameObject("BossSlamZone");
+        GameObject go = new GameObject("BossChargeLane");
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = whiteSprite;
-        sr.color = zoneColor;
+        sr.color = laneColor;
 
         Shader shader = Shader.Find("Sprites/Default");
 
@@ -589,89 +653,72 @@ public class BossSlam : MonoBehaviour
             sr.sortingOrder = bossSr.sortingOrder - 1;
         }
 
+        // Gövde yüksekliğinde soluk bant: şeridin "tehlikeli" olduğunu gösterir.
+        GameObject band = new GameObject("Band");
+        band.transform.SetParent(go.transform, false);
+
+        SpriteRenderer bsr = band.AddComponent<SpriteRenderer>();
+        bsr.sprite = whiteSprite;
+        bsr.sharedMaterial = sr.sharedMaterial;
+        bsr.sortingLayerID = sr.sortingLayerID;
+        bsr.sortingOrder = sr.sortingOrder - 1;
+
         go.transform.position = new Vector3(transform.position.x, groundY, 0f);
-
-        // Alanın iki kenarına dikey direkler: okunurluk.
-        for (int i = 0; i < 2; i++)
-        {
-            GameObject post = new GameObject(i == 0 ? "PostL" : "PostR");
-            post.transform.SetParent(go.transform, false);
-
-            SpriteRenderer psr = post.AddComponent<SpriteRenderer>();
-            psr.sprite = whiteSprite;
-            psr.sharedMaterial = sr.sharedMaterial;
-            psr.sortingLayerID = sr.sortingLayerID;
-            psr.sortingOrder = sr.sortingOrder + 1;
-        }
 
         return go;
     }
 
-    private void UpdateZone(GameObject zone, float x, float groundY, float progress, bool locked)
+    private void UpdateLane(GameObject lane, float fromX, float toX, float groundY, float progress, bool locked)
     {
-        if (zone == null)
+        if (lane == null)
             return;
 
-        zone.transform.position = new Vector3(x, groundY + 0.08f, 0f);
-        zone.transform.localScale = new Vector3(zoneRadius * 2f, 0.22f, 1f);
+        float len = Mathf.Max(0.1f, Mathf.Abs(toX - fromX));
+        float cx = (fromX + toX) * 0.5f;
 
-        SpriteRenderer sr = zone.GetComponent<SpriteRenderer>();
+        const float FloorH = 0.3f;
+        const float BandH = 1.8f;
 
-        PlacePosts(zone, locked ? lockedColor : new Color(1f, 0.25f, 0.15f, Mathf.Lerp(0.5f, 1f, progress)));
+        lane.transform.position = new Vector3(cx, groundY + FloorH * 0.5f, 0f);
+        lane.transform.localScale = new Vector3(len, FloorH, 1f);
+
+        SpriteRenderer sr = lane.GetComponent<SpriteRenderer>();
+
+        Transform band = lane.transform.GetChild(0);
+
+        band.localScale = new Vector3(1f, BandH / FloorH, 1f);
+        band.localPosition = new Vector3(0f, (BandH * 0.5f - FloorH * 0.5f) / FloorH, 0f);
+
+        SpriteRenderer bsr = band.GetComponent<SpriteRenderer>();
 
         if (locked)
         {
             sr.color = lockedColor;
+
+            Color bc = lockedColor;
+            bc.a = 0.22f;
+            bsr.color = bc;
+
             return;
         }
 
         float pulse = 0.65f + 0.35f * Mathf.Sin(Time.time * (10f + 14f * progress));
 
-        Color c = zoneColor;
-        c.a = Mathf.Lerp(0.25f, 0.8f, progress) * pulse;
+        Color c = laneColor;
+        c.a = Mathf.Lerp(0.3f, 0.85f, progress) * pulse;
 
         sr.color = c;
-    }
 
-    // Direkler: dünya boyutu 0.14 x 1.8; ebeveyn ölçeğini telafi eder.
-    private void PlacePosts(GameObject zone, Color color)
-    {
-        const float PostW = 0.14f;
-        const float PostH = 1.8f;
-
-        Vector3 ps = zone.transform.localScale;
-
-        for (int i = 0; i < 2; i++)
-        {
-            Transform post = zone.transform.GetChild(i);
-
-            post.localScale = new Vector3(PostW / ps.x, PostH / ps.y, 1f);
-
-            post.localPosition =
-                new Vector3(i == 0 ? -0.5f : 0.5f, (PostH * 0.5f - ps.y * 0.5f) / ps.y, 0f);
-
-            post.GetComponent<SpriteRenderer>().color = color;
-        }
-    }
-
-    private void FlashZone(GameObject zone, float x, float groundY)
-    {
-        if (zone == null)
-            return;
-
-        zone.transform.position = new Vector3(x, groundY + 0.3f, 0f);
-        zone.transform.localScale = new Vector3(zoneRadius * 2.3f, 0.7f, 1f);
-        zone.GetComponent<SpriteRenderer>().color = Color.white;
-
-        PlacePosts(zone, Color.white);
-
-        Destroy(zone, 0.12f);
+        Color b = laneColor;
+        b.a = 0.12f * pulse;
+        bsr.color = b;
     }
 
     private void OnDisable()
     {
         overrideVelocity = false;
-        SetGravity(false);
+        RestoreCollisions();
+
         if (busy)
             BossSkillGate.End("slam");
 
