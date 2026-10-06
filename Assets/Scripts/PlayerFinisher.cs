@@ -14,6 +14,15 @@ public class PlayerFinisher : MonoBehaviour
     [Tooltip("Açıksa infaz düşmanın durumundan bağımsız HER ZAMAN vurur (saldırıda, sersemlemiş, hasarlı...). Kapalıysa açık anı tutturmak gerekir.")]
     [SerializeField] private bool alwaysHit = true;
 
+    [Header("Çizgi alanı (basılı tuttukça büyür)")]
+    [Tooltip("Hemen bırakınca vurulan çizgi uzunluğu.")]
+    [SerializeField] private float lineMinLength = 5f;
+
+    [Tooltip("En uzun basılı tutuşta çizgi uzunluğu.")]
+    [SerializeField] private float lineMaxLength = 18f;
+
+    [SerializeField] private Color lineColor = new Color(1f, 0.82f, 0.3f, 1f);
+
     [Header("Input")]
     [SerializeField] private KeyCode executeKey = KeyCode.E;
 
@@ -52,6 +61,91 @@ public class PlayerFinisher : MonoBehaviour
 
     /// <summary>HUD için: şu an odakta harcanacak parça sayısı (odakta değilse 0).</summary>
     public static int ChargingSegments { get; private set; }
+
+    /// <summary>Son infazın çizgi uzunluğu (EnemyExecuteState okur).</summary>
+    public static float LastLineRange { get; private set; } = 18f;
+
+    // Basılı tutma süresine göre çizgi uzunluğu (3 parçaya ulaşma süresinde tam).
+    private float LineLengthFor(float hold)
+    {
+        float full = minHold + (Mathf.Max(1, ExecuteMeter.Segments) - 1) * segHold;
+        float t = Mathf.Clamp01(full > 0f ? hold / full : 1f);
+
+        return Mathf.Lerp(lineMinLength, lineMaxLength, t);
+    }
+
+    // ---- görsel: büyüyen çizgi alanı ----
+    private Transform lineRoot;
+    private SpriteRenderer lineBody;
+    private SpriteRenderer lineEdge;
+    private static Sprite lineSprite;
+
+    private void UpdateLineVfx(float dir, float length)
+    {
+        if (lineRoot == null)
+        {
+            if (lineSprite == null)
+            {
+                Texture2D tex = new Texture2D(1, 1);
+                tex.SetPixel(0, 0, Color.white);
+                tex.Apply();
+
+                lineSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0f, 0.5f), 1f);
+            }
+
+            GameObject go = new GameObject("ExecuteLineVfx");
+            go.hideFlags = HideFlags.HideInHierarchy;
+            lineRoot = go.transform;
+
+            Material mat = null;
+            Shader sh = Shader.Find("Sprites/Default");
+
+            if (sh != null)
+                mat = new Material(sh);
+
+            lineBody = NewLinePart("Body", mat, 90);
+            lineEdge = NewLinePart("Edge", mat, 91);
+        }
+
+        float h = EnemyExecuteState.LineHeight * 2f;
+        float pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 14f);
+
+        Vector3 origin = transform.position;
+
+        lineRoot.position = origin;
+        lineRoot.localScale = new Vector3(dir < 0f ? -1f : 1f, 1f, 1f);
+
+        lineBody.transform.localScale = new Vector3(length, h, 1f);
+        lineBody.color = new Color(lineColor.r, lineColor.g, lineColor.b, 0.14f * pulse);
+
+        lineEdge.transform.localPosition = new Vector3(length - 0.08f, 0f, 0f);
+        lineEdge.transform.localScale = new Vector3(0.08f, h, 1f);
+        lineEdge.color = new Color(1f, 0.95f, 0.7f, 0.85f);
+    }
+
+    private SpriteRenderer NewLinePart(string name, Material mat, int order)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(lineRoot, false);
+
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = lineSprite;
+        sr.sortingOrder = order;
+
+        if (mat != null)
+            sr.sharedMaterial = mat;
+
+        return sr;
+    }
+
+    private void HideLineVfx()
+    {
+        if (lineRoot != null)
+        {
+            Destroy(lineRoot.gameObject);
+            lineRoot = null;
+        }
+    }
 
     // Bu basılı tutma süresinde harcanacak parça (mevcut parçayla sınırlı).
     private int SegsFor(float hold)
@@ -193,6 +287,13 @@ public class PlayerFinisher : MonoBehaviour
 
         ChargingSegments = holdTime >= minHold ? SegsFor(holdTime) : 1;
 
+        float lineDir = Mathf.Sign(chargeTarget.transform.position.x - transform.position.x);
+
+        if (lineDir == 0f)
+            lineDir = player.facingDir;
+
+        UpdateLineVfx(lineDir, LineLengthFor(holdTime));
+
         ExecuteCinematic.SetFocusProgress(prog);
 
         bool held = Input.GetKey(executeKey);
@@ -228,6 +329,10 @@ public class PlayerFinisher : MonoBehaviour
     {
         EnemyController target = chargeTarget;
         int segs = SegsFor(holdTime);
+
+        LastLineRange = LineLengthFor(holdTime);
+
+        HideLineVfx();
 
         charging = false;
         chargeTarget = null;
@@ -292,6 +397,8 @@ public class PlayerFinisher : MonoBehaviour
         chargeTarget = null;
         ChargingSegments = 0;
 
+        HideLineVfx();
+
         ExecuteCinematic.CancelFocus();
 
         RestoreFromCharge();
@@ -314,6 +421,8 @@ public class PlayerFinisher : MonoBehaviour
 
     private void OnDisable()
     {
+        HideLineVfx();
+
         if (charging)
             CancelCharge();
     }

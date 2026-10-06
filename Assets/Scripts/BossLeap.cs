@@ -18,8 +18,8 @@ public class BossLeap : MonoBehaviour
 {
     [Header("Zamanlama")]
     public float firstDelay = 7f;
-    public float cooldown = 11f;
-    public float cooldownPhase2 = 8f;
+    public float cooldown = 12f;
+    public float cooldownPhase2 = 9f;
 
     [Tooltip("Odaklanma süresi (sn). İlk kısmında alan oyuncuyu izler, sonra kilitlenir.")]
     public float focusTime = 1.0f;

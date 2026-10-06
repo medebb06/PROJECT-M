@@ -21,8 +21,7 @@ public class EnemyExecuteState : IEnemyState
     private const float MaxPassTime = 0.6f;
 
     // Düz zeminde: karşıdaki bu mesafedeki, aynı hizadaki TÜM düşmanlar da vurulur.
-    private const float LineRange = 18f;
-    private const float LineHeight = 1.6f;
+    public const float LineHeight = 1.6f;
 
     private readonly List<EnemyController> extras = new List<EnemyController>();
     private readonly List<Collider2D> extraColliders = new List<Collider2D>();
@@ -39,8 +38,8 @@ public class EnemyExecuteState : IEnemyState
     {
         this.enemy = enemy;
 
-        // Execute() çağrısında düşman henüz sersemleme durumundaysa tam hasar.
-        openOnly = enemy != null && !enemy.IsStaggered;
+        // Düşman açık anda / sersemlemişse tam hasar; değilse (kör vuruş) ×0.75.
+        openOnly = enemy != null && !enemy.IsOpen;
     }
 
     public void Enter()
@@ -133,7 +132,7 @@ public class EnemyExecuteState : IEnemyState
                 float dx = other.transform.position.x - player.transform.position.x;
                 float dy = other.transform.position.y - player.transform.position.y;
 
-                if (Mathf.Sign(dx) != direction || Mathf.Abs(dx) > LineRange || Mathf.Abs(dy) > LineHeight)
+                if (Mathf.Sign(dx) != direction || Mathf.Abs(dx) > PlayerFinisher.LastLineRange || Mathf.Abs(dy) > LineHeight)
                     continue;
 
                 extras.Add(other);
@@ -255,9 +254,8 @@ public class EnemyExecuteState : IEnemyState
             if (boss != null)
             {
                 // Boss: infaz tek atmaz, canın bir yüzdesini alır (faz atlatmaz).
-                float pct = boss.ExecutePercentFor(segs) * (openOnly ? OpenOnlyDamageMultiplier : 1f);
-
-                damage = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * pct));
+                // Cana doğrudan hasar + denge itmesi; canı azsa bitirici vuruş.
+                damage = boss.ExecuteHealthDamage(segs, openOnly ? OpenOnlyDamageMultiplier : 1f);
             }
             else
             {
@@ -275,7 +273,7 @@ public class EnemyExecuteState : IEnemyState
             );
         }
 
-        if (health != null)
+        if (health != null && damage > 0)
             health.TakeDamage(damage);
 
         // Hattaki diğer düşmanlar aynı güçle vurulur.
@@ -303,6 +301,10 @@ public class EnemyExecuteState : IEnemyState
         {
             return;
         }
+
+        // Denge kırılınca başka bir state'e geçildiyse (sersemleme vb.) ezme.
+        if (enemy.CurrentState != this)
+            return;
 
         enemy.ChangeState(
             new EnemyChaseState(enemy)
@@ -352,7 +354,7 @@ public class EnemyExecuteState : IEnemyState
         int dmg;
 
         if (boss != null)
-            dmg = Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * boss.ExecutePercentFor(segs)));
+            dmg = boss.ExecuteHealthDamage(segs, 1f);
         else
             dmg = segs >= 2
                 ? Mathf.Max(1, h.CurrentHealth)
@@ -365,6 +367,7 @@ public class EnemyExecuteState : IEnemyState
             1.1f
         );
 
-        h.TakeDamage(dmg);
+        if (dmg > 0)
+            h.TakeDamage(dmg);
     }
 }

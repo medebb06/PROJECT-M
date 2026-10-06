@@ -17,8 +17,8 @@ public class BossNova : MonoBehaviour
 {
     [Header("Zamanlama")]
     public float firstDelay = 8f;
-    public float cooldown = 16f;
-    public float cooldownPhase2 = 11f;
+    public float cooldown = 18f;
+    public float cooldownPhase2 = 13f;
 
     [Tooltip("Uyarı süresi (sn): zemin şeridi yanıp söner, vuruş sonunda.")]
     public float windup = 1.4f;

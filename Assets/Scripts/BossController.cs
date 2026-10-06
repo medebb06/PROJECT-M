@@ -129,7 +129,45 @@ public class BossController : MonoBehaviour
     public float defaultExecutePercent = 0.28f;
 
     [Tooltip("İnfazda harcanan parçaya göre boss canından alınan oran (1, 2, 3 parça).")]
-    public float[] executePercentBySegments = { 0.10f, 0.20f, 0.35f };
+    public float[] executePercentBySegments = { 0.05f, 0.10f, 0.18f };
+
+    [Tooltip("Parça başına: infazın denge barına ittiği oran (barın tamamına göre).")]
+    public float[] executeBalancePushBySegments = { 0.15f, 0.30f, 0.50f };
+
+    [Tooltip("Parça başına: boss'un can oranı bunun ALTINDAYSA infaz öldürür (bitirici vuruş).")]
+    public float[] executeKillBelowBySegments = { 0.06f, 0.12f, 0.20f };
+
+    /// <summary>
+    /// İnfazın boss'a etkisi: cana doğrudan hasar + denge barına itme.
+    /// Canı eşiğin altındaysa öldürür. Dönen değer: cana uygulanacak hasar.
+    /// </summary>
+    public int ExecuteHealthDamage(int segs, float multiplier)
+    {
+        if (Health == null)
+            return 0;
+
+        int idx = Mathf.Clamp(segs, 1, 3) - 1;
+
+        // Bitirici vuruş: can eşiğin altındaysa ölür.
+        if (executeKillBelowBySegments != null &&
+            idx < executeKillBelowBySegments.Length &&
+            HealthPercent <= executeKillBelowBySegments[idx])
+        {
+            return Mathf.Max(1, Health.CurrentHealth);
+        }
+
+        // Denge barına it (kırılırsa normal denge kırılma akışı çalışır).
+        if (balance != null && !balance.IsBroken &&
+            executeBalancePushBySegments != null && idx < executeBalancePushBySegments.Length)
+        {
+            int units = Mathf.RoundToInt(balance.MaxBalance * executeBalancePushBySegments[idx] * multiplier);
+
+            if (units > 0)
+                balance.AddBalanceDamage(units, false);
+        }
+
+        return Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * ExecutePercentFor(segs) * multiplier));
+    }
 
     public float ExecutePercentFor(int segs)
     {
