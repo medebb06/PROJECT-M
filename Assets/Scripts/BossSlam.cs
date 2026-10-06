@@ -21,8 +21,8 @@ public class BossSlam : MonoBehaviour
 {
     [Header("Zamanlama")]
     public float firstDelay = 3f;
-    public float cooldown = 7f;
-    public float cooldownPhase2 = 5f;
+    public float cooldown = 9f;
+    public float cooldownPhase2 = 7f;
 
     [Tooltip("İlk uyarı süresi (sn). Şerit bu sürenin ilk kısmında oyuncuyu izler.")]
     public float windup = 0.5f;
@@ -109,6 +109,12 @@ public class BossSlam : MonoBehaviour
         BossNova nova = GetComponent<BossNova>();
 
         if (nova != null && nova.IsBusy)
+            return;
+
+        // Zıplama hazırsa sıra onun: çizgi atağı yol vermeli.
+        BossLeap leap = GetComponent<BossLeap>();
+
+        if (leap != null && leap.IsReady && BossSkillGate.CanStart("leap"))
             return;
 
         BossBrain brain = GetComponent<BossBrain>();

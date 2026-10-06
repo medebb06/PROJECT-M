@@ -7,7 +7,7 @@ using UnityEngine;
 public static class BossSkillGate
 {
     /// <summary>Aynı yeteneğin tekrar kullanılabilmesi için en az süre (sn).</summary>
-    public const float SameSkillGap = 12f;
+    public const float SameSkillGap = 8f;
 
     /// <summary>Herhangi iki özel yetenek arası en az süre (sn).</summary>
     public const float AnySkillGap = 3.5f;

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using UnityEngine;
 
@@ -23,10 +25,44 @@ public static class BossStats
     public static int reflectedHits;
     public static float phase2At = -1f;
 
+    // Oyuncu davranışı (sadece boss'a karşı).
+    public static int parries;
+    public static int dodges;
+    public static readonly int[] executes = new int[4]; // [1..3] = harcanan parça
+
+    private static bool subscribed;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Boot()
     {
         Reset();
+
+        if (!subscribed)
+        {
+            subscribed = true;
+
+            CombatEvents.ParrySucceeded += (enemy, broke) =>
+            {
+                if (IsBoss(enemy))
+                    parries++;
+            };
+
+            CombatEvents.Dodged += (enemy, unblockable) =>
+            {
+                if (IsBoss(enemy))
+                    dodges++;
+            };
+        }
+    }
+
+    private static bool IsBoss(EnemyController e)
+    {
+        return e != null && e.GetComponent<BossController>() != null;
+    }
+
+    public static void RecordExecute(int segs)
+    {
+        executes[Mathf.Clamp(segs, 1, 3)]++;
     }
 
     public static void Reset()
@@ -35,6 +71,9 @@ public static class BossStats
         postureBreaks = 0;
         reflectedHits = 0;
         phase2At = -1f;
+        parries = 0;
+        dodges = 0;
+        Array.Clear(executes, 0, executes.Length);
     }
 
     public static void Record(string skill, int damage, bool lethal)
@@ -68,6 +107,22 @@ public static class BossStats
             "   Yansıtılan ok: " + reflectedHits
         );
 
+        sb.AppendLine(
+            "Parry: " + parries + "   Kusursuz kaçış: " + dodges +
+            "   İnfaz (1/2/3 parça): " + executes[1] + " / " + executes[2] + " / " + executes[3]
+        );
+
+        BossController bc = BossController.Current;
+
+        if (bc != null && bc.Health != null)
+        {
+            sb.AppendLine(
+                "Boss canı (bitişte): %" + Mathf.RoundToInt(bc.HealthPercent * 100f) +
+                "   Denge: %" + Mathf.RoundToInt(bc.BalancePercent * 100f) +
+                (bc.InPhase2 ? "   (faz 2)" : "")
+            );
+        }
+
         if (entries.Count == 0)
             sb.AppendLine("Oyuncu hiç hasar almadı.");
 
@@ -80,5 +135,28 @@ public static class BossStats
         }
 
         Debug.Log(sb.ToString());
+
+        WriteToFile(sb.ToString());
+    }
+
+    // Özeti dosyaya ekle: Assets/Scripts/BossLog.txt (editörde), yoksa persistentDataPath.
+    private static void WriteToFile(string text)
+    {
+        try
+        {
+            string path =
+                Application.isEditor
+                    ? Path.Combine(Application.dataPath, "Scripts", "BossLog.txt")
+                    : Path.Combine(Application.persistentDataPath, "BossLog.txt");
+
+            File.AppendAllText(
+                path,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\n" + text + "\n"
+            );
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("BossLog yazılamadı: " + ex.Message);
+        }
     }
 }

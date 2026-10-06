@@ -148,6 +148,8 @@ public class BossController : MonoBehaviour
 
         int idx = Mathf.Clamp(segs, 1, 3) - 1;
 
+        BossStats.RecordExecute(segs);
+
         // Bitirici vuruş: can eşiğin altındaysa ölür.
         if (executeKillBelowBySegments != null &&
             idx < executeKillBelowBySegments.Length &&

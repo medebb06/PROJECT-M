@@ -17,9 +17,9 @@ using UnityEngine;
 public class BossLeap : MonoBehaviour
 {
     [Header("Zamanlama")]
-    public float firstDelay = 7f;
-    public float cooldown = 12f;
-    public float cooldownPhase2 = 9f;
+    public float firstDelay = 4f;
+    public float cooldown = 6f;
+    public float cooldownPhase2 = 4.5f;
 
     [Tooltip("Odaklanma süresi (sn). İlk kısmında alan oyuncuyu izler, sonra kilitlenir.")]
     public float focusTime = 1.0f;
@@ -40,7 +40,7 @@ public class BossLeap : MonoBehaviour
 
     [Header("Menzil")]
     [Tooltip("Bu mesafeden YAKINSA atlamaz: bu yetenek UZAK mesafe içindir.")]
-    public float minDistance = 8f;
+    public float minDistance = 0f;
     public float maxDistance = 40f;
 
     [Header("Hasar")]
@@ -66,6 +66,9 @@ public class BossLeap : MonoBehaviour
     private readonly List<Collider2D[]> ignoredPairs = new List<Collider2D[]>();
 
     public bool IsBusy => busy;
+
+    /// <summary>Cooldown bitti, atlamaya hazır (BossSlam bu durumda öne geçmesine izin verir).</summary>
+    public bool IsReady => !busy && Time.time >= nextTime;
 
     private static Sprite whiteSprite;
 
