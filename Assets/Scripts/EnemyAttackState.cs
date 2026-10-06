@@ -672,6 +672,10 @@ public class EnemyAttackState : IEnemyState
                     DoAttack();
 
                 resolvingHit = false;
+
+                // Son vuruş parry/block/isabet fark etmez oyuncuyu kaydırarak iter.
+                if (currentHit != null && currentHit.parryKnockback > 0f)
+                    PushPlayerBack(currentHit.parryKnockback);
             }
 
             // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
@@ -850,8 +854,25 @@ public class EnemyAttackState : IEnemyState
 
         PlayerController p = enemy.target.GetComponent<PlayerController>();
 
-        if (p == null || p.rb == null)
+        if (p == null || p.rb == null || p.isDashing)
+        {
+            Debug.Log("ITME IPTAL: oyuncu yok / dash");
             return;
+        }
+
+        // Vuruş boşa gittiyse (oyuncu uzaktaysa) itme yok.
+        if (Mathf.Abs(p.transform.position.x - enemy.transform.position.x) > 6f)
+        {
+            Debug.Log("ITME IPTAL: menzil disi");
+            return;
+        }
+
+        PlayerDefenseController pd = p.GetComponent<PlayerDefenseController>();
+
+        Debug.Log(
+            "ITME BASLADI → block=" + (pd != null && pd.IsBlocking) +
+            " parry=" + (pd != null && pd.IsParrying)
+        );
 
         float dir = Mathf.Sign(p.transform.position.x - enemy.transform.position.x);
 
@@ -868,7 +889,12 @@ public class EnemyAttackState : IEnemyState
         const float Duration = 0.35f;
 
         float t = 0f;
-        p.inputLockTimer = Mathf.Max(p.inputLockTimer, Duration);
+
+        // inputLockTimer sadece inputLocked=true iken geriye sayar; ikisini birlikte aç.
+        p.inputLocked = true;
+        p.inputLockTimer = Mathf.Max(p.inputLockTimer, Duration + 0.15f);
+
+        float startX = p.rb.position.x;
 
         ContactFilter2D filter = new ContactFilter2D();
         filter.useTriggers = false;
@@ -898,9 +924,24 @@ public class EnemyAttackState : IEnemyState
 
             for (int k = 0; k < n; k++)
             {
-                if (hits[k].collider != null && !hits[k].collider.isTrigger)
+                Collider2D c = hits[k].collider;
+
+                // Sadece sabit zemin/duvar durdurur; düşman, kalkan ve oyuncunun
+                // kendi çarpıştırıcıları (block'ta açılan) sayılmaz.
+                if (
+                    c != null &&
+                    !c.isTrigger &&
+                    c.attachedRigidbody != p.rb &&
+                    (c.attachedRigidbody == null ||
+                     c.attachedRigidbody.bodyType == RigidbodyType2D.Static) &&
+                    !c.transform.IsChildOf(p.transform) &&
+                    // Sadece yola DİK duran yüzey (duvar) durdurur; zemine
+                    // değen/gömülü kalkan çarpıştırıcısı (normal yukarı) sayılmaz.
+                    hits[k].normal.x * dir < -0.5f
+                )
                 {
                     step = Mathf.Max(0f, hits[k].distance - 0.02f);
+                    Debug.Log("ITME ENGELI: " + c.name + " normal=" + hits[k].normal);
                     break;
                 }
             }
@@ -909,8 +950,31 @@ public class EnemyAttackState : IEnemyState
             p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
         }
 
-        if (p != null && p.rb != null)
+        // Kayma bittikten sonra kısa süre hızı sıfırda tut (block durumundan
+        // kalan hız / itme artığı haritaya yayılmasın).
+        float hold = 0.15f;
+
+        while (hold > 0f && p != null && p.rb != null)
+        {
+            yield return new WaitForFixedUpdate();
+
+            if (p == null || p.rb == null)
+                yield break;
+
             p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
+            hold -= Time.fixedDeltaTime;
+        }
+
+        if (p != null && p.rb != null)
+        {
+            p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
+
+            Debug.Log(
+                "KESIS SELI ITME → kayma: " +
+                (p.rb.position.x - startX).ToString("F2") +
+                " birim"
+            );
+        }
     }
 
     private void StopMovement()
@@ -1364,10 +1428,6 @@ public class EnemyAttackState : IEnemyState
             enemy.PlayParrySlowMotion(balance.IsBroken);
 
         CombatEvents.RaiseParry(enemy, balance.IsBroken);
-
-        // Parry'lense bile geri iten vuruş (Keşiş Seli'nin son vuruşu).
-        if (currentHit != null && currentHit.parryKnockback > 0f)
-            PushPlayerBack(currentHit.parryKnockback);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()

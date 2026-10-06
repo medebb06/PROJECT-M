@@ -731,15 +731,23 @@ MonoBehaviour:
   hurtState: Hurt
   sweepState: Sweep
   grabState: Grab
+  shootState: Shoot
+  windupStyle: 0
+  maxWindupSlowdown: 3
+  maxWindupSpeedup: 3
+  minHurtTime: 0.25
   holdPoseTime: 0
   sweepHitTime: 0
   grabHitTime: 0
+  shootHitTime: 0
   locomotionBlend: 0
   walkSpeedThreshold: 0.15
   alignHitFrameToDamage: 1
   hurtDuringStagger: 1
   hurtOnDeath: 1
   restartHurtOnNewHit: 1
+  forceLoopLocomotion: 1
+  showDebug: 0
 --- !u!114 &7502996902466412553
 MonoBehaviour:
   m_ObjectHideFlags: 0

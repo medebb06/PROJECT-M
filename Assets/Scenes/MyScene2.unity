@@ -460,6 +460,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Duelist (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 3697985245505729534, guid: 1601fc16a190ab042a1c6487dfc1fad4, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6330493747468593160, guid: 1601fc16a190ab042a1c6487dfc1fad4, type: 3}
       propertyPath: slider
       value: 
@@ -583,7 +587,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 7.7375
+  orthographic size: 7.075
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1244,6 +1248,10 @@ PrefabInstance:
     - target: {fileID: 3597890912437742849, guid: 4b83b857872b9c7408b69678f8d2075a, type: 3}
       propertyPath: m_Name
       value: Archer
+      objectReference: {fileID: 0}
+    - target: {fileID: 3597890912437742849, guid: 4b83b857872b9c7408b69678f8d2075a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6412496031771107592, guid: 4b83b857872b9c7408b69678f8d2075a, type: 3}
       propertyPath: m_AnchorMax.y
@@ -20752,7 +20760,7 @@ MonoBehaviour:
   knockbackClip: {fileID: 0}
   target: {fileID: 0}
   chaseRange: 5
-  enemySprite: {fileID: 0}
+  enemySprite: {fileID: 7859885541070801493, guid: 1601fc16a190ab042a1c6487dfc1fad4, type: 3}
 --- !u!114 &1942622301
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21191,6 +21199,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4155821602142902435, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4290170941337979681, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: enableRecovery
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5722060828941545317, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
