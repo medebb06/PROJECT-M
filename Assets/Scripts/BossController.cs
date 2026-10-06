@@ -128,6 +128,19 @@ public class BossController : MonoBehaviour
     [Tooltip("Diğer boss'larda infaz canın bu oranını alır (faz atlatmaz, öldürmez).")]
     public float defaultExecutePercent = 0.28f;
 
+    [Tooltip("İnfazda harcanan parçaya göre boss canından alınan oran (1, 2, 3 parça).")]
+    public float[] executePercentBySegments = { 0.10f, 0.20f, 0.35f };
+
+    public float ExecutePercentFor(int segs)
+    {
+        if (executePercentBySegments == null || executePercentBySegments.Length == 0)
+            return ExecuteDamagePercent;
+
+        int i = Mathf.Clamp(segs, 1, executePercentBySegments.Length) - 1;
+
+        return executePercentBySegments[i];
+    }
+
     /// <summary>İnfazın boss'a vereceği can oranı (tüm boss'larda yüzde, aşırı güçlü olmasın).</summary>
     public float ExecuteDamagePercent =>
         PercentExecute ? trialExecutePercent : defaultExecutePercent;

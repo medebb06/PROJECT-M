@@ -249,7 +249,7 @@ public class PlayerHud : MonoBehaviour
         ExecuteMeter meter = ExecuteMeter.Instance;
 
         float fill = meter != null ? meter.Fill : 0f;
-        bool full = meter != null && meter.IsFull;
+        bool full = meter != null && meter.FullSegments >= 1;
 
         GUI.color = backColor;
         GUI.DrawTexture(new Rect(x - 1f, y - 1f, barWidth + 2f, executeHeight + 2f), Texture2D.whiteTexture);
@@ -269,7 +269,18 @@ public class PlayerHud : MonoBehaviour
         GUI.color = ec;
         GUI.DrawTexture(new Rect(x, y, barWidth * fill, executeHeight), Texture2D.whiteTexture);
 
-        // Bölme çizgileri (≈ öldürme başına bir bölme).
+        // Odakta harcanacak parçalar yanıp söner (önizleme).
+        int spending = PlayerFinisher.ChargingSegments;
+
+        if (spending > 0 && meter != null)
+        {
+            float from = Mathf.Max(0f, fill - spending / (float)ExecuteMeter.Segments);
+
+            GUI.color = new Color(1f, 1f, 1f, 0.4f + 0.4f * Mathf.Sin(now * 18f));
+            GUI.DrawTexture(new Rect(x + barWidth * from, y, barWidth * (fill - from), executeHeight), Texture2D.whiteTexture);
+        }
+
+        // Bölme çizgileri (her parça bir infaz hakkı).
         GUI.color = new Color(0f, 0f, 0f, 0.7f);
 
         for (int i = 1; i < 3; i++)
@@ -286,7 +297,7 @@ public class PlayerHud : MonoBehaviour
 
         // Etiket.
         GUI.color = full ? executeColor : new Color(0.8f, 0.8f, 0.8f, 0.7f);
-        GUI.Label(new Rect(x + barWidth + 10f, y - 4f, 140f, executeHeight + 8f), full ? "[E] İNFAZ" : "İNFAZ", labelStyle);
+        GUI.Label(new Rect(x + barWidth + 10f, y - 4f, 140f, executeHeight + 8f), full ? "[E] İNFAZ ×" + meter.FullSegments : "İNFAZ", labelStyle);
 
         // ---------------- YETENEK YUVASI ----------------
 

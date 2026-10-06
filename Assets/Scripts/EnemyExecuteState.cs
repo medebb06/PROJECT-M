@@ -190,25 +190,30 @@ public class EnemyExecuteState : IEnemyState
 
         // İNFAZ BARI ile yapılan infaz: normal düşman ölür; boss faz 1'de
         // faz 2 eşiğine iner, faz 2'de ölür.
-        if (ExecuteMeter.TakeLethal(enemy) && health != null)
+        int segs = ExecuteMeter.TakePower(enemy);
+
+        if (segs > 0 && health != null)
         {
             BossController boss = enemy.GetComponent<BossController>();
 
             if (boss != null)
             {
                 // Boss: infaz tek atmaz, canın bir yüzdesini alır (faz atlatmaz).
-                float pct = boss.ExecuteDamagePercent * (openOnly ? OpenOnlyDamageMultiplier : 1f);
+                float pct = boss.ExecutePercentFor(segs) * (openOnly ? OpenOnlyDamageMultiplier : 1f);
 
                 damage = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * pct));
             }
             else
             {
-                damage = Mathf.Max(1, health.CurrentHealth);
+                // 1 parça ≈ canın yarısı, 2+ parça öldürür.
+                damage = segs >= 2
+                    ? Mathf.Max(1, health.CurrentHealth)
+                    : Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * 0.5f));
             }
 
             CombatCallout.Popup(
                 enemy.transform.position + Vector3.up * 2.4f,
-                "İNFAZ!",
+                segs >= ExecuteMeter.Segments ? "İNFAZ ×" + segs + "!!" : "İNFAZ ×" + segs + "!",
                 new Color(1f, 0.8f, 0.3f),
                 1.3f
             );

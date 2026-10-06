@@ -22,12 +22,16 @@ public class PlayerFinisher : MonoBehaviour
     [Tooltip("İnfaz için E'yi en az bu kadar (gerçek sn) basılı tut; daha erken bırakırsan iptal.")]
     [SerializeField] private float minHold = 0.3f;
 
-    [Tooltip("Bu süre dolunca (gerçek sn) otomatik infaz.")]
-    [SerializeField] private float maxHold = 1.0f;
+    [Tooltip("Her EK parça için gereken ek basılı tutma süresi (gerçek sn). 1 parça = minHold, 2 = +bu, 3 = +2×bu.")]
+    [SerializeField] private float segHold = 0.35f;
 
     [Tooltip("Odaklanırken dünyanın zaman hızı (ağır çekim).")]
     [Range(0.02f, 1f)]
     [SerializeField] private float focusTimeScale = 0.12f;
+
+    [Tooltip("Uzun tutarken zaman hızı yavaş yavaş buna çıkar (uzun odak = daha çok maruz kalma).")]
+    [Range(0.02f, 1f)]
+    [SerializeField] private float focusTimeScaleMax = 0.4f;
 
     [Tooltip("Hedef bu çarpanla menzili aşarsa odak iptal.")]
     [SerializeField] private float rangeSlack = 1.8f;
@@ -41,6 +45,21 @@ public class PlayerFinisher : MonoBehaviour
     private bool charging;
     private float holdTime;
     private EnemyController chargeTarget;
+    private int availSegs;
+
+    /// <summary>HUD için: şu an odakta harcanacak parça sayısı (odakta değilse 0).</summary>
+    public static int ChargingSegments { get; private set; }
+
+    // Bu basılı tutma süresinde harcanacak parça (mevcut parçayla sınırlı).
+    private int SegsFor(float hold)
+    {
+        int n = 1 + Mathf.FloorToInt(Mathf.Max(0f, hold - minHold) / segHold);
+
+        return Mathf.Clamp(n, 1, Mathf.Max(1, availSegs));
+    }
+
+    // Eldeki parçaların tamamına ulaşılan süre.
+    private float MaxHold => minHold + (Mathf.Max(1, availSegs) - 1) * segHold;
 
     private GUIStyle barStyle;
 
@@ -125,6 +144,8 @@ public class PlayerFinisher : MonoBehaviour
         charging = true;
         holdTime = 0f;
         chargeTarget = target;
+        availSegs = Mathf.Max(1, ExecuteMeter.Instance != null ? ExecuteMeter.Instance.FullSegments : ExecuteMeter.Segments);
+        ChargingSegments = 1;
 
         // Hedefe dön.
         float dir = Mathf.Sign(target.transform.position.x - transform.position.x);
@@ -163,9 +184,13 @@ public class PlayerFinisher : MonoBehaviour
         holdTime += dt;
 
         // Odaklanma: dünya ağır çekimde (her kare yenilenir).
-        HitStop.Request(0.12f, focusTimeScale, 8);
+        float prog = Mathf.Clamp01(MaxHold > 0f ? holdTime / MaxHold : 1f);
 
-        ExecuteCinematic.SetFocusProgress(Mathf.Clamp01(holdTime / maxHold));
+        HitStop.Request(0.12f, Mathf.Lerp(focusTimeScale, focusTimeScaleMax, prog), 8);
+
+        ChargingSegments = holdTime >= minHold ? SegsFor(holdTime) : 1;
+
+        ExecuteCinematic.SetFocusProgress(prog);
 
         bool held = Input.GetKey(executeKey);
 
@@ -190,8 +215,8 @@ public class PlayerFinisher : MonoBehaviour
             return;
         }
 
-        // Tam dolunca kendiliğinden infaz (sersemlik penceresi kaçmasın).
-        if (holdTime >= maxHold)
+        // Eldeki tüm parçalar dolunca kendiliğinden infaz.
+        if (holdTime >= MaxHold)
             ReleaseCharge();
     }
 
@@ -199,11 +224,13 @@ public class PlayerFinisher : MonoBehaviour
     private void ReleaseCharge()
     {
         EnemyController target = chargeTarget;
+        int segs = SegsFor(holdTime);
 
         charging = false;
         chargeTarget = null;
+        ChargingSegments = 0;
 
-        if (target == null || !ExecuteMeter.TryConsume(target))
+        if (target == null || !ExecuteMeter.TrySpend(target, segs))
         {
             ExecuteCinematic.CancelFocus();
 
@@ -224,10 +251,10 @@ public class PlayerFinisher : MonoBehaviour
         }
 
         // =====================================================
-        // TUTMADI: bar harcandı ama ölümcül işaret kalmasın.
+        // TUTMADI: harcanan parçalar boşa gitti (kalanlar durur).
         // =====================================================
 
-        ExecuteMeter.TakeLethal(target);
+        ExecuteMeter.TakePower(target);
 
         ExecuteCinematic.CancelFocus();
 
@@ -260,6 +287,7 @@ public class PlayerFinisher : MonoBehaviour
     {
         charging = false;
         chargeTarget = null;
+        ChargingSegments = 0;
 
         ExecuteCinematic.CancelFocus();
 
@@ -321,8 +349,9 @@ public class PlayerFinisher : MonoBehaviour
         float x = sp.x - w * 0.5f;
         float y = Screen.height - sp.y - h * 0.5f;
 
-        float p = Mathf.Clamp01(holdTime / maxHold);
+        float p = Mathf.Clamp01(MaxHold > 0f ? holdTime / MaxHold : 1f);
         bool ready = holdTime >= minHold;
+        int segsNow = ready ? SegsFor(holdTime) : 0;
 
         Color old = GUI.color;
 
@@ -332,13 +361,20 @@ public class PlayerFinisher : MonoBehaviour
         GUI.color = ready ? new Color(1f, 0.82f, 0.3f) : new Color(0.75f, 0.75f, 0.8f);
         GUI.DrawTexture(new Rect(x, y, w * p, h), Texture2D.whiteTexture);
 
-        // Bırakma eşiği işareti.
+        // Parça eşikleri (1., 2., 3. parça).
         GUI.color = new Color(1f, 1f, 1f, 0.8f);
-        GUI.DrawTexture(new Rect(x + w * (minHold / maxHold) - 1f, y - 3f * s, 2f, h + 6f * s), Texture2D.whiteTexture);
+
+        for (int i = 0; i < availSegs; i++)
+        {
+            float t = minHold + i * segHold;
+            float tx = x + w * (MaxHold > 0f ? t / MaxHold : 0f);
+
+            GUI.DrawTexture(new Rect(tx - 1f, y - 3f * s, 2f, h + 6f * s), Texture2D.whiteTexture);
+        }
 
         barStyle.fontSize = Mathf.RoundToInt(13f * s);
 
-        string label = ready ? "BIRAK → İNFAZ" : "BASILI TUT";
+        string label = ready ? "BIRAK → İNFAZ ×" + segsNow : "BASILI TUT";
 
         GUI.color = new Color(0f, 0f, 0f, 0.9f);
         GUI.Label(new Rect(x + 1f, y - 24f * s + 1f, w, 20f * s), label, barStyle);

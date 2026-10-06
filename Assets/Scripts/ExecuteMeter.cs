@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// İNFAZ BARI. Düşman öldürdükçe dolar; DOLUYKEN sersemlemiş düşmana E:
-///   - normal düşman: TEK VURUŞTA ölür,
-///   - boss: faz 1'de canı faz 2 eşiğine iner, faz 2'de ölür.
-/// Bar boşken E çalışmaz: sersemlemiş düşmanı normal vuruşlarla bitirirsin
-/// (sersemlemiş düşmana vuruşlar 'Staggered Health Multiplier' kat sert).
+/// İNFAZ BARI (3 PARÇALI). İyi oynadıkça dolar (parry, kusursuz kaçış, öldürme, vuruş).
+/// E'yi ne kadar basılı tutarsan o kadar PARÇA harcarsın, o kadar çok hasar vurursun:
+///   - normal düşman: 1 parça = canının yarısı, 2+ parça = öldürür,
+///   - boss: parça sayısına göre canın %'si (BossController.ExecutePercentFor).
+/// Tutturamazsan harcadığın parçalar boşa gider (kalanlar durur).
 ///
 /// KURULUM YOK: sahne açılınca kendiliğinden oluşur. Ayarlamak istersen
 /// sahnede bir objeye ekle, değerleri oradan değiştir.
@@ -19,25 +19,37 @@ public class ExecuteMeter : MonoBehaviour
     // İnfazcı charm'ı koyar (1 = etkisiz).
     public static float CharmFillMultiplier = 1f;
 
-    [Header("Dolma")]
+    /// <summary>Barın parça sayısı. Her parça bir infaz hakkıdır.</summary>
+    public const int Segments = 3;
+
+    [Header("Dolma (barın tamamı = 1, bir parça ≈ 0.333)")]
     [Tooltip("Normal düşman öldürünce (4 öldürme ≈ dolu).")]
-    [Range(0f, 1f)] public float killFill = 0.25f;
+    [Range(0f, 1f)] public float killFill = 0.2f;
 
     [Tooltip("Kalabalık (zayıf) düşman öldürünce.")]
-    [Range(0f, 1f)] public float swarmKillFill = 0.1f;
+    [Range(0f, 1f)] public float swarmKillFill = 0.06f;
 
     [Tooltip("Dengeyi KIRAN parry.")]
-    [Range(0f, 1f)] public float parryBreakFill = 0.06f;
+    [Range(0f, 1f)] public float parryBreakFill = 0.1f;
+
+    [Tooltip("Her başarılı parry.")]
+    [Range(0f, 1f)] public float parryFill = 0.05f;
+
+    [Tooltip("Kusursuz kaçış (dash ile saldırıdan kurtulma).")]
+    [Range(0f, 1f)] public float dodgeFill = 0.06f;
+
+    [Tooltip("Düşmana isabet eden her vuruş (az: savunma daha çok verir).")]
+    [Range(0f, 1f)] public float hitFill = 0.012f;
 
     [Header("Boss (öldürme olmadığı için ayrı kaynaklar)")]
     [Tooltip("Boss'un dengesini kırmak (vuruş ya da parry).")]
-    [Range(0f, 1f)] public float bossBreakFill = 0.4f;
+    [Range(0f, 1f)] public float bossBreakFill = 0.3f;
 
     [Tooltip("Boss'a her parry.")]
-    [Range(0f, 1f)] public float bossParryFill = 0.05f;
+    [Range(0f, 1f)] public float bossParryFill = 0.06f;
 
     [Tooltip("Boss'a verilen can hasarı × bu = dolum (max canın %50'si → 0.3).")]
-    [Range(0f, 2f)] public float bossHealthDamageFill = 0.5f;
+    [Range(0f, 2f)] public float bossHealthDamageFill = 0.6f;
 
     [Tooltip("Koşu başında bar dolu başlasın (ilk infazı öğretmek için).")]
     public bool startFull = true;
@@ -53,10 +65,14 @@ public class ExecuteMeter : MonoBehaviour
 
     public bool IsFull => Fill >= 0.999f;
 
+    /// <summary>Tamamen dolmuş parça sayısı (0..3).</summary>
+    public int FullSegments => Mathf.Clamp(Mathf.FloorToInt(Fill * Segments + 0.001f), 0, Segments);
+
     // Arayüz: son dolma zamanı (parlama efekti için).
     public float LastFilledTime { get; private set; } = -99f;
 
-    private static readonly HashSet<EnemyController> lethal = new HashSet<EnemyController>();
+    // Hedef → o infaza harcanan parça sayısı.
+    private static readonly Dictionary<EnemyController, int> power = new Dictionary<EnemyController, int>();
     private static EnemyController lastExecuted;
     private float nextWarn;
 
@@ -65,7 +81,7 @@ public class ExecuteMeter : MonoBehaviour
     {
         Instance = null;
         CharmFillMultiplier = 1f;
-        lethal.Clear();
+        power.Clear();
         lastExecuted = null;
     }
 
@@ -101,6 +117,7 @@ public class ExecuteMeter : MonoBehaviour
         CombatEvents.EnemyKilled += OnKilled;
         CombatEvents.ParrySucceeded += OnParry;
         CombatEvents.EnemyHit += OnEnemyHit;
+        CombatEvents.Dodged += OnDodged;
     }
 
     private void OnDisable()
@@ -108,6 +125,7 @@ public class ExecuteMeter : MonoBehaviour
         CombatEvents.EnemyKilled -= OnKilled;
         CombatEvents.ParrySucceeded -= OnParry;
         CombatEvents.EnemyHit -= OnEnemyHit;
+        CombatEvents.Dodged -= OnDodged;
     }
 
     private void OnKilled(EnemyController enemy)
@@ -128,8 +146,15 @@ public class ExecuteMeter : MonoBehaviour
         Add(swarm ? swarmKillFill : killFill);
     }
 
+    private void OnDodged(EnemyController enemy, bool unblockable)
+    {
+        Add(dodgeFill);
+    }
+
     private void OnParry(EnemyController enemy, bool brokeBalance)
     {
+        Add(parryFill);
+
         if (brokeBalance)
             Add(parryBreakFill);
 
@@ -145,7 +170,13 @@ public class ExecuteMeter : MonoBehaviour
     // Boss: denge kırma + can hasarı barı doldurur.
     private void OnEnemyHit(EnemyController enemy, DamageInfo info, HitResult result)
     {
-        if (!result.hit || !IsBoss(enemy))
+        if (!result.hit)
+            return;
+
+        // Her isabet az da olsa doldurur (savunma çok daha fazla verir).
+        Add(hitFill);
+
+        if (!IsBoss(enemy))
             return;
 
         if (result.brokeBalance)
@@ -170,14 +201,14 @@ public class ExecuteMeter : MonoBehaviour
         if (amount <= 0f)
             return;
 
-        bool wasFull = IsFull;
+        int segsBefore = FullSegments;
 
         // Kalıcı gelişim: Cellat (dolum hızı). Charm: İnfazcı.
         amount *= MetaProgress.ExecuteFillMultiplier * CharmFillMultiplier;
 
         Fill = Mathf.Clamp01(Fill + amount);
 
-        if (!wasFull && IsFull)
+        if (FullSegments > segsBefore)
         {
             LastFilledTime = Time.unscaledTime;
 
@@ -185,9 +216,11 @@ public class ExecuteMeter : MonoBehaviour
 
             if (player != null)
             {
+                int n = FullSegments;
+
                 CombatCallout.Popup(
                     player.transform.position + Vector3.up * 2.6f,
-                    "İNFAZ HAZIR",
+                    n >= Segments ? "İNFAZ ×" + n + " (DOLU)" : "İNFAZ ×" + n,
                     new Color(1f, 0.82f, 0.3f),
                     1f
                 );
@@ -199,35 +232,60 @@ public class ExecuteMeter : MonoBehaviour
     // STATİK API
     // =========================================================
 
-    public static bool CanExecute => Instance == null || Instance.IsFull;
+    /// <summary>En az bir parça dolu mu? (infaz denenebilir)</summary>
+    public static bool CanExecute => Instance == null || Instance.FullSegments >= 1;
 
     public static float StaggeredHealthMultiplier =>
         Instance != null ? Instance.staggeredHealthMultiplier : 1f;
 
-    /// <summary>Bar dolu: harca, hedefi "ölümcül infaz" olarak işaretle.</summary>
-    public static bool TryConsume(EnemyController target)
+    /// <summary>Doluysa 'segs' parça harca ve hedefi o güçle işaretle. Yetmezse false.</summary>
+    public static bool TrySpend(EnemyController target, int segs)
     {
-        if (Instance == null)
-            return true;
+        segs = Mathf.Clamp(segs, 1, Segments);
 
-        if (!Instance.IsFull)
-            return false;
+        if (Instance != null)
+        {
+            if (Instance.FullSegments < segs)
+                return false;
 
-        Instance.Fill = 0f;
+            Instance.Fill = Mathf.Max(0f, Instance.Fill - segs / (float)Segments);
+        }
 
         if (target != null)
         {
-            lethal.Add(target);
+            power[target] = segs;
             lastExecuted = target;
         }
 
         return true;
     }
 
-    /// <summary>EnemyExecuteState: bu infaz ölümcül mü (bir kez).</summary>
+    /// <summary>Eski çağrı: dolu olan tüm parçaları harca.</summary>
+    public static bool TryConsume(EnemyController target)
+    {
+        int segs = Instance != null ? Instance.FullSegments : Segments;
+
+        if (segs < 1)
+            return false;
+
+        return TrySpend(target, segs);
+    }
+
+    /// <summary>EnemyExecuteState: bu infaza harcanan parça sayısı (bir kez; yoksa 0).</summary>
+    public static int TakePower(EnemyController target)
+    {
+        if (target == null || !power.TryGetValue(target, out int segs))
+            return 0;
+
+        power.Remove(target);
+
+        return segs;
+    }
+
+    /// <summary>Eski API: bu infaz işaretli miydi (bir kez).</summary>
     public static bool TakeLethal(EnemyController target)
     {
-        return target != null && lethal.Remove(target);
+        return TakePower(target) > 0;
     }
 
     public static void WarnNotReady(EnemyController target)
@@ -248,7 +306,7 @@ public class ExecuteMeter : MonoBehaviour
     /// <summary>Yeni koşu.</summary>
     public static void ResetForRun()
     {
-        lethal.Clear();
+        power.Clear();
         lastExecuted = null;
 
         if (Instance != null)
