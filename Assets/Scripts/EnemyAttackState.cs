@@ -672,6 +672,10 @@ public class EnemyAttackState : IEnemyState
                     DoAttack();
 
                 resolvingHit = false;
+
+                // Son vuruş parry/block/isabet fark etmez oyuncuyu kaydırarak iter.
+                if (currentHit != null && currentHit.parryKnockback > 0f)
+                    PushPlayerBack(currentHit.parryKnockback);
             }
 
             // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
@@ -850,7 +854,11 @@ public class EnemyAttackState : IEnemyState
 
         PlayerController p = enemy.target.GetComponent<PlayerController>();
 
-        if (p == null || p.rb == null)
+        if (p == null || p.rb == null || p.isDashing)
+            return;
+
+        // Vuruş boşa gittiyse (oyuncu uzaktaysa) itme yok.
+        if (Mathf.Abs(p.transform.position.x - enemy.transform.position.x) > 6f)
             return;
 
         float dir = Mathf.Sign(p.transform.position.x - enemy.transform.position.x);
@@ -863,21 +871,30 @@ public class EnemyAttackState : IEnemyState
 
     private System.Collections.IEnumerator PushRoutine(PlayerController p, float dir, float force)
     {
-        const float Duration = 0.2f;
+        const float Duration = 0.5f;
 
         float t = 0f;
+        p.inputLockTimer = Mathf.Max(p.inputLockTimer, Duration);
 
         while (t < Duration && p != null && p.rb != null)
         {
-            // Tüm Update'lerden SONRA yaz: parry durumu hızı sıfırlamış olabilir.
-            yield return new WaitForEndOfFrame();
+            // Hem fizikten önce hem tüm Update'lerden sonra yaz:
+            // parry/block/hurt durumları hızı sıfırlayabilir.
+            yield return new WaitForFixedUpdate();
 
             if (p == null || p.rb == null || p.isDashing)
                 yield break;
 
             float k = 1f - t / Duration;
+            k *= k; // ease-out: hızlı başlar, sürünerek durur
+            p.rb.linearVelocity = new Vector2(dir * force * (0.25f + 0.75f * k), p.rb.linearVelocity.y);
 
-            p.rb.linearVelocity = new Vector2(dir * force * k, p.rb.linearVelocity.y);
+            yield return new WaitForEndOfFrame();
+
+            if (p == null || p.rb == null || p.isDashing)
+                yield break;
+
+            p.rb.linearVelocity = new Vector2(dir * force * (0.25f + 0.75f * k), p.rb.linearVelocity.y);
 
             t += Time.deltaTime;
         }
@@ -1334,10 +1351,6 @@ public class EnemyAttackState : IEnemyState
             enemy.PlayParrySlowMotion(balance.IsBroken);
 
         CombatEvents.RaiseParry(enemy, balance.IsBroken);
-
-        // Parry'lense bile geri iten vuruş (Keşiş Seli'nin son vuruşu).
-        if (currentHit != null && currentHit.parryKnockback > 0f)
-            PushPlayerBack(currentHit.parryKnockback);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()

@@ -506,7 +506,7 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Ritim Kırıcı",
                 signature = true,
-                weight = 1f,
+                weight = 0.6f,
                 cooldown = 3.9f,
                 recoveryMultiplier = 1.30f,
                 hits =
@@ -522,7 +522,7 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Gölge Atılışı",
-                weight = 0.9f,
+                weight = 0.5f,
                 cooldown = 4.5f,
                 recoveryMultiplier = 1.04f,
                 hits = { new MoveHit(MoveHitType.Grab, 0.9f, 0f, 1.2f, 1.6f) }
@@ -533,7 +533,7 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Hilal Dalgası",
-                weight = 0.9f,
+                weight = 0.5f,
                 cooldown = 3.9f,
                 minDistance = 3.5f,
                 recoveryMultiplier = 1.00f,
@@ -546,7 +546,7 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Gölge Kesiği",
-                weight = 0.6f,
+                weight = 0.35f,
                 cooldown = 1.3f,
                 hits = { new MoveHit(MoveHitType.Normal, 0.65f) }
             }
@@ -559,7 +559,7 @@ public class EnemyMoveset : MonoBehaviour
                 {
                     name = "Çifte Hilal",
                     signature = true,
-                    weight = 0.9f,
+                    weight = 0.5f,
                     cooldown = 5.2f,
                     minDistance = 3.5f,
                     recoveryMultiplier = 1.30f,
@@ -576,7 +576,7 @@ public class EnemyMoveset : MonoBehaviour
                 {
                     name = "Gölge Zinciri",
                     signature = true,
-                    weight = 1f,
+                    weight = 0.6f,
                     cooldown = 5.2f,
                     recoveryMultiplier = 1.43f,
                     hits =
@@ -607,24 +607,22 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Keşiş Seli",
                 signature = true,
-                weight = 1.1f,
-                cooldown = 9f,
+                weight = 3.2f,
+                cooldown = 4.5f,
                 maxDistance = 10f,
-                recoveryMultiplier = 2.2f,
+                recoveryMultiplier = 1.6f,
                 hits =
                 {
                     new MoveHit(MoveHitType.Normal, 0.95f * k).Advance(4f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.8f * k).Advance(3.5f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.68f * k).Advance(3.2f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.58f * k).Advance(2.8f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.5f * k).Advance(2.4f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.43f * k).Advance(2f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.38f * k).Advance(1.8f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.34f * k).Advance(1.5f).Retarget(),
-                    new MoveHit(MoveHitType.Normal, 0.31f * k).Advance(1.2f).Retarget(),
-                    // Gerilme payı: son vuruş gecikmeli; parry'lense bile oyuncuyu geri iter.
-                    new MoveHit(MoveHitType.Normal, 0.95f * k, 0.35f, 1.4f, 1.25f)
-                        .Retarget().ParryReward(3.5f).ParryKnockback(12f)
+                    new MoveHit(MoveHitType.Normal, 0.78f * k).Advance(3.5f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.64f * k).Advance(3f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.53f * k).Advance(2.6f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.44f * k).Advance(2.2f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.37f * k).Advance(1.8f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.32f * k).Advance(1.4f).Retarget(),
+                    // Gerilme payı: son vuruş uzun gecikmeli; parry'lense bile oyuncuyu uzağa iter.
+                    new MoveHit(MoveHitType.Normal, 1.25f * k, 0.4f, 1.4f, 1.25f)
+                        .Retarget().ParryReward(3.5f).ParryKnockback(24f)
                 }
             }
         );
@@ -633,8 +631,8 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Kırık Tempo",
-                weight = 0.9f,
-                cooldown = 7f,
+                weight = 1.6f,
+                cooldown = 3.5f,
                 maxDistance = 9f,
                 recoveryMultiplier = 1.8f,
                 hits =
