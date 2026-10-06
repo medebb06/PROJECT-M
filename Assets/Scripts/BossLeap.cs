@@ -18,13 +18,26 @@ public class BossLeap : MonoBehaviour
 {
     [Header("Zamanlama")]
     public float firstDelay = 4f;
-    public float cooldown = 6f;
-    public float cooldownPhase2 = 4.5f;
+    public float cooldown = 9f;
+    public float cooldownPhase2 = 7f;
 
-    [Tooltip("Odaklanma süresi (sn). İlk kısmında alan oyuncuyu izler, sonra kilitlenir.")]
-    public float focusTime = 1.0f;
+    [Tooltip("Yükselme (odaklanma) süresi (sn). Uzun: boşluğu bulup koşmak için zaman.")]
+    public float riseTime = 2.0f;
 
-    [Range(0.2f, 0.9f)] public float trackFraction = 0.65f;
+    public float riseHeight = 9f;
+
+    [Tooltip("Tepede asılı kalma (sn): her yer kilitlenir.")]
+    public float hangTime = 0.35f;
+
+    [Tooltip("Düşüş süresi (sn).")]
+    public float dropTime = 0.22f;
+
+    [Tooltip("Güvenli boşluğun genişliği (birim).")]
+    public float gapWidth = 4.2f;
+
+    public float gapMinOffset = 6f;
+    public float gapMaxOffset = 11f;
+
 
     [Tooltip("Atlayış yatay hızı (birim/sn).")]
     public float leapSpeed = 40f;
@@ -36,7 +49,7 @@ public class BossLeap : MonoBehaviour
     public float arcBase = 5f;
     public float arcPerDistance = 0.18f;
 
-    public float exhaustTime = 1.0f;
+    public float exhaustTime = 1.4f;
 
     [Header("Menzil")]
     [Tooltip("Bu mesafeden YAKINSA atlamaz: bu yetenek UZAK mesafe içindir.")]
@@ -159,7 +172,7 @@ public class BossLeap : MonoBehaviour
     {
         busy = true;
 
-        int leaps = boss != null && boss.InPhase2 ? 2 : 1;
+        int leaps = 1;
 
         for (int i = 0; i < leaps; i++)
         {
@@ -249,26 +262,45 @@ public class BossLeap : MonoBehaviour
 
         float groundY = bodyCol != null ? bodyCol.bounds.min.y : transform.position.y;
 
-        float lockedX = ClampToArena(target.position.x);
+        GetArenaRange(out float minX, out float maxX);
 
-        GameObject zone = MakeZone(groundY);
+        // Güvenli boşluk: oyuncudan uzakta bir yerde, arena içinde.
+        float half = gapWidth * 0.5f;
+        float px = target.position.x;
+
+        float side = Random.value < 0.5f ? -1f : 1f;
+
+        float gapX = px + side * Random.Range(gapMinOffset, gapMaxOffset);
+
+        if (gapX - half < minX || gapX + half > maxX)
+            gapX = px - side * Random.Range(gapMinOffset, gapMaxOffset);
+
+        gapX = Mathf.Clamp(gapX, minX + half, maxX - half);
+
+        GameObject left = MakeZone(groundY);
+        GameObject right = MakeZone(groundY);
 
         enemy.PlayAlertFlash();
 
-        if (first)
-            CombatCallout.PopupAbove(enemy, "DASH!", new Color(1f, 0.35f, 0.2f), 1.1f);
+        CombatCallout.PopupAbove(enemy, "BOŞLUĞA KAÇ!", new Color(1f, 0.35f, 0.2f), 1.4f);
 
-        float time = first ? focusTime : focusTime * 0.6f;
-        float lockAt = time * trackFraction;
+        IgnorePlayerCollisions(player);
 
-        // ---------- 1) ODAK ----------
+        float time = riseTime;
+
+        Vector2 start = rb.position;
+
+        // ---------- 1) YÜKSELİŞ / ODAK ----------
+        SetGravity(true);
+
         float t = 0f;
 
         while (t < time)
         {
             if (Interrupted())
             {
-                Abort(zone);
+                Abort(left);
+                if (right != null) Destroy(right);
                 done(false);
                 yield break;
             }
@@ -277,41 +309,34 @@ public class BossLeap : MonoBehaviour
 
             overrideVelocity = true;
 
-            bool tracking = t < lockAt;
+            float u = Mathf.Clamp01(t / time);
 
-            if (tracking)
-            {
-                lockedX = ClampToArena(target.position.x);
+            // Yavaşlayarak yükselir (odaklanma gibi), sonda titrer.
+            float e = 1f - (1f - u) * (1f - u);
 
-                enemy.RetargetFacing();
-            }
+            float shakeX = u > 0.75f ? Mathf.Sin(Time.time * 70f) * 0.12f * (u - 0.75f) * 4f : 0f;
 
-            UpdateZone(zone, lockedX, groundY, t / Mathf.Max(0.01f, time), !tracking);
+            rb.position = new Vector2(start.x + shakeX, start.y + riseHeight * e);
+
+            float p = u;
+
+            UpdateRange(left, minX, gapX - half, groundY, p, false);
+            UpdateRange(right, gapX + half, maxX, groundY, p, false);
 
             t += Time.deltaTime;
 
             yield return null;
         }
 
-        // ---------- 2) ATLA (yay) ----------
-        IgnorePlayerCollisions(player);
-        SetGravity(true);
+        // Son bir an asılı kalır (kilit).
+        float hold = 0f;
 
-        Vector2 start = rb.position;
-        Vector2 end = new Vector2(lockedX, start.y);
-
-        float dist = Mathf.Abs(end.x - start.x);
-
-        float flight = Mathf.Clamp(dist / Mathf.Max(1f, leapSpeed), minFlightTime, maxFlightTime);
-        float arc = arcBase + dist * arcPerDistance;
-
-        float f = 0f;
-
-        while (f < flight)
+        while (hold < hangTime)
         {
-            if (enemy == null || enemy.IsDead)
+            if (Interrupted())
             {
-                Abort(zone);
+                Abort(left);
+                if (right != null) Destroy(right);
                 done(false);
                 yield break;
             }
@@ -320,83 +345,99 @@ public class BossLeap : MonoBehaviour
 
             overrideVelocity = true;
 
-            float u = Mathf.Clamp01(f / flight);
+            UpdateRange(left, minX, gapX - half, groundY, 1f, true);
+            UpdateRange(right, gapX + half, maxX, groundY, 1f, true);
 
-            Vector2 p =
-                new Vector2(
-                    Mathf.Lerp(start.x, end.x, u),
-                    start.y + arc * 4f * u * (1f - u)
-                );
+            hold += Time.deltaTime;
 
-            rb.position = p;
+            yield return null;
+        }
 
-            UpdateZone(zone, lockedX, groundY, 1f, true);
+        // ---------- 2) İNİŞ (düşüş) ----------
+        Vector2 top = rb.position;
+        Vector2 land = new Vector2(Mathf.Clamp(top.x, minX, maxX), start.y);
+
+        float f = 0f;
+
+        while (f < dropTime)
+        {
+            if (enemy == null || enemy.IsDead)
+            {
+                Abort(left);
+                if (right != null) Destroy(right);
+                done(false);
+                yield break;
+            }
+
+            enemy.StartAttackRecovery(0.5f);
+
+            overrideVelocity = true;
+
+            float u = Mathf.Clamp01(f / dropTime);
+
+            rb.position = Vector2.Lerp(top, land, u * u);
 
             f += Time.deltaTime;
 
             yield return null;
         }
 
-        rb.position = end;
+        rb.position = land;
         rb.linearVelocity = Vector2.zero;
 
-        // ---------- 3) İNİŞ ----------
         SetGravity(false);
         RestoreCollisions();
 
-        Impact(player, lockedX);
+        Impact(player, gapX, half, minX, maxX);
 
-        FlashZone(zone, lockedX, groundY);
+        FlashRange(left, minX, gapX - half, groundY);
+        FlashRange(right, gapX + half, maxX, groundY);
 
-        // ---------- 4) AÇIK ----------
-        if (last)
+        // ---------- 3) AÇIK ----------
+        enemy.openUntil = EnemyTime.Now + exhaustTime;
+
+        float ex = 0f;
+
+        while (ex < exhaustTime)
         {
-            // Yorgun boss: infaz için açık an.
-            enemy.openUntil = EnemyTime.Now + exhaustTime;
+            if (enemy == null || enemy.IsDead || enemy.IsStaggered)
+                break;
 
-            float e = 0f;
+            enemy.StartAttackRecovery(0.5f);
 
-            while (e < exhaustTime)
-            {
-                if (enemy == null || enemy.IsDead || enemy.IsStaggered)
-                    break;
+            overrideVelocity = true;
 
-                enemy.StartAttackRecovery(0.5f);
+            ex += Time.deltaTime;
 
-                overrideVelocity = true;
-
-                e += Time.deltaTime;
-
-                yield return null;
-            }
-
-            overrideVelocity = false;
-
-            enemy.StartAttackRecovery(1.0f);
+            yield return null;
         }
-        else
-        {
-            float e = 0f;
 
-            while (e < 0.25f)
-            {
-                if (Interrupted())
-                    break;
+        overrideVelocity = false;
 
-                enemy.StartAttackRecovery(0.5f);
-
-                overrideVelocity = true;
-
-                e += Time.deltaTime;
-
-                yield return null;
-            }
-        }
+        enemy.StartAttackRecovery(1.0f);
 
         done(true);
     }
 
-    private void Impact(PlayerController player, float centerX)
+    private void GetArenaRange(out float minX, out float maxX)
+    {
+        if (boss != null && boss.HasArena)
+        {
+            minX = boss.ArenaMinX;
+            maxX = boss.ArenaMaxX;
+            return;
+        }
+
+        Camera cam = Camera.main;
+
+        float cx = cam != null ? cam.transform.position.x : transform.position.x;
+        float hw = cam != null ? cam.orthographicSize * cam.aspect : 18f;
+
+        minX = cx - hw;
+        maxX = cx + hw;
+    }
+
+    private void Impact(PlayerController player, float gapX, float half, float minX, float maxX)
     {
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(shake);
@@ -406,12 +447,12 @@ public class BossLeap : MonoBehaviour
         if (player == null)
             return;
 
-        // Alandan çıkmak kurtarır.
-        if (Mathf.Abs(player.transform.position.x - centerX) > radius)
+        // Boşlukta durmak tek kurtuluş.
+        if (Mathf.Abs(player.transform.position.x - gapX) <= half)
             return;
 
-        // Korumalı dönem (yeni hasar sonrası) ve DASH i-frame'i kurtarır.
-        if (player.isInvincible)
+        // Sadece hasar sonrası korumalı dönem sayılır; dash i-frame'i KURTARMAZ.
+        if (player.hitInvincibilityTimer > 0f)
             return;
 
         PlayerDamageReceiver receiver = player.GetComponent<PlayerDamageReceiver>();
@@ -419,25 +460,23 @@ public class BossLeap : MonoBehaviour
         if (receiver == null)
             return;
 
-        Vector2 dir =
-            new Vector2(Mathf.Sign(player.transform.position.x - centerX), 0f);
+        Vector2 dir = new Vector2(Mathf.Sign(player.transform.position.x - gapX), 0f);
 
         if (dir.x == 0f)
             dir.x = 1f;
 
         int damage = Mathf.Max(1, Mathf.RoundToInt(enemy.unblockableDamage * damageMultiplier));
 
-        // Engellenemez; dash i-frame'i işe yarar (ignoreDashIFrames = false).
         receiver.TakeDamage(
             damage,
             dir,
-            5f,
-            2f,
+            4f,
+            1f,
             0.12f,
             40f,
             enemy,
             PlayerHitKind.Unblockable,
-            false
+            true
         );
 
         EnemyAttackCoordinator.NotifyPlayerHit();
@@ -519,16 +558,18 @@ public class BossLeap : MonoBehaviour
         return go;
     }
 
-    private void UpdateZone(GameObject zone, float x, float groundY, float progress, bool locked)
+    private void UpdateRange(GameObject zone, float x0, float x1, float groundY, float progress, bool locked)
     {
         if (zone == null)
             return;
 
         const float FloorH = 0.3f;
-        const float BandH = 2.2f;
+        const float BandH = 3.2f;
 
-        zone.transform.position = new Vector3(x, groundY + FloorH * 0.5f, 0f);
-        zone.transform.localScale = new Vector3(radius * 2f, FloorH, 1f);
+        float w = Mathf.Max(0.01f, x1 - x0);
+
+        zone.transform.position = new Vector3((x0 + x1) * 0.5f, groundY + FloorH * 0.5f, 0f);
+        zone.transform.localScale = new Vector3(w, FloorH, 1f);
 
         SpriteRenderer sr = zone.GetComponent<SpriteRenderer>();
 
@@ -544,38 +585,38 @@ public class BossLeap : MonoBehaviour
             sr.color = lockedColor;
 
             Color lc = lockedColor;
-            lc.a = 0.25f;
+            lc.a = 0.3f;
             bsr.color = lc;
 
             return;
         }
 
-        float pulse = 0.65f + 0.35f * Mathf.Sin(Time.time * (10f + 14f * progress));
+        float pulse = 0.65f + 0.35f * Mathf.Sin(Time.time * (8f + 16f * progress));
 
         Color c = zoneColor;
-        c.a = Mathf.Lerp(0.3f, 0.85f, progress) * pulse;
+        c.a = Mathf.Lerp(0.3f, 0.9f, progress) * pulse;
 
         sr.color = c;
 
         Color b = zoneColor;
-        b.a = 0.13f * pulse;
+        b.a = Mathf.Lerp(0.08f, 0.22f, progress) * pulse;
         bsr.color = b;
     }
 
-    private void FlashZone(GameObject zone, float x, float groundY)
+    private void FlashRange(GameObject zone, float x0, float x1, float groundY)
     {
         if (zone == null)
             return;
 
-        zone.transform.position = new Vector3(x, groundY + 0.35f, 0f);
-        zone.transform.localScale = new Vector3(radius * 2.3f, 0.7f, 1f);
+        zone.transform.position = new Vector3((x0 + x1) * 0.5f, groundY + 0.35f, 0f);
+        zone.transform.localScale = new Vector3(Mathf.Max(0.01f, x1 - x0), 0.7f, 1f);
 
         SpriteRenderer sr = zone.GetComponent<SpriteRenderer>();
         sr.color = Color.white;
 
-        zone.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.4f);
+        zone.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, 0.45f);
 
-        Destroy(zone, 0.14f);
+        Destroy(zone, 0.18f);
     }
 
     private void OnDisable()

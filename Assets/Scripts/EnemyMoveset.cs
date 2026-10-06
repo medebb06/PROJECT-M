@@ -509,9 +509,9 @@ public class EnemyMoveset : MonoBehaviour
             {
                 name = "Ritim Kırıcı",
                 signature = true,
-                weight = 0.6f,
-                cooldown = 3.9f,
-                recoveryMultiplier = 1.30f,
+                weight = 1.3f,
+                cooldown = 2.8f,
+                recoveryMultiplier = 1.05f,
                 hits =
                 {
                     new MoveHit(MoveHitType.Normal, 0.55f),
@@ -525,9 +525,9 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Gölge Atılışı",
-                weight = 0.5f,
-                cooldown = 4.5f,
-                recoveryMultiplier = 1.04f,
+                weight = 0.9f,
+                cooldown = 3.5f,
+                recoveryMultiplier = 0.9f,
                 hits = { new MoveHit(MoveHitType.Grab, 0.9f, 0f, 1.2f, 1.6f) }
             }
         );
@@ -536,10 +536,10 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Hilal Dalgası",
-                weight = 0.5f,
-                cooldown = 3.9f,
+                weight = 0.9f,
+                cooldown = 3.0f,
                 minDistance = 3.5f,
-                recoveryMultiplier = 1.00f,
+                recoveryMultiplier = 0.9f,
                 hits = { new MoveHit(MoveHitType.Shot, 0.85f) }
             }
         );
@@ -549,7 +549,7 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Gölge Kesiği",
-                weight = 0.35f,
+                weight = 0.7f,
                 cooldown = 1.3f,
                 hits = { new MoveHit(MoveHitType.Normal, 0.65f) }
             }
@@ -562,10 +562,10 @@ public class EnemyMoveset : MonoBehaviour
                 {
                     name = "Çifte Hilal",
                     signature = true,
-                    weight = 0.5f,
-                    cooldown = 5.2f,
+                    weight = 0.9f,
+                    cooldown = 4.0f,
                     minDistance = 3.5f,
-                    recoveryMultiplier = 1.30f,
+                    recoveryMultiplier = 1.05f,
                     hits =
                     {
                         new MoveHit(MoveHitType.Shot, 0.7f),
@@ -579,9 +579,9 @@ public class EnemyMoveset : MonoBehaviour
                 {
                     name = "Gölge Zinciri",
                     signature = true,
-                    weight = 0.6f,
-                    cooldown = 5.2f,
-                    recoveryMultiplier = 1.43f,
+                    weight = 1.1f,
+                    cooldown = 4.0f,
+                    recoveryMultiplier = 1.15f,
                     hits =
                     {
                         new MoveHit(MoveHitType.Normal, 0.5f),
@@ -592,28 +592,28 @@ public class EnemyMoveset : MonoBehaviour
                 }
             );
 
-            ScaleWindups(m, 0.75f);
+            ScaleWindups(m, 0.65f);
         }
         else
         {
-            ScaleWindups(m, 0.85f);
+            ScaleWindups(m, 0.75f);
         }
 
         // ---------------- PARRY SERİLERİ (Keşiş tarzı) ----------------
 
         // Yavaş başlar, aralar kısalır; boss her vuruşta oyuncuya doğru
         // ilerler ve yön değiştirebilir. Hepsi parry ister.
-        float k = phase2 ? 0.9f : 1f;
+        float k = phase2 ? 0.8f : 0.9f;
 
         m.Add(
             new AttackMove
             {
                 name = "Keşiş Seli",
                 signature = true,
-                weight = 3.2f,
-                cooldown = 4.5f,
+                weight = 1.3f,
+                cooldown = 9f,
                 maxDistance = 10f,
-                recoveryMultiplier = 1.6f,
+                recoveryMultiplier = 1.25f,
                 hits =
                 {
                     new MoveHit(MoveHitType.Normal, 0.95f * k).Advance(4f).Retarget(),
@@ -634,10 +634,10 @@ public class EnemyMoveset : MonoBehaviour
             new AttackMove
             {
                 name = "Kırık Tempo",
-                weight = 1.6f,
-                cooldown = 3.5f,
+                weight = 2.0f,
+                cooldown = 2.8f,
                 maxDistance = 9f,
-                recoveryMultiplier = 1.8f,
+                recoveryMultiplier = 1.4f,
                 hits =
                 {
                     new MoveHit(MoveHitType.Normal, 0.6f * k).Advance(3f).Retarget(),
@@ -648,6 +648,17 @@ public class EnemyMoveset : MonoBehaviour
                 }
             }
         );
+
+        // Seri parry kombolarında ara vuruşlar hafif: ölüm 1-2 hatadan değil 3-4 hatadan gelsin.
+        // Son (ödüllü) vuruş ağır kalır.
+        for (int i = 0; i < m.Count; i++)
+        {
+            if (m[i].name != "Keşiş Seli" && m[i].name != "Kırık Tempo")
+                continue;
+
+            for (int h = 0; h < m[i].hits.Count - 1; h++)
+                m[i].hits[h].damageMultiplier *= 0.7f;
+        }
 
         return m;
     }

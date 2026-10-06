@@ -21,11 +21,11 @@ public class BossSlam : MonoBehaviour
 {
     [Header("Zamanlama")]
     public float firstDelay = 3f;
-    public float cooldown = 9f;
-    public float cooldownPhase2 = 7f;
+    public float cooldown = 7f;
+    public float cooldownPhase2 = 5.5f;
 
     [Tooltip("İlk uyarı süresi (sn). Şerit bu sürenin ilk kısmında oyuncuyu izler.")]
-    public float windup = 0.5f;
+    public float windup = 0.42f;
 
     [Tooltip("Şeridin oyuncuyu izlediği kısım (uyarının yüzdesi). Kalanında KİLİTLİ beklenir = zıplama hazırlığı.")]
     [Range(0.2f, 0.9f)] public float trackFraction = 0.4f;

@@ -10,7 +10,7 @@ public static class BossSkillGate
     public const float SameSkillGap = 8f;
 
     /// <summary>Herhangi iki özel yetenek arası en az süre (sn).</summary>
-    public const float AnySkillGap = 3.5f;
+    public const float AnySkillGap = 2.5f;
 
     private static string lastId = "";
     private static float lastEnd = -999f;

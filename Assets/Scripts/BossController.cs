@@ -32,9 +32,9 @@ public class BossController : MonoBehaviour
     [Min(1f)]
     public float trialHealthMultiplier = 4f;
 
-    [Tooltip("Boss'un denge çubuğu normal düşmanın kaç katı.")]
+    [Tooltip("Boss'un denge çubuğu normal düşmanın kaç katı. (Yüksek = düz vuruşla zor kırılır, parry yolu ödüllü.)")]
     [Min(1f)]
-    public float trialBalanceMultiplier = 5f;
+    public float trialBalanceMultiplier = 7f;
 
     [Tooltip("Denge kırılınca infazın vuracağı can oranı (0.18 = %18).")]
     [Range(0.02f, 1f)]
@@ -71,6 +71,9 @@ public class BossController : MonoBehaviour
 
     [Tooltip("Gölge Hilali'nin vuruşları bloğa bu kadar kat posture hasarı verir (blok riskli olsun).")]
     public float trialBlockPostureMultiplier = 1.6f;
+
+    [Tooltip("Boss'un tüm vuruş hasarı bu çarpanla ölçeklenir (0.7 = %30 az).")]
+    [Range(0.3f, 1f)] public float trialDamageScale = 0.7f;
 
     [Header("Ölümcül vuruş (Sekiro gibi)")]
     [Tooltip("Denge dolunca boss bu kadar sn sersemler; E ile ÖLÜMCÜL VURUŞ atılır (bar harcamaz).")]
@@ -353,6 +356,10 @@ public class BossController : MonoBehaviour
                 Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialExecutePercent));
 
             // Can kilidi: faz 1'de faz 2 eşiğinin altına inemez (son vuruş gerekir).
+            // Boss hasarı: tek vuruşlar daha hafif, ölüm birkaç hatadan gelsin.
+            enemy.attackDamage = Mathf.Max(1, Mathf.RoundToInt(enemy.attackDamage * trialDamageScale));
+            enemy.unblockableDamage = Mathf.Max(1, Mathf.RoundToInt(enemy.unblockableDamage * trialDamageScale));
+
             // Normal hasar boss'u öldüremez: sadece ölümcül vuruş can çubuğunu bitirir.
             Health.MinHealth = 1;
 
@@ -415,8 +422,8 @@ public class BossController : MonoBehaviour
             moveset.comboBlockPostureMultiplier = 0.55f;
 
             // Çevik ve saldırgan: hızlı koşar, toparlanması kısa.
-            enemy.chaseSpeed *= 1.3f;
-            enemy.attackRecoveryTime *= 0.6f;
+            enemy.chaseSpeed *= 1.4f;
+            enemy.attackRecoveryTime *= 0.5f;
 
             // Kusursuz kaçış / atla-vur ödülleri boss'un barını az doldursun.
             UnblockableCounter counter = GetComponent<UnblockableCounter>();
@@ -643,8 +650,8 @@ public class BossController : MonoBehaviour
         if (moveset != null)
             moveset.moves = EnemyMoveset.CreateBossMoves(act, true);
 
-        enemy.chaseSpeed *= 1.15f;
-        enemy.attackRecoveryTime *= 0.85f;
+        enemy.chaseSpeed *= 1.2f;
+        enemy.attackRecoveryTime *= 0.8f;
 
         // Kısa nefes: oyuncu ne olduğunu görsün.
         if (balance != null && !balance.IsBroken)
