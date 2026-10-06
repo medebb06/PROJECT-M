@@ -258,7 +258,10 @@ public class GroundSlamState : IPlayerState
 
         int balanceDamage = enemy.slamBalanceDamage;
 
-        if (balance != null)
+        // Boss: bar zaten büyük; yüzde tabanlı hasar çok vurmasın, sabit hasar.
+        bool isBoss = enemy.GetComponent<BossController>() != null;
+
+        if (balance != null && !isBoss)
         {
             balanceDamage =
                 Mathf.Max(

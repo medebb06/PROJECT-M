@@ -77,10 +77,52 @@ public class RunUI : MonoBehaviour
     private Vector2 lastMenuMouse;
     private float metaMessageUntil;
 
+    // Kalıcı gelişim kapalıysa (GameFeatures) o madde hiç çıkmaz.
     private static readonly string[] MainItems =
+        GameFeatures.MetaProgression
+            ? new[] { "BAŞLA", "KALICI GELİŞİM", "AYARLAR", "ÇIKIŞ" }
+            : new[] { "BAŞLA", "AYARLAR", "ÇIKIŞ" };
+
+    // ---------------- BAĞIMSIZ MOD (RunManager yokken / çalışmıyorken) ----------------
+
+    /// <summary>Ana menü şu an ekranda mı? (PlayerHud bunu okur.)</summary>
+    public static bool MenuVisible { get; private set; }
+
+    private int bornFrame;
+    private bool standaloneReady;
+    private bool standaloneMenuOpen;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
     {
-        "BAŞLA", "KALICI GELİŞİM", "AYARLAR", "ÇIKIŞ"
-    };
+        MenuVisible = false;
+    }
+
+    // RunManager'dan bağımsız: sahne yüklenince kendini kurar.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Bootstrap()
+    {
+        if (FindFirstObjectByType<RunUI>() != null)
+            return;
+
+        new GameObject("RunUI").AddComponent<RunUI>();
+    }
+
+    private void Awake()
+    {
+        bornFrame = Time.frameCount;
+    }
+
+    // Çalışan bir koşu yöneticisi var mı? (Start'ı tamamlamış, açık.)
+    private static RunManager ActiveRun()
+    {
+        RunManager r = RunManager.Instance;
+
+        if (r != null && r.isActiveAndEnabled && r.Inventory != null)
+            return r;
+
+        return null;
+    }
     private const string GoldIcon = "●";
 
     // =========================================================
@@ -89,10 +131,16 @@ public class RunUI : MonoBehaviour
 
     private void Update()
     {
-        RunManager run = RunManager.Instance;
+        RunManager run = ActiveRun();
 
         if (run == null)
+        {
+            UpdateStandalone();
             return;
+        }
+
+        // Koşu yöneticisi devraldı: bağımsız menü kapalı kalsın.
+        standaloneMenuOpen = false;
 
         switch (run.State)
         {
@@ -250,26 +298,26 @@ public class RunUI : MonoBehaviour
 
     private void ActivateMain(RunManager run, int index)
     {
-        switch (index)
+        switch (MainItems[index])
         {
-            case 0:
+            case "BAŞLA":
                 // Zorluk kademesi açık değilse doğrudan başla.
-                if (MetaProgress.HeatUnlocked > 0)
+                if (run != null && MetaProgress.HeatUnlocked > 0)
                     page = MenuPage.NewRun;
                 else
                     StartRun(run);
                 break;
 
-            case 1:
+            case "KALICI GELİŞİM":
                 page = MenuPage.Meta;
                 break;
 
-            case 2:
+            case "AYARLAR":
                 pendingUiScale = -1f;
                 page = MenuPage.Settings;
                 break;
 
-            case 3:
+            case "ÇIKIŞ":
                 QuitGame();
                 break;
         }
@@ -278,7 +326,78 @@ public class RunUI : MonoBehaviour
     private void StartRun(RunManager run)
     {
         page = MenuPage.Main;
-        run.RequestStart();
+
+        if (run != null)
+            run.RequestStart();
+        else
+            CloseStandaloneMenu();
+    }
+
+    // =========================================================
+    // BAĞIMSIZ MENÜ (RunManager olmadan)
+    // =========================================================
+
+    private void UpdateStandalone()
+    {
+        // RunManager'ın Start'ı bitsin diye birkaç kare bekle.
+        if (!standaloneReady)
+        {
+            if (Time.frameCount - bornFrame < 3)
+                return;
+
+            standaloneReady = true;
+            OpenStandaloneMenu();
+        }
+
+        if (standaloneMenuOpen)
+            UpdateLobby(null);
+    }
+
+    private void OpenStandaloneMenu()
+    {
+        standaloneMenuOpen = true;
+        page = MenuPage.Main;
+        mainIndex = 0;
+
+        HitStop.ClearAll();
+        Time.timeScale = 0f;
+
+        PlayerController p = FindFirstObjectByType<PlayerController>();
+
+        if (p != null)
+            p.canControl = false;
+    }
+
+    private void CloseStandaloneMenu()
+    {
+        standaloneMenuOpen = false;
+        MenuVisible = false;
+
+        HitStop.ClearAll();
+        Time.timeScale = 1f;
+
+        StartCoroutine(ReleasePlayerSoon());
+    }
+
+    // Menü tıklaması/Enter'ı oyuna (zıplama/saldırı) sızmasın.
+    private System.Collections.IEnumerator ReleasePlayerSoon()
+    {
+        yield return new WaitForSecondsRealtime(0.1f);
+
+        PlayerController p = FindFirstObjectByType<PlayerController>();
+
+        if (p != null)
+            p.canControl = true;
+    }
+
+    private void DrawStandalone(float width, float height)
+    {
+        DrawBossBar(width);
+
+        MenuVisible = standaloneMenuOpen;
+
+        if (standaloneMenuOpen)
+            DrawMainMenu(null, width, height);
     }
 
     private static void QuitGame()
@@ -312,9 +431,9 @@ public class RunUI : MonoBehaviour
 
     private void OnGUI()
     {
-        RunManager run = RunManager.Instance;
+        RunManager run = ActiveRun();
 
-        if (run == null || run.Inventory == null)
+        if (run == null && !standaloneReady)
             return;
 
         float scale = GameSettings.GuiScale(uiScale);
@@ -326,6 +445,14 @@ public class RunUI : MonoBehaviour
         float height = Screen.height / scale;
 
         EnsureStyles();
+
+        if (run == null)
+        {
+            DrawStandalone(width, height);
+            return;
+        }
+
+        MenuVisible = run.State == RunState.Lobby;
 
         if (run.State == RunState.Lobby)
         {
@@ -496,7 +623,7 @@ public class RunUI : MonoBehaviour
 
             string label = MainItems[i];
 
-            if (i == 1)
+            if (MainItems[i] == "KALICI GELİŞİM")
                 label += "   <size=14><color=#C9A0FF>◆ " + MetaProgress.Essence + " öz</color></size>";
 
             string text =
@@ -517,19 +644,25 @@ public class RunUI : MonoBehaviour
             lastMenuMouse = e.mousePosition;
 
         // Alt bilgi.
-        string stats =
-            "Koşu " + MetaProgress.Runs +
-            "   •   Zafer " + MetaProgress.Wins +
-            "   •   En iyi perde " + MetaProgress.BestAct;
+        if (GameFeatures.MetaProgression)
+        {
+            string stats =
+                "Koşu " + MetaProgress.Runs +
+                "   •   Zafer " + MetaProgress.Wins +
+                "   •   En iyi perde " + MetaProgress.BestAct;
 
-        if (run.LastEssence > 0)
-            stats += "   •   <color=#C9A0FF>son koşu +" + run.LastEssence + " öz</color>";
+            if (run != null && run.LastEssence > 0)
+                stats += "   •   <color=#C9A0FF>son koşu +" + run.LastEssence + " öz</color>";
 
-        GUI.Label(new Rect(x, height - 56f, 700f, 18f), stats, smallStyle);
+            GUI.Label(new Rect(x, height - 56f, 700f, 18f), stats, smallStyle);
+        }
 
         GUI.Label(
             new Rect(x, height - 36f, 900f, 18f),
-            "[Q] yetenek   [E] infaz   [Esc] duraklat   W/S + Enter: menü",
+            (GameFeatures.Abilities ? "[Q] yetenek   " : "") +
+            "[E] infaz   " +
+            (run != null ? "[Esc] duraklat   " : "") +
+            "W/S + Enter: menü",
             menuHintStyle
         );
     }

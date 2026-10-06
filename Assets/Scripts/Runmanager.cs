@@ -618,7 +618,8 @@ public class RunManager : MonoBehaviour
     public int RemovePriceNow => Price(removePrice);
 
     // Dinlenme
-    public bool CanUpgradeAnyCharm => UpgradableCharms().Count > 0;
+    public bool CanUpgradeAnyCharm =>
+        GameFeatures.Upgrades && UpgradableCharms().Count > 0;
     public int RestHealPercentDisplay =>
         Mathf.RoundToInt(restHealPercent * HeatHealMultiplier * 100f);
 
@@ -812,7 +813,9 @@ public class RunManager : MonoBehaviour
 
         BuildArchetypeTemplates();
 
-        if (useLevelGenerator)
+        // GameFeatures.ProceduralGeneration kapalıysa rastgele harita + orman
+        // teması hiç kurulmaz (sahnedeki sabit zemin kullanılır).
+        if (useLevelGenerator && GameFeatures.ProceduralGeneration)
         {
             level = FindFirstObjectByType<LevelGenerator>();
 
@@ -873,7 +876,9 @@ public class RunManager : MonoBehaviour
 
         pool.AddRange(extraCharms);
 
-        if (GetComponent<RunUI>() == null)
+        // RunUI artık kendi kendine kurulur (RunManager'dan bağımsız);
+        // yine de yoksa ekle.
+        if (FindFirstObjectByType<RunUI>() == null)
             gameObject.AddComponent<RunUI>();
 
         loopRoutine = StartCoroutine(RunLoop());
@@ -888,6 +893,18 @@ public class RunManager : MonoBehaviour
 
     private void Update()
     {
+        // TEST: F9 = Gölge Hilali boss'unu doğur (koşu içindeyken).
+        if (Input.GetKeyDown(KeyCode.F9))
+        {
+            Debug.Log("F9: Gölge Hilali doğuruluyor (State=" + State + ")");
+
+            if (!IsPaused)
+            {
+                ShowBanner("GÖLGE HİLALİ", 2f);
+                SpawnBoss("Gölge Hilali", 4);
+            }
+        }
+
         if (Input.GetKeyDown(KeyCode.F2))
             showRunDebug = !showRunDebug;
 
@@ -1354,9 +1371,10 @@ public class RunManager : MonoBehaviour
 
             BeginRun();
 
-            yield return WeaponOfferRoutine();
+            if (GameFeatures.Weapons)
+                yield return WeaponOfferRoutine();
 
-            if (abilityOfferAtStart)
+            if (abilityOfferAtStart && GameFeatures.Abilities)
                 yield return AbilityOfferRoutine();
 
             if (offerAtRunStart)
@@ -1368,7 +1386,8 @@ public class RunManager : MonoBehaviour
 
             for (Act = 1; Act <= acts && !playerHealth.IsDead; Act++)
             {
-                shopUsedThisAct = false;
+                // Dükkan kapalıysa "kullanıldı" say: kapı seçeneklerinde çıkmaz.
+                shopUsedThisAct = !GameFeatures.Shop;
                 restUsedThisAct = false;
 
                 ShowBanner("PERDE " + Act, 1.8f);
@@ -1499,6 +1518,10 @@ public class RunManager : MonoBehaviour
     // Koşu sonu ÖZ: öldürme + ulaşılan perde + boss + zafer, ısıyla artar.
     private void GrantEssence()
     {
+        // Kalıcı gelişim kapalı: öz verilmez.
+        if (!GameFeatures.MetaProgression)
+            return;
+
         int actReached = IsVictory ? acts : Mathf.Clamp(Act, 1, acts);
 
         float kills = runKills * essencePerKill;
@@ -3469,7 +3492,29 @@ public class RunManager : MonoBehaviour
         }
     }
 
-    private void SpawnBoss(string bossName)
+    // TEST: BossTestHotkey çağırır. Gölge Hilali'ni doğurur.
+    public void DebugSpawnTrialBoss()
+    {
+        if (bossTemplate == null)
+        {
+            GameObject src = bossPrefab != null ? bossPrefab : enemyPrefab;
+
+            Debug.LogWarning(
+                "RunManager: boss şablonu yoktu, test için '" +
+                (src != null ? src.name : "YOK") + "' kullanılıyor."
+            );
+
+            if (src == null)
+                return;
+
+            bossTemplate = src;
+        }
+
+        ShowBanner("GÖLGE HİLALİ", 2f);
+        SpawnBoss("Gölge Hilali", 4);
+    }
+
+    private void SpawnBoss(string bossName, int actOverride = 0)
     {
         int side = UnityEngine.Random.value < 0.5f ? -1 : 1;
 
@@ -3516,7 +3561,7 @@ public class RunManager : MonoBehaviour
                 ? Mathf.Min(0.7f, bossPhase2At + 0.15f)
                 : bossPhase2At;
 
-        controller.Setup(bossName, phaseAt, Act);
+        controller.Setup(bossName, phaseAt, actOverride > 0 ? actOverride : Act);
 
         currentBoss = boss;
 

@@ -41,7 +41,39 @@ public class MoveHit
     [Min(0f)]
     public float parryBalanceMultiplier = 1f;
 
+    [Tooltip("Bu vuruşun uyarısı boyunca düşmanın OYUNCUYA DOĞRU ilerleme hızı (birim/sn). 0 = yerinde.")]
+    [Min(0f)]
+    public float advanceSpeed = 0f;
+
+    [Tooltip("Vuruşun uyarısı başlarken düşman oyuncuya YENİDEN döner (yön değiştirebilir).")]
+    public bool retarget = false;
+
+    [Tooltip("Bu vuruş PARRY'lense bile oyuncuyu geri iten kuvvet (0 = itme yok).")]
+    [Min(0f)]
+    public float parryKnockback = 0f;
+
     public MoveHit() { }
+
+    // Zincirle: new MoveHit(...).ParryKnockback(12f)
+    public MoveHit ParryKnockback(float force)
+    {
+        parryKnockback = force;
+        return this;
+    }
+
+    // Zincirle: new MoveHit(...).Advance(3.5f)
+    public MoveHit Advance(float speed)
+    {
+        advanceSpeed = speed;
+        return this;
+    }
+
+    // Zincirle: new MoveHit(...).Retarget()
+    public MoveHit Retarget()
+    {
+        retarget = true;
+        return this;
+    }
 
     // Zincirle: new MoveHit(...).ParryReward(3f)
     public MoveHit ParryReward(float multiplier)
@@ -160,6 +192,9 @@ public class EnemyMoveset : MonoBehaviour
     public Color sweepColor = new Color(0.3f, 0.75f, 1f);
 
     private AttackMove lastMove;
+
+    /// <summary>Son seçilen hamlenin adı (istatistik için).</summary>
+    public string LastMoveName => lastMove != null ? lastMove.name : "?";
 
     private void Awake()
     {
@@ -372,6 +407,9 @@ public class EnemyMoveset : MonoBehaviour
 
     public static List<AttackMove> CreateBossMoves(int act, bool phase2)
     {
+        if (act >= 4)
+            return CreateTrialBossMoves(phase2);
+
         if (act <= 1)
             return phase2 ? CreateBossPhase2Moves() : CreateBossPhase1Moves();
 
@@ -450,6 +488,167 @@ public class EnemyMoveset : MonoBehaviour
         }
 
         return h;
+    }
+
+    // =========================================================
+    // PERDE 4: GÖLGE HİLALİ (3 eşsiz saldırılı boss)
+    //   Ritim Kırıcı  : düzensiz ritimli 3'lü kombo, son vuruş altın (parry ödülü)
+    //   Gölge Atılışı : uzun menzilli yakalama (dash ile içinden geç / kusursuz kaçış)
+    //   Hilal Dalgası : mesafeden dalga (zıpla ya da parry ile geri yansıt)
+    // =========================================================
+
+    public static List<AttackMove> CreateTrialBossMoves(bool phase2)
+    {
+        List<AttackMove> m = new List<AttackMove>();
+
+        m.Add(
+            new AttackMove
+            {
+                name = "Ritim Kırıcı",
+                signature = true,
+                weight = 1f,
+                cooldown = 3.9f,
+                recoveryMultiplier = 1.30f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.55f),
+                    new MoveHit(MoveHitType.Normal, 0.3f),
+                    new MoveHit(MoveHitType.Normal, 0.85f, 0.45f, 1.3f, 1.2f).ParryReward(3f)
+                }
+            }
+        );
+
+        m.Add(
+            new AttackMove
+            {
+                name = "Gölge Atılışı",
+                weight = 0.9f,
+                cooldown = 4.5f,
+                recoveryMultiplier = 1.04f,
+                hits = { new MoveHit(MoveHitType.Grab, 0.9f, 0f, 1.2f, 1.6f) }
+            }
+        );
+
+        m.Add(
+            new AttackMove
+            {
+                name = "Hilal Dalgası",
+                weight = 0.9f,
+                cooldown = 3.9f,
+                minDistance = 3.5f,
+                recoveryMultiplier = 1.00f,
+                hits = { new MoveHit(MoveHitType.Shot, 0.85f) }
+            }
+        );
+
+        // Dolgu: kısa tek vuruş (boss hep aynı üç şeyi yapmasın).
+        m.Add(
+            new AttackMove
+            {
+                name = "Gölge Kesiği",
+                weight = 0.6f,
+                cooldown = 1.3f,
+                hits = { new MoveHit(MoveHitType.Normal, 0.65f) }
+            }
+        );
+
+        if (phase2)
+        {
+            m.Add(
+                new AttackMove
+                {
+                    name = "Çifte Hilal",
+                    signature = true,
+                    weight = 0.9f,
+                    cooldown = 5.2f,
+                    minDistance = 3.5f,
+                    recoveryMultiplier = 1.30f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Shot, 0.7f),
+                        new MoveHit(MoveHitType.Shot, 0.45f, 0.35f)
+                    }
+                }
+            );
+
+            m.Add(
+                new AttackMove
+                {
+                    name = "Gölge Zinciri",
+                    signature = true,
+                    weight = 1f,
+                    cooldown = 5.2f,
+                    recoveryMultiplier = 1.43f,
+                    hits =
+                    {
+                        new MoveHit(MoveHitType.Normal, 0.5f),
+                        new MoveHit(MoveHitType.Normal, 0.3f),
+                        new MoveHit(MoveHitType.Grab, 0.6f, 0f, 1.2f, 1.6f),
+                        new MoveHit(MoveHitType.Normal, 0.55f, 0.3f, 1.3f, 1.2f).ParryReward(3.5f)
+                    }
+                }
+            );
+
+            ScaleWindups(m, 0.75f);
+        }
+        else
+        {
+            ScaleWindups(m, 0.85f);
+        }
+
+        // ---------------- PARRY SERİLERİ (Keşiş tarzı) ----------------
+
+        // Yavaş başlar, aralar kısalır; boss her vuruşta oyuncuya doğru
+        // ilerler ve yön değiştirebilir. Hepsi parry ister.
+        float k = phase2 ? 0.9f : 1f;
+
+        m.Add(
+            new AttackMove
+            {
+                name = "Keşiş Seli",
+                signature = true,
+                weight = 1.1f,
+                cooldown = 9f,
+                maxDistance = 10f,
+                recoveryMultiplier = 2.2f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.95f * k).Advance(4f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.8f * k).Advance(3.5f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.68f * k).Advance(3.2f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.58f * k).Advance(2.8f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.5f * k).Advance(2.4f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.43f * k).Advance(2f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.38f * k).Advance(1.8f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.34f * k).Advance(1.5f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.31f * k).Advance(1.2f).Retarget(),
+                    // Gerilme payı: son vuruş gecikmeli; parry'lense bile oyuncuyu geri iter.
+                    new MoveHit(MoveHitType.Normal, 0.95f * k, 0.35f, 1.4f, 1.25f)
+                        .Retarget().ParryReward(3.5f).ParryKnockback(12f)
+                }
+            }
+        );
+
+        m.Add(
+            new AttackMove
+            {
+                name = "Kırık Tempo",
+                weight = 0.9f,
+                cooldown = 7f,
+                maxDistance = 9f,
+                recoveryMultiplier = 1.8f,
+                hits =
+                {
+                    new MoveHit(MoveHitType.Normal, 0.6f * k).Advance(3f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.26f * k).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.75f * k, 0.3f).Advance(3f).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.26f * k).Retarget(),
+                    new MoveHit(MoveHitType.Normal, 0.6f * k, 0.25f, 1.2f, 1.2f).Retarget().ParryReward(3f)
+                }
+            }
+        );
+
+        return m;
     }
 
     private float WeightOf(AttackMove move, float distance, float now)

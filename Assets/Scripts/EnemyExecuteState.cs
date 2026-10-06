@@ -128,6 +128,9 @@ public class EnemyExecuteState : IEnemyState
             enemyRb.linearVelocity =
                 Vector2.zero;
         }
+
+        // Sinematik: kamera yakınlaşır + ağır çekim.
+        ExecuteCinematic.Begin();
     }
 
     public void Tick()
@@ -181,7 +184,12 @@ public class EnemyExecuteState : IEnemyState
         {
             BossController boss = enemy.GetComponent<BossController>();
 
-            if (boss != null && !boss.InPhase2)
+            if (boss != null && boss.PercentExecute)
+            {
+                // Gölge Hilali: tek atmaz, canın bir yüzdesi.
+                damage = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * boss.ExecutePercent));
+            }
+            else if (boss != null && !boss.InPhase2)
             {
                 int threshold =
                     Mathf.FloorToInt(health.MaxHealth * boss.Phase2At);
@@ -195,7 +203,7 @@ public class EnemyExecuteState : IEnemyState
 
             CombatCallout.Popup(
                 enemy.transform.position + Vector3.up * 2.4f,
-                boss != null && !boss.InPhase2 ? "İNFAZ! FAZ 2" : "İNFAZ!",
+                boss != null && !boss.InPhase2 && !boss.PercentExecute ? "İNFAZ! FAZ 2" : "İNFAZ!",
                 new Color(1f, 0.8f, 0.3f),
                 1.3f
             );
@@ -203,6 +211,9 @@ public class EnemyExecuteState : IEnemyState
 
         if (health != null)
             health.TakeDamage(damage);
+
+        // Sinematik: öldürme anı (kısa sarsıntı) + kamera açılmaya başlar.
+        ExecuteCinematic.End(health != null && health.IsDead);
 
         // =====================================================
         // COLLISION GERİ AÇ
@@ -238,6 +249,8 @@ public class EnemyExecuteState : IEnemyState
         // Güvenlik:
         // State dışarıdan değiştirilirse collider
         // açık kalmasın.
+
+        ExecuteCinematic.End(false);
 
         if (playerCollider != null &&
             enemyCollider != null)

@@ -888,6 +888,12 @@ public class EnemyController : MonoBehaviour
         if (IsStaggered)
             return;
 
+        // Gölge Hilali: can ölümcül değilse hiçbir kaynak sersemletemez.
+        BossController trialBoss = GetComponent<BossController>();
+
+        if (trialBoss != null && trialBoss.BlocksStagger())
+            return;
+
         PlayFlash(
             staggerFlashColor,
             staggerFlashDuration
@@ -1102,6 +1108,18 @@ public class EnemyController : MonoBehaviour
     public void LockFacing(bool locked)
     {
         facingLocked = locked;
+    }
+
+    // Yön kilitli olsa bile şimdi oyuncuya dön (kombo vuruşlarında yön değiştirme).
+    public void RetargetFacing()
+    {
+        bool was = facingLocked;
+
+        facingLocked = false;
+
+        FaceTarget();
+
+        facingLocked = was;
     }
 
     // +1 = sağa, -1 = sola bakıyor.
@@ -1743,6 +1761,15 @@ public class EnemyController : MonoBehaviour
 
     private void HandleBalanceBroken()
     {
+        // Boss (Gölge Hilali): sersemleme yerine denge sıfırlanır + can hasarı.
+        BossController trialBoss = GetComponent<BossController>();
+
+        if (trialBoss != null && trialBoss.TryPostureBreak())
+        {
+            CombatEvents.RaiseBalanceBroken(this);
+            return;
+        }
+
         ForceStagger();
 
         CombatEvents.RaiseBalanceBroken(this);

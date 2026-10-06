@@ -358,6 +358,12 @@ public class EnemyProjectile : MonoBehaviour
 
         CombatCallout.PopupAbove(owner, settings.reflectText, settings.reflectedColor, 1.1f);
 
+        // Boss: yansıtılan ok doğrudan CAN hasarı verir.
+        BossController reflectBoss = owner.GetComponent<BossController>();
+
+        if (reflectBoss != null)
+            reflectBoss.OnReflectedHit();
+
         Finish();
     }
 

@@ -158,8 +158,9 @@ public class EnemyHitFeedback : MonoBehaviour
 
         if (CombatVFXManager.Instance != null)
         {
+            // Efekt kılıçların çarpıştığı noktada (düşmanın ayağında değil).
             CombatVFXManager.Instance.PlayParry(
-                transform.position,
+                ParryVFX.ContactPoint(transform),
                 hitDirection
             );
         }

@@ -97,8 +97,11 @@ public static class MetaProgress
     public static int TotalParries => D.totalParries;
 
     // Seçilebilecek en yüksek zorluk: N'de kazanınca N+1 açılır.
+    // GameFeatures.MetaProgression kapalıyken zorluk kademesi hep 0.
     public static int HeatUnlocked =>
-        Mathf.Clamp(D.highestHeatWon + 1, 0, MaxHeat);
+        GameFeatures.MetaProgression
+            ? Mathf.Clamp(D.highestHeatWon + 1, 0, MaxHeat)
+            : 0;
 
     public static int SelectedHeat
     {
@@ -169,7 +172,7 @@ public static class MetaProgress
 
     public static void AddEssence(int amount)
     {
-        if (amount <= 0)
+        if (!GameFeatures.MetaProgression || amount <= 0)
             return;
 
         D.essence += amount;
@@ -231,16 +234,24 @@ public static class MetaProgress
     }
 
     // Değerler (yükseltme seviyelerinden).
-    public static int BonusMaxHealth => UpgradeLevel(MetaUpgrades.Health) * 10;
-    public static float BonusPostHeal => UpgradeLevel(MetaUpgrades.PostHeal) * 0.03f;
-    public static float ExecuteFillMultiplier => 1f + UpgradeLevel(MetaUpgrades.ExecuteFill) * 0.15f;
-    public static float AbilityCooldownMultiplier => 1f - UpgradeLevel(MetaUpgrades.AbilityCooldown) * 0.08f;
-    public static float ShopPriceMultiplier => 1f - UpgradeLevel(MetaUpgrades.ShopDiscount) * 0.08f;
-    public static int StartGold => UpgradeLevel(MetaUpgrades.StartGold) * 25;
-    public static float EssenceMultiplier => 1f + UpgradeLevel(MetaUpgrades.EssenceGain) * 0.1f;
+    // Kalıcı gelişim kapalıyken hepsi nötr (seviye 0).
+    private static int Lvl(string id) =>
+        GameFeatures.MetaProgression ? UpgradeLevel(id) : 0;
+
+    public static int BonusMaxHealth => Lvl(MetaUpgrades.Health) * 10;
+    public static float BonusPostHeal => Lvl(MetaUpgrades.PostHeal) * 0.03f;
+    public static float ExecuteFillMultiplier => 1f + Lvl(MetaUpgrades.ExecuteFill) * 0.15f;
+    public static float AbilityCooldownMultiplier => 1f - Lvl(MetaUpgrades.AbilityCooldown) * 0.08f;
+    public static float ShopPriceMultiplier => 1f - Lvl(MetaUpgrades.ShopDiscount) * 0.08f;
+    public static int StartGold => Lvl(MetaUpgrades.StartGold) * 25;
+    public static float EssenceMultiplier => 1f + Lvl(MetaUpgrades.EssenceGain) * 0.1f;
 
     public static bool IsUnlocked(string id)
     {
+        // Kalıcı gelişim kapalı: ilerlemeye bağlı kilit yok.
+        if (!GameFeatures.MetaProgression)
+            return true;
+
         return string.IsNullOrEmpty(id) || D.unlocked.Contains(id);
     }
 
@@ -259,6 +270,10 @@ public static class MetaProgress
         int parries
     )
     {
+        // Kalıcı gelişim kapalı: koşu kaydedilmez, kilit açılmaz.
+        if (!GameFeatures.MetaProgression)
+            return new List<string>();
+
         Data d = D;
 
         d.runs++;

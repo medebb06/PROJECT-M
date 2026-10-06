@@ -33,6 +33,11 @@ public class EnemyArcher : MonoBehaviour
     [Range(0f, 1f)]
     public float muzzleHeight = 0.6f;
 
+    [Tooltip(
+        "Açıksa ok, ATEŞ ANINDA hedefin gövde yüksekliğinde çıkar (büyük boss'ların " +
+        "oku oyuncunun başının üstünden geçmesin). Zıplayarak yine kaçılır.")]
+    public bool matchTargetHeight = false;
+
     [Tooltip("Okun gövdeden ne kadar önde çıktığı (birim).")]
     public float muzzleForward = 0.4f;
 
@@ -321,6 +326,17 @@ public class EnemyArcher : MonoBehaviour
                 b.min.y + b.size.y * muzzleHeight
             );
 
+        if (matchTargetHeight && enemy.target != null)
+        {
+            Collider2D tc = enemy.target.GetComponent<Collider2D>();
+
+            if (tc == null)
+                tc = enemy.target.GetComponentInChildren<Collider2D>();
+
+            if (tc != null)
+                origin.y = Mathf.Clamp(tc.bounds.center.y, b.min.y + 0.2f, b.max.y);
+        }
+
         Vector2 forward = new Vector2(facing, 0f);
         Vector2 dir = forward;
 
@@ -347,6 +363,17 @@ public class EnemyArcher : MonoBehaviour
         }
 
         EnemyProjectile.Spawn(this, enemy, origin, dir.normalized, damage);
+
+        Fired?.Invoke(this, damage);
+    }
+
+    /// <summary>Her ok bırakıldığında (boss yankısı vb. dinler).</summary>
+    public static event System.Action<EnemyArcher, int> Fired;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetFired()
+    {
+        Fired = null;
     }
 }
 

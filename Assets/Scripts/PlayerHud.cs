@@ -128,9 +128,8 @@ public class PlayerHud : MonoBehaviour
         if (Event.current.type != EventType.Repaint || health == null)
             return;
 
-        RunManager run = RunManager.Instance;
-
-        if (run != null && run.State == RunState.Lobby)
+        // Ana menü açıkken gizle (RunManager olsa da olmasa da).
+        if (RunUI.MenuVisible)
             return;
 
         // Menülerin (RunUI) arkasında, düşman çubuklarının önünde.

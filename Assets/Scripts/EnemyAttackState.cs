@@ -53,6 +53,7 @@ public class EnemyAttackState : IEnemyState
     private EnemyMoveset moveset;
     private AttackMove move;
     private int stepIndex;
+    private MoveHit currentHit;
     private MoveHitType hitType = MoveHitType.Normal;
     private float stepDamageMultiplier = 1f;
     private float stepReachMultiplier = 1f;
@@ -247,6 +248,11 @@ public class EnemyAttackState : IEnemyState
 
     private void BeginStep(MoveHit hit)
     {
+        currentHit = hit;
+
+        if (hit.retarget)
+            enemy.RetargetFacing();
+
         hitType = hit.type;
         stepDamageMultiplier = hit.damageMultiplier;
         stepReachMultiplier = hit.reachMultiplier;
@@ -619,6 +625,8 @@ public class EnemyAttackState : IEnemyState
         {
             StopMovement();
 
+            AdvanceTowardTarget();
+
             // Düşman zamanıyla ilerler: parry slow-mo'sunda animasyon ve
             // ses ile birlikte yavaşlar.
             warningTimer -= EnemyTime.DeltaTime;
@@ -799,6 +807,81 @@ public class EnemyAttackState : IEnemyState
     // =========================================================
     // MOVEMENT
     // =========================================================
+
+    // Keşiş serileri: vuruşun uyarısı boyunca oyuncuya doğru ilerle.
+    private void AdvanceTowardTarget()
+    {
+        if (
+            currentHit == null ||
+            currentHit.advanceSpeed <= 0f ||
+            rb == null ||
+            enemy.target == null ||
+            warningTimer <= 0f
+        )
+        {
+            return;
+        }
+
+        float dx = enemy.target.position.x - enemy.transform.position.x;
+
+        // Oyuncuyu İTMEMEK için: gövdeler arası küçük bir boşluk kalınca dur.
+        float stopDistance = 1.6f;
+
+        Collider2D selfCol = enemy.GetComponent<Collider2D>();
+        Collider2D targetCol = enemy.target.GetComponent<Collider2D>();
+
+        if (selfCol != null && targetCol != null)
+            stopDistance = selfCol.bounds.extents.x + targetCol.bounds.extents.x + 0.5f;
+
+        if (Mathf.Abs(dx) <= stopDistance)
+            return;
+
+        rb.linearVelocity =
+            new Vector2(
+                Mathf.Sign(dx) * currentHit.advanceSpeed * EnemyTime.Scale,
+                rb.linearVelocity.y
+            );
+    }
+
+    private void PushPlayerBack(float force)
+    {
+        if (enemy.target == null)
+            return;
+
+        PlayerController p = enemy.target.GetComponent<PlayerController>();
+
+        if (p == null || p.rb == null)
+            return;
+
+        float dir = Mathf.Sign(p.transform.position.x - enemy.transform.position.x);
+
+        if (dir == 0f)
+            dir = -enemy.FacingDirection;
+
+        enemy.StartCoroutine(PushRoutine(p, dir, force));
+    }
+
+    private System.Collections.IEnumerator PushRoutine(PlayerController p, float dir, float force)
+    {
+        const float Duration = 0.2f;
+
+        float t = 0f;
+
+        while (t < Duration && p != null && p.rb != null)
+        {
+            // Tüm Update'lerden SONRA yaz: parry durumu hızı sıfırlamış olabilir.
+            yield return new WaitForEndOfFrame();
+
+            if (p == null || p.rb == null || p.isDashing)
+                yield break;
+
+            float k = 1f - t / Duration;
+
+            p.rb.linearVelocity = new Vector2(dir * force * k, p.rb.linearVelocity.y);
+
+            t += Time.deltaTime;
+        }
+    }
 
     private void StopMovement()
     {
@@ -1251,6 +1334,10 @@ public class EnemyAttackState : IEnemyState
             enemy.PlayParrySlowMotion(balance.IsBroken);
 
         CombatEvents.RaiseParry(enemy, balance.IsBroken);
+
+        // Parry'lense bile geri iten vuruş (Keşiş Seli'nin son vuruşu).
+        if (currentHit != null && currentHit.parryKnockback > 0f)
+            PushPlayerBack(currentHit.parryKnockback);
 
         // Balance kırıldıysa EnemyBalance.OnBalanceBroken
         // üzerinden EnemyController.HandleBalanceBroken()

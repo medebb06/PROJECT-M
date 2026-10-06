@@ -11,6 +11,13 @@ public class CombatVFXManager : MonoBehaviour
 
     [Header("Defense VFX")]
     [SerializeField] private GameObject parryVFX;
+
+    [Header("Parry (kodla çizilen çatışma efekti)")]
+    [Tooltip("Açık: parry'de ParryVFX (yıldız flaşı + halka + kıvılcım) oynar.")]
+    [SerializeField] private bool proceduralParryVFX = true;
+
+    [Tooltip("Açık: eski 'Parry VFX' prefab'ı da oynar. Normal vuruşla aynı görünüyorsa KAPALI bırak.")]
+    [SerializeField] private bool alsoPlayParryPrefab = false;
     [SerializeField] private GameObject blockVFX;
 
     [Header("Balance VFX")]
@@ -57,6 +64,14 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayParry(Vector3 position, Vector2 direction)
     {
+        if (proceduralParryVFX)
+        {
+            ParryVFX.Play(position, direction, vfxSortingLayer, vfxSortingOrder + 20);
+
+            if (!alsoPlayParryPrefab)
+                return;
+        }
+
         if (parryVFX == null)
         {
             Debug.LogWarning("PARRY VFX ASSIGNED DEĞİL!");

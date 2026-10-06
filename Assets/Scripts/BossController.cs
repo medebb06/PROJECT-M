@@ -23,7 +23,33 @@ public class BossController : MonoBehaviour
 
     public event Action PhaseChanged;
 
+    [Tooltip("Denge çubuğu normal düşmanın kaç katı (büyük = parry barı az doldurur).")]
+    [Min(1f)]
+    public float balanceMultiplier = 4f;
+
+    [Header("Gölge Hilali (perde 4)")]
+    [Tooltip("Boss'un canı (RunManager'ın verdiği değerin kaç katı).")]
+    [Min(1f)]
+    public float trialHealthMultiplier = 4f;
+
+    [Tooltip("Boss'un denge çubuğu normal düşmanın kaç katı.")]
+    [Min(1f)]
+    public float trialBalanceMultiplier = 5f;
+
+    [Tooltip("Denge kırılınca infazın vuracağı can oranı (0.18 = %18).")]
+    [Range(0.02f, 1f)]
+    public float trialExecutePercent = 0.18f;
+
+    [Tooltip("Denge çubuğu dolunca (sersemlemek yerine) boss'un yiyeceği can oranı (Sekiro gibi).")]
+    [Range(0.05f, 0.6f)]
+    public float trialPostureBreakPercent = 0.25f;
+
+    [Tooltip("Parry ile yansıtılan ok boss'a değince yiyeceği can oranı.")]
+    [Range(0f, 0.3f)]
+    public float reflectHealthPercent = 0.04f;
+
     private float phase2At = 0.5f;
+    private float startTime;
     private int act = 1;
 
     private EnemyController enemy;
@@ -39,6 +65,74 @@ public class BossController : MonoBehaviour
 
     public float BalancePercent =>
         balance != null ? balance.BalancePercent : 0f;
+
+    /// <summary>Gölge Hilali: infaz barı ölümcül değil, canın % kadarını alır.</summary>
+    public bool PercentExecute => act >= 4;
+
+    public float ExecutePercent => trialExecutePercent;
+
+    /// <summary>
+    /// Denge dolunca: sersemleme YOK, denge sıfırlanır, boss canının %X'ini yer.
+    /// Can bu hasara yetmiyorsa false döner (normal sersemleme / infaz fırsatı).
+    /// </summary>
+    // Gölge Hilali'nde sersemlemeyi engelle (can ölümcül değilse).
+    public bool BlocksStagger()
+    {
+        if (!PercentExecute || Health == null || Health.IsDead)
+            return false;
+
+        int damage = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialPostureBreakPercent));
+
+        return Health.CurrentHealth > damage;
+    }
+
+    public bool TryPostureBreak()
+    {
+        if (!PercentExecute || Health == null || balance == null || enemy == null)
+        {
+            Debug.Log("TryPostureBreak: kapalı (PercentExecute=" + PercentExecute + ")");
+            return false;
+        }
+
+        int damage = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialPostureBreakPercent));
+
+        if (Health.CurrentHealth <= damage)
+            return false;
+
+        Debug.Log("DENGE KIRILDI → sersemleme yok, can -" + damage);
+
+        BossStats.postureBreaks++;
+
+        balance.RecoverBalance();
+
+        Health.TakeDamage(damage);
+
+        enemy.PlayBalanceDamageFlash();
+
+        CombatCallout.PopupAbove(enemy, "DENGE KIRILDI", new Color(1f, 0.85f, 0.2f), 1.4f);
+
+        HitStop.Request(0.14f, 0.04f);
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(0.9f);
+
+        return true;
+    }
+
+    /// <summary>Yansıtılan ok boss'a değdi: doğrudan can hasarı.</summary>
+    public void OnReflectedHit()
+    {
+        if (!PercentExecute || Health == null || Health.IsDead)
+            return;
+
+        int damage = Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * reflectHealthPercent));
+
+        Health.TakeDamage(damage);
+
+        BossStats.reflectedHits++;
+
+        CombatCallout.PopupAbove(enemy, "CAN HASARI!", new Color(1f, 0.5f, 0.4f), 1.1f, 1.1f);
+    }
 
     public bool IsAlive => enemy != null && !enemy.IsDead;
 
@@ -77,11 +171,75 @@ public class BossController : MonoBehaviour
 
         moveset.moves = EnemyMoveset.CreateBossMoves(act, false);
 
+        // Boss'un dengesi normal düşmana göre çok daha geç kırılır:
+        // parry/vuruş aynı hasarı verir ama bar 'balanceMultiplier' kat büyüktür.
+        float balMult = act >= 4 ? trialBalanceMultiplier : balanceMultiplier;
+
+        if (balance != null && balMult > 1f)
+            balance.SetMaxBalance(Mathf.RoundToInt(balance.MaxBalance * balMult));
+
+        // Gölge Hilali: uzun savaş (4-5 dk) ve tek atmayan infaz.
+        if (act >= 4 && Health != null)
+        {
+            Health.SetMaxHealth(
+                Mathf.RoundToInt(Health.MaxHealth * trialHealthMultiplier),
+                true
+            );
+
+            enemy.executeDamage =
+                Mathf.Max(1, Mathf.RoundToInt(Health.MaxHealth * trialExecutePercent));
+        }
+
         // Perdeye göre karakter.
         if (act == 2)
         {
             enemy.chaseSpeed *= 1.25f;
             enemy.attackRecoveryTime *= 0.8f;
+        }
+        else if (act >= 4)
+        {
+            // Gölge Hilali: mesafeden dalga atar, geri kaçmaz / geri dash atmaz.
+            EnemyArcher archer = GetComponent<EnemyArcher>();
+
+            if (archer == null)
+                archer = gameObject.AddComponent<EnemyArcher>();
+
+            archer.retreatDistance = 0f;
+            archer.enableBackDash = false;
+            archer.arrowScale = 3.2f;
+            archer.arrowSpeed = 17f;
+            archer.arrowColor = new Color(0.75f, 0.55f, 1f);
+            archer.matchTargetHeight = true;
+
+            // Zıpla-Ez: alan saldırısı.
+            if (GetComponent<BossSlam>() == null)
+                gameObject.AddComponent<BossSlam>();
+
+            // Yakalamadan dash ile kurtulma payı (uzun menzil için).
+            enemy.unblockableDodgeGrace = Mathf.Max(enemy.unblockableDodgeGrace, 0.3f);
+
+            // Aynı hamleyi art arda seçme.
+            moveset.repeatPenalty = 0.05f;
+
+            // Çevik ve saldırgan: hızlı koşar, toparlanması kısa.
+            enemy.chaseSpeed *= 1.3f;
+            enemy.attackRecoveryTime *= 0.6f;
+
+            // Kusursuz kaçış / atla-vur ödülleri boss'un barını az doldursun.
+            UnblockableCounter counter = GetComponent<UnblockableCounter>();
+
+            if (counter == null)
+                counter = gameObject.AddComponent<UnblockableCounter>();
+
+            counter.dashCounterBalancePercent = 0.1f;
+            counter.jumpCounterBalancePercent = 0.07f;
+
+            // Haritaya vuran kaçış saldırısı.
+            if (GetComponent<BossNova>() == null)
+                gameObject.AddComponent<BossNova>();
+
+            BossStats.Reset();
+            startTime = Time.time;
         }
         else if (act >= 3)
         {
@@ -93,10 +251,77 @@ public class BossController : MonoBehaviour
         Current = this;
     }
 
+    private void OnEnable()
+    {
+        CombatEvents.PlayerDamaged += OnPlayerDamaged;
+    }
+
+    private void OnDisable()
+    {
+        CombatEvents.PlayerDamaged -= OnPlayerDamaged;
+    }
+
+    private void OnPlayerDamaged(PlayerDamageReport report)
+    {
+        if (!PercentExecute || report.source != enemy)
+            return;
+
+        string skill =
+            BossSkillGate.IsRunning
+                ? BossSkillGate.CurrentId
+                : (moveset != null ? moveset.LastMoveName : "?");
+
+        BossStats.Record(skill, report.amount, report.lethal);
+
+        if (report.lethal)
+            BossStats.Print("OYUNCU ÖLDÜ", Time.time - startTime);
+    }
+
     private void OnDestroy()
     {
+        if (PercentExecute && enemy != null && enemy.IsDead)
+            BossStats.Print("BOSS ÖLDÜ", Time.time - startTime);
+
         if (Current == this)
             Current = null;
+    }
+
+    // Faz 2 sahnesi: boss kükrer, kısa süre saldırmaz; oyuncu ne olduğunu görür.
+    private System.Collections.IEnumerator Phase2Scene()
+    {
+        BossSkillGate.Block(2.4f);
+
+        enemy.StartAttackRecovery(2.2f);
+
+        BossStats.phase2At = Time.time - startTime;
+
+        if (RunManager.Instance != null)
+            RunManager.Instance.ShowBanner("GÖLGE UYANDI", 2f);
+
+        CombatCallout.PopupAbove(enemy, "GÖLGE UYANDI", new Color(0.75f, 0.55f, 1f), 1.8f);
+
+        enemy.PlayTintFlash(new Color(0.6f, 0.4f, 1f), 0.8f);
+
+        HitStop.Request(0.3f, 0.05f);
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(1.5f);
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+
+        float t = 0f;
+
+        while (t < 1.4f && enemy != null && !enemy.IsDead)
+        {
+            enemy.StartAttackRecovery(0.5f);
+
+            if (rb != null)
+                rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            t += Time.deltaTime;
+
+            yield return null;
+        }
     }
 
     private void Update()
@@ -137,6 +362,9 @@ public class BossController : MonoBehaviour
             RunManager.Instance.ShowBanner("FAZ 2", 1.4f);
 
         PhaseChanged?.Invoke();
+
+        if (PercentExecute)
+            StartCoroutine(Phase2Scene());
 
         Debug.Log("BOSS FAZ 2: " + BossName);
     }
