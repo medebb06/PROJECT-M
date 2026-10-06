@@ -134,7 +134,11 @@ public class BossNova : MonoBehaviour
         if (busy || enemy == null || enemy.IsDead)
             return;
 
-        if (Time.time < nextTime || enemy.target == null || enemy.IsTargetDead)
+        BossBrain brain = GetComponent<BossBrain>();
+
+        float early = brain != null ? brain.EarlySkillBonus : 0f;
+
+        if (Time.time < nextTime - early || enemy.target == null || enemy.IsTargetDead)
             return;
 
         BossSlam slam = GetComponent<BossSlam>();

@@ -114,6 +114,11 @@ public class PlayerController : MonoBehaviour
     public float slamLiftForce = 5f;
     [Tooltip("Slam bir düşmana değerse oyuncu bu hızla yukarı sıçrar (0 = kapalı).")]
     public float slamBounceVelocity = 10f;
+    [Tooltip("Yer vuruşu (↓ + Space) bittikten sonra tekrar kullanılabilmesi için gereken süre (sn).")]
+    public float slamCooldown = 3f;
+    [HideInInspector] public float slamReadyTime;
+
+    public bool CanGroundSlam => Time.time >= slamReadyTime;
 
     [HideInInspector] public bool canControl = true;
     [HideInInspector] public bool isDashing;

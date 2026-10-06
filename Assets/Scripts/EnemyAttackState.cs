@@ -740,6 +740,9 @@ public class EnemyAttackState : IEnemyState
 
             enemy.StartAttackRecovery(recovery);
 
+            // İnfaz için "açık an": toparlanma boyunca düşman savunmasız.
+            enemy.openUntil = EnemyTime.Now + recovery * 0.85f;
+
             recoveryTimer = recovery;
 
             isRecovering = true;

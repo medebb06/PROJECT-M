@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public class GroundSlamState : IPlayerState
@@ -21,6 +21,9 @@ public class GroundSlamState : IPlayerState
     public void Enter()
     {
         impactTriggered = false;
+
+        // Bekleme süresi slam başlayınca işlemeye başlar.
+        player.slamReadyTime = Time.time + player.slamCooldown;
 
         startY = player.transform.position.y;
 

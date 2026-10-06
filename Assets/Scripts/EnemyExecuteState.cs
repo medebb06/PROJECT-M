@@ -8,6 +8,16 @@ public class EnemyExecuteState : IEnemyState
     private float timer;
     private bool finished;
 
+    // Sersemlik yokken (sadece "açık an"da) atılan infaz daha az hasar verir.
+    private readonly bool openOnly;
+    private const float OpenOnlyDamageMultiplier = 0.75f;
+
+    // Geçiş süresi (GERÇEK sn): dünya ağır çekimdeyken bile oyuncu hızlı geçer.
+    private const float PassRealTime = 0.2f;
+
+    // Geçiş mesafesi en az bu kadar olsun (görünür bir "içinden geçiş").
+    private const float MinPassDistance = 2.2f;
+
     private Collider2D playerCollider;
     private Collider2D enemyCollider;
 
@@ -16,6 +26,9 @@ public class EnemyExecuteState : IEnemyState
     )
     {
         this.enemy = enemy;
+
+        // Execute() çağrısında düşman henüz sersemleme durumundaysa tam hasar.
+        openOnly = enemy != null && !enemy.IsStaggered;
     }
 
     public void Enter()
@@ -88,7 +101,7 @@ public class EnemyExecuteState : IEnemyState
         // =====================================================
 
         float passDistance =
-            enemy.executeDistance;
+            Mathf.Max(enemy.executeDistance, MinPassDistance);
 
         Vector2 targetPosition =
             new Vector2(
@@ -101,11 +114,7 @@ public class EnemyExecuteState : IEnemyState
         // EXECUTE
         // =====================================================
 
-        float duration =
-            Mathf.Max(
-                enemy.executeDuration,
-                0.06f
-            );
+        float duration = PassRealTime;
 
         player.stateMachine.ChangeState(
             new PlayerExecuteState(
@@ -138,9 +147,10 @@ public class EnemyExecuteState : IEnemyState
         if (finished)
             return;
 
-        timer += Time.deltaTime;
+        // Gerçek zaman: ağır çekimde de geçişle aynı anda biter.
+        timer += Time.unscaledDeltaTime;
 
-        if (timer >= enemy.executeDuration)
+        if (timer >= PassRealTime)
         {
             FinishExecute();
         }
@@ -184,17 +194,12 @@ public class EnemyExecuteState : IEnemyState
         {
             BossController boss = enemy.GetComponent<BossController>();
 
-            if (boss != null && boss.PercentExecute)
+            if (boss != null)
             {
-                // Gölge Hilali: tek atmaz, canın bir yüzdesi.
-                damage = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * boss.ExecutePercent));
-            }
-            else if (boss != null && !boss.InPhase2)
-            {
-                int threshold =
-                    Mathf.FloorToInt(health.MaxHealth * boss.Phase2At);
+                // Boss: infaz tek atmaz, canın bir yüzdesini alır (faz atlatmaz).
+                float pct = boss.ExecuteDamagePercent * (openOnly ? OpenOnlyDamageMultiplier : 1f);
 
-                damage = Mathf.Max(1, health.CurrentHealth - threshold);
+                damage = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * pct));
             }
             else
             {
@@ -203,7 +208,7 @@ public class EnemyExecuteState : IEnemyState
 
             CombatCallout.Popup(
                 enemy.transform.position + Vector3.up * 2.4f,
-                boss != null && !boss.InPhase2 && !boss.PercentExecute ? "İNFAZ! FAZ 2" : "İNFAZ!",
+                "İNFAZ!",
                 new Color(1f, 0.8f, 0.3f),
                 1.3f
             );

@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// İNFAZ GEÇİŞİ: oyuncu düşmanın İÇİNDEN çok hızlı geçer (gerçek zamanla), dünya ağır çekimdedir.
+/// Geçerken art görüntü (afterimage) bırakır; sonunda düşmana doğru döner.
+/// </summary>
 public class PlayerExecuteState : IPlayerState
 {
     private PlayerController player;
@@ -11,7 +15,15 @@ public class PlayerExecuteState : IPlayerState
     private float timer;
     private float duration;
 
+    private float ghostTimer;
+
     private float originalGravityScale;
+
+    // Geçişin yönü (sonunda tersine dönüp düşmana bakılır).
+    private float moveDir;
+
+    // Art görüntü sıklığı (gerçek sn).
+    private const float GhostSpacing = 0.014f;
 
     public PlayerExecuteState(
         PlayerController player,
@@ -23,7 +35,7 @@ public class PlayerExecuteState : IPlayerState
         this.player = player;
         this.sm = sm;
         this.targetPosition = targetPosition;
-        this.duration = duration;
+        this.duration = Mathf.Max(0.05f, duration);
     }
 
     public void Enter()
@@ -32,6 +44,12 @@ public class PlayerExecuteState : IPlayerState
             player.rb.position;
 
         timer = 0f;
+        ghostTimer = 0f;
+
+        moveDir = Mathf.Sign(targetPosition.x - startPosition.x);
+
+        if (moveDir == 0f)
+            moveDir = player.facingDir;
 
         originalGravityScale =
             player.rb.gravityScale;
@@ -42,6 +60,9 @@ public class PlayerExecuteState : IPlayerState
         player.isInvincible = true;
         player.isDashing = true;
 
+        // Hareket yönüne bak.
+        FaceDirection(moveDir);
+
         player.SetVelocity(
             Vector2.zero
         );
@@ -49,41 +70,77 @@ public class PlayerExecuteState : IPlayerState
 
     public void Update()
     {
-        // Execute sırasında input yok.
+        // GERÇEK ZAMAN: dünya ağır çekimdeyken bile geçiş hızlıdır.
+        float dt = Time.unscaledDeltaTime;
+
+        timer += dt;
+
+        float t = Mathf.Clamp01(timer / duration);
+
+        // Hızlı başlar, sonda yumuşakça yavaşlar.
+        float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+
+        Vector2 pos = Vector2.Lerp(startPosition, targetPosition, eased);
+
+        player.rb.position = pos;
+        player.rb.linearVelocity = Vector2.zero;
+
+        ghostTimer -= dt;
+
+        if (ghostTimer <= 0f)
+        {
+            ghostTimer = GhostSpacing;
+            SpawnGhost();
+        }
+
+        if (t >= 1f)
+            Finish();
     }
 
     public void FixedUpdate()
     {
-        timer +=
-            Time.fixedDeltaTime;
+        player.rb.linearVelocity = Vector2.zero;
+    }
 
-        float t =
-            Mathf.Clamp01(
-                timer / duration
-            );
+    private void SpawnGhost()
+    {
+        if (!player.afterImagePrefab || !player.playerSprite)
+            return;
 
-        float smoothT =
-            Mathf.SmoothStep(
-                0f,
-                1f,
-                t
-            );
-
-        Vector2 nextPosition =
-            Vector2.Lerp(
-                startPosition,
-                targetPosition,
-                smoothT
-            );
-
-        player.rb.MovePosition(
-            nextPosition
+        GameObject obj = Object.Instantiate(
+            player.afterImagePrefab,
+            player.transform.position,
+            Quaternion.identity
         );
 
-        if (t >= 1f)
-        {
-            Finish();
-        }
+        AfterImage ghost = obj.GetComponent<AfterImage>();
+
+        if (ghost == null)
+            return;
+
+        Vector3 ghostScale =
+            player.modelPivot != null
+                ? player.modelPivot.localScale
+                : Vector3.one;
+
+        ghostScale.x = Mathf.Abs(ghostScale.x);
+
+        ghost.Init(
+            player.playerSprite.sprite,
+            ghostScale,
+            player.playerSprite.flipX
+        );
+
+        // Ağır çekimde uzun süre kalsın (iz bırakma hissi).
+        ghost.fadeSpeed = 1.3f;
+    }
+
+    private void FaceDirection(float dir)
+    {
+        player.facingDir = dir < 0f ? -1f : 1f;
+
+        if (player.playerSprite != null)
+            player.playerSprite.flipX = player.facingDir < 0f;
     }
 
     private void Finish()
@@ -98,6 +155,9 @@ public class PlayerExecuteState : IPlayerState
         player.SetVelocity(
             Vector2.zero
         );
+
+        // Geçtikten sonra düşmana doğru dön (sinematik bitiş).
+        FaceDirection(-moveDir);
 
         if (player.IsGrounded())
         {

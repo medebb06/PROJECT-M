@@ -105,7 +105,11 @@ public class BossSlam : MonoBehaviour
         if (nova != null && nova.IsBusy)
             return;
 
-        if (Time.time < nextTime || enemy.target == null || enemy.IsTargetDead)
+        BossBrain brain = GetComponent<BossBrain>();
+
+        float early = brain != null ? brain.EarlySkillBonus : 0f;
+
+        if (Time.time < nextTime - early || enemy.target == null || enemy.IsTargetDead)
             return;
 
         if (
@@ -507,6 +511,9 @@ public class BossSlam : MonoBehaviour
 
         if (last)
         {
+            // Yorgun boss: infaz için açık an.
+            enemy.openUntil = EnemyTime.Now + exhaustTime;
+
             float e = 0f;
 
             while (e < exhaustTime)

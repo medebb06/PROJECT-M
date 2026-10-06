@@ -38,7 +38,7 @@ public class BossController : MonoBehaviour
 
     [Tooltip("Denge kırılınca infazın vuracağı can oranı (0.18 = %18).")]
     [Range(0.02f, 1f)]
-    public float trialExecutePercent = 0.18f;
+    public float trialExecutePercent = 0.28f;
 
     [Tooltip("Denge çubuğu dolunca (sersemlemek yerine) boss'un yiyeceği can oranı (Sekiro gibi).")]
     [Range(0.05f, 0.6f)]
@@ -68,6 +68,9 @@ public class BossController : MonoBehaviour
 
     /// <summary>Gölge Hilali: infaz barı ölümcül değil, canın % kadarını alır.</summary>
     public bool PercentExecute => act >= 4;
+
+    [Tooltip("Gölge Hilali'nin vuruşları bloğa bu kadar kat posture hasarı verir (blok riskli olsun).")]
+    public float trialBlockPostureMultiplier = 1.6f;
 
     // ---------- DÖVÜŞ ALANI (Gölge Hilali) ----------
     // Boss çağrıldığı anda kameranın gördüğü alan dövüş alanı olur;
@@ -121,6 +124,13 @@ public class BossController : MonoBehaviour
     }
 
     public float ExecutePercent => trialExecutePercent;
+
+    [Tooltip("Diğer boss'larda infaz canın bu oranını alır (faz atlatmaz, öldürmez).")]
+    public float defaultExecutePercent = 0.28f;
+
+    /// <summary>İnfazın boss'a vereceği can oranı (tüm boss'larda yüzde, aşırı güçlü olmasın).</summary>
+    public float ExecuteDamagePercent =>
+        PercentExecute ? trialExecutePercent : defaultExecutePercent;
 
     /// <summary>
     /// Denge dolunca: sersemleme YOK, denge sıfırlanır, boss canının %X'ini yer.
@@ -265,14 +275,36 @@ public class BossController : MonoBehaviour
             // Zıpla-Ez: alan saldırısı.
             SetupArena();
 
+            // Akıllı boss: oyuncunun durumuna göre hamle seçer.
+            BossBrain brain = GetComponent<BossBrain>();
+
+            if (brain == null)
+                brain = gameObject.AddComponent<BossBrain>();
+
+            // Blok riskli olsun: boss vuruşları bloğa daha fazla posture hasarı verir.
+            enemy.blockPostureDamage =
+                Mathf.RoundToInt(enemy.blockPostureDamage * trialBlockPostureMultiplier);
+
             if (GetComponent<BossSlam>() == null)
                 gameObject.AddComponent<BossSlam>();
+
+            // Atlayış: uzaktan üstüne zıplar (dash ile kaçılır).
+            if (GetComponent<BossLeap>() == null)
+                gameObject.AddComponent<BossLeap>();
 
             // Yakalamadan dash ile kurtulma payı (uzun menzil için).
             enemy.unblockableDodgeGrace = Mathf.Max(enemy.unblockableDodgeGrace, 0.3f);
 
             // Aynı hamleyi art arda seçme.
             moveset.repeatPenalty = 0.05f;
+
+            // Beyin: hamle ağırlıklarını oyuncunun durumuna göre çarpar.
+            BossBrain brainRef = GetComponent<BossBrain>();
+
+            if (brainRef != null)
+                moveset.weightModifier = brainRef.Modify;
+
+            moveset.comboBlockPostureMultiplier = 0.55f;
 
             // Çevik ve saldırgan: hızlı koşar, toparlanması kısa.
             enemy.chaseSpeed *= 1.3f;

@@ -18,10 +18,31 @@ public class PlayerFinisher : MonoBehaviour
     [Min(0f)]
     [SerializeField] private float inputBuffer = 0.25f;
 
+    [Header("Basılı Tut (odak)")]
+    [Tooltip("İnfaz için E'yi en az bu kadar (gerçek sn) basılı tut; daha erken bırakırsan iptal.")]
+    [SerializeField] private float minHold = 0.3f;
+
+    [Tooltip("Bu süre dolunca (gerçek sn) otomatik infaz.")]
+    [SerializeField] private float maxHold = 1.0f;
+
+    [Tooltip("Odaklanırken dünyanın zaman hızı (ağır çekim).")]
+    [Range(0.02f, 1f)]
+    [SerializeField] private float focusTimeScale = 0.12f;
+
+    [Tooltip("Hedef bu çarpanla menzili aşarsa odak iptal.")]
+    [SerializeField] private float rangeSlack = 1.8f;
+
     private PlayerController player;
     private PlayerCombatController combat;
 
     private float bufferTimer;
+
+    // ---- odak (basılı tutma) ----
+    private bool charging;
+    private float holdTime;
+    private EnemyController chargeTarget;
+
+    private GUIStyle barStyle;
 
     private void Awake()
     {
@@ -41,6 +62,13 @@ public class PlayerFinisher : MonoBehaviour
 
     private void Update()
     {
+        // ODAK: E basılı tutulurken.
+        if (charging)
+        {
+            UpdateCharge();
+            return;
+        }
+
         if (Input.GetKeyDown(executeKey))
             bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
 
@@ -60,43 +88,265 @@ public class PlayerFinisher : MonoBehaviour
             return;
         }
 
-        if (TryExecute())
+        // Odak için tuş BASILI olmalı (tamponlanmış kısa basış işe yaramaz).
+        if (!Input.GetKey(executeKey))
+        {
+            bufferTimer = 0f;
+            return;
+        }
+
+        if (TryBeginCharge())
             bufferTimer = 0f;
     }
 
-    private bool TryExecute()
+    // E'ye basıldı: uygun hedef varsa odağı başlat.
+    private bool TryBeginCharge()
     {
         EnemyController target =
             FindBestTarget();
 
         // Hedef yoksa tampon beklemeye devam eder (denge tam o an
         // kırılabilir).
-        if (target == null || !target.IsStaggered)
+        // Her an denenebilir: hedefin açık olması şart değil (tutturmak oyuncuya kalmış).
+        if (target == null)
             return false;
 
         // İNFAZ BARI dolu değilse infaz yok (uyarı; tampon boşalır).
-        if (!ExecuteMeter.TryConsume(target))
+        if (!ExecuteMeter.CanExecute)
         {
             ExecuteMeter.WarnNotReady(target);
             return true;
         }
 
-        // Saldırı sürüyorsa iptal et: execute anında başlasın.
+        // Saldırı sürüyorsa iptal et: odak anında başlasın.
         if (combat != null)
             combat.CancelAttack();
 
-        // =====================================================
-        // EXECUTE
-        // EnemyExecuteState zaten:
-        // - Player'ı buluyor
-        // - PlayerExecuteState'e geçiriyor
-        // - Enemy'yi durduruyor
-        // - Damage veriyor
-        // =====================================================
+        charging = true;
+        holdTime = 0f;
+        chargeTarget = target;
 
-        target.Execute();
+        // Hedefe dön.
+        float dir = Mathf.Sign(target.transform.position.x - transform.position.x);
+
+        if (dir != 0f)
+        {
+            player.facingDir = dir;
+
+            if (player.playerSprite != null)
+                player.playerSprite.flipX = dir < 0f;
+        }
+
+        player.stateMachine.ChangeState(new PlayerExecuteChargeState(player));
+
+        ExecuteCinematic.BeginFocus(player.transform, target.transform);
 
         return true;
+    }
+
+    private void UpdateCharge()
+    {
+        // Hedef kayboldu / ölü / sersemlik bitti / çok uzaklaştı: iptal.
+        if (
+            chargeTarget == null ||
+            chargeTarget.IsDead ||
+            !(player.stateMachine.CurrentState is PlayerExecuteChargeState) ||
+            Vector2.Distance(transform.position, chargeTarget.transform.position) > finisherRange * rangeSlack
+        )
+        {
+            CancelCharge();
+            return;
+        }
+
+        float dt = Time.unscaledDeltaTime;
+
+        holdTime += dt;
+
+        // Odaklanma: dünya ağır çekimde (her kare yenilenir).
+        HitStop.Request(0.12f, focusTimeScale, 8);
+
+        ExecuteCinematic.SetFocusProgress(Mathf.Clamp01(holdTime / maxHold));
+
+        bool held = Input.GetKey(executeKey);
+
+        if (!held)
+        {
+            if (holdTime >= minHold)
+                ReleaseCharge();
+            else
+            {
+                EnemyController hint = chargeTarget;
+
+                CancelCharge();
+
+                CombatCallout.PopupAbove(
+                    hint,
+                    "BASILI TUT",
+                    new Color(0.85f, 0.85f, 0.9f),
+                    0.8f
+                );
+            }
+
+            return;
+        }
+
+        // Tam dolunca kendiliğinden infaz (sersemlik penceresi kaçmasın).
+        if (holdTime >= maxHold)
+            ReleaseCharge();
+    }
+
+    // Bırakıldı: hedef AÇIK ANDAysa infaz; değilse tutmadı (bar boşa gider).
+    private void ReleaseCharge()
+    {
+        EnemyController target = chargeTarget;
+
+        charging = false;
+        chargeTarget = null;
+
+        if (target == null || !ExecuteMeter.TryConsume(target))
+        {
+            ExecuteCinematic.CancelFocus();
+
+            RestoreFromCharge();
+
+            return;
+        }
+
+        if (target.IsOpen)
+        {
+            // =================================================
+            // TUTTU: EnemyExecuteState → hızlı geçiş + ağır çekim + hasar.
+            // =================================================
+
+            target.Execute();
+
+            return;
+        }
+
+        // =====================================================
+        // TUTMADI: bar harcandı ama ölümcül işaret kalmasın.
+        // =====================================================
+
+        ExecuteMeter.TakeLethal(target);
+
+        ExecuteCinematic.CancelFocus();
+
+        float dir = Mathf.Sign(target.transform.position.x - transform.position.x);
+
+        if (dir == 0f)
+            dir = player.facingDir;
+
+        float gap = Mathf.Abs(target.transform.position.x - transform.position.x);
+
+        // Düşmana doğru kısa bir hamle; ama içinden geçmez.
+        float lunge = Mathf.Clamp(gap - 0.9f, 0.4f, 1.8f);
+
+        player.stateMachine.ChangeState(
+            new PlayerExecuteFailState(player, player.stateMachine, dir, lunge)
+        );
+
+        CombatCallout.PopupAbove(
+            player,
+            "TUTMADI!",
+            new Color(1f, 0.35f, 0.3f),
+            1.1f
+        );
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(0.3f);
+    }
+
+    private void CancelCharge()
+    {
+        charging = false;
+        chargeTarget = null;
+
+        ExecuteCinematic.CancelFocus();
+
+        RestoreFromCharge();
+    }
+
+    // Odak durumundan normal duruma dön.
+    private void RestoreFromCharge()
+    {
+        if (player == null || player.stateMachine == null)
+            return;
+
+        if (!(player.stateMachine.CurrentState is PlayerExecuteChargeState))
+            return;
+
+        if (player.IsGrounded())
+            player.stateMachine.ChangeState(new GroundedState(player, player.stateMachine));
+        else
+            player.stateMachine.ChangeState(new AirState(player, player.stateMachine));
+    }
+
+    private void OnDisable()
+    {
+        if (charging)
+            CancelCharge();
+    }
+
+    // ---------------- ODAK ÇUBUĞU ----------------
+
+    private void OnGUI()
+    {
+        if (!charging || chargeTarget == null || Event.current.type != EventType.Repaint)
+            return;
+
+        Camera cam = Camera.main;
+
+        if (cam == null)
+            return;
+
+        Vector3 sp = cam.WorldToScreenPoint(chargeTarget.transform.position + Vector3.up * 2.6f);
+
+        if (sp.z < 0f)
+            return;
+
+        if (barStyle == null)
+        {
+            barStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+        }
+
+        float s = Mathf.Max(0.6f, Screen.height / 720f);
+
+        float w = 170f * s;
+        float h = 10f * s;
+
+        float x = sp.x - w * 0.5f;
+        float y = Screen.height - sp.y - h * 0.5f;
+
+        float p = Mathf.Clamp01(holdTime / maxHold);
+        bool ready = holdTime >= minHold;
+
+        Color old = GUI.color;
+
+        GUI.color = new Color(0f, 0f, 0f, 0.75f);
+        GUI.DrawTexture(new Rect(x - 2f, y - 2f, w + 4f, h + 4f), Texture2D.whiteTexture);
+
+        GUI.color = ready ? new Color(1f, 0.82f, 0.3f) : new Color(0.75f, 0.75f, 0.8f);
+        GUI.DrawTexture(new Rect(x, y, w * p, h), Texture2D.whiteTexture);
+
+        // Bırakma eşiği işareti.
+        GUI.color = new Color(1f, 1f, 1f, 0.8f);
+        GUI.DrawTexture(new Rect(x + w * (minHold / maxHold) - 1f, y - 3f * s, 2f, h + 6f * s), Texture2D.whiteTexture);
+
+        barStyle.fontSize = Mathf.RoundToInt(13f * s);
+
+        string label = ready ? "BIRAK → İNFAZ" : "BASILI TUT";
+
+        GUI.color = new Color(0f, 0f, 0f, 0.9f);
+        GUI.Label(new Rect(x + 1f, y - 24f * s + 1f, w, 20f * s), label, barStyle);
+
+        GUI.color = ready ? new Color(1f, 0.9f, 0.45f) : Color.white;
+        GUI.Label(new Rect(x, y - 24f * s, w, 20f * s), label, barStyle);
+
+        GUI.color = old;
     }
 
     private EnemyController FindBestTarget()
@@ -123,8 +373,8 @@ public class PlayerFinisher : MonoBehaviour
             if (enemy == null)
                 continue;
 
-            // Sadece staggered enemy
-            if (!enemy.IsStaggered)
+            // Her canlı düşman denenebilir (ölü / infaz edilen hariç).
+            if (enemy.IsDead || enemy.CurrentState is EnemyExecuteState)
                 continue;
 
             Vector2 enemyPosition =
@@ -164,9 +414,11 @@ public class PlayerFinisher : MonoBehaviour
                     ? forwardPriority
                     : 0f;
 
+            // Açık andaki düşmana hafif tercih (ama zorunlu değil).
             float score =
                 directionScore +
-                distanceScore;
+                distanceScore +
+                (enemy.IsOpen ? 0.4f : 0f);
 
             if (score > bestScore)
             {

@@ -410,6 +410,19 @@ public class EnemyController : MonoBehaviour
     public bool IsStaggered =>
         currentState is EnemyStaggerState;
 
+    // AÇIK AN: sersemlemese de saldırısı bitmiş, toparlanan (savunmasız) düşman.
+    // İnfaz bu pencerede de atılabilir (sersemlikten daha kısa ve zor).
+    // EnemyTime cinsinden bitiş; saldırı toparlanması ve boss yorgunluğu doldurur.
+    [System.NonSerialized] public float openUntil;
+
+    public bool IsOpen =>
+        IsStaggered ||
+        (
+            EnemyTime.Now < openUntil &&
+            !IsDead &&
+            !(currentState is EnemyExecuteState)
+        );
+
     public bool IsDead =>
         health != null &&
         health.IsDead;
@@ -1742,7 +1755,7 @@ public class EnemyController : MonoBehaviour
 
     public void Execute()
     {
-        if (!IsStaggered)
+        if (!IsOpen)
             return;
 
         Debug.Log(

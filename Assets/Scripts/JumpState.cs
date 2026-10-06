@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class JumpState : IPlayerState
 {
@@ -126,7 +126,8 @@ public class JumpState : IPlayerState
         if (
             player.verticalInput < -0.5f &&
             Input.GetKeyDown(KeyCode.Space) &&
-            !player.isGrounded
+            !player.isGrounded &&
+            player.CanGroundSlam
         )
         {
             sm.ChangeState(

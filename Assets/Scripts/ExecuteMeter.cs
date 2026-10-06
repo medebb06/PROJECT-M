@@ -20,24 +20,24 @@ public class ExecuteMeter : MonoBehaviour
     public static float CharmFillMultiplier = 1f;
 
     [Header("Dolma")]
-    [Tooltip("Normal düşman öldürünce (3 öldürme ≈ dolu).")]
-    [Range(0f, 1f)] public float killFill = 0.34f;
+    [Tooltip("Normal düşman öldürünce (4 öldürme ≈ dolu).")]
+    [Range(0f, 1f)] public float killFill = 0.25f;
 
     [Tooltip("Kalabalık (zayıf) düşman öldürünce.")]
-    [Range(0f, 1f)] public float swarmKillFill = 0.15f;
+    [Range(0f, 1f)] public float swarmKillFill = 0.1f;
 
     [Tooltip("Dengeyi KIRAN parry.")]
-    [Range(0f, 1f)] public float parryBreakFill = 0.08f;
+    [Range(0f, 1f)] public float parryBreakFill = 0.06f;
 
     [Header("Boss (öldürme olmadığı için ayrı kaynaklar)")]
     [Tooltip("Boss'un dengesini kırmak (vuruş ya da parry).")]
-    [Range(0f, 1f)] public float bossBreakFill = 0.5f;
+    [Range(0f, 1f)] public float bossBreakFill = 0.4f;
 
     [Tooltip("Boss'a her parry.")]
-    [Range(0f, 1f)] public float bossParryFill = 0.08f;
+    [Range(0f, 1f)] public float bossParryFill = 0.05f;
 
     [Tooltip("Boss'a verilen can hasarı × bu = dolum (max canın %50'si → 0.3).")]
-    [Range(0f, 2f)] public float bossHealthDamageFill = 0.6f;
+    [Range(0f, 2f)] public float bossHealthDamageFill = 0.5f;
 
     [Tooltip("Koşu başında bar dolu başlasın (ilk infazı öğretmek için).")]
     public bool startFull = true;

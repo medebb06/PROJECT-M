@@ -1,19 +1,20 @@
-using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
 /// <summary>
-/// İNFAZ SİNEMATİĞİ: infaz başlayınca kamera yakınlaşır, zaman ağır çekime
-/// girip normale döner, öldürme anında kısa bir sarsıntı olur, sonra kamera
-/// yumuşakça eski haline açılır.
+/// İNFAZ SİNEMATİĞİ. İki aşama:
 ///
-/// Kendi kendini kurar (sahneye bir şey eklemen gerekmez). Çağıranlar:
-///   ExecuteCinematic.Begin();        // EnemyExecuteState.Enter
-///   ExecuteCinematic.End(killed);    // EnemyExecuteState.FinishExecute
+///   ODAK (E basılı tutulurken): kamera yavaşça yaklaşır, oyuncu ile düşmanın ORTASINA kayar,
+///       siyah sinema şeritleri açılır. (Zamanı PlayerFinisher yavaşlatır.)
+///   VURUŞ (bırakınca): kamera hızla en yakına geçer, ağır çekim sürer; öldürme anında sarsıntı +
+///       kısa dondurma, sonra zaman yumuşakça normale döner ve kamera eski haline açılır.
 ///
-/// Ayarlar aşağıdaki sabitlerde. Zoom ortografik boyutla yapılır (2D).
-/// Pixel Perfect Camera varsa efekt süresince geçici kapatılır (aksi halde
-/// boyutu geri ezer), bitince açılır.
+/// Kendi kendini kurar. Çağıranlar:
+///   ExecuteCinematic.BeginFocus(player, enemy); SetFocusProgress(0..1); CancelFocus();   // PlayerFinisher
+///   ExecuteCinematic.Begin();  ExecuteCinematic.End(killed);                              // EnemyExecuteState
+///
+/// Zoom ortografik boyutla yapılır (2D). Pixel Perfect Camera varsa efekt süresince geçici kapatılır.
+/// Cinemachine "Follow" hedefi efekt boyunca iki karakterin ortasındaki bir noktaya çevrilir ve sonunda geri verilir.
 /// </summary>
 public class ExecuteCinematic : MonoBehaviour
 {
@@ -21,31 +22,63 @@ public class ExecuteCinematic : MonoBehaviour
     // AYARLAR
     // =========================================================
 
-    /// <summary>Ortografik boyut çarpanı. Küçük = daha yakın (0.72 ≈ %39 yakınlaşma).</summary>
-    private const float ZoomFactor = 0.72f;
+    /// <summary>Ortografik boyut çarpanları (küçük = daha yakın).</summary>
+    private const float FocusZoomStart = 0.92f;
+    private const float FocusZoomEnd = 0.74f;
+    private const float StrikeZoom = 0.58f;
 
-    private const float ZoomInTime = 0.14f;    // yakınlaşma süresi (gerçek sn)
-    private const float ZoomOutTime = 0.45f;   // açılma süresi
-    private const float LingerAfterKill = 0.22f; // öldürmeden sonra yakında bekleme
-    private const float MaxHold = 2.5f;        // güvenlik: en fazla bu kadar yakında kal
+    /// <summary>Çarpan değişim hızları (1/sn, gerçek zaman).</summary>
+    private const float FocusRate = 0.9f;
+    private const float StrikeRate = 5f;
+    private const float ReleaseRate = 2.2f;
 
-    /// <summary>Ağır çekim başlangıç hızı (1 = ağır çekim yok).</summary>
-    private const float SlowMoScale = 0.2f;
-    private const float SlowMoDuration = 0.55f; // gerçek sn, sonra normale rampa
+    private const float LingerAfterKill = 0.45f;  // öldürmeden sonra yakında bekleme
+    private const float MaxStrikeHold = 2.5f;     // güvenlik
+    private const float FocusTimeout = 0.5f;      // PlayerFinisher haber vermezse odak biter
 
-    /// <summary>Öldürme anı kamera sarsıntısı (0 = yok).</summary>
-    private const float KillShake = 0.6f;
+    /// <summary>Vuruş anı ağır çekim (süre gerçek sn).</summary>
+    private const float StrikeSlowScale = 0.1f;
+    private const float StrikeSlowTime = 0.6f;
+
+    /// <summary>Öldürme anı: dondurma + sarsıntı, sonra zaman normale döner.</summary>
+    private const float KillFreeze = 0.16f;
+    private const float KillShake = 0.8f;
+    private const float RecoverTime = 1.0f;
+
+    /// <summary>Sinema şeritlerinin ekran yüksekliğine oranı (tam zoom'da, her biri).</summary>
+    private const float BarFraction = 0.11f;
 
     // =========================================================
     // API
     // =========================================================
 
+    public static void BeginFocus(Transform player, Transform enemy)
+    {
+        if (!Application.isPlaying)
+            return;
+
+        Get().DoBeginFocus(player, enemy);
+    }
+
+    public static void SetFocusProgress(float progress01)
+    {
+        if (instance != null)
+            instance.DoFocusProgress(progress01);
+    }
+
+    public static void CancelFocus()
+    {
+        if (instance != null)
+            instance.DoCancelFocus();
+    }
+
+    /// <summary>Vuruş aşaması başlar (EnemyExecuteState.Enter).</summary>
     public static void Begin()
     {
         if (!Application.isPlaying)
             return;
 
-        Get().DoBegin();
+        Get().DoBeginStrike();
     }
 
     public static void End(bool killed)
@@ -57,6 +90,8 @@ public class ExecuteCinematic : MonoBehaviour
     // =========================================================
     // İÇ
     // =========================================================
+
+    private enum Mode { None, Focus, Strike }
 
     private static ExecuteCinematic instance;
 
@@ -79,50 +114,115 @@ public class ExecuteCinematic : MonoBehaviour
 
     private Camera cam;
     private CinemachineCamera cm;
+    private CinemachineBrain brain;
 
     private bool acquired;
-    private bool active;
+    private Mode mode = Mode.None;
 
-    private float t;              // 0 = normal, 1 = tam yakın
-    private float baseSize;       // efekt başındaki ekran boyutu
+    private float zoom = 1f;          // 1 = normal
+    private float baseSize;
     private float originalLensSize;
-    private float beginTime;
+    private float focusProgress;
+    private float lastPing;
+    private float strikeBegin;
     private float releaseAt = -1f;
 
-    private readonly List<Behaviour> disabledByUs = new List<Behaviour>();
+    private Transform playerT;
+    private Transform enemyT;
+    private Vector3 lastEnemyPos;
+
+    private Transform focusPoint;
+    private Transform originalFollow;
+    private bool originalIgnoreTimeScale;
+
+    private readonly System.Collections.Generic.List<Behaviour> disabledByUs =
+        new System.Collections.Generic.List<Behaviour>();
 
     private void Awake()
     {
         enabled = false;
     }
 
-    private void DoBegin()
+    // ---------------- Başlat / bitir ----------------
+
+    private void DoBeginFocus(Transform player, Transform enemy)
     {
+        playerT = player;
+        enemyT = enemy;
+
+        if (enemy != null)
+            lastEnemyPos = enemy.position;
+
         if (!acquired && !Acquire())
             return;
 
-        active = true;
+        mode = Mode.Focus;
+        focusProgress = 0f;
+        lastPing = Time.unscaledTime;
         releaseAt = -1f;
-        beginTime = Time.unscaledTime;
 
-        if (SlowMoScale < 0.999f)
-            HitStop.RequestRamp(SlowMoDuration, SlowMoScale, 1f, 2f, 5);
+        enabled = true;
+    }
+
+    private void DoFocusProgress(float p)
+    {
+        if (mode != Mode.Focus)
+            return;
+
+        focusProgress = Mathf.Clamp01(p);
+        lastPing = Time.unscaledTime;
+    }
+
+    private void DoCancelFocus()
+    {
+        if (mode == Mode.Focus)
+            mode = Mode.None;
+    }
+
+    private void DoBeginStrike()
+    {
+        if (playerT == null)
+        {
+            PlayerController pc = FindFirstObjectByType<PlayerController>();
+
+            if (pc != null)
+                playerT = pc.transform;
+        }
+
+        if (!acquired && !Acquire())
+            return;
+
+        mode = Mode.Strike;
+        strikeBegin = Time.unscaledTime;
+        releaseAt = -1f;
+
+        // Geçiş boyunca ağır çekim sürsün.
+        HitStop.Request(StrikeSlowTime, StrikeSlowScale, 9);
 
         enabled = true;
     }
 
     private void DoEnd(bool killed)
     {
-        if (!active || releaseAt >= 0f)
+        if (mode != Mode.Strike || releaseAt >= 0f)
             return;
 
         releaseAt = Time.unscaledTime + LingerAfterKill;
 
-        if (killed && KillShake > 0f && CameraShake.Instance != null)
-            CameraShake.Instance.Shake(KillShake);
+        // Önce yavaş yavaş normale dönen rampa, sonra (daha yüksek öncelikle) kısa dondurma.
+        HitStop.RequestRamp(RecoverTime, 0.14f, 1f, 2f, 9);
+
+        if (killed)
+        {
+            HitStop.Request(KillFreeze, 0.02f, 10);
+
+            if (KillShake > 0f && CameraShake.Instance != null)
+                CameraShake.Instance.Shake(KillShake);
+        }
     }
 
-    // Kamera + Cinemachine kamerasını bul, Pixel Perfect'i geçici kapat.
+    // ---------------- Kamera ----------------
+
     private bool Acquire()
     {
         cam = Camera.main;
@@ -130,7 +230,7 @@ public class ExecuteCinematic : MonoBehaviour
         if (cam == null || !cam.orthographic)
             return false;
 
-        CinemachineBrain brain = cam.GetComponent<CinemachineBrain>();
+        brain = cam.GetComponent<CinemachineBrain>();
 
         cm = brain != null ? brain.ActiveVirtualCamera as CinemachineCamera : null;
 
@@ -165,10 +265,36 @@ public class ExecuteCinematic : MonoBehaviour
             disabledByUs.Add(ppExt);
         }
 
+        // Cinemachine geçişleri/sönümü ağır çekimde de gerçek zamanla aksın.
+        if (brain != null)
+        {
+            originalIgnoreTimeScale = brain.IgnoreTimeScale;
+            brain.IgnoreTimeScale = true;
+        }
+
+        // Kamera hedefi: iki karakterin ortası.
+        originalFollow = cm.Follow;
+
+        if (focusPoint == null)
+        {
+            GameObject go = new GameObject("ExecuteFocusPoint");
+            go.hideFlags = HideFlags.HideInHierarchy;
+            focusPoint = go.transform;
+        }
+
+        Vector3 startPos =
+            originalFollow != null
+                ? originalFollow.position
+                : (playerT != null ? playerT.position : cam.transform.position);
+
+        focusPoint.position = startPos;
+
+        cm.Follow = focusPoint;
+
         // Atlama olmasın: önce ekrandaki boyutu lens'e yaz.
         SetSize(baseSize);
 
-        t = 0f;
+        zoom = 1f;
         acquired = true;
 
         return true;
@@ -193,37 +319,109 @@ public class ExecuteCinematic : MonoBehaviour
         if (cam == null || cm == null)
         {
             acquired = false;
-            active = false;
-            t = 0f;
+            mode = Mode.None;
+            zoom = 1f;
             enabled = false;
             return;
         }
 
-        if (active)
+        float now = Time.unscaledTime;
+        float dt = Time.unscaledDeltaTime;
+
+        // Zaman aşımları.
+        if (mode == Mode.Focus && now - lastPing > FocusTimeout)
+            mode = Mode.None;
+
+        if (mode == Mode.Strike)
         {
-            if (releaseAt >= 0f && Time.unscaledTime >= releaseAt)
-                active = false;
-            else if (Time.unscaledTime - beginTime > MaxHold)
-                active = false;
+            if (releaseAt >= 0f && now >= releaseAt)
+                mode = Mode.None;
+            else if (now - strikeBegin > MaxStrikeHold)
+                mode = Mode.None;
         }
 
-        float target = active ? 1f : 0f;
-        float speed = 1f / (active ? ZoomInTime : ZoomOutTime);
+        // Zoom hedefi.
+        float targetZoom;
+        float rate;
 
-        t = Mathf.MoveTowards(t, target, speed * Time.unscaledDeltaTime);
+        switch (mode)
+        {
+            case Mode.Focus:
+                targetZoom = Mathf.Lerp(FocusZoomStart, FocusZoomEnd, focusProgress);
+                rate = FocusRate;
+                break;
 
-        float eased = t * t * (3f - 2f * t);
+            case Mode.Strike:
+                targetZoom = StrikeZoom;
+                rate = StrikeRate;
+                break;
 
-        SetSize(Mathf.Lerp(baseSize, baseSize * ZoomFactor, eased));
+            default:
+                targetZoom = 1f;
+                rate = ReleaseRate;
+                break;
+        }
 
-        if (!active && t <= 0f)
+        zoom = Mathf.MoveTowards(zoom, targetZoom, rate * dt);
+
+        SetSize(baseSize * zoom);
+
+        UpdateFocusPoint(dt);
+
+        if (mode == Mode.None && zoom >= 0.999f)
             Release();
+    }
+
+    // Kamera hedefini iki karakterin ortasına (bitince eski hedefe) doğru kaydır.
+    private void UpdateFocusPoint(float dt)
+    {
+        if (focusPoint == null)
+            return;
+
+        if (enemyT != null)
+            lastEnemyPos = enemyT.position;
+
+        Vector3 desired;
+
+        if (mode == Mode.None && originalFollow != null)
+        {
+            desired = originalFollow.position;
+        }
+        else
+        {
+            Vector3 a = playerT != null ? playerT.position : focusPoint.position;
+
+            desired = (a + lastEnemyPos) * 0.5f + Vector3.up * 0.3f;
+        }
+
+        desired.z = focusPoint.position.z;
+
+        focusPoint.position =
+            Vector3.Lerp(focusPoint.position, desired, 1f - Mathf.Exp(-9f * dt));
     }
 
     private void Release()
     {
+        Restore();
+
+        acquired = false;
+        mode = Mode.None;
+        zoom = 1f;
+        enabled = false;
+    }
+
+    private void Restore()
+    {
         if (cm != null)
+        {
             SetSize(originalLensSize);
+
+            // Eski takip hedefini geri ver.
+            cm.Follow = originalFollow;
+        }
+
+        if (brain != null)
+            brain.IgnoreTimeScale = originalIgnoreTimeScale;
 
         for (int i = 0; i < disabledByUs.Count; i++)
         {
@@ -232,31 +430,49 @@ public class ExecuteCinematic : MonoBehaviour
         }
 
         disabledByUs.Clear();
-
-        acquired = false;
-        active = false;
-        t = 0f;
-        enabled = false;
     }
 
     private void OnDisable()
     {
-        // Obje kapanırsa Pixel Perfect açık kalmasın.
+        // Obje kapanırsa Pixel Perfect / takip hedefi açık kalmasın.
         if (!acquired)
             return;
 
-        if (cm != null)
-            SetSize(originalLensSize);
+        Restore();
 
-        for (int i = 0; i < disabledByUs.Count; i++)
-        {
-            if (disabledByUs[i] != null)
-                disabledByUs[i].enabled = true;
-        }
-
-        disabledByUs.Clear();
         acquired = false;
-        active = false;
-        t = 0f;
+        mode = Mode.None;
+        zoom = 1f;
+    }
+
+    private void OnDestroy()
+    {
+        if (focusPoint != null)
+            Destroy(focusPoint.gameObject);
+    }
+
+    // ---------------- Sinema şeritleri ----------------
+
+    private void OnGUI()
+    {
+        if (Event.current.type != EventType.Repaint)
+            return;
+
+        float bar = Mathf.Clamp01((1f - zoom) / 0.3f);
+
+        if (bar <= 0.001f)
+            return;
+
+        float h = Screen.height * BarFraction * bar;
+
+        Color old = GUI.color;
+
+        GUI.depth = -100;
+        GUI.color = Color.black;
+
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, h), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(0f, Screen.height - h, Screen.width, h), Texture2D.whiteTexture);
+
+        GUI.color = old;
     }
 }

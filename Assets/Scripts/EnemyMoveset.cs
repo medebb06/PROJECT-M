@@ -157,6 +157,9 @@ public class EnemyMoveset : MonoBehaviour
     [Range(0f, 1f)]
     public float repeatPenalty = 0.35f;
 
+    // Boss beyni gibi dış sistemler hamle ağırlığını bağlama göre çarpabilir.
+    [NonSerialized] public Func<AttackMove, float> weightModifier;
+
     [Header("Kombo")]
     [Tooltip(
         "Açık: kombonun ARA vuruşlarında parry slow-mo yok (ritim bozulmaz). " +
@@ -667,9 +670,15 @@ public class EnemyMoveset : MonoBehaviour
         if (now - move.lastUsedTime < move.cooldown)
             return 0f;
 
-        return move == lastMove
-            ? move.weight * repeatPenalty
-            : move.weight;
+        float w =
+            move == lastMove
+                ? move.weight * repeatPenalty
+                : move.weight;
+
+        if (weightModifier != null)
+            w *= Mathf.Max(0f, weightModifier(move));
+
+        return w;
     }
 
     // =========================================================

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class AirState : IPlayerState
 {
@@ -41,7 +41,8 @@ public class AirState : IPlayerState
 
         if (
             player.verticalInput < -0.5f &&
-            Input.GetKeyDown(KeyCode.Space)
+            Input.GetKeyDown(KeyCode.Space) &&
+            player.CanGroundSlam
         )
         {
             sm.ChangeState(

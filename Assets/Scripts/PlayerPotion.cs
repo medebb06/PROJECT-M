@@ -22,6 +22,11 @@ public class PlayerPotion : MonoBehaviour
 
     public int Charges { get; private set; }
 
+    /// <summary>Şu an F basılı tutularak iksir içiliyor mu? (Boss tepki verir.)</summary>
+    public bool IsDrinking => drinking;
+
+    public static PlayerPotion Instance { get; private set; }
+
     private PlayerController player;
     private Health health;
     private int lastHealth;
@@ -48,6 +53,7 @@ public class PlayerPotion : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         Charges = maxCharges;
     }
 
