@@ -1,0 +1,9 @@
+ronin_samuray.png
+size:2048,2048
+filter:Linear,Linear
+main
+bounds:2,2,843,1503
+hat
+bounds:852,2,985,329
+pony
+bounds:852,340,353,656
