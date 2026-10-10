@@ -796,7 +796,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.5023585, g: 0.6698113, b: 0.65620303, a: 0}
+  m_BackGroundColor: {r: 0.17519578, g: 0.2924528, b: 0.28658998, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -821,7 +821,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 16
+  orthographic size: 7.4375
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -20695,7 +20695,7 @@ Tilemap:
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_Origin: {x: -17, y: -27, z: 0}
   m_Size: {x: 85, y: 27, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
@@ -21059,7 +21059,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1942622292}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 60e4ab9a63e431b43a54f6de3df4d9c2, type: 3}
   m_Name: 
@@ -21454,11 +21454,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.6
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.7
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalPosition.x
