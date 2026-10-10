@@ -1,0 +1,39 @@
+ronin.png
+size:1024,1024
+filter:Linear,Linear
+sağ bacak
+bounds:138,515,113,121
+offsets:216,116,600,626
+sol bacak
+bounds:898,314,112,130
+offsets:306,116,600,626
+gövde
+bounds:2,515,134,122
+offsets:219,203,600,626
+sağ kol
+bounds:818,314,78,153
+offsets:170,186,600,626
+ceket sol
+bounds:321,314,103,190
+offsets:328,165,600,626
+sol kol
+bounds:483,314,101,163
+offsets:367,192,600,626
+ceket sag
+bounds:426,314,55,181
+offsets:207,165,600,626
+kafa
+bounds:2,314,317,199
+offsets:160,279,600,626
+yüz
+bounds:253,515,202,86
+offsets:159,333,600,626
+hair
+bounds:2,2,425,310
+offsets:125,257,600,626
+hat
+bounds:429,2,505,262
+offsets:49,297,600,626
+kılıc
+bounds:586,314,230,155
+offsets:252,134,600,626
