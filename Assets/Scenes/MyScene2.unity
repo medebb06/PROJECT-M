@@ -1098,7 +1098,7 @@ GameObject:
   - component: {fileID: 717190196}
   - component: {fileID: 717190195}
   m_Layer: 9
-  m_Name: r
+  m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2812,6 +2812,14 @@ PrefabInstance:
       propertyPath: slider
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 3048870848761095977, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: maxSquash
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3048870848761095977, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: maxStretch
+      value: 0.1
+      objectReference: {fileID: 0}
     - target: {fileID: 3301041753063720387, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Size.x
       value: 2.016161
@@ -2854,15 +2862,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.2
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.2
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.12
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 7536978035833587185, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalPosition.x
