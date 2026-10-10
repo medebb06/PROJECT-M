@@ -2808,6 +2808,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2233936731360532477, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: slider
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 3301041753063720387, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Size.x
       value: 2.016161
@@ -2918,10 +2922,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7802889488494470465, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 4301498018943129808, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+    - {fileID: 6501445533221864210, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-      insertIndex: -1
+      insertIndex: 0
       addedObject: {fileID: 319618574}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
