@@ -1,0 +1,6 @@
+samuray.png
+size:2048,2048
+filter:Linear,Linear
+samuray
+bounds:2,2,1139,1373
+offsets:0,0,1145,1373
