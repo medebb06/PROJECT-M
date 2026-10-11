@@ -137,8 +137,15 @@ namespace RonniSkin
             return (nxt.shortNameHash == ParryHash) || (cur.shortNameHash == ParryHash && cur.normalizedTime < 0.15f);
         }
 
+        bool wasDashing; float dashStart;
         void UpdateCombat()
         {
+            // ---- dash: quick low lunge, everything streams back ----
+            bool dashing = player.isDashing;
+            if (dashing && !wasDashing) dashStart = Time.time;
+            wasDashing = dashing;
+            if (dashing && anim.HasClip("dash")) { anim.SetAction("dash", Time.time - dashStart); return; }
+
             // ---- attacks: timing from PlayerCombatController.AttackProgress ----
             bool attacking = combat != null && combat.IsAttacking;
             if (attacking)
@@ -202,17 +209,18 @@ namespace RonniSkin
             if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
             {
                 bool right = anim.faceRight;
-                bool air = useProfileJump && !anim.grounded && !anim.ActionActive && !right;
+                bool air = useProfileJump && !anim.grounded && !anim.ActionActive;
                 bool run = useProfileRun && anim.running && anim.grounded && !anim.ActionActive;
                 int mode = air ? 2 : run ? 1 : 0;
-                if (mode != bMode || (mode == 1 && right != bRight))
+                if (mode != bMode || (mode != 0 && right != bRight))
                 {
                     if (rigB != null) rigB.SetShown(false);
+                    bool newJump = mode == 2 && bMode != 2;
                     bMode = mode; bRight = right;
-                    rigB = (mode == 1 && right) ? rigBR : rigBL; playerB = (mode == 1 && right) ? playerBR : playerBL;
+                    rigB = right ? rigBR : rigBL; playerB = right ? playerBR : playerBL;
                     if (mode != 0)
                     {
-                        if (mode == 2) jumpCount++;
+                        if (newJump) jumpCount++;
                         playerB.clip = mode == 2 ? ((jumpCount % 2 == 1) ? "air_a" : "air_b") : "run";
                         playerB.manual01 = -1f;
                         playerB.Restart(0f); rigB.SetShown(true);

@@ -930,6 +930,10 @@ MonoBehaviour:
   sizeMultiplier: 1
   offset: {x: 0, y: 0}
   mirrorSpriteColor: 1
+  forceRun: 0
+  useProfileRun: 1
+  useProfileJump: 1
+  airVelocityRange: 12
 --- !u!114 &547231764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -950,6 +954,8 @@ MonoBehaviour:
   blendTime: 0.2
   addSprings: 1
   blinkInterval: {x: 2, y: 5}
+  actionBlendIn: 0.05
+  actionBlendOut: 0.12
 --- !u!114 &547231765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -966,6 +972,7 @@ MonoBehaviour:
   sortingLayerName: Default
   sortingOrderOffset: 0
   skinGrid: {x: 8, y: 14}
+  resourceFolder: RonniSkin
 --- !u!1 &576347936
 GameObject:
   m_ObjectHideFlags: 0
@@ -2902,6 +2909,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 3048870848761095977, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3048870848761095977, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: maxSquash
       value: 0.2
       objectReference: {fileID: 0}
@@ -3017,8 +3028,7 @@ PrefabInstance:
       propertyPath: m_Offset.y
       value: 2.0776289
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 7802889488494470465, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 4301498018943129808, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
     - {fileID: 6501445533221864210, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}

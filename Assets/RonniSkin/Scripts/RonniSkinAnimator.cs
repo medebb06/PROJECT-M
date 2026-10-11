@@ -218,7 +218,7 @@ namespace RonniSkin
             if (clips.TryGetValue("run", out var rc)) runClipT = (runClipT + dt * runSpeed) % rc.duration;
             runW = Mathf.MoveTowards(runW, running ? 1f : 0f, blendTime > 0 ? dt / blendTime : 1f);
             float w = Mathf.SmoothStep(0, 1, runW);
-            rig.SetRunLayers(runW > 0.5f);
+            rig.SetRunLayers(runW > 0.5f || (actionClip == "dash" && actionW > 0.3f));
             airW = Mathf.MoveTowards(airW, grounded ? 0f : 1f, dt / 0.12f);
             float aw = Mathf.SmoothStep(0, 1, airW);
 
@@ -234,7 +234,7 @@ namespace RonniSkin
 
             actionW = Mathf.MoveTowards(actionW, actionWTarget, dt / Mathf.Max(0.001f, actionWTarget > actionW ? actionBlendIn : actionBlendOut));
             float acw = Mathf.SmoothStep(0, 1, actionW);
-            bool drawn = acw > 0.02f && actionClip != null;
+            bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash";
             rig.SetVisible("katana", drawn); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
 
             float upp = rig.unitsPerPixel;
