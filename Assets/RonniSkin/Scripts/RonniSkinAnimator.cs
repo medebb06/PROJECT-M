@@ -101,6 +101,8 @@ namespace RonniSkin
         // ---------- combat actions (attack1-4, block, parry) ----------
         string actionClip; float actionTime, actionW, actionWTarget;
         [Header("Combat")] public float actionBlendIn = 0.07f, actionBlendOut = 0.2f;
+        [Tooltip("Idle with the katana drawn in the back hand (false = sheathed at the hip).")] public bool swordReady = true;
+        float readyW = -1f;
         /// Play a baked action clip at clip-time t (seconds; attacks use 0..1 = progress).
         static bool IsGuardClip(string c) => c == "block" || c == "parry" || c == "block_hit";
         public void SetAction(string clip, float t)
@@ -275,7 +277,9 @@ namespace RonniSkin
 
             actionW = Mathf.MoveTowards(actionW, actionWTarget, dt / Mathf.Max(0.001f, actionWTarget > actionW ? actionBlendIn : actionBlendOut));
             float acw = Mathf.SmoothStep(0, 1, actionW);
-            bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash";
+            // sheathe / unsheathe: own visibility rules (phase thresholds in clip frames, see below)
+            bool sheath = acw > 0.02f && (actionClip == "sheathe" || actionClip == "unsheathe");
+            bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash" && !sheath;
             bool guardGrip = actionClip == "block" || actionClip == "block_hit" || actionClip == "parry" || actionClip == "parry_success" || actionClip == "guard_break";
             bool thickArm = drawn && guardGrip && actionClip != "guard_break";
             // attack1-4 combo: two-handed long katana; own arm copies keep the far arm behind the body
@@ -285,13 +289,30 @@ namespace RonniSkin
             float au = actionTime;
             // blade behind the head: attack1 wind-up, attack4 big overhead wind-up
             bool aBack = (aStep == 1 && au < 16f / 60f) || (aStep == 4 && au >= 14f / 60f && au < 26f / 60f);
-            rig.SetVisible("katana", drawn && !guardGrip && !aL); rig.SetVisible("katana2", drawn && guardGrip); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
+            // ready idle: katana held low in the back hand
+            if (readyW < 0f) readyW = swordReady ? 1f : 0f;
+            readyW = Mathf.MoveTowards(readyW, swordReady && !running ? 1f : 0f, dt / 0.15f);
+            bool readyIdle = !drawn && !sheath && readyW > 0.5f;
+            // sheathe phases (54 frames): arm crosses in front 15..39, front katana pair from 15, blade home (sheathed graphic) from 30
+            // unsheathe = sheathe frames 50 -> 14 reversed (37 frames)
+            bool shFront = false, shPairF = false, shHome = false;
+            if (sheath)
+            {
+                float d = Mathf.Max(0.01f, ClipDuration(actionClip));
+                if (actionClip == "sheathe") { float fi = Mathf.Clamp01(actionTime / d) * 53f; shFront = fi >= 15f && fi < 40f; shPairF = fi >= 15f; shHome = fi >= 30f; }
+                else { float fi = 50f - Mathf.Clamp01(actionTime / d) * 36f; shFront = fi >= 15f && fi < 40f; shPairF = fi >= 15f; shHome = fi >= 30f; }
+            }
+            bool krB = readyIdle || (sheath && !shPairF && !shHome), krF = sheath && shPairF && !shHome;
+            bool sayaOn = drawn || readyIdle || (sheath && !shHome);
+            rig.SetVisible("katana", drawn && !guardGrip && !aL); rig.SetVisible("katana2", drawn && guardGrip); rig.SetVisible("saya", sayaOn); rig.SetVisible("sword", !sayaOn);
+            rig.SetVisible("kr_blade_b", krB); rig.SetVisible("kr_hilt_b", krB); rig.SetVisible("kr_blade_f", krF); rig.SetVisible("kr_hilt_f", krF);
             rig.SetVisible("katana_long_b", aL && aBack); rig.SetVisible("katana_long_f", aL && !aBack);
-            rig.SetVisible("arm_R_a1", aL); rig.SetVisible("arm_L_a1", aL);
+            bool armBack = aL || readyIdle || (sheath && !shFront);
+            rig.SetVisible("arm_R_a1", armBack); rig.SetVisible("arm_L_a1", aL || readyIdle || sheath);
             // hidden filler patches behind the body: plug the neck / waist gaps that open up in the deep lunges
             rig.SetVisible("fill_neck", aL); rig.SetVisible("fill_waist_top", aL); rig.SetVisible("fill_waist_bot", aL);
             // two-handed guard: arms swap to split upper/lower pieces (clean elbows, thick sword arm)
-            rig.SetVisible("arm_R", !thickArm && !aL); rig.SetVisible("arm_L", !thickArm && !aL); rig.SetVisible("arm_R_thick", false);
+            rig.SetVisible("arm_R", !thickArm && !armBack); rig.SetVisible("arm_L", !thickArm && !aL && !readyIdle && !sheath); rig.SetVisible("arm_R_thick", false);
             rig.SetVisible("arm_R_up", thickArm); rig.SetVisible("arm_R_lo", thickArm); rig.SetVisible("arm_L_up", thickArm); rig.SetVisible("arm_L_lo", thickArm);
             // slash smears: flash in right before each hit, hold through the impact, fade over the follow-through
             rig.SetVisible("slash1", false);
@@ -302,7 +323,7 @@ namespace RonniSkin
                 if (sa > 0.01f) rig.SetPartColor("slash_atk" + si, new Color(1f, 1f, 1f, sa));
             }
             // guard break: sword arm + katana fall back behind the body (base layer order)
-            rig.SetActLayers(drawn && acw > 0.5f && actionClip != "guard_break");
+            rig.SetActLayers((drawn && acw > 0.5f && actionClip != "guard_break") || readyIdle || (sheath && acw > 0.5f));
 
             float upp = rig.unitsPerPixel;
             foreach (var n in Driven)
@@ -312,6 +333,9 @@ namespace RonniSkin
                 if (!SampleClip("run", n, runClipT, out K b)) b = Run(n, runT);
                 float r = Mathf.Lerp(Mathf.Lerp(a.r, b.r, w), c.r, aw), x = Mathf.Lerp(Mathf.Lerp(a.x, b.x, w), c.x, aw), y = Mathf.Lerp(Mathf.Lerp(a.y, b.y, w), c.y, aw);
                 float sx = Mathf.Lerp(Mathf.Lerp(a.sx, b.sx, w), c.sx, aw), sy = Mathf.Lerp(Mathf.Lerp(a.sy, b.sy, w), c.sy, aw);
+                // ready idle: back hand holds the katana (arm + katana bones only)
+                if (readyW > 0f && tracks.TryGetValue("idle_ready", out var rt) && rt.ContainsKey(n) && SampleClip("idle_ready", n, 0f, out K rk))
+                { float rw = Mathf.SmoothStep(0, 1, readyW); r = Mathf.LerpAngle(r, rk.r, rw); x = Mathf.Lerp(x, rk.x, rw); y = Mathf.Lerp(y, rk.y, rw); }
                 // parry reads from the (static) block pose; only bones missing there fall back to the parry clip
                 string src = actionClip; float st = actionTime;
                 bool parryPunch = actionClip == "parry" && tracks.TryGetValue("block", out var bt) && bt.ContainsKey(n);
@@ -325,6 +349,13 @@ namespace RonniSkin
                 t.localRotation = Quaternion.Euler(0, 0, r);
                 t.localPosition = basePos[n] + new Vector3(x * upp, y * upp, 0);
                 t.localScale = new Vector3(sx, sy, 1);
+            }
+            // sheathing: the blade telescopes into the saya (blade piece scales toward the habaki)
+            if (rig.bones.TryGetValue("kblade", out var kb))
+            {
+                float ks = 1f;
+                if (sheath && tracks[actionClip].ContainsKey("kblade_sy") && SampleClip(actionClip, "kblade_sy", actionTime, out K kk)) ks = Mathf.Lerp(1f, Mathf.Max(0.001f, kk.r), acw);
+                kb.localScale = new Vector3(1f, ks, 1f);
             }
             var s = transform.localScale;
             float fx = Mathf.Abs(s.x) * (faceRight ? -1 : 1);

@@ -305,6 +305,12 @@
    "parent": "armR3",
    "x": 905,
    "y": 2640
+  },
+  {
+   "name": "kblade",
+   "parent": "katana2",
+   "x": 904.5,
+   "y": 2330
   }
  ],
  "parts": [
@@ -1077,6 +1083,70 @@
    "hidden": true,
    "runOrder": 17,
    "actOrder": 29
+  },
+  {
+   "name": "kr_blade_b",
+   "x": 735,
+   "y": -310,
+   "w": 341,
+   "h": 2640,
+   "order": 0,
+   "bones": [
+    "kblade"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 10.6
+  },
+  {
+   "name": "kr_hilt_b",
+   "x": 735,
+   "y": 2330,
+   "w": 341,
+   "h": 960,
+   "order": 0,
+   "bones": [
+    "katana2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 11.4
+  },
+  {
+   "name": "kr_blade_f",
+   "x": 735,
+   "y": -310,
+   "w": 341,
+   "h": 2640,
+   "order": 0,
+   "bones": [
+    "kblade"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 12.9
+  },
+  {
+   "name": "kr_hilt_f",
+   "x": 735,
+   "y": 2330,
+   "w": 341,
+   "h": 960,
+   "order": 0,
+   "bones": [
+    "katana2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 18.4
   }
  ]
 }

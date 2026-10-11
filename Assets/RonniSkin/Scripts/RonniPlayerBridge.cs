@@ -18,6 +18,10 @@ namespace RonniSkin
         public float sizeMultiplier = 1f;
         public Vector2 offset = Vector2.zero;
         public bool mirrorSpriteColor = true;
+        [Header("Sheathe")]
+        [Tooltip("Key that sheathes / draws the katana while idle.")] public KeyCode sheatheKey = KeyCode.R;
+        [Tooltip("Start the level with the katana drawn (held in the back hand).")] public bool startDrawn = true;
+        string shClip; float shStart;
         [Tooltip("Test: always play the run animation.")] public bool forceRun = false;
         [Tooltip("Use the side-profile drawing (Resources/RonniSkinB) while running.")] public bool useProfileRun = true;
         [Tooltip("Use the side-profile drawing (facing left) while in the air.")] public bool useProfileJump = true;
@@ -55,6 +59,7 @@ namespace RonniSkin
                 if (player.modelPivot != null) oldAnim = player.modelPivot.GetComponent<Animator>();
                 if (oldAnim == null) oldAnim = player.GetComponentInChildren<Animator>(true);
             }
+            anim.swordReady = startDrawn;
             if (mainOld != null)
             {
                 rig.sortingLayerName = mainOld.sortingLayerName;
@@ -173,6 +178,7 @@ namespace RonniSkin
                 else { int s = OldAttackStep(); if (s != 0 && prog < 0.25f) { attackStep = s; lastStep = s; } }
                 lastProgress = prog;
                 wasAttacking = true;
+                anim.swordReady = true; shClip = null;   // attacking always draws the katana
                 anim.SetAction("attack" + attackStep, prog);
                 return;
             }
@@ -190,6 +196,7 @@ namespace RonniSkin
             else if (postureHit && (blocking || parrying) && defClip != "guard_break") StartDef("block_hit");
             else if (parrying && !wasParrying && defClip != "parry_success") StartDef("parry");
             wasParrying = parrying;
+            if (defClip != null || blocking || parrying) { anim.swordReady = true; shClip = null; }
             if (defClip != null)
             {
                 float dt0 = Time.time - defStart;
@@ -197,6 +204,19 @@ namespace RonniSkin
                 defClip = null;
             }
             if (blocking || parrying) { anim.SetAction("block", Time.time); return; }
+
+            // ---- sheathe / draw on key (grounded, idle) ----
+            if (shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.HasClip("sheathe") && anim.HasClip("unsheathe"))
+            {
+                shClip = anim.swordReady ? "sheathe" : "unsheathe"; shStart = Time.time;
+                anim.swordReady = shClip == "unsheathe";
+            }
+            if (shClip != null)
+            {
+                float ts = Time.time - shStart;
+                if (ts < anim.ClipDuration(shClip)) { anim.SetAction(shClip, ts); return; }
+                shClip = null;
+            }
 
             anim.ClearAction();
         }
