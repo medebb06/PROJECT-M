@@ -325,7 +325,7 @@
    "wFall": 0.04,
    "runOrder": 0,
    "hidden": false,
-   "actOrder": 27.6
+   "actOrder": 18.5
   },
   {
    "name": "arm_R_thick",
@@ -651,7 +651,7 @@
    "wFall": 0.12,
    "hidden": true,
    "runOrder": 17,
-   "actOrder": 17
+   "actOrder": 27.9
   },
   {
    "name": "arm_L",
@@ -879,6 +879,22 @@
    "runOrder": 0,
    "hidden": true,
    "actOrder": 27.6
+  },
+  {
+   "name": "slash1",
+   "x": -1792,
+   "y": -1333,
+   "w": 5183,
+   "h": 4792,
+   "order": 17,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 17,
+   "actOrder": 27.85
   }
  ]
 }

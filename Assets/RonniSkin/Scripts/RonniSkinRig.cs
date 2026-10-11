@@ -26,6 +26,7 @@ namespace RonniSkin
         /// Show/hide the whole character (keeps per-part visibility).
         public void SetShown(bool on) { if (on == rigShown) return; rigShown = on; foreach (var p in parts) if (p != null) p.SetRigShown(on); }
         public bool Shown => rigShown;
+        public void SetPartColor(string part, Color c) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetColor(c, true); }
         public void SetVisible(string part, bool v) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetVisible(v); }
         readonly List<int> baseOrder = new List<int>(), runOrderList = new List<int>(), actOrderList = new List<int>();
         bool actLayers;

@@ -241,6 +241,15 @@ namespace RonniSkin
             // two-handed guard: arms swap to split upper/lower pieces (clean elbows, thick sword arm)
             rig.SetVisible("arm_R", !thickArm); rig.SetVisible("arm_L", !thickArm); rig.SetVisible("arm_R_thick", false);
             rig.SetVisible("arm_R_up", thickArm); rig.SetVisible("arm_R_lo", thickArm); rig.SetVisible("arm_L_up", thickArm); rig.SetVisible("arm_L_lo", thickArm);
+            // slash smear: flashes in during the swing, fades over the follow-through
+            float sa = 0f;
+            if (actionClip == "attack1" && acw > 0.5f)
+            {
+                float u = actionTime;
+                sa = u < 0.27f ? Mathf.Clamp01((u - 0.12f) / 0.06f) : Mathf.Clamp01(1f - (u - 0.27f) / 0.16f);
+            }
+            rig.SetVisible("slash1", sa > 0.01f);
+            if (sa > 0.01f) rig.SetPartColor("slash1", new Color(1f, 1f, 1f, sa));
             // guard break: sword arm + katana fall back behind the body (base layer order)
             rig.SetActLayers(drawn && acw > 0.5f && actionClip != "guard_break");
 
