@@ -895,6 +895,188 @@
    "hidden": true,
    "runOrder": 17,
    "actOrder": 27.85
+  },
+  {
+   "name": "katana_long_b",
+   "x": 735,
+   "y": -310,
+   "w": 341,
+   "h": 3600,
+   "order": 0,
+   "bones": [
+    "katana2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 10.6
+  },
+  {
+   "name": "katana_long_f",
+   "x": 735,
+   "y": -310,
+   "w": 341,
+   "h": 3600,
+   "order": 0,
+   "bones": [
+    "katana2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 18.3
+  },
+  {
+   "name": "arm_R_a1",
+   "x": 689,
+   "y": 1610,
+   "w": 682,
+   "h": 1107,
+   "order": 0,
+   "bones": [
+    "armR1",
+    "armR2",
+    "armR3",
+    "armR_end"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 0,
+   "hidden": true,
+   "actOrder": 11.5
+  },
+  {
+   "name": "arm_L_a1",
+   "x": 1680,
+   "y": 1507,
+   "w": 669,
+   "h": 1254,
+   "order": 18,
+   "bones": [
+    "armL1",
+    "armL2",
+    "armL3",
+    "armL_end"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 18,
+   "hidden": true,
+   "actOrder": 18.7
+  },
+  {
+   "name": "fill_neck",
+   "x": 1405,
+   "y": 1395,
+   "w": 434,
+   "h": 420,
+   "order": 10,
+   "bones": [
+    "chest"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 10.9,
+   "actOrder": 10.9
+  },
+  {
+   "name": "fill_waist_top",
+   "x": 1095,
+   "y": 2135,
+   "w": 748,
+   "h": 280,
+   "order": 5,
+   "bones": [
+    "torso"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 5.4,
+   "actOrder": 5.4
+  },
+  {
+   "name": "fill_waist_bot",
+   "x": 1076,
+   "y": 2395,
+   "w": 908,
+   "h": 290,
+   "order": 5,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 5.5,
+   "actOrder": 5.5
+  },
+  {
+   "name": "slash_atk1",
+   "x": -2781.0,
+   "y": -2341.0,
+   "w": 5129.5,
+   "h": 5864.9,
+   "order": 17,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 17,
+   "actOrder": 29
+  },
+  {
+   "name": "slash_atk2",
+   "x": -2451.3,
+   "y": -327.6,
+   "w": 1096.4,
+   "h": 3572.9,
+   "order": 17,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 17,
+   "actOrder": 29
+  },
+  {
+   "name": "slash_atk3",
+   "x": -3042.6,
+   "y": 1456.1,
+   "w": 2192.2,
+   "h": 1218.9,
+   "order": 17,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 17,
+   "actOrder": 29
+  },
+  {
+   "name": "slash_atk4",
+   "x": -2863.2,
+   "y": -2326.7,
+   "w": 6366.1,
+   "h": 6147.2,
+   "order": 17,
+   "bones": [
+    "hip"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 17,
+   "actOrder": 29
   }
  ]
 }

@@ -233,6 +233,23 @@ namespace RonniSkin
             return R(0);
         }
 
+        // per-step smear envelope (u = attack progress 0..1): ramp-in start/end, hold end, fade length
+        static float SmearAlpha(int step, float u)
+        {
+            float r0, r1, h, f;
+            switch (step)
+            {
+                case 1: r0 = 0.27f; r1 = 0.33f; h = 0.38f; f = 0.14f; break;
+                case 2: r0 = 0.25f; r1 = 0.32f; h = 0.38f; f = 0.14f; break;
+                case 3: r0 = 0.27f; r1 = 0.33f; h = 0.37f; f = 0.10f; break;
+                default: r0 = 0.42f; r1 = 0.48f; h = 0.55f; f = 0.15f; break;
+            }
+            if (u < r0) return 0f;
+            if (u < r1) return (u - r0) / (r1 - r0);
+            if (u < h) return 1f;
+            return Mathf.Clamp01(1f - (u - h) / f);
+        }
+
         void Update()
         {
             if (rig == null || !rig.IsBuilt) return;
@@ -261,19 +278,29 @@ namespace RonniSkin
             bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash";
             bool guardGrip = actionClip == "block" || actionClip == "block_hit" || actionClip == "parry" || actionClip == "parry_success" || actionClip == "guard_break";
             bool thickArm = drawn && guardGrip && actionClip != "guard_break";
-            rig.SetVisible("katana", drawn && !guardGrip); rig.SetVisible("katana2", drawn && guardGrip); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
+            // attack1-4 combo: two-handed long katana; own arm copies keep the far arm behind the body
+            int aStep = 0;
+            if (drawn && actionClip != null && actionClip.Length == 7 && actionClip.StartsWith("attack")) aStep = actionClip[6] - '0';
+            bool aL = aStep >= 1 && aStep <= 4;
+            float au = actionTime;
+            // blade behind the head: attack1 wind-up, attack4 big overhead wind-up
+            bool aBack = (aStep == 1 && au < 16f / 60f) || (aStep == 4 && au >= 14f / 60f && au < 26f / 60f);
+            rig.SetVisible("katana", drawn && !guardGrip && !aL); rig.SetVisible("katana2", drawn && guardGrip); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
+            rig.SetVisible("katana_long_b", aL && aBack); rig.SetVisible("katana_long_f", aL && !aBack);
+            rig.SetVisible("arm_R_a1", aL); rig.SetVisible("arm_L_a1", aL);
+            // hidden filler patches behind the body: plug the neck / waist gaps that open up in the deep lunges
+            rig.SetVisible("fill_neck", aL); rig.SetVisible("fill_waist_top", aL); rig.SetVisible("fill_waist_bot", aL);
             // two-handed guard: arms swap to split upper/lower pieces (clean elbows, thick sword arm)
-            rig.SetVisible("arm_R", !thickArm); rig.SetVisible("arm_L", !thickArm); rig.SetVisible("arm_R_thick", false);
+            rig.SetVisible("arm_R", !thickArm && !aL); rig.SetVisible("arm_L", !thickArm && !aL); rig.SetVisible("arm_R_thick", false);
             rig.SetVisible("arm_R_up", thickArm); rig.SetVisible("arm_R_lo", thickArm); rig.SetVisible("arm_L_up", thickArm); rig.SetVisible("arm_L_lo", thickArm);
-            // slash smear: flashes in during the swing, fades over the follow-through
-            float sa = 0f;
-            if (actionClip == "attack1" && acw > 0.5f)
+            // slash smears: flash in right before each hit, hold through the impact, fade over the follow-through
+            rig.SetVisible("slash1", false);
+            for (int si = 1; si <= 4; si++)
             {
-                float u = actionTime;
-                sa = u < 0.27f ? Mathf.Clamp01((u - 0.12f) / 0.06f) : Mathf.Clamp01(1f - (u - 0.27f) / 0.16f);
+                float sa = (aStep == si && acw > 0.5f) ? SmearAlpha(si, au) : 0f;
+                rig.SetVisible("slash_atk" + si, sa > 0.01f);
+                if (sa > 0.01f) rig.SetPartColor("slash_atk" + si, new Color(1f, 1f, 1f, sa));
             }
-            rig.SetVisible("slash1", sa > 0.01f);
-            if (sa > 0.01f) rig.SetPartColor("slash1", new Color(1f, 1f, 1f, sa));
             // guard break: sword arm + katana fall back behind the body (base layer order)
             rig.SetActLayers(drawn && acw > 0.5f && actionClip != "guard_break");
 
