@@ -205,8 +205,8 @@ Transform:
   m_GameObject: {fileID: 3697985245505729534}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 23.001755, y: -4.6003146, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalPosition: {x: 7.3650618, y: -4.564998, z: 0}
+  m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6916797786646981420}
@@ -325,9 +325,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72f0f5b74cd194e49bcfc0fbbaa3857c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
-  attackRange: 6
-  chaseStopDistance: 4
-  chaseSpeed: 5
+  attackRange: 8
+  chaseStopDistance: 5
+  chaseSpeed: 7
   alwaysHunt: 0
   useStandby: 1
   standbyDistance: 4.5
