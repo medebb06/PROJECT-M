@@ -2539,6 +2539,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 219089015951684364, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 1500514311952413261, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
       propertyPath: parryHitStopTimeScale
       value: 0.01
@@ -2546,6 +2550,14 @@ PrefabInstance:
     - target: {fileID: 3212990304400142721, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
       propertyPath: m_Mesh
       value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4835172456715868936, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5006777874225356017, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 5437468479207363370, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2599,9 +2611,29 @@ PrefabInstance:
       propertyPath: hitVFXInsideAmount
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 6518560691318549444, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6645564663970228363, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6645564663970228363, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_TagString
+      value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 6881005926789426159, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 7819838104998345150, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 7819838104998345150, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 9045930727589892200, guid: e804ab9115066df4a87f108f8c8b794a, type: 3}
       propertyPath: slamFreezeTime

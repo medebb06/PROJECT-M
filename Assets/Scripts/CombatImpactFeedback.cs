@@ -34,6 +34,19 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float blockPunchAmount = 0.06f;
     [SerializeField] private float blockPunchDuration = 0.05f;
 
+    // Yeni isimli alanlar: eski inspector değerleri bunları ezmesin diye.
+    [Header("Parry Hit-Stop (heavy)")]
+    [Tooltip("Tam donma süresi (gerçek saniye).")]
+    [SerializeField] private float parryFreezeTime = 0.13f;
+    [Tooltip("Donmadan sonra ağır çekimden normale dönüş süresi.")]
+    [SerializeField] private float parrySlowTime = 0.22f;
+    [SerializeField] private float parrySlowScale = 0.15f;
+
+    [Header("Block Hit-Stop (heavy)")]
+    [SerializeField] private float blockFreezeTime = 0.08f;
+    [SerializeField] private float blockSlowTime = 0.12f;
+    [SerializeField] private float blockSlowScale = 0.3f;
+
     [Header("Balance Break Impact")]
     [SerializeField] private float balanceBreakHitStopTimeScale = 0.01f;
     [SerializeField] private float balanceBreakHitStopDuration = 0.12f;
@@ -48,6 +61,8 @@ public class CombatImpactFeedback : MonoBehaviour
     // block, parry) hit-stop'lar yok sayılır.
     private const int NormalPriority = 0;
     private const int BalanceBreakPriority = 10;
+    private const int ParryPriority = 5;
+    private const int BlockPriority = 3;
 
     private Coroutine punchRoutine;
 
@@ -88,11 +103,9 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayParryImpact()
     {
-        HitStop.Request(
-            parryHitStopDuration,
-            parryHitStopTimeScale,
-            NormalPriority
-        );
+        // Tam donma + ardından normale yavaşça dönen ağır çekim.
+        HitStop.Request(parryFreezeTime, 0f, ParryPriority);
+        HitStop.RequestRamp(parryFreezeTime + parrySlowTime, parrySlowScale, 1f, 2f, ParryPriority);
 
         PlayScreenShake(parryShakeForce);
 
@@ -108,11 +121,8 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayBlockImpact()
     {
-        HitStop.Request(
-            blockHitStopDuration,
-            blockHitStopTimeScale,
-            NormalPriority
-        );
+        HitStop.Request(blockFreezeTime, 0f, BlockPriority);
+        HitStop.RequestRamp(blockFreezeTime + blockSlowTime, blockSlowScale, 1f, 2f, BlockPriority);
 
         PlayScreenShake(blockShakeForce);
 
