@@ -259,3 +259,12 @@ Boss canı (bitişte): %0   Denge: %0   (faz 2)
   Gölge Zinciri: 1 isabet, 20 hasar, 0 öldürme
   nova: 2 isabet, 80 hasar, 0 öldürme
 
+2026-10-11 19:18:44
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 63 sn   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 17   Kusursuz kaçış: 4   Ölümcül vuruş: 0
+Boss canı (bitişte): %77   Denge: %86
+  slam: 2 isabet, 68 hasar, 1 öldürme
+  Ritim Kırıcı: 1 isabet, 20 hasar, 0 öldürme
+  Kırık Tempo: 3 isabet, 52 hasar, 0 öldürme
+

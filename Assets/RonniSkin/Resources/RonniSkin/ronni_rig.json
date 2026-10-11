@@ -299,6 +299,12 @@
    "parent": "armL3",
    "x": 2030,
    "y": 2660
+  },
+  {
+   "name": "katana2",
+   "parent": "armR3",
+   "x": 905,
+   "y": 2640
   }
  ],
  "parts": [
@@ -318,7 +324,24 @@
    "wPow": 10,
    "wFall": 0.04,
    "runOrder": 0,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 27.6
+  },
+  {
+   "name": "katana2",
+   "x": 735,
+   "y": 168,
+   "w": 341,
+   "h": 2950,
+   "order": 0,
+   "bones": [
+    "katana2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "runOrder": 0,
+   "actOrder": 27.5
   },
   {
    "name": "ponytail",
@@ -336,7 +359,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 1,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 1
   },
   {
    "name": "foot_R",
@@ -353,7 +377,8 @@
    "wPow": 6,
    "wFall": 0.08,
    "runOrder": 2,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 2
   },
   {
    "name": "foot_L",
@@ -370,7 +395,8 @@
    "wPow": 6,
    "wFall": 0.08,
    "runOrder": 3,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 3
   },
   {
    "name": "hem_R",
@@ -385,7 +411,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 4,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 4
   },
   {
    "name": "hem_L",
@@ -400,7 +427,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 5,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 5
   },
   {
    "name": "crotch",
@@ -415,7 +443,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 6,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 6
   },
   {
    "name": "leg_R",
@@ -432,7 +461,8 @@
    "wPow": 6,
    "wFall": 0.07,
    "runOrder": 7,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 7
   },
   {
    "name": "leg_L",
@@ -449,7 +479,8 @@
    "wPow": 6,
    "wFall": 0.07,
    "runOrder": 8,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 8
   },
   {
    "name": "belt_tail_L",
@@ -464,7 +495,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 9,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 9
   },
   {
    "name": "belt_tail_R",
@@ -479,7 +511,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 10,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 10
   },
   {
    "name": "torso",
@@ -496,7 +529,8 @@
    "wPow": 4,
    "wFall": 0.35,
    "runOrder": 11,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 11
   },
   {
    "name": "coat_L",
@@ -514,7 +548,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 12,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 12
   },
   {
    "name": "saya",
@@ -529,7 +564,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": true,
-   "runOrder": 13
+   "runOrder": 13,
+   "actOrder": 13
   },
   {
    "name": "sword",
@@ -544,7 +580,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 14,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 14
   },
   {
    "name": "belt",
@@ -559,7 +596,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 15,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 15
   },
   {
    "name": "coat_R",
@@ -577,14 +615,15 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 0.5,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 16
   },
   {
    "name": "katana",
-   "x": 1890,
-   "y": 1240,
-   "w": 263,
-   "h": 1663,
+   "x": 1860,
+   "y": 188,
+   "w": 341,
+   "h": 2950,
    "order": 17,
    "bones": [
     "katana"
@@ -592,7 +631,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": true,
-   "runOrder": 17
+   "runOrder": 17,
+   "actOrder": 17
   },
   {
    "name": "arm_L",
@@ -610,7 +650,8 @@
    "wPow": 10,
    "wFall": 0.04,
    "runOrder": 18,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 18.8
   },
   {
    "name": "head",
@@ -625,7 +666,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 19,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 19
   },
   {
    "name": "hair_tip_L",
@@ -640,7 +682,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 20,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 20
   },
   {
    "name": "hair_tip_M",
@@ -655,7 +698,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 21,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 21
   },
   {
    "name": "hair_tip_R",
@@ -670,7 +714,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 22,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 22
   },
   {
    "name": "hair_top",
@@ -685,7 +730,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 23,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 23
   },
   {
    "name": "brows",
@@ -700,7 +746,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 24,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 24
   },
   {
    "name": "eye_R",
@@ -715,7 +762,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 25,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 25
   },
   {
    "name": "eye_L",
@@ -730,7 +778,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 26,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 26
   },
   {
    "name": "hat",
@@ -745,7 +794,8 @@
    "wPow": 4,
    "wFall": 0.12,
    "runOrder": 27,
-   "hidden": false
+   "hidden": false,
+   "actOrder": 27
   }
  ]
 }

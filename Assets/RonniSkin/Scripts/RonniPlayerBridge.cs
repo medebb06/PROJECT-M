@@ -50,6 +50,8 @@ namespace RonniSkin
             {
                 combat = player.GetComponent<PlayerCombatController>() ?? player.GetComponentInChildren<PlayerCombatController>();
                 defense = player.GetComponent<PlayerDefenseController>() ?? player.GetComponentInChildren<PlayerDefenseController>();
+                posture = player.GetComponent<PlayerPosture>() ?? player.GetComponentInChildren<PlayerPosture>();
+                if (posture != null) lastPosture = posture.CurrentPosture;
                 if (player.modelPivot != null) oldAnim = player.modelPivot.GetComponent<Animator>();
                 if (oldAnim == null) oldAnim = player.GetComponentInChildren<Animator>(true);
             }
@@ -146,6 +148,8 @@ namespace RonniSkin
         }
 
         bool wasDashing; float dashStart;
+        PlayerPosture posture; int lastPosture; bool wasBroken; string defClip; float defStart;
+        void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
         {
             // ---- dash: quick low lunge, everything streams back ----
@@ -174,15 +178,25 @@ namespace RonniSkin
             }
             if (wasAttacking) { wasAttacking = false; lastAttackEnd = Time.time; }
 
-            // ---- parry: on window press and on successful parry ----
+            // ---- defence: guard break > successful parry > block hit > parry press > block hold ----
+            int pv = posture != null ? posture.CurrentPosture : 0;
+            bool postureHit = posture != null && pv < lastPosture;
+            lastPosture = pv;
+            bool blocking = defense != null && defense.IsBlocking;
             bool parrying = defense != null && defense.IsParrying;
-            if ((parrying && !wasParrying) || OldParryPlaying()) parryStart = Time.time;
+            if (posture != null && posture.IsBroken && !wasBroken) StartDef("guard_break");
+            wasBroken = posture != null && posture.IsBroken;
+            if (OldParryPlaying() && defClip != "parry_success" && defClip != "guard_break") StartDef("parry_success");
+            else if (postureHit && (blocking || parrying) && defClip != "guard_break") StartDef("block_hit");
+            else if (parrying && !wasParrying && defClip != "parry_success") StartDef("parry");
             wasParrying = parrying;
-            float pd = anim.ClipDuration("parry");
-            if (Time.time - parryStart < pd) { anim.SetAction("parry", Time.time - parryStart); return; }
-
-            // ---- block hold ----
-            if (defense != null && defense.IsBlocking) { anim.SetAction("block", Time.time); return; }
+            if (defClip != null)
+            {
+                float dt0 = Time.time - defStart;
+                if (dt0 < anim.ClipDuration(defClip)) { anim.SetAction(defClip, dt0); return; }
+                defClip = null;
+            }
+            if (blocking || parrying) { anim.SetAction("block", Time.time); return; }
 
             anim.ClearAction();
         }

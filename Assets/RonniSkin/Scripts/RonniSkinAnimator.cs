@@ -235,7 +235,7 @@ namespace RonniSkin
             actionW = Mathf.MoveTowards(actionW, actionWTarget, dt / Mathf.Max(0.001f, actionWTarget > actionW ? actionBlendIn : actionBlendOut));
             float acw = Mathf.SmoothStep(0, 1, actionW);
             bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash";
-            rig.SetVisible("katana", drawn); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
+            rig.SetVisible("katana", drawn); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn); rig.SetActLayers(drawn && acw > 0.5f);
 
             float upp = rig.unitsPerPixel;
             foreach (var n in Driven)

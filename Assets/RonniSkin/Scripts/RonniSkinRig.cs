@@ -17,7 +17,7 @@ namespace RonniSkin
         public Vector2Int skinGrid = new Vector2Int(8, 14);
 
         [Serializable] class BoneData { public string name; public string parent; public float x; public float y; }
-        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public bool hidden; public int[] grid; }
+        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public float actOrder = -1f; public bool hidden; public int[] grid; }
         [Serializable] class RigData { public BoneData[] bones; public PartData[] parts; public float[] origin; public float heightPx; }
 
         public readonly List<RonniSoftPart> parts = new List<RonniSoftPart>();
@@ -27,7 +27,10 @@ namespace RonniSkin
         public void SetShown(bool on) { if (on == rigShown) return; rigShown = on; foreach (var p in parts) if (p != null) p.SetRigShown(on); }
         public bool Shown => rigShown;
         public void SetVisible(string part, bool v) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetVisible(v); }
-        readonly List<int> baseOrder = new List<int>(), runOrderList = new List<int>();
+        readonly List<int> baseOrder = new List<int>(), runOrderList = new List<int>(), actOrderList = new List<int>();
+        bool actLayers;
+        /// While the katana is drawn both hands come in front of the body.
+        public void SetActLayers(bool on) { if (on == actLayers) return; actLayers = on; ApplyOrders(); }
         bool runLayers;
         public void SetSorting(string layer, int offset)
         {
@@ -45,7 +48,7 @@ namespace RonniSkin
                 var mr = parts[i] != null ? parts[i].GetComponent<MeshRenderer>() : null;
                 if (mr == null) continue;
                 mr.sortingLayerName = sortingLayerName;
-                mr.sortingOrder = sortingOrderOffset + (runLayers ? runOrderList[i] : baseOrder[i]);
+                mr.sortingOrder = sortingOrderOffset + (actLayers ? actOrderList[i] : runLayers ? runOrderList[i] : baseOrder[i]);
             }
         }
         public void SetColor(Color c, bool visible) { foreach (var p in parts) if (p != null) p.SetColor(c, visible); }
@@ -92,7 +95,7 @@ namespace RonniSkin
                 if (tex == null) { Debug.LogWarning("Ronni: missing texture " + pd.name); continue; }
                 var go = new GameObject(pd.name);
                 go.transform.SetParent(partsRoot, false);
-                var sp = go.AddComponent<RonniSoftPart>(); parts.Add(sp); baseOrder.Add(pd.order * 10); partByName[pd.name] = sp; runOrderList.Add(pd.runOrder >= 0 ? Mathf.RoundToInt(pd.runOrder * 10) : pd.order * 10);
+                var sp = go.AddComponent<RonniSoftPart>(); parts.Add(sp); baseOrder.Add(pd.order * 10); partByName[pd.name] = sp; runOrderList.Add(pd.runOrder >= 0 ? Mathf.RoundToInt(pd.runOrder * 10) : pd.order * 10); actOrderList.Add(pd.actOrder >= 0 ? Mathf.RoundToInt(pd.actOrder * 10) : pd.order * 10);
                 var bl = new List<Transform>();
                 foreach (var bn in pd.bones) bl.Add(bones[bn]);
                 bool skinned = bl.Count > 1;
