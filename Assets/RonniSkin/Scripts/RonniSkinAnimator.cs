@@ -102,7 +102,31 @@ namespace RonniSkin
         string actionClip; float actionTime, actionW, actionWTarget;
         [Header("Combat")] public float actionBlendIn = 0.07f, actionBlendOut = 0.2f;
         /// Play a baked action clip at clip-time t (seconds; attacks use 0..1 = progress).
-        public void SetAction(string clip, float t) { if (clip != null && tracks.ContainsKey(clip)) { actionClip = clip; actionTime = t; actionWTarget = 1f; } else ClearAction(); }
+        static bool IsGuardClip(string c) => c == "block" || c == "parry" || c == "block_hit";
+        public void SetAction(string clip, float t)
+        {
+            if (clip != null && tracks.ContainsKey(clip))
+            {
+                // guard poses snap in on the first frame (no sweep from idle/run through other poses)
+                if (IsGuardClip(clip) && actionW < 1f) actionW = 1f;
+                actionClip = clip; actionTime = t; actionWTarget = 1f;
+            }
+            else ClearAction();
+        }
+
+        // Parry = block pose + one short, hard punch (no raised-sword deflect pose). u = 0..1 over the clip.
+        static void ParryPunch(string bone, ref K k, float time, float duration)
+        {
+            float u = Mathf.Clamp01(time / Mathf.Max(0.01f, duration));
+            float p = u < 0.2f ? u / 0.2f : 1f - Mathf.SmoothStep(0f, 1f, (u - 0.2f) / 0.8f);
+            switch (bone)
+            {
+                case "katana2": k.r += 30f * p; break;
+                case "armR2": k.r -= 10f * p; break;
+                case "torso": k.r += 3f * p; break;
+                case "hip": k.y -= 12f * p; break;
+            }
+        }
         public void ClearAction() { actionWTarget = 0f; }
         public bool ActionActive => actionW > 0.02f && actionClip != null;
         public bool HasClip(string clip) => tracks.ContainsKey(clip);
@@ -261,8 +285,13 @@ namespace RonniSkin
                 if (!SampleClip("run", n, runClipT, out K b)) b = Run(n, runT);
                 float r = Mathf.Lerp(Mathf.Lerp(a.r, b.r, w), c.r, aw), x = Mathf.Lerp(Mathf.Lerp(a.x, b.x, w), c.x, aw), y = Mathf.Lerp(Mathf.Lerp(a.y, b.y, w), c.y, aw);
                 float sx = Mathf.Lerp(Mathf.Lerp(a.sx, b.sx, w), c.sx, aw), sy = Mathf.Lerp(Mathf.Lerp(a.sy, b.sy, w), c.sy, aw);
-                if (acw > 0f && actionClip != null && tracks[actionClip].ContainsKey(n) && SampleClip(actionClip, n, actionTime, out K act))
+                // parry reads from the (static) block pose; only bones missing there fall back to the parry clip
+                string src = actionClip; float st = actionTime;
+                bool parryPunch = actionClip == "parry" && tracks.TryGetValue("block", out var bt) && bt.ContainsKey(n);
+                if (parryPunch) { src = "block"; st = 0f; }
+                if (acw > 0f && actionClip != null && tracks[src].ContainsKey(n) && SampleClip(src, n, st, out K act))
                 {
+                    if (parryPunch) ParryPunch(n, ref act, actionTime, ClipDuration("parry"));
                     r = Mathf.LerpAngle(r, act.r, acw); x = Mathf.Lerp(x, act.x, acw); y = Mathf.Lerp(y, act.y, acw);
                 }
                 if (n == "eye_R" || n == "eye_L") sy *= eyeY;

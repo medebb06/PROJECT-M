@@ -657,6 +657,8 @@ public class EnemyAttackState : IEnemyState
 
             bool enemyStaggered;
 
+            Debug.Log("[DBG] vurus ani: hitType=" + hitType + " target=" + (enemy.target != null ? enemy.target.name : "null") + " unblockable=" + isUnblockable);
+
             if (hitType == MoveHitType.Shot)
             {
                 // OK: vuruş anında mermi çıkar; sonucu mermi çözer
@@ -1018,6 +1020,8 @@ public class EnemyAttackState : IEnemyState
 
         PlayerController player =
             enemy.target.GetComponent<PlayerController>();
+
+        Debug.Log("[DBG] DoAttack: player=" + (player != null) + " invincible=" + (player != null && player.isInvincible) + " dashing=" + (player != null && player.isDashing));
 
         if (player == null)
         {
