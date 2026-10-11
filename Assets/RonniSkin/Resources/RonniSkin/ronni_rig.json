@@ -328,9 +328,28 @@
    "actOrder": 27.6
   },
   {
+   "name": "arm_R_thick",
+   "x": 469,
+   "y": 1610,
+   "w": 1122,
+   "h": 1107,
+   "order": 0,
+   "bones": [
+    "armR1",
+    "armR2",
+    "armR3",
+    "armR_end"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 0,
+   "hidden": true,
+   "actOrder": 27.6
+  },
+  {
    "name": "katana2",
    "x": 735,
-   "y": 168,
+   "y": -160,
    "w": 341,
    "h": 2950,
    "order": 0,
@@ -651,7 +670,7 @@
    "wFall": 0.04,
    "runOrder": 18,
    "hidden": false,
-   "actOrder": 18.8
+   "actOrder": 28
   },
   {
    "name": "head",
@@ -796,6 +815,70 @@
    "runOrder": 27,
    "hidden": false,
    "actOrder": 27
+  },
+  {
+   "name": "arm_L_up",
+   "x": 1780,
+   "y": 1535,
+   "w": 413,
+   "h": 643,
+   "order": 18,
+   "bones": [
+    "armL1"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 18,
+   "hidden": true,
+   "actOrder": 27.98
+  },
+  {
+   "name": "arm_L_lo",
+   "x": 1475,
+   "y": 1302,
+   "w": 1079,
+   "h": 1664,
+   "order": 18,
+   "bones": [
+    "armL2"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 18,
+   "hidden": true,
+   "actOrder": 28.0
+  },
+  {
+   "name": "arm_R_up",
+   "x": 757,
+   "y": 1505,
+   "w": 623,
+   "h": 767,
+   "order": 0,
+   "bones": [
+    "armR1"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 0,
+   "hidden": true,
+   "actOrder": 27.58
+  },
+  {
+   "name": "arm_R_lo",
+   "x": 212,
+   "y": 1353,
+   "w": 1636,
+   "h": 1621,
+   "order": 0,
+   "bones": [
+    "armR2"
+   ],
+   "wPow": 10,
+   "wFall": 0.04,
+   "runOrder": 0,
+   "hidden": true,
+   "actOrder": 27.6
   }
  ]
 }

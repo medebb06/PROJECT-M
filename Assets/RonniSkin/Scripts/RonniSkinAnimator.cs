@@ -25,7 +25,7 @@ namespace RonniSkin
         struct K { public float r, x, y, sx, sy; }
         static readonly string[] Driven = {
             "hip","torso","chest","head","hat","armR1","armR2","armR3","armL1","armL2","armL3",
-            "katana","legR1","legR2","footR","toeR","legL1","legL2","footL","toeL",
+            "katana","katana2","legR1","legR2","footR","toeR","legL1","legL2","footL","toeL",
             "coatR1","coatR2","coatR3","coatL1","coatL2","coatL3","beltTailL","beltTailR","sword",
             "pony1","pony2","pony3","hair_tip_L","hair_tip_M","hair_tip_R","eye_R","eye_L" };
 
@@ -235,7 +235,14 @@ namespace RonniSkin
             actionW = Mathf.MoveTowards(actionW, actionWTarget, dt / Mathf.Max(0.001f, actionWTarget > actionW ? actionBlendIn : actionBlendOut));
             float acw = Mathf.SmoothStep(0, 1, actionW);
             bool drawn = acw > 0.02f && actionClip != null && actionClip != "dash";
-            rig.SetVisible("katana", drawn); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn); rig.SetActLayers(drawn && acw > 0.5f);
+            bool guardGrip = actionClip == "block" || actionClip == "block_hit" || actionClip == "parry" || actionClip == "parry_success" || actionClip == "guard_break";
+            bool thickArm = drawn && guardGrip && actionClip != "guard_break";
+            rig.SetVisible("katana", drawn && !guardGrip); rig.SetVisible("katana2", drawn && guardGrip); rig.SetVisible("saya", drawn); rig.SetVisible("sword", !drawn);
+            // two-handed guard: arms swap to split upper/lower pieces (clean elbows, thick sword arm)
+            rig.SetVisible("arm_R", !thickArm); rig.SetVisible("arm_L", !thickArm); rig.SetVisible("arm_R_thick", false);
+            rig.SetVisible("arm_R_up", thickArm); rig.SetVisible("arm_R_lo", thickArm); rig.SetVisible("arm_L_up", thickArm); rig.SetVisible("arm_L_lo", thickArm);
+            // guard break: sword arm + katana fall back behind the body (base layer order)
+            rig.SetActLayers(drawn && acw > 0.5f && actionClip != "guard_break");
 
             float upp = rig.unitsPerPixel;
             foreach (var n in Driven)
