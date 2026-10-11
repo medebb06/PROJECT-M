@@ -241,7 +241,7 @@ namespace RonniSkin
             {
                 case 1: r0 = 0.27f; r1 = 0.33f; h = 0.38f; f = 0.14f; break;
                 case 2: r0 = 0.25f; r1 = 0.32f; h = 0.38f; f = 0.14f; break;
-                case 3: r0 = 0.27f; r1 = 0.33f; h = 0.37f; f = 0.10f; break;
+                case 3: r0 = 0.27f; r1 = 0.33f; h = 0.38f; f = 0.14f; break;
                 default: r0 = 0.42f; r1 = 0.48f; h = 0.55f; f = 0.15f; break;
             }
             if (u < r0) return 0f;
