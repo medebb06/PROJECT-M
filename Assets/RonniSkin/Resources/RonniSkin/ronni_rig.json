@@ -45,26 +45,26 @@
   {
    "name": "pony1",
    "parent": "head",
-   "x": 1880,
-   "y": 500
+   "x": 1885.0,
+   "y": 1360.0
   },
   {
    "name": "pony2",
    "parent": "pony1",
-   "x": 2240,
-   "y": 813
+   "x": 1923.4,
+   "y": 1628.9
   },
   {
    "name": "pony3",
    "parent": "pony2",
-   "x": 2238,
-   "y": 1233
+   "x": 1928.1,
+   "y": 1934.0
   },
   {
    "name": "pony_end",
    "parent": "pony3",
-   "x": 2250,
-   "y": 1620
+   "x": 1907.8,
+   "y": 2233.8
   },
   {
    "name": "hair_tip_L",
@@ -321,12 +321,30 @@
    "hidden": false
   },
   {
+   "name": "ponytail",
+   "x": 1785,
+   "y": 1273,
+   "w": 462,
+   "h": 990,
+   "order": 1,
+   "bones": [
+    "pony1",
+    "pony2",
+    "pony3",
+    "pony_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "runOrder": 1,
+   "hidden": false
+  },
+  {
    "name": "foot_R",
    "x": 929,
    "y": 3235,
    "w": 538,
    "h": 383,
-   "order": 1,
+   "order": 2,
    "bones": [
     "footR",
     "toeR",
@@ -334,7 +352,7 @@
    ],
    "wPow": 6,
    "wFall": 0.08,
-   "runOrder": 1,
+   "runOrder": 2,
    "hidden": false
   },
   {
@@ -343,7 +361,7 @@
    "y": 3259,
    "w": 538,
    "h": 383,
-   "order": 2,
+   "order": 3,
    "bones": [
     "footL",
     "toeL",
@@ -351,7 +369,7 @@
    ],
    "wPow": 6,
    "wFall": 0.08,
-   "runOrder": 2,
+   "runOrder": 3,
    "hidden": false
   },
   {
@@ -360,13 +378,13 @@
    "y": 3080,
    "w": 325,
    "h": 320,
-   "order": 3,
+   "order": 4,
    "bones": [
     "ankleR"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 3,
+   "runOrder": 4,
    "hidden": false
   },
   {
@@ -375,13 +393,13 @@
    "y": 3067,
    "w": 341,
    "h": 336,
-   "order": 4,
+   "order": 5,
    "bones": [
     "ankleL"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 4,
+   "runOrder": 5,
    "hidden": false
   },
   {
@@ -390,13 +408,13 @@
    "y": 2290,
    "w": 1137,
    "h": 410,
-   "order": 5,
+   "order": 6,
    "bones": [
     "hip"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 5,
+   "runOrder": 6,
    "hidden": false
   },
   {
@@ -405,7 +423,7 @@
    "y": 2290,
    "w": 577,
    "h": 993,
-   "order": 6,
+   "order": 7,
    "bones": [
     "legR1",
     "legR2",
@@ -413,7 +431,7 @@
    ],
    "wPow": 6,
    "wFall": 0.07,
-   "runOrder": 6,
+   "runOrder": 7,
    "hidden": false
   },
   {
@@ -422,7 +440,7 @@
    "y": 2306,
    "w": 780,
    "h": 978,
-   "order": 7,
+   "order": 8,
    "bones": [
     "legL1",
     "legL2",
@@ -430,7 +448,7 @@
    ],
    "wPow": 6,
    "wFall": 0.07,
-   "runOrder": 7,
+   "runOrder": 8,
    "hidden": false
   },
   {
@@ -439,13 +457,13 @@
    "y": 2386,
    "w": 212,
    "h": 343,
-   "order": 8,
+   "order": 9,
    "bones": [
     "beltTailL"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 8,
+   "runOrder": 9,
    "hidden": false
   },
   {
@@ -454,13 +472,13 @@
    "y": 2362,
    "w": 215,
    "h": 375,
-   "order": 9,
+   "order": 10,
    "bones": [
     "beltTailR"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 9,
+   "runOrder": 10,
    "hidden": false
   },
   {
@@ -469,7 +487,7 @@
    "y": 1500,
    "w": 796,
    "h": 848,
-   "order": 10,
+   "order": 11,
    "bones": [
     "torso",
     "chest",
@@ -477,7 +495,7 @@
    ],
    "wPow": 4,
    "wFall": 0.35,
-   "runOrder": 10,
+   "runOrder": 11,
    "hidden": false
   },
   {
@@ -486,7 +504,7 @@
    "y": 1497,
    "w": 552,
    "h": 1522,
-   "order": 11,
+   "order": 12,
    "bones": [
     "coatL1",
     "coatL2",
@@ -495,26 +513,11 @@
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 11,
+   "runOrder": 12,
    "hidden": false
   },
   {
    "name": "saya",
-   "x": 1216,
-   "y": 1951,
-   "w": 1266,
-   "h": 1289,
-   "order": 12,
-   "bones": [
-    "sword"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": true,
-   "runOrder": 12
-  },
-  {
-   "name": "sword",
    "x": 1216,
    "y": 1951,
    "w": 1266,
@@ -525,7 +528,22 @@
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 13,
+   "hidden": true,
+   "runOrder": 13
+  },
+  {
+   "name": "sword",
+   "x": 1216,
+   "y": 1951,
+   "w": 1266,
+   "h": 1289,
+   "order": 14,
+   "bones": [
+    "sword"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "runOrder": 14,
    "hidden": false
   },
   {
@@ -534,13 +552,13 @@
    "y": 2324,
    "w": 771,
    "h": 185,
-   "order": 14,
+   "order": 15,
    "bones": [
     "torso"
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "runOrder": 14,
+   "runOrder": 15,
    "hidden": false
   },
   {
@@ -549,7 +567,7 @@
    "y": 1531,
    "w": 430,
    "h": 1468,
-   "order": 15,
+   "order": 16,
    "bones": [
     "coatR1",
     "coatR2",
@@ -567,14 +585,14 @@
    "y": 1240,
    "w": 263,
    "h": 1663,
-   "order": 16,
+   "order": 17,
    "bones": [
     "katana"
    ],
    "wPow": 4,
    "wFall": 0.12,
    "hidden": true,
-   "runOrder": 16
+   "runOrder": 17
   },
   {
    "name": "arm_L",
@@ -582,7 +600,7 @@
    "y": 1507,
    "w": 669,
    "h": 1254,
-   "order": 17,
+   "order": 18,
    "bones": [
     "armL1",
     "armL2",
@@ -591,24 +609,6 @@
    ],
    "wPow": 10,
    "wFall": 0.04,
-   "runOrder": 17,
-   "hidden": false
-  },
-  {
-   "name": "ponytail",
-   "x": 1843,
-   "y": 291,
-   "w": 720,
-   "h": 1349,
-   "order": 18,
-   "bones": [
-    "pony1",
-    "pony2",
-    "pony3",
-    "pony_end"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
    "runOrder": 18,
    "hidden": false
   },

@@ -23,6 +23,12 @@ namespace RonniSkin
         [Tooltip("Use the side-profile drawing (facing left) while in the air.")] public bool useProfileJump = true;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
+        [Header("Transitions")]
+        [Tooltip("Squash 'turn' when switching between the front and side drawings.")] public float switchPopTime = 0.11f;
+        [Tooltip("Landing squash duration.")] public float landTime = 0.16f;
+        [Range(0f, 0.3f)] public float landSquash = 0.12f;
+        int visualId = -1; float popT = 1f, landT = 1f; bool wasGrounded = true;
+        Transform partsA; Vector3 baseBL = Vector3.one, baseBR = Vector3.one;
         RonniSkinRig rigB, rigBL, rigBR; RonniClipPlayer playerB, playerBL, playerBR; bool showingB; bool bRight;
 
         RonniSkinRig rig; RonniSkinAnimator anim;
@@ -92,6 +98,8 @@ namespace RonniSkin
             MakeProfile("RonniSkinBR", "Ronni_B_Right", out rigBR, out playerBR); // facing right: visible hand holds the katana
             if (rigBR == null) { rigBR = rigBL; playerBR = playerBL; }
             rigB = rigBL; playerB = playerBL;
+            if (rigBL != null) baseBL = rigBL.transform.localScale;
+            if (rigBR != null) baseBR = rigBR.transform.localScale;
         }
 
         void MakeProfile(string folder, string goName, out RonniSkinRig r, out RonniClipPlayer p)
@@ -239,7 +247,28 @@ namespace RonniSkin
                     }
                     else airU = -1f;
                 }
+                int vid = mode == 0 ? 0 : (right ? 2 : 1);
+                if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
+            ApplyTransitionScale();
+        }
+
+        void ApplyTransitionScale()
+        {
+            if (partsA == null && rig != null && rig.IsBuilt) partsA = rig.transform.Find("Parts");
+            bool g = anim.grounded;
+            if (g && !wasGrounded) landT = 0f;
+            wasGrounded = g;
+            float dt = Time.deltaTime;
+            popT += switchPopTime > 0f ? dt / switchPopTime : 1f;
+            landT += landTime > 0f ? dt / landTime : 1f;
+            float sx = 1f, sy = 1f;
+            if (popT < 1f) { float e = Mathf.SmoothStep(0f, 1f, popT); sx *= Mathf.Lerp(0.72f, 1f, e); sy *= Mathf.Lerp(1.04f, 1f, e); }
+            if (landT < 1f) { float s = Mathf.Sin(Mathf.PI * landT) * (1f - 0.3f * landT); sy *= 1f - landSquash * s; sx *= 1f + landSquash * 0.65f * s; }
+            var sc = new Vector3(sx, sy, 1f);
+            if (partsA != null) partsA.localScale = visualId <= 0 ? sc : Vector3.one;
+            if (rigBL != null) rigBL.transform.localScale = visualId == 1 ? Vector3.Scale(baseBL, sc) : baseBL;
+            if (rigBR != null && rigBR != rigBL) rigBR.transform.localScale = visualId == 2 ? Vector3.Scale(baseBR, sc) : baseBR;
         }
 
         void OnDisable()

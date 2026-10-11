@@ -10,6 +10,7 @@ namespace RonniSkin
     {
         public string clip = "run";
         public float speed = 1f;
+        [Tooltip("Cross-fade time when the clip changes.")] public float fadeTime = 0.12f;
         [Tooltip("If >= 0, the clip is sampled at this normalized position instead of playing by time.")] public float manual01 = -1f;
 
         [System.Serializable] class BoneTrack { public string name; public float[] r; public float[] x; public float[] y; }
@@ -19,7 +20,11 @@ namespace RonniSkin
         RonniSkinRig rig;
         readonly Dictionary<string, Clip> clips = new Dictionary<string, Clip>();
         readonly Dictionary<Transform, Vector3> basePos = new Dictionary<Transform, Vector3>();
-        float t;
+        float t; Clip lastClip;
+        readonly Dictionary<Transform, float> snapR = new Dictionary<Transform, float>();
+        readonly Dictionary<Transform, Vector3> snapP = new Dictionary<Transform, Vector3>();
+        float fadeT = 1f;
+        readonly HashSet<string> used = new HashSet<string>();
 
         void Start()
         {
@@ -50,11 +55,33 @@ namespace RonniSkin
             int i1 = c.loop ? (i0 + 1) % c.frames : Mathf.Min(i0 + 1, c.frames - 1);
             i0 = c.loop ? i0 % c.frames : Mathf.Min(i0, c.frames - 1);
             float upp = rig.unitsPerPixel;
+            if (c != lastClip)
+            {
+                // snapshot the current pose so the new clip fades in from it
+                bool first = lastClip == null;
+                lastClip = c; snapR.Clear(); snapP.Clear();
+                foreach (var b in rig.bones.Values) { snapR[b] = b.localEulerAngles.z; snapP[b] = b.localPosition; }
+                fadeT = first ? 1f : 0f;
+            }
+            fadeT += fadeTime > 0f ? Time.deltaTime / fadeTime : 1f;
+            float w = Mathf.Clamp01(fadeT); w = w * w * (3f - 2f * w);
+            used.Clear();
             foreach (var tr in c.bones)
             {
                 if (!rig.bones.TryGetValue(tr.name, out var b)) continue;
-                b.localRotation = Quaternion.Euler(0, 0, Mathf.LerpAngle(tr.r[i0], tr.r[i1], u));
-                b.localPosition = basePos[b] + new Vector3(Mathf.Lerp(tr.x[i0], tr.x[i1], u) * upp, Mathf.Lerp(tr.y[i0], tr.y[i1], u) * upp, 0);
+                used.Add(tr.name);
+                float r = Mathf.LerpAngle(tr.r[i0], tr.r[i1], u);
+                Vector3 p = basePos[b] + new Vector3(Mathf.Lerp(tr.x[i0], tr.x[i1], u) * upp, Mathf.Lerp(tr.y[i0], tr.y[i1], u) * upp, 0);
+                if (w < 1f) { r = Mathf.LerpAngle(snapR[b], r, w); p = Vector3.Lerp(snapP[b], p, w); }
+                b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p;
+            }
+            foreach (var kv in rig.bones)
+            {
+                if (used.Contains(kv.Key)) continue;
+                var b = kv.Value;
+                float r = w < 1f ? Mathf.LerpAngle(snapR[b], 0f, w) : 0f;
+                Vector3 p = w < 1f ? Vector3.Lerp(snapP[b], basePos[b], w) : basePos[b];
+                b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p;
             }
         }
     }

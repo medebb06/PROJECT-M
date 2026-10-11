@@ -14,7 +14,7 @@ namespace RonniSkin
         public bool faceRight = false;
         [Range(0.1f, 3f)] public float runSpeed = 1f;
         [Range(0.1f, 3f)] public float idleSpeed = 1f;
-        public float blendTime = 0.2f;
+        public float blendTime = 0.25f;
         [Tooltip("Physics-like lag on ponytail and coat tails.")] public bool addSprings = true;
         [Header("Blink")] public Vector2 blinkInterval = new Vector2(2f, 5f);
 
@@ -100,7 +100,7 @@ namespace RonniSkin
 
         // ---------- combat actions (attack1-4, block, parry) ----------
         string actionClip; float actionTime, actionW, actionWTarget;
-        [Header("Combat")] public float actionBlendIn = 0.05f, actionBlendOut = 0.12f;
+        [Header("Combat")] public float actionBlendIn = 0.07f, actionBlendOut = 0.2f;
         /// Play a baked action clip at clip-time t (seconds; attacks use 0..1 = progress).
         public void SetAction(string clip, float t) { if (clip != null && tracks.ContainsKey(clip)) { actionClip = clip; actionTime = t; actionWTarget = 1f; } else ClearAction(); }
         public void ClearAction() { actionWTarget = 0f; }
