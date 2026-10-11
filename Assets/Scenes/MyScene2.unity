@@ -877,6 +877,95 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!1 &547231761
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 547231762}
+  - component: {fileID: 547231765}
+  - component: {fileID: 547231764}
+  - component: {fileID: 547231763}
+  m_Layer: 0
+  m_Name: Ronni
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &547231762
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547231761}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2023785779}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &547231763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547231761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f470aec318b0ddc4f81a6e50eb3ed6f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RonniSkin.RonniPlayerBridge
+  player: {fileID: 2122615062}
+  originalSprite: {fileID: 0}
+  hideOriginal: 1
+  matchOriginalSize: 1
+  sizeMultiplier: 1
+  offset: {x: 0, y: 0}
+  mirrorSpriteColor: 1
+--- !u!114 &547231764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547231761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7b8cd28af084514595bd8a54d2fab08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RonniSkin.RonniSkinAnimator
+  running: 0
+  grounded: 1
+  faceRight: 0
+  runSpeed: 1
+  idleSpeed: 1
+  blendTime: 0.2
+  addSprings: 1
+  blinkInterval: {x: 2, y: 5}
+--- !u!114 &547231765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547231761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bfedb58b3a7be24c88668bc53fecffb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RonniSkin.RonniSkinRig
+  unitsPerPixel: 0.001
+  sortingLayerName: Default
+  sortingOrderOffset: 0
+  skinGrid: {x: 8, y: 14}
 --- !u!1 &576347936
 GameObject:
   m_ObjectHideFlags: 0
@@ -2937,6 +3026,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       insertIndex: 0
       addedObject: {fileID: 319618574}
+    - targetCorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 547231762}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
 --- !u!1660057539 &9223372036854775807

@@ -197,3 +197,65 @@ Boss canı (bitişte): %0   Denge: %0   (faz 2)
   leap: 2 isabet, 80 hasar, 0 öldürme
   Gölge Zinciri: 1 isabet, 40 hasar, 0 öldürme
 
+2026-10-11 12:45:53
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 37 sn   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 12   Kusursuz kaçış: 1   Ölümcül vuruş: 0
+Boss canı (bitişte): %92   Denge: %58
+  leap: 1 isabet, 40 hasar, 0 öldürme
+  slam: 1 isabet, 40 hasar, 0 öldürme
+  Kırık Tempo: 1 isabet, 14 hasar, 0 öldürme
+  Keşiş Seli: 1 isabet, 6 hasar, 1 öldürme
+
+2026-10-11 12:46:21
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 62 sn   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 18   Kusursuz kaçış: 2   Ölümcül vuruş: 0
+Boss canı (bitişte): %88   Denge: %74
+  leap: 2 isabet, 80 hasar, 0 öldürme
+  slam: 2 isabet, 80 hasar, 0 öldürme
+  Kırık Tempo: 2 isabet, 28 hasar, 0 öldürme
+  Keşiş Seli: 1 isabet, 6 hasar, 1 öldürme
+  Ritim Kırıcı: 1 isabet, 6 hasar, 1 öldürme
+
+2026-10-11 12:47:47
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 138 sn  (faz 2: 117. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 39   Kusursuz kaçış: 7   Ölümcül vuruş: 2
+Boss canı (bitişte): %97   Denge: %0   (faz 2)
+  leap: 3 isabet, 118 hasar, 1 öldürme
+  slam: 4 isabet, 160 hasar, 0 öldürme
+  Kırık Tempo: 3 isabet, 42 hasar, 0 öldürme
+  Keşiş Seli: 3 isabet, 34 hasar, 1 öldürme
+  Ritim Kırıcı: 1 isabet, 6 hasar, 1 öldürme
+  Gölge Atılışı: 1 isabet, 40 hasar, 0 öldürme
+  Gölge Zinciri: 1 isabet, 20 hasar, 0 öldürme
+
+2026-10-11 12:48:40
+===== BOSS ÖZETİ: OYUNCU ÖLDÜ =====
+Süre: 189 sn  (faz 2: 117. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 39   Kusursuz kaçış: 8   Ölümcül vuruş: 2
+Boss canı (bitişte): %96   Denge: %1   (faz 2)
+  leap: 4 isabet, 158 hasar, 1 öldürme
+  slam: 4 isabet, 160 hasar, 0 öldürme
+  Kırık Tempo: 5 isabet, 80 hasar, 0 öldürme
+  Keşiş Seli: 3 isabet, 34 hasar, 1 öldürme
+  Ritim Kırıcı: 1 isabet, 6 hasar, 1 öldürme
+  Gölge Atılışı: 2 isabet, 62 hasar, 1 öldürme
+  Gölge Zinciri: 1 isabet, 20 hasar, 0 öldürme
+  nova: 2 isabet, 80 hasar, 0 öldürme
+
+2026-10-11 12:50:03
+===== BOSS ÖZETİ: BOSS ÖLDÜ =====
+Süre: 260 sn  (faz 2: 117. sn)   Denge kırma: 0   Yansıtılan ok: 0
+Parry: 61   Kusursuz kaçış: 13   Ölümcül vuruş: 4
+Boss canı (bitişte): %0   Denge: %0   (faz 2)
+  leap: 6 isabet, 238 hasar, 1 öldürme
+  slam: 6 isabet, 240 hasar, 0 öldürme
+  Kırık Tempo: 6 isabet, 94 hasar, 0 öldürme
+  Keşiş Seli: 4 isabet, 48 hasar, 1 öldürme
+  Ritim Kırıcı: 2 isabet, 26 hasar, 1 öldürme
+  Gölge Atılışı: 2 isabet, 62 hasar, 1 öldürme
+  Gölge Zinciri: 1 isabet, 20 hasar, 0 öldürme
+  nova: 2 isabet, 80 hasar, 0 öldürme
+

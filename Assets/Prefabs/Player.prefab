@@ -368,7 +368,6 @@ GameObject:
   - component: {fileID: 8449581305901829592}
   - component: {fileID: 3005321260534870830}
   - component: {fileID: 1744991486302456785}
-  - component: {fileID: 7802889488494470465}
   - component: {fileID: 6117942513030080515}
   - component: {fileID: 175735275392567023}
   - component: {fileID: 2750624663502266744}
@@ -457,7 +456,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   rb: {fileID: 3005321260534870830}
-  col: {fileID: 7802889488494470465}
+  col: {fileID: 0}
   modelPivot: {fileID: 1425016800824621251}
   attackPoint: {fileID: 632210660080007154}
   audioPlayer: {fileID: 428304297161084997}
@@ -509,6 +508,11 @@ MonoBehaviour:
   dashTime: 0.15
   dashCooldown: 0.4
   dashBufferTime: 0.15
+  minInputBuffer: 0.3
+  hurtDashCancelAfter: 0.5
+  slamLandLock: 0.05
+  attackMomentumCarry: 0.12
+  attackMomentumMax: 1
   afterImagePrefab: {fileID: 5447121605314187258, guid: fbfd7b7c826a7da4783958b89aa9b063, type: 3}
   afterImageSpacing: 0.05
   stepTimer: 0
@@ -517,12 +521,20 @@ MonoBehaviour:
   postureBreakKnockback: 5
   slamLockDuration: 0.12
   slamFreezeTime: 0.04
+  slamMinRadius: 3
+  slamFullPowerDrop: 6
+  slamBalancePercent: 0.18
+  slamPushForce: 10
+  slamLiftForce: 5
+  slamBounceVelocity: 10
   canControl: 1
   isDashing: 0
   hitInvincibilityTimer: 0
   isAttackLocked: 0
   slamGroundLock: 0
   slamLockTimer: 0
+  slamCooldown: 1
+  slamReadyTime: 0
   dashCooldownTimer: 0
   dashPressed: 0
   dashBufferTimer: 0
@@ -624,6 +636,15 @@ MonoBehaviour:
   inputBufferTime: 0.2
   comboResetTime: 0.4
   comboCancelPoint: 0.8
+  maxAirAttacks: 2
+  airAttackDuration: 0.28
+  airAttackHitTime: 0.35
+  airAttackMaxFallSpeed: 3
+  downAttackDuration: 0.3
+  downAttackHitTime: 0.25
+  downAttackBoxSize: {x: 1.4, y: 1.7}
+  downAttackBalanceMultiplier: 1.2
+  pogoBounceVelocity: 15
   hitBoxSize: {x: 3, y: 2}
   hitVFXInsideAmount: 1.32
   hitVFXForwardOffset: 0.56
@@ -874,6 +895,8 @@ MonoBehaviour:
   cancelAttackOnDefense: 1
   chainDuration: 0.8
   chainParryWindowMultiplier: 1.5
+  postParryGrace: 0.06
+  parryCancelTime: 0.45
   whiffPenaltyTime: 0.3
   whiffWindowMultiplier: 0.5
   showDebug: 0
@@ -1017,43 +1040,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!70 &7802889488494470465
-CapsuleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5722060828941545317}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0.029902995, y: 1.5939537}
-  m_Size: {x: 1.1958348, y: 2.795173}
-  m_Direction: 0
 --- !u!114 &6117942513030080515
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1066,10 +1052,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 169b8195ef3a6cd468b82d7f3ab6492e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerFinisher
-  finisherRange: 4
+  longReach: 9
   forwardPriority: 1.5
+  staggerOnly: 1
+  lineMinLength: 5
+  lineMaxLength: 18
+  lineColor: {r: 1, g: 0.82, b: 0.3, a: 1}
   executeKey: 101
   inputBuffer: 0.25
+  minHold: 0.3
+  segHold: 0.35
+  focusStartScale: 0.04
+  focusEndScale: 0.5
+  rangeSlack: 1.8
 --- !u!114 &175735275392567023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1100,6 +1095,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
   baseCritChance: 0
+  critChanceCap: 0.5
   baseCritMultiplier: 2
   debugLog: 0
   activeModifiers: []

@@ -1,0 +1,242 @@
+using UnityEngine;
+
+namespace RonniSkin
+{
+    /// Puts Ronni on the existing Player: reads PlayerController state (move, grounded,
+    /// facing, defend), hides the old sprite, matches its size/position/sorting and
+    /// mirrors its blink / hit-flash color onto Ronni.
+    [DefaultExecutionOrder(-200)]
+    [RequireComponent(typeof(RonniSkinRig), typeof(RonniSkinAnimator))]
+    public class RonniPlayerBridge : MonoBehaviour
+    {
+        public PlayerController player;
+        [Tooltip("Old sprite to hide (defaults to PlayerController.playerSprite).")]
+        public SpriteRenderer originalSprite;
+        public bool hideOriginal = true;
+        public bool matchOriginalSize = true;
+        [Tooltip("Extra size multiplier on top of the auto match.")]
+        public float sizeMultiplier = 1f;
+        public Vector2 offset = Vector2.zero;
+        public bool mirrorSpriteColor = true;
+        [Tooltip("Test: always play the run animation.")] public bool forceRun = false;
+        [Tooltip("Use the side-profile drawing (Resources/RonniSkinB) while running.")] public bool useProfileRun = true;
+        [Tooltip("Use the side-profile drawing (facing left) while in the air.")] public bool useProfileJump = true;
+        [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
+        int bMode, jumpCount; float airU;
+        RonniSkinRig rigB, rigBL, rigBR; RonniClipPlayer playerB, playerBL, playerBR; bool showingB; bool bRight;
+
+        RonniSkinRig rig; RonniSkinAnimator anim;
+        PlayerCombatController combat; PlayerDefenseController defense; Animator oldAnim;
+        bool wasParrying, wasAttacking; float parryStart = -10f; int attackStep = 1, lastStep; float lastAttackEnd = -10f; float lastProgress;
+        static readonly int[] AttackHashes = { Animator.StringToHash("Attack1"), Animator.StringToHash("Attack2"), Animator.StringToHash("Attack3"), Animator.StringToHash("Attack4") };
+        static readonly int ParryHash = Animator.StringToHash("Parry");
+        Renderer[] hidden; Renderer mainOld; bool aligned;
+        const float RonniHeightPx = 3350f; // hat top to sole
+
+        void Awake()
+        {
+            rig = GetComponent<RonniSkinRig>();
+            anim = GetComponent<RonniSkinAnimator>();
+            if (player == null) player = GetComponentInParent<PlayerController>();
+            if (originalSprite == null && player != null) originalSprite = player.playerSprite;
+            CollectOld();
+            if (player != null)
+            {
+                combat = player.GetComponent<PlayerCombatController>() ?? player.GetComponentInChildren<PlayerCombatController>();
+                defense = player.GetComponent<PlayerDefenseController>() ?? player.GetComponentInChildren<PlayerDefenseController>();
+                if (player.modelPivot != null) oldAnim = player.modelPivot.GetComponent<Animator>();
+                if (oldAnim == null) oldAnim = player.GetComponentInChildren<Animator>(true);
+            }
+            if (mainOld != null)
+            {
+                rig.sortingLayerName = mainOld.sortingLayerName;
+                rig.sortingOrderOffset = mainOld.sortingOrder;
+            }
+        }
+
+        void CollectOld()
+        {
+            Transform root = player != null && player.modelPivot != null ? player.modelPivot : transform.parent;
+            if (root == null) { hidden = new Renderer[0]; return; }
+            var list = new System.Collections.Generic.List<Renderer>();
+            float best = -1;
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r.transform.IsChildOf(transform)) continue;
+                if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+                list.Add(r);
+                bool usable = !(r is SpriteRenderer sr) || sr.sprite != null;
+                float size = r.bounds.size.y;
+                if (usable && r.enabled && r.gameObject.activeInHierarchy && size >= best) { best = size; mainOld = r; }
+            }
+            hidden = list.ToArray();
+        }
+
+        void Align(Bounds b)
+        {
+            float s = 1f;
+            if (matchOriginalSize)
+            {
+                float parentScale = transform.parent != null ? Mathf.Abs(transform.parent.lossyScale.y) : 1f;
+                s = b.size.y / (RonniHeightPx * rig.unitsPerPixel * parentScale) * sizeMultiplier;
+            }
+            float sign = transform.localScale.x < 0 ? -1 : 1;
+            transform.localScale = new Vector3(s * sign, s, 1f);
+            transform.position = new Vector3(b.center.x + offset.x, b.min.y + offset.y, transform.position.z);
+        }
+
+        void Start()
+        {
+            if (!useProfileRun) return;
+            MakeProfile("RonniSkinB", "Ronni_B_Left", out rigBL, out playerBL);   // facing left: far hand holds the katana
+            MakeProfile("RonniSkinBR", "Ronni_B_Right", out rigBR, out playerBR); // facing right: visible hand holds the katana
+            if (rigBR == null) { rigBR = rigBL; playerBR = playerBL; }
+            rigB = rigBL; playerB = playerBL;
+        }
+
+        void MakeProfile(string folder, string goName, out RonniSkinRig r, out RonniClipPlayer p)
+        {
+            r = null; p = null;
+            if (Resources.Load<TextAsset>(folder + "/ronni_rig") == null) return;
+            var go = new GameObject(goName); go.SetActive(false);
+            go.transform.SetParent(transform, false);
+            r = go.AddComponent<RonniSkinRig>(); r.resourceFolder = folder;
+            r.unitsPerPixel = rig.unitsPerPixel; r.skinGrid = rig.skinGrid;
+            r.sortingLayerName = rig.sortingLayerName; r.sortingOrderOffset = rig.sortingOrderOffset;
+            p = go.AddComponent<RonniClipPlayer>();
+            go.SetActive(true);
+            float k = r.HeightPx > 0 ? rig.HeightPx / r.HeightPx : 1f;
+            go.transform.localScale = new Vector3(k, k, 1f);
+            r.SetShown(false);
+        }
+
+        void Update()
+        {
+            if (player == null) return;
+            bool defending = player.IsDefending();
+            anim.grounded = player.isGrounded;
+            anim.running = forceRun || (player.isGrounded && !defending && Mathf.Abs(player.moveInput) > 0.1f);
+            if (forceRun) anim.grounded = true;
+            if (Mathf.Abs(player.facingDir) > 0.01f) anim.faceRight = player.facingDir > 0f;
+            UpdateCombat();
+        }
+
+        int OldAttackStep()
+        {
+            if (oldAnim == null || !oldAnim.isActiveAndEnabled) return 0;
+            var nxt = oldAnim.GetNextAnimatorStateInfo(0); var cur = oldAnim.GetCurrentAnimatorStateInfo(0);
+            for (int i = 0; i < 4; i++) if (nxt.shortNameHash == AttackHashes[i]) return i + 1;
+            for (int i = 0; i < 4; i++) if (cur.shortNameHash == AttackHashes[i]) return i + 1;
+            return 0;
+        }
+
+        bool OldParryPlaying()
+        {
+            if (oldAnim == null || !oldAnim.isActiveAndEnabled) return false;
+            var nxt = oldAnim.GetNextAnimatorStateInfo(0); var cur = oldAnim.GetCurrentAnimatorStateInfo(0);
+            return (nxt.shortNameHash == ParryHash) || (cur.shortNameHash == ParryHash && cur.normalizedTime < 0.15f);
+        }
+
+        void UpdateCombat()
+        {
+            // ---- attacks: timing from PlayerCombatController.AttackProgress ----
+            bool attacking = combat != null && combat.IsAttacking;
+            if (attacking)
+            {
+                float prog = combat.AttackProgress;
+                bool newSwing = !wasAttacking || prog + 0.05f < lastProgress;
+                if (newSwing)
+                {
+                    int s = OldAttackStep();
+                    if (s == 0) s = (Time.time - lastAttackEnd > 0.6f) ? 1 : (lastStep % 4) + 1;
+                    attackStep = s; lastStep = s;
+                }
+                else { int s = OldAttackStep(); if (s != 0 && prog < 0.25f) { attackStep = s; lastStep = s; } }
+                lastProgress = prog;
+                wasAttacking = true;
+                anim.SetAction("attack" + attackStep, prog);
+                return;
+            }
+            if (wasAttacking) { wasAttacking = false; lastAttackEnd = Time.time; }
+
+            // ---- parry: on window press and on successful parry ----
+            bool parrying = defense != null && defense.IsParrying;
+            if ((parrying && !wasParrying) || OldParryPlaying()) parryStart = Time.time;
+            wasParrying = parrying;
+            float pd = anim.ClipDuration("parry");
+            if (Time.time - parryStart < pd) { anim.SetAction("parry", Time.time - parryStart); return; }
+
+            // ---- block hold ----
+            if (defense != null && defense.IsBlocking) { anim.SetAction("block", Time.time); return; }
+
+            anim.ClearAction();
+        }
+
+        void LateUpdate()
+        {
+            if (!aligned && hidden != null && Time.frameCount > 1)
+            {
+                Renderer best = null; float bs = 0.01f;
+                foreach (var r in hidden)
+                {
+                    if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+                    if (r is SpriteRenderer sr && sr.sprite == null) continue;
+                    if (r.bounds.size.y > bs) { bs = r.bounds.size.y; best = r; }
+                }
+                if (best != null)
+                {
+                    mainOld = best; Align(best.bounds); aligned = true;
+                    rig.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigBL != null) rigBL.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder);
+                }
+            }
+            if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;
+            if (mirrorSpriteColor && originalSprite != null && rig.IsBuilt)
+            {
+                rig.SetColor(originalSprite.color, true);
+                if (rigBL != null && rigBL.IsBuilt) rigBL.SetColor(originalSprite.color, true);
+                if (rigBR != null && rigBR != rigBL && rigBR.IsBuilt) rigBR.SetColor(originalSprite.color, true);
+            }
+            // side-profile drawing: run (left/right rigs) and jump/air (left rig, katana hand hidden)
+            if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
+            {
+                bool right = anim.faceRight;
+                bool air = useProfileJump && !anim.grounded && !anim.ActionActive && !right;
+                bool run = useProfileRun && anim.running && anim.grounded && !anim.ActionActive;
+                int mode = air ? 2 : run ? 1 : 0;
+                if (mode != bMode || (mode == 1 && right != bRight))
+                {
+                    if (rigB != null) rigB.SetShown(false);
+                    bMode = mode; bRight = right;
+                    rigB = (mode == 1 && right) ? rigBR : rigBL; playerB = (mode == 1 && right) ? playerBR : playerBL;
+                    if (mode != 0)
+                    {
+                        if (mode == 2) jumpCount++;
+                        playerB.clip = mode == 2 ? ((jumpCount % 2 == 1) ? "air_a" : "air_b") : "run";
+                        playerB.manual01 = -1f;
+                        playerB.Restart(0f); rigB.SetShown(true);
+                    }
+                    rig.SetShown(mode == 0);
+                }
+                if (playerB != null)
+                {
+                    playerB.speed = anim.runSpeed;
+                    if (mode == 2)
+                    {
+                        float vy = player.rb != null ? player.rb.linearVelocity.y : 0f;
+                        float target = Mathf.Clamp01(0.5f - vy / (2f * airVelocityRange));
+                        airU = airU < 0f ? target : Mathf.MoveTowards(airU, target, Time.deltaTime * 4f);
+                        playerB.manual01 = airU;
+                    }
+                    else airU = -1f;
+                }
+            }
+        }
+
+        void OnDisable()
+        {
+            if (hidden != null) foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
+        }
+    }
+}

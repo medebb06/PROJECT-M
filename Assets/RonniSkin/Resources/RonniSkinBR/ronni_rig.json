@@ -1,0 +1,752 @@
+{
+ "origin": [
+  1650,
+  3950
+ ],
+ "heightPx": 3180,
+ "bones": [
+  {
+   "name": "root",
+   "parent": "",
+   "x": 1650,
+   "y": 3950
+  },
+  {
+   "name": "hip",
+   "parent": "root",
+   "x": 1650,
+   "y": 2780
+  },
+  {
+   "name": "torso",
+   "parent": "hip",
+   "x": 1620,
+   "y": 2780
+  },
+  {
+   "name": "chest",
+   "parent": "torso",
+   "x": 1620,
+   "y": 2380
+  },
+  {
+   "name": "chest_end",
+   "parent": "chest",
+   "x": 1640,
+   "y": 1960
+  },
+  {
+   "name": "neck",
+   "parent": "chest",
+   "x": 1640,
+   "y": 1990
+  },
+  {
+   "name": "head",
+   "parent": "neck",
+   "x": 1600,
+   "y": 1900
+  },
+  {
+   "name": "hat",
+   "parent": "head",
+   "x": 1600,
+   "y": 1180
+  },
+  {
+   "name": "bang1",
+   "parent": "head",
+   "x": 1170,
+   "y": 1330
+  },
+  {
+   "name": "bang2",
+   "parent": "bang1",
+   "x": 1145,
+   "y": 1450
+  },
+  {
+   "name": "bang3",
+   "parent": "bang2",
+   "x": 1115,
+   "y": 1580
+  },
+  {
+   "name": "bang_end",
+   "parent": "bang3",
+   "x": 1090,
+   "y": 1710
+  },
+  {
+   "name": "lock1",
+   "parent": "head",
+   "x": 1560,
+   "y": 1500
+  },
+  {
+   "name": "lock2",
+   "parent": "lock1",
+   "x": 1562,
+   "y": 1640
+  },
+  {
+   "name": "lock3",
+   "parent": "lock2",
+   "x": 1572,
+   "y": 1790
+  },
+  {
+   "name": "lock_end",
+   "parent": "lock3",
+   "x": 1590,
+   "y": 1940
+  },
+  {
+   "name": "pony1",
+   "parent": "head",
+   "x": 2010,
+   "y": 830
+  },
+  {
+   "name": "pony2",
+   "parent": "pony1",
+   "x": 2290,
+   "y": 1250
+  },
+  {
+   "name": "pony3",
+   "parent": "pony2",
+   "x": 2420,
+   "y": 1650
+  },
+  {
+   "name": "pony_end",
+   "parent": "pony3",
+   "x": 2560,
+   "y": 2060
+  },
+  {
+   "name": "coat1",
+   "parent": "chest",
+   "x": 1700,
+   "y": 1980
+  },
+  {
+   "name": "coat2",
+   "parent": "coat1",
+   "x": 1740,
+   "y": 2500
+  },
+  {
+   "name": "coat3",
+   "parent": "coat2",
+   "x": 1790,
+   "y": 2950
+  },
+  {
+   "name": "coat_end",
+   "parent": "coat3",
+   "x": 1840,
+   "y": 3400
+  },
+  {
+   "name": "belt1",
+   "parent": "torso",
+   "x": 1300,
+   "y": 2800
+  },
+  {
+   "name": "belt2",
+   "parent": "belt1",
+   "x": 1250,
+   "y": 3000
+  },
+  {
+   "name": "belt_end",
+   "parent": "belt2",
+   "x": 1200,
+   "y": 3160
+  },
+  {
+   "name": "armN1",
+   "parent": "chest",
+   "x": 1700,
+   "y": 2090
+  },
+  {
+   "name": "sleeveN2",
+   "parent": "armN1",
+   "x": 1720,
+   "y": 2550
+  },
+  {
+   "name": "sleeveN_end",
+   "parent": "sleeveN2",
+   "x": 1730,
+   "y": 2850
+  },
+  {
+   "name": "armN2",
+   "parent": "armN1",
+   "x": 1630,
+   "y": 2770
+  },
+  {
+   "name": "armN3",
+   "parent": "armN2",
+   "x": 1600,
+   "y": 3000
+  },
+  {
+   "name": "armN_end",
+   "parent": "armN3",
+   "x": 1590,
+   "y": 3160
+  },
+  {
+   "name": "katanaN",
+   "parent": "armN3",
+   "x": 1670,
+   "y": 2855
+  },
+  {
+   "name": "armF1",
+   "parent": "chest",
+   "x": 1770,
+   "y": 2075
+  },
+  {
+   "name": "sleeveF2",
+   "parent": "armF1",
+   "x": 1790,
+   "y": 2535
+  },
+  {
+   "name": "sleeveF_end",
+   "parent": "sleeveF2",
+   "x": 1800,
+   "y": 2835
+  },
+  {
+   "name": "armF2",
+   "parent": "armF1",
+   "x": 1700,
+   "y": 2755
+  },
+  {
+   "name": "armF3",
+   "parent": "armF2",
+   "x": 1670,
+   "y": 2985
+  },
+  {
+   "name": "armF_end",
+   "parent": "armF3",
+   "x": 1660,
+   "y": 3145
+  },
+  {
+   "name": "katanaB",
+   "parent": "armF3",
+   "x": 1740,
+   "y": 2855
+  },
+  {
+   "name": "legN1",
+   "parent": "hip",
+   "x": 1650,
+   "y": 2780
+  },
+  {
+   "name": "legN2",
+   "parent": "legN1",
+   "x": 1650,
+   "y": 3200
+  },
+  {
+   "name": "legN_end",
+   "parent": "legN2",
+   "x": 1650,
+   "y": 3640
+  },
+  {
+   "name": "footN",
+   "parent": "legN2",
+   "x": 1680,
+   "y": 3660
+  },
+  {
+   "name": "toeN",
+   "parent": "footN",
+   "x": 1480,
+   "y": 3880
+  },
+  {
+   "name": "toeN_end",
+   "parent": "toeN",
+   "x": 1320,
+   "y": 3945
+  },
+  {
+   "name": "legF1",
+   "parent": "hip",
+   "x": 1720,
+   "y": 2765
+  },
+  {
+   "name": "legF2",
+   "parent": "legF1",
+   "x": 1720,
+   "y": 3185
+  },
+  {
+   "name": "legF_end",
+   "parent": "legF2",
+   "x": 1720,
+   "y": 3625
+  },
+  {
+   "name": "footF",
+   "parent": "legF2",
+   "x": 1750,
+   "y": 3645
+  },
+  {
+   "name": "toeF",
+   "parent": "footF",
+   "x": 1550,
+   "y": 3865
+  },
+  {
+   "name": "toeF_end",
+   "parent": "toeF",
+   "x": 1390,
+   "y": 3930
+  }
+ ],
+ "parts": [
+  {
+   "name": "foot_F",
+   "x": 1378,
+   "y": 3552,
+   "w": 557,
+   "h": 400,
+   "bones": [
+    "legF2",
+    "footF",
+    "toeF",
+    "toeF_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "hidden": false,
+   "order": 0,
+   "runOrder": 0,
+   "grid": [
+    8,
+    8
+   ]
+  },
+  {
+   "name": "forearm_F",
+   "x": 1620,
+   "y": 2067,
+   "w": 273,
+   "h": 886,
+   "bones": [
+    "armF1",
+    "armF2",
+    "armF3",
+    "armF_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "grid": [
+    4,
+    12
+   ],
+   "hidden": false,
+   "order": 1,
+   "runOrder": 1
+  },
+  {
+   "name": "hand_F",
+   "x": 1530,
+   "y": 2708,
+   "w": 329,
+   "h": 449,
+   "bones": [
+    "armF1",
+    "armF2",
+    "armF3",
+    "armF_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "hidden": false,
+   "grid": [
+    6,
+    12
+   ],
+   "order": 2,
+   "runOrder": 2
+  },
+  {
+   "name": "sleeve_F",
+   "x": 1523,
+   "y": 2016,
+   "w": 518,
+   "h": 826,
+   "bones": [
+    "armF1",
+    "sleeveF2",
+    "sleeveF_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.15,
+   "hidden": false,
+   "order": 3,
+   "runOrder": 3
+  },
+  {
+   "name": "leg_F",
+   "x": 1387,
+   "y": 2676,
+   "w": 661,
+   "h": 964,
+   "bones": [
+    "legF1",
+    "legF2",
+    "legF_end"
+   ],
+   "wPow": 8,
+   "wFall": 0.04,
+   "hidden": false,
+   "grid": [
+    10,
+    24
+   ],
+   "order": 4,
+   "runOrder": 4
+  },
+  {
+   "name": "ponytail",
+   "x": 1958,
+   "y": 731,
+   "w": 786,
+   "h": 1348,
+   "bones": [
+    "pony1",
+    "pony2",
+    "pony3",
+    "pony_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 5,
+   "runOrder": 5
+  },
+  {
+   "name": "neck",
+   "x": 1440,
+   "y": 1760,
+   "w": 520,
+   "h": 540,
+   "bones": [
+    "chest",
+    "neck",
+    "head",
+    "hat"
+   ],
+   "wPow": 3,
+   "wFall": 0.3,
+   "hidden": false,
+   "order": 6,
+   "runOrder": 6,
+   "grid": [
+    4,
+    12
+   ]
+  },
+  {
+   "name": "torso",
+   "x": 1197,
+   "y": 1944,
+   "w": 772,
+   "h": 828,
+   "bones": [
+    "torso",
+    "chest",
+    "chest_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.35,
+   "hidden": false,
+   "order": 7,
+   "runOrder": 7
+  },
+  {
+   "name": "head",
+   "x": 1059,
+   "y": 1104,
+   "w": 881,
+   "h": 862,
+   "bones": [
+    "head"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 8,
+   "runOrder": 8
+  },
+  {
+   "name": "belt",
+   "x": 1105,
+   "y": 2747,
+   "w": 278,
+   "h": 427,
+   "bones": [
+    "belt1",
+    "belt2",
+    "belt_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 9,
+   "runOrder": 9
+  },
+  {
+   "name": "foot_N",
+   "x": 1308,
+   "y": 3567,
+   "w": 557,
+   "h": 400,
+   "bones": [
+    "legN2",
+    "footN",
+    "toeN",
+    "toeN_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "hidden": false,
+   "order": 10,
+   "runOrder": 10,
+   "grid": [
+    8,
+    8
+   ]
+  },
+  {
+   "name": "leg_N",
+   "x": 1318,
+   "y": 2693,
+   "w": 661,
+   "h": 964,
+   "bones": [
+    "legN1",
+    "legN2",
+    "legN_end"
+   ],
+   "wPow": 8,
+   "wFall": 0.04,
+   "hidden": false,
+   "grid": [
+    10,
+    24
+   ],
+   "order": 11,
+   "runOrder": 11
+  },
+  {
+   "name": "hair_back",
+   "x": 1332,
+   "y": 1295,
+   "w": 843,
+   "h": 626,
+   "bones": [
+    "head"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 12,
+   "runOrder": 12
+  },
+  {
+   "name": "coat",
+   "x": 1247,
+   "y": 1934,
+   "w": 896,
+   "h": 1468,
+   "bones": [
+    "coat1",
+    "coat2",
+    "coat3",
+    "coat_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.1,
+   "hidden": false,
+   "grid": [
+    10,
+    20
+   ],
+   "order": 13,
+   "runOrder": 13
+  },
+  {
+   "name": "forearm_N",
+   "x": 1550,
+   "y": 2082,
+   "w": 273,
+   "h": 886,
+   "bones": [
+    "armN1",
+    "armN2",
+    "armN3",
+    "armN_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "grid": [
+    4,
+    12
+   ],
+   "hidden": false,
+   "order": 14,
+   "runOrder": 14
+  },
+  {
+   "name": "sleeve_N",
+   "x": 1453,
+   "y": 2031,
+   "w": 518,
+   "h": 826,
+   "bones": [
+    "armN1",
+    "sleeveN2",
+    "sleeveN_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.15,
+   "hidden": false,
+   "order": 15,
+   "runOrder": 15
+  },
+  {
+   "name": "sidelock",
+   "x": 1381,
+   "y": 1510,
+   "w": 284,
+   "h": 455,
+   "bones": [
+    "lock1",
+    "lock2",
+    "lock3",
+    "lock_end"
+   ],
+   "wPow": 3,
+   "wFall": 0.15,
+   "hidden": false,
+   "grid": [
+    6,
+    18
+   ],
+   "order": 16,
+   "runOrder": 16
+  },
+  {
+   "name": "bangs",
+   "x": 1011,
+   "y": 1313,
+   "w": 260,
+   "h": 396,
+   "bones": [
+    "bang1",
+    "bang2",
+    "bang3",
+    "bang_end"
+   ],
+   "wPow": 3,
+   "wFall": 0.15,
+   "hidden": false,
+   "grid": [
+    6,
+    18
+   ],
+   "order": 17,
+   "runOrder": 17
+  },
+  {
+   "name": "katana_sheathed",
+   "x": 1448,
+   "y": 2176,
+   "w": 443,
+   "h": 2679,
+   "bones": [
+    "katanaN"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 18,
+   "runOrder": 18
+  },
+  {
+   "name": "hand_N",
+   "x": 1460,
+   "y": 2723,
+   "w": 329,
+   "h": 449,
+   "bones": [
+    "armN1",
+    "armN2",
+    "armN3",
+    "armN_end"
+   ],
+   "wPow": 6,
+   "wFall": 0.06,
+   "hidden": false,
+   "grid": [
+    6,
+    12
+   ],
+   "order": 19,
+   "runOrder": 19
+  },
+  {
+   "name": "face",
+   "x": 1193,
+   "y": 1429,
+   "w": 261,
+   "h": 345,
+   "bones": [
+    "head"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 20,
+   "runOrder": 20
+  },
+  {
+   "name": "hat",
+   "x": 599,
+   "y": 771,
+   "w": 2031,
+   "h": 1139,
+   "bones": [
+    "hat"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "order": 21,
+   "runOrder": 21
+  }
+ ]
+}
