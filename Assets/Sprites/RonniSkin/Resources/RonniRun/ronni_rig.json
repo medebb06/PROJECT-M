@@ -178,6 +178,18 @@
    "parent": "legB2",
    "x": 745,
    "y": 1065
+  },
+  {
+   "name": "footF_end",
+   "parent": "footF",
+   "x": 515,
+   "y": 1100
+  },
+  {
+   "name": "footB_end",
+   "parent": "footB",
+   "x": 708,
+   "y": 1135
   }
  ],
  "parts": [
@@ -312,10 +324,11 @@
    "bones": [
     "legB1",
     "legB2",
-    "legB_end"
+    "footB",
+    "footB_end"
    ],
-   "wPow": 6,
-   "wFall": 0.06,
+   "wPow": 3,
+   "wFall": 0.25,
    "hidden": false,
    "grid": [
     8,
@@ -388,10 +401,11 @@
    "bones": [
     "legF1",
     "legF2",
-    "legF_end"
+    "footF",
+    "footF_end"
    ],
-   "wPow": 6,
-   "wFall": 0.06,
+   "wPow": 3,
+   "wFall": 0.25,
    "hidden": false,
    "grid": [
     12,

@@ -38,6 +38,8 @@ namespace RonniSkin
             foreach (var b in rig.bones.Values) basePos[b] = b.localPosition;
         }
 
+        public bool HasClip(string name) { return clips.ContainsKey(name); }
+
         public void Restart(float phase01 = 0f)
         {
             if (clips.TryGetValue(clip, out var c)) t = phase01 * c.duration;

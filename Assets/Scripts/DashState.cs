@@ -11,6 +11,12 @@ public class DashState : IPlayerState
     private float speed;
     private float fxTimer;
 
+    // Hız çanı: 3 = ortada ortalama hızın ~2.2 katı. Büyük = ortası daha keskin, başı/sonu daha yavaş.
+    private const float DashBellPower = 3f;
+
+    // Dash süresi çarpanı (mesafe sabit kalır, hız buna göre düşer). Animasyon köprüsü de bunu kullanır.
+    public const float DurationScale = 1.5f;
+
     private int originalLayer;
     private GameObject colObject;
     private int colOriginalLayer;
@@ -54,11 +60,11 @@ public class DashState : IPlayerState
         player.isInvincible = true;
         player.isAttackLocked = true;
 
-        timer = player.dashTime;
+        timer = player.dashTime * DurationScale;
 
         dir = player.GetDashDirection();
 
-        speed = player.dashDistance / player.dashTime;
+        speed = player.dashDistance / (player.dashTime * DurationScale);
 
         // collision layer save
         originalLayer = player.gameObject.layer;
@@ -153,12 +159,28 @@ public class DashState : IPlayerState
         HandleAfterImage();
     }
 
+    static float Gamma(float x)
+    {
+        // Sadece tam sayı + 1 için (faktöriyel): Gamma(k+1) = k!
+        float r = 1f;
+        for (int k = 2; k < Mathf.RoundToInt(x); k++) r *= k;
+        return r;
+    }
+
     public void FixedUpdate()
     {
         // dash boyunca stabil velocity
         Vector2 vel = player.rb.linearVelocity;
 
-        vel.x = dir * speed;
+        // Yavaş başla, ortada çok hız kazan, yavaşça dur:
+        // v(p) = ortalama * (2n+1)!/(n!)^2 * p^n * (1-p)^n  (integral = dashDistance, mesafe sabit).
+        // n büyüdükçe orta kısım daha keskin/hızlı, uçlar daha yavaş olur.
+        float p = Mathf.Clamp01(1f - timer / Mathf.Max(0.0001f, player.dashTime * DurationScale));
+        float n = DashBellPower;
+        float norm = Gamma(2f * n + 2f) / (Gamma(n + 1f) * Gamma(n + 1f));
+        float curve = norm * Mathf.Pow(p, n) * Mathf.Pow(1f - p, n);
+
+        vel.x = dir * speed * curve;
         vel.y = 0f;
 
         player.SetVelocity(vel);

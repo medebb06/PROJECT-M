@@ -176,6 +176,7 @@ namespace RonniSkin
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
             wasDashing = dashing;
+            if (dashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt) return; // profil dash (mode 3) LateUpdate'te
             if (dashing && anim.HasClip("dash")) { anim.SetAction("dash", Time.time - dashStart); return; }
 
             // ---- attacks: timing from PlayerCombatController.AttackProgress ----
@@ -270,18 +271,19 @@ namespace RonniSkin
                 bool right = anim.faceRight;
                 bool air = useProfileJump && !anim.grounded && !anim.ActionActive;
                 bool run = useProfileRun && anim.running && anim.grounded && !anim.ActionActive;
-                int mode = air ? 2 : run ? 1 : 0;
+                bool dashP = player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
+                int mode = dashP ? 3 : air ? 2 : run ? 1 : 0;
                 if (mode != bMode || (mode != 0 && right != bRight))
                 {
                     if (rigB != null) rigB.SetShown(false);
                     bool newJump = mode == 2 && bMode != 2;
                     bMode = mode; bRight = right;
                     rigB = right ? rigBR : rigBL; playerB = right ? playerBR : playerBL;
-                    if (mode == 1 && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
+                    if ((mode == 1 || mode == 3 || (mode == 2 && playerRun != null && playerRun.HasClip("air_a"))) && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
                     if (mode != 0)
                     {
                         if (newJump) jumpCount++;
-                        playerB.clip = mode == 2 ? ((jumpCount % 2 == 1) ? "air_a" : "air_b") : "run";
+                        playerB.clip = mode == 3 ? "dash" : mode == 2 ? ((jumpCount % 2 == 1) ? "air_a" : "air_b") : "run";
                         playerB.manual01 = -1f;
                         playerB.Restart(0f); rigB.SetShown(true);
                     }
@@ -296,6 +298,11 @@ namespace RonniSkin
                         float target = Mathf.Clamp01(0.5f - vy / (2f * airVelocityRange));
                         airU = airU < 0f ? target : Mathf.MoveTowards(airU, target, Time.deltaTime * 4f);
                         playerB.manual01 = airU;
+                    }
+                    else if (mode == 3)
+                    {
+                        airU = -1f;
+                        playerB.manual01 = Mathf.Clamp01((Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale));
                     }
                     else airU = -1f;
                 }

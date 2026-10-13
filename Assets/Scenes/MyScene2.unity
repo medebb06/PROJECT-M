@@ -1001,11 +1001,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
   rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
   color: {r: 0.62, g: 0.8, b: 1.15, a: 1}
-  innerWidth: 0.05
-  innerIntensity: 0.6
-  outerWidth: 0.11
-  outerIntensity: 0.22
-  upBias: 0.6
+  innerWidth: 0.06
+  innerIntensity: 1.2
+  outerWidth: 0.13
+  outerIntensity: 0.4
+  upBias: 0.8
+  moonRim: 1
+  moonColor: {r: 0.55, g: 0.72, b: 1, a: 1}
+  moonWidth: 0.05
+  moonIntensity: 1
 --- !u!1 &231609406
 GameObject:
   m_ObjectHideFlags: 0
@@ -9809,7 +9813,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 27
+  orthographic size: 23.47826
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -9838,7 +9842,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.PixelPerfectCamera
   m_ComponentVersion: 1
-  m_AssetsPPU: 20
+  m_AssetsPPU: 23
   m_RefResolutionX: 1920
   m_RefResolutionY: 1080
   m_CropFrame: 0
@@ -14909,11 +14913,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
   rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
   color: {r: 0.62, g: 0.8, b: 1.15, a: 1}
-  innerWidth: 0.05
-  innerIntensity: 0.6
-  outerWidth: 0.11
-  outerIntensity: 0.22
-  upBias: 0.6
+  innerWidth: 0.06
+  innerIntensity: 1.2
+  outerWidth: 0.13
+  outerIntensity: 0.4
+  upBias: 0.8
+  moonRim: 1
+  moonColor: {r: 0.55, g: 0.72, b: 1, a: 1}
+  moonWidth: 0.05
+  moonIntensity: 1
 --- !u!1 &1980620597
 GameObject:
   m_ObjectHideFlags: 0
@@ -15570,11 +15578,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
   rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
   color: {r: 0.62, g: 0.8, b: 1.15, a: 1}
-  innerWidth: 0.05
-  innerIntensity: 1
-  outerWidth: 0.1
-  outerIntensity: 0.22
-  upBias: 0.6
+  innerWidth: 0.06
+  innerIntensity: 1.2
+  outerWidth: 0.13
+  outerIntensity: 0.4
+  upBias: 0.8
+  moonRim: 1
+  moonColor: {r: 0.55, g: 0.72, b: 1, a: 1}
+  moonWidth: 0.05
+  moonIntensity: 1
+--- !u!114 &2122615100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329658975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b86e7cbf86c2014a98a38974ca75d7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterBackdrop
+  glowSprite: {fileID: 21300000, guid: c5867b4cc66c3a34d9871dc56576d972, type: 3}
+  additiveMaterial: {fileID: 2100000, guid: c86c61a676ec6b84d96d1590b8a29ad0, type: 2}
+  color: {r: 1, g: 1, b: 1, a: 1}
+  intensity: 0.1
+  size: {x: 7.5, y: 8.5}
+  offset: {x: 0, y: 0.2}
+  breathe: 0.06
+  breatheSpeed: 0.6
+  followSpeed: 14
+  orderBelow: 12
 --- !u!1 &2136288078
 GameObject:
   m_ObjectHideFlags: 0
@@ -15842,6 +15876,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2122615081}
+    - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2122615100}
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
