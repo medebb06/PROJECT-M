@@ -26,6 +26,8 @@ public static class GameBoot
             flow.AddComponent<GameFlow>();
         }
 
+        GameVignette.Ensure();
+
         ScreenFade.Instance.Set(1f);
 
         GameObject menu = new GameObject("~MainMenu");
@@ -157,6 +159,8 @@ public class MainMenu : MonoBehaviour
     {
         new Row { label = "SES", kanji = "音量", kind = 1 },
         new Row { label = "ARAYÜZ BOYUTU", kanji = "画面", kind = 1 },
+        new Row { label = "KENAR KARARMA", kanji = "暗さ", kind = 1 },
+        new Row { label = "KARARMA ALANI", kanji = "範囲", kind = 1 },
         new Row { label = "TAM EKRAN", kanji = "全画面", kind = 2 },
         new Row { label = "GERİ", kanji = "戻る", kind = 0 },
     };
@@ -336,8 +340,8 @@ public class MainMenu : MonoBehaviour
         fillRects = new RectTransform[n];
         knobRects = new RectTransform[n];
 
-        float top = p == Page.Main ? 40f : 70f;
-        float step = p == Page.Main ? -84f : -76f;
+        float top = p == Page.Main ? 40f : 110f;
+        float step = p == Page.Main ? -84f : -66f;
 
         for (int i = 0; i < n; i++)
         {
@@ -532,12 +536,26 @@ public class MainMenu : MonoBehaviour
                 DragSlider(1, v => GameSettings.UiScale = v, GameSettings.MinUiScale, GameSettings.MaxUiScale);
                 break;
 
-            case 2: // tam ekran
+            case 2: // kenar kararma gücü
+                if (dir != 0)
+                    GameVignette.Intensity = GameVignette.Intensity + dir * 0.05f;
+
+                DragSlider(2, v => GameVignette.Intensity = v, 0f, 1f);
+                break;
+
+            case 3: // kararma alanı
+                if (dir != 0)
+                    GameVignette.Size = GameVignette.Size + dir * 0.05f;
+
+                DragSlider(3, v => GameVignette.Size = v, 0f, 1f);
+                break;
+
+            case 4: // tam ekran
                 if (dir != 0 || confirm || click)
                     GameSettings.Fullscreen = !GameSettings.Fullscreen;
                 break;
 
-            case 3: // geri
+            case 5: // geri
                 if (confirm || click)
                     Back();
                 break;
@@ -599,8 +617,11 @@ public class MainMenu : MonoBehaviour
         float t = Mathf.InverseLerp(GameSettings.MinUiScale, GameSettings.MaxUiScale, ui);
         SetSlider(1, t, Mathf.RoundToInt(ui * 100f) + "%");
 
-        if (valueTexts[2] != null)
-            valueTexts[2].text = Screen.fullScreen ? "AÇIK" : "KAPALI";
+        SetSlider(2, GameVignette.Intensity, Mathf.RoundToInt(GameVignette.Intensity * 100f) + "%");
+        SetSlider(3, GameVignette.Size, Mathf.RoundToInt(GameVignette.Size * 100f) + "%");
+
+        if (valueTexts[4] != null)
+            valueTexts[4].text = Screen.fullScreen ? "AÇIK" : "KAPALI";
     }
 
     private void SetSlider(int row, float t, string text)
@@ -774,5 +795,119 @@ public class MainMenu : MonoBehaviour
         t.Apply();
 
         return Sprite.Create(t, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+}
+
+
+/// <summary>
+/// OYUN İÇİ KENAR KARARMASI (vinyet). Ayarlar menüsünden güç ve alan ayarlanır, PlayerPrefs'te saklanır.
+/// Menü ve ekran kararmasının altında, oyunun üstünde çizilir.
+/// </summary>
+public class GameVignette : MonoBehaviour
+{
+    private static GameVignette instance;
+
+    private const string KeyInt = "pm_vig_int";
+    private const string KeySize = "pm_vig_size";
+
+    public static float Intensity
+    {
+        get { return PlayerPrefs.GetFloat(KeyInt, 0.55f); }
+        set { PlayerPrefs.SetFloat(KeyInt, Mathf.Clamp01(value)); Apply(); }
+    }
+
+    public static float Size
+    {
+        get { return PlayerPrefs.GetFloat(KeySize, 0.5f); }
+        set { PlayerPrefs.SetFloat(KeySize, Mathf.Clamp01(value)); dirtyTex = true; Apply(); }
+    }
+
+    private static bool dirtyTex = true;
+
+    private Image image;
+    private Texture2D tex;
+    private Sprite sprite;
+
+    public static void Ensure()
+    {
+        if (instance != null)
+            return;
+
+        GameObject go = new GameObject("~GameVignette");
+        DontDestroyOnLoad(go);
+        instance = go.AddComponent<GameVignette>();
+    }
+
+    private void Awake()
+    {
+        instance = this;
+
+        Canvas c = gameObject.AddComponent<Canvas>();
+        c.renderMode = RenderMode.ScreenSpaceOverlay;
+        c.sortingOrder = 100;
+
+        GameObject g = new GameObject("Vig");
+        g.transform.SetParent(transform, false);
+        image = g.AddComponent<Image>();
+        image.raycastTarget = false;
+
+        RectTransform rt = image.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+
+        Apply();
+    }
+
+    private static void Apply()
+    {
+        if (instance == null)
+            return;
+
+        if (dirtyTex)
+        {
+            instance.Rebuild();
+            dirtyTex = false;
+        }
+
+        instance.image.color = new Color(1f, 1f, 1f, Intensity);
+        instance.image.enabled = Intensity > 0.001f;
+    }
+
+    // Size: 0 = sadece köşeler, 1 = ekranın ortasına kadar uzanan kararma.
+    private void Rebuild()
+    {
+        const int n = 128;
+
+        if (tex == null)
+        {
+            tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+        }
+
+        float inner = Mathf.Lerp(0.85f, 0.1f, Size);
+        Color32[] px = new Color32[n * n];
+
+        for (int y = 0; y < n; y++)
+        {
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x / (n - 1f) - 0.5f) * 2f;
+                float dy = (y / (n - 1f) - 0.5f) * 2f;
+                float d = Mathf.Sqrt(dx * dx + dy * dy) / 1.414f;
+                float a = Mathf.SmoothStep(inner * 0.7f, 1f, d);
+                px[y * n + x] = new Color32(0, 0, 0, (byte)Mathf.RoundToInt(Mathf.Clamp01(a) * 255f));
+            }
+        }
+
+        tex.SetPixels32(px);
+        tex.Apply();
+
+        if (sprite == null)
+        {
+            sprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+            image.sprite = sprite;
+        }
     }
 }

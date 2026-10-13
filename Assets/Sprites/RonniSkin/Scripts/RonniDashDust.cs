@@ -18,6 +18,17 @@ namespace RonniSkin
         [Tooltip("İki yer çizgisi arasındaki mesafe = karakter boyu x bu.")] public float skidSpacing = 0.8f;
         public Color tint = Color.white;
 
+        [Header("Impact VFX (Free Slash VFX/Prefabs/Impact.prefab)")]
+        [Tooltip("Dash başında karakterin arkasında çıkan efekt. Boşsa Editor'de otomatik bulunur.")] public GameObject impactPrefab;
+        public bool impactEnabled = true;
+        [Tooltip("Efektin karakterin gövde merkezinden dash'in ARKASINA kayması (karakter boyu x bu).")] public float impactBackOffset = 0.25f;
+        [Tooltip("Gövde merkezinden yukarı kayma (karakter boyu x bu).")] public float impactUp = 0.0f;
+        public float impactScale = 1f;
+        [Tooltip("1 = normal. Küçüldükçe efekt yavaş oynar, daha uzun kalır (0.6 = ~1.7 kat uzun).")] [Range(0.2f, 2f)] public float impactSpeed = 0.6f;
+        [Tooltip("true: efekt dash'in tersine (arkaya) döner. false: dash yönüne.")] public bool impactFaceBack = false;
+        [Tooltip("Prefab içinden kapatılacak parça adları (ortadaki yatay çizgi için). Parçalar: Shafts, Impact (ortadaki yuvarlak patlama), Shafts Streched (yatay çizgi), Light.")] public string[] impactHide = { "Shafts Streched", "Impact" };
+        [Tooltip("Efektin 0 derecede baktığı yön sağ değilse buradan düzelt (derece).")] public float impactAngleOffset = 0f;
+
         PlayerController player; RonniSkinRig rig;
         Sprite[] burst, skid;
         string layer; int order; float worldH;
@@ -76,6 +87,55 @@ namespace RonniSkin
         {
             haveSkid = false;
             Spawn(burst, burstFps, transform.position.x, dir);
+            SpawnImpact(dir);
+        }
+
+        void SpawnImpact(float dir)
+        {
+            if (!impactEnabled) return;
+#if UNITY_EDITOR
+            if (impactPrefab == null)
+                impactPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Free Slash VFX/Prefabs/Impact.prefab");
+#endif
+            if (impactPrefab == null) return;
+
+            float d = dir >= 0f ? 1f : -1f;
+            Vector3 c = (player != null && player.col != null) ? player.col.bounds.center : transform.position;
+            Vector3 pos = new Vector3(c.x - d * worldH * impactBackOffset, c.y + worldH * impactUp, 0f);
+            float ang = (impactFaceBack ? (d >= 0f ? 180f : 0f) : (d >= 0f ? 0f : 180f)) + impactAngleOffset;
+
+            var go = Instantiate(impactPrefab, pos, Quaternion.identity);
+
+            // Sol: 180 derece döndür. Sağ: sol halin ayna görüntüsü (dikeyde çevir).
+            float sgn = impactFaceBack ? -d : d;
+            Vector3 baseScale = go.transform.localScale * impactScale;
+            if (sgn < 0f) go.transform.rotation = Quaternion.Euler(0f, 0f, 180f + impactAngleOffset);
+            else { go.transform.rotation = Quaternion.Euler(0f, 0f, impactAngleOffset); baseScale.y = -baseScale.y; }
+            go.transform.localScale = baseScale;
+
+            // Gizlenecek parçalar: sadece çizimi ve üretimi kapanır (kök sistem de olabilir).
+            foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (impactHide != null && System.Array.IndexOf(impactHide, ps.gameObject.name) >= 0)
+                {
+                    var em = ps.emission; em.enabled = false;
+                    var pr = ps.GetComponent<ParticleSystemRenderer>();
+                    if (pr != null) pr.enabled = false;
+                }
+            }
+
+            foreach (var r in go.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            { r.sortingLayerName = layer; r.sortingOrder = order + 5; }
+
+            float life = 0.5f;
+            foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var m = ps.main;
+                m.simulationSpeed = impactSpeed;
+                ps.Play(true);
+                life = Mathf.Max(life, (m.duration + (m.startLifetime.mode == ParticleSystemCurveMode.Constant ? m.startLifetime.constant : 2f)) / Mathf.Max(0.05f, impactSpeed));
+            }
+            Destroy(go, life + 0.2f);
         }
 
         /// Dash boyunca her karede (aktifken yerde çizgi bırakır).
