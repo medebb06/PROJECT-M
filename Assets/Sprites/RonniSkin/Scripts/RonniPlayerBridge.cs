@@ -30,9 +30,9 @@ namespace RonniSkin
         [Tooltip("Koşu çiziminin boyu (1 = Ronni ile aynı boy).")] public float runScale = 1f;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
-        RonniDashTrail dashTrail; bool dashPrev; float dashEndT = -10f;
+        RonniDashDust dashDust; bool dustPrev; bool dashPrev; float dashEndT = -10f;
         [Tooltip("Dash bitince koşuya geçerken idle'a düşmesin diye tutulan süre (sn).")] public float dashRunGrace = 0.25f;
-        [Tooltip("Dash sırasında karakterin her bölgesinden renkli iz.")] public bool dashTrailEnabled = true;
+        [Tooltip("Dash başında toz patlaması + dash boyunca yer çizgileri.")] public bool dashDustEnabled = true;
         [Tooltip("Dash'in yüzde kaçında iz yazmayı bıraksın (iz oraya kadar uzar, uç yerinde kalıp solar)."), Range(0.3f, 1f)] public float dashTrailEndFrac = 0.75f;
         [Header("Transitions")]
         [Tooltip("Squash 'turn' when switching between the front and side drawings.")] public float switchPopTime = 0.11f;
@@ -281,12 +281,17 @@ namespace RonniSkin
                 bool run = useProfileRun && (anim.running || afterDash) && anim.grounded && !anim.ActionActive;
                 bool dashP = player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
                 int mode = dashP ? 3 : air ? 2 : run ? 1 : 0;
-                if (dashTrailEnabled && rigRun != null && rigRun.IsBuilt)
+                if (dashDustEnabled && rigRun != null && rigRun.IsBuilt)
                 {
-                    if (dashTrail == null) dashTrail = gameObject.AddComponent<RonniDashTrail>();
-                    dashTrail.Init(rigRun);
-                    float dashFrac = (Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale);
-                    dashTrail.SetEmitting(player.isDashing && dashP && dashFrac < dashTrailEndFrac); // iz dash bitmeden kesilir, ucu orada kalır
+                    if (dashDust == null) { dashDust = GetComponent<RonniDashDust>(); if (dashDust == null) dashDust = gameObject.AddComponent<RonniDashDust>(); }
+                    dashDust.Init(player, rigRun);
+                    bool dd = player.isDashing && dashP;
+                    float dd01 = (Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale);
+                    float ddir = player.GetDashDirection();
+                    if (Mathf.Abs(ddir) < 0.01f) ddir = player.facingDir;
+                    if (dd && !dustPrev) dashDust.Begin(ddir);
+                    dashDust.Tick(dd && dd01 < dashTrailEndFrac, ddir);
+                    dustPrev = dd;
                 }
                 if (mode != bMode || (mode != 0 && right != bRight))
                 {
