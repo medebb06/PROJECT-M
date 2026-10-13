@@ -14213,8 +14213,8 @@ MonoBehaviour:
   frontOrder: 520
   splashOrder: 310
   rainColor: {r: 0.74, g: 0.84, b: 1, a: 1}
-  splashRate: 26
-  playerSplashRate: 9
+  splashRate: 103.1
+  playerSplashRate: 50
   waterRippleBoost: 3
   lightningInterval: {x: 7, y: 18}
   flashBoost: 2.2
