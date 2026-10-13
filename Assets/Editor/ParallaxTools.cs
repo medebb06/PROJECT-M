@@ -40,6 +40,10 @@ public static class ParallaxTools
             if (p == null)
                 continue;
 
+            // Bulut katmanları kendi oranlarını taşır (Tools > Lighting > Build Cloud Layers).
+            if (p.name.StartsWith("Clouds_"))
+                continue;
+
             // Üst objesinde de parallax varsa bu ikinci kez kayar (çift parallax hatası).
             if (p.transform.parent != null && p.transform.parent.GetComponentInParent<ParallaxEffect>(true) != null)
             {

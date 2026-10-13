@@ -34,9 +34,11 @@ public class AtmosphereLight : MonoBehaviour
     public float raySpeed = 0.25f;
 
     private float[] rayBaseAlpha;
+    private Transform moonT;
 
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
     private static readonly int WindStrengthId = Shader.PropertyToID("_ProjectM_WindStrength");
+    private static readonly int MoonPosId = Shader.PropertyToID("_ProjectM_MoonPos");
     private static readonly int SkyTimeId = Shader.PropertyToID("_ProjectM_SkyTime");
 
     private void OnEnable()
@@ -75,6 +77,13 @@ public class AtmosphereLight : MonoBehaviour
             horizonAnchor.position = new Vector3(p.x, horizonY, 0f);
 
         Shader.SetGlobalVector(LightPosId, new Vector4(p.x + lightOffset.x, horizonY + lightOffset.y, 0f, 0f));
+
+        // Ayın dünya konumu (bulutlar ona göre aydınlanır / saydamlaşır).
+        if (moonT == null && skyAnchor != null)
+            moonT = skyAnchor.Find("Moon");
+
+        Vector3 mp = moonT != null ? moonT.position : new Vector3(p.x, horizonY + 6f, 0f);
+        Shader.SetGlobalVector(MoonPosId, new Vector4(mp.x, mp.y, 0f, 0f));
 
         if (rays == null || rayBaseAlpha == null || rayBaseAlpha.Length != rays.Length)
         {

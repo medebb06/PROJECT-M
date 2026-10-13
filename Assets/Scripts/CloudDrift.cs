@@ -1,51 +1,73 @@
 using UnityEngine;
 
 /// <summary>
-/// Bulutu çok hafifçe salındırır: yatayda yavaş gidip gelir, dikeyde azıcık süzülür.
-/// Her bulut farklı hız ve fazda hareket eder. Konumu "ekleyerek" değiştirdiği için
-/// ParallaxEffect ile birlikte sorunsuz çalışır. Sadece Play'de.
+/// Bulut akışı: rüzgâr yönünde, sürekli ve tek yönlü (ileri-geri salınım yok).
+///   - Hız bulut katmanına göre verilir (uzak yavaş, yakın hızlı) — Tools > Lighting > Build Cloud Layers.
+///   - Kameradan çok uzaklaşan bulut diğer uca taşınır (sonsuz akış). Taşıma ekran dışında olur.
+///   - Dikeyde çok hafif, yavaş bir süzülme (birikmez, geri dönmez).
+/// Konumu "ekleyerek" değiştirir: ParallaxEffect ile birlikte çalışır. Sadece Play'de.
 /// </summary>
 public class CloudDrift : MonoBehaviour
 {
-    [Tooltip("Yatay salınım genişliği (birim).")]
-    public float amplitudeX = 0.6f;
-    [Tooltip("Dikey süzülme (birim).")]
-    public float amplitudeY = 0.08f;
-    [Tooltip("Bir gidip gelme kaç saniye sürer.")]
-    public float period = 40f;
-    [Tooltip("Rastgele faz (0 = otomatik, konuma göre).")]
-    public float phase;
+    [Tooltip("Akış hızı (birim/sn). Katmana göre ayarlanır.")]
+    public float speed = 0.25f;
 
-    private Vector2 lastOffset;
+    [Tooltip("+1 = soldan sağa, -1 = sağdan sola.")]
+    public float direction = 1f;
+
+    [Tooltip("Dikey süzülme genliği (birim).")]
+    public float bobAmplitude = 0.1f;
+
+    [Tooltip("Bir süzülme dönüşü kaç saniye sürer.")]
+    public float bobPeriod = 55f;
+
+    [Tooltip("Kameraya bu kadar yatay uzaklığı geçen bulut diğer tarafa taşınır (görüş alanından büyük olmalı).")]
+    public float wrapHalfSpan = 75f;
+
+    private float phase;
+    private float lastBob;
     private float t0;
+    private Camera cam;
 
     private void OnEnable()
     {
-        if (phase == 0f)
-            phase = Mathf.Repeat(transform.position.x * 0.37f + transform.position.y * 1.3f, Mathf.PI * 2f);
+        phase = Mathf.Repeat(transform.position.x * 0.37f + transform.position.y * 1.3f, Mathf.PI * 2f);
 
-        // Bulutlar aynı hızda gitmesin.
-        period *= Mathf.Lerp(0.8f, 1.25f, Mathf.Repeat(phase * 0.618f, 1f));
+        // Bulutlar aynı anda aynı hareketi yapmasın.
+        bobPeriod *= Mathf.Lerp(0.8f, 1.3f, Mathf.Repeat(phase * 0.618f, 1f));
 
         t0 = Time.time;
-        lastOffset = Offset(0f);
+        lastBob = Bob(0f);
     }
 
-    private Vector2 Offset(float t)
+    private float Bob(float t)
     {
-        float w = Mathf.PI * 2f / Mathf.Max(1f, period);
-        return new Vector2(
-            Mathf.Sin(t * w + phase) * amplitudeX,
-            Mathf.Sin(t * w * 0.63f + phase * 1.7f) * amplitudeY
-        );
+        return Mathf.Sin(t * Mathf.PI * 2f / Mathf.Max(5f, bobPeriod) + phase) * bobAmplitude;
     }
 
     private void Update()
     {
-        Vector2 o = Offset(Time.time - t0);
-        Vector2 d = o - lastOffset;
-        lastOffset = o;
+        float dt = Time.deltaTime;
 
-        transform.position += new Vector3(d.x, d.y, 0f);
+        float bob = Bob(Time.time - t0);
+        float dy = bob - lastBob;
+        lastBob = bob;
+
+        Vector3 p = transform.position;
+        p.x += direction * speed * dt;
+        p.y += dy;
+
+        if (cam == null)
+            cam = Camera.main;
+
+        if (cam != null)
+        {
+            float rel = p.x - cam.transform.position.x;
+
+            if (rel > wrapHalfSpan) p.x -= 2f * wrapHalfSpan;
+            else if (rel < -wrapHalfSpan) p.x += 2f * wrapHalfSpan;
+        }
+
+        transform.position = p;
     }
 }

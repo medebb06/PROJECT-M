@@ -86,6 +86,12 @@ Shader "ProjectM/Water"
         float4 _WaterReflRect;      // minX, minY, 1/genişlik, 1/yükseklik
         float  _WaterMoonX;
         float  _WaterTime;
+
+        // Saat dilimi (TimeOfDay)
+        float  _ProjectM_TodOn;
+        float4 _ProjectM_WaterMul;     // rgb: su rengi çarpanı
+        float4 _ProjectM_LightColor;   // rgb: güneş/ay rengi
+        float4 _ProjectM_Glint;        // x: ışık yolu pırıltı çarpanı
         float4 _WaterRipples[16];   // x, derinlik, başlangıç zamanı, güç
 
         struct Attributes
@@ -184,7 +190,10 @@ Shader "ProjectM/Water"
             }
 
             // ---- yansıma ----
-            half3 base = lerp(_ShallowColor.rgb, _DeepColor.rgb, fade);
+            half3 base = lerp(_ShallowColor.rgb, _DeepColor.rgb, fade) * lerp(half3(1,1,1), _ProjectM_WaterMul.rgb, _ProjectM_TodOn);
+            half3 lightC = lerp(_MoonColor.rgb, _ProjectM_LightColor.rgb, _ProjectM_TodOn);
+            half3 lineC = lerp(_LineColor.rgb, _ProjectM_LightColor.rgb * 0.8h, _ProjectM_TodOn);
+            half glint = lerp(1.0h, _ProjectM_Glint.x, _ProjectM_TodOn);
             half3 col = base;
 
             if (_WaterHasRefl > 0.5)
@@ -205,7 +214,7 @@ Shader "ProjectM/Water"
 
             // ---- ince parlak çizgiler (dalga sırtları) ----
             float crest = pow(saturate(bandA * 0.5 + 0.5), 24.0) * saturate(n2.x * 1.5 + 0.6);
-            col += _LineColor.rgb * crest * _Streaks * 0.5 * near;
+            col += lineC * crest * _Streaks * 0.5 * near;
 
             // ---- ay yolu: yatay kısa çizgi pırıltıları ----
             float w = _MoonWidth * (1.0 + d * _MoonSpread);
@@ -218,13 +227,13 @@ Shader "ProjectM/Water"
             float blob = smoothstep(0.45, 0.8, ga * 0.55 + gb * 0.55 - 0.05);
             float sparkle = row * blob * 2.5;
             float vfade = saturate(1.0 - d / (_FadeDistance * 1.2));
-            col += _MoonColor.rgb * mask * vfade * (sparkle * _MoonIntensity + _MoonGlow);
+            col += lightC * mask * vfade * (sparkle * _MoonIntensity + _MoonGlow) * glint;
 
             // ---- halka ışığı ----
             // Halka rengi ışıktan: ay yolunda ayın rengi, başka yerde yansıyan gökyüzünün rengi.
             {
                 half3 sky = (_WaterHasRefl > 0.5) ? SampleRefl(float2(x, _WaterY + d + 1.5)).rgb : _ShallowColor.rgb;
-                half3 lightCol = lerp(sky * 1.2, _MoonColor.rgb, saturate(mask * 1.5));
+                half3 lightCol = lerp(sky * 1.2, lightC, saturate(mask * 1.5));
                 float hi = max(ringLight, 0.0);
                 float lo = max(-ringLight, 0.0);
                 col += lightCol * hi * _RippleLight * 0.5 * (0.4 + 0.6 * near);

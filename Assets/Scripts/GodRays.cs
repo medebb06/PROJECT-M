@@ -37,6 +37,36 @@ public class GodRays : MonoBehaviour
 
     private readonly List<SpriteRenderer> beams = new List<SpriteRenderer>();
     private readonly List<float> baseAlpha = new List<float>();
+    private readonly List<float> factor = new List<float>();
+
+    // Saat dilimi (TimeOfDay) çarpanları: Inspector değerlerine dokunmaz.
+    private bool todActive;
+    private Color todColor = Color.white;
+    private float todScale = 1f;
+
+    /// <summary>TimeOfDay: renk ve şiddet çarpanı. Yeniden kurmadan anında uygular.</summary>
+    public void ApplyTint(Color rgb, float scale)
+    {
+        // Değişmediyse dokunma (flicker animasyonu bozulmasın).
+        if (todActive && beams.Count > 0 && Mathf.Approximately(scale, todScale) &&
+            Mathf.Approximately(rgb.r, todColor.r) && Mathf.Approximately(rgb.g, todColor.g) && Mathf.Approximately(rgb.b, todColor.b))
+            return;
+
+        todActive = true;
+        todColor = rgb;
+        todScale = scale;
+
+        for (int i = 0; i < beams.Count; i++)
+        {
+            if (beams[i] == null || i >= factor.Count)
+                continue;
+
+            baseAlpha[i] = intensity * todScale * factor[i];
+            Color c = todColor;
+            c.a = baseAlpha[i];
+            beams[i].color = c;
+        }
+    }
 
     private bool needsBuild;
 
@@ -84,6 +114,7 @@ public class GodRays : MonoBehaviour
 
         beams.Clear();
         baseAlpha.Clear();
+        factor.Clear();
     }
 
     [ContextMenu("Yeniden Kur")]
@@ -115,7 +146,8 @@ public class GodRays : MonoBehaviour
                 perp * ((t + jitter) * spread * viewW);
 
             float w = Mathf.Lerp(widthRange.x, widthRange.y, (float)rng.NextDouble()) * viewW;
-            float a = intensity * Mathf.Lerp(0.45f, 1f, (float)rng.NextDouble());
+            float f = Mathf.Lerp(0.45f, 1f, (float)rng.NextDouble());
+            float a = intensity * (todActive ? todScale : 1f) * f;
             float lenK = Mathf.Lerp(0.75f, 1.1f, (float)rng.NextDouble());
 
             GameObject g = new GameObject("~ray");
@@ -132,12 +164,13 @@ public class GodRays : MonoBehaviour
             sr.sharedMaterial = material;
             sr.sortingOrder = sortingOrder;
 
-            Color c = color;
+            Color c = todActive ? todColor : color;
             c.a = a;
             sr.color = c;
 
             beams.Add(sr);
             baseAlpha.Add(a);
+            factor.Add(f);
         }
     }
 
