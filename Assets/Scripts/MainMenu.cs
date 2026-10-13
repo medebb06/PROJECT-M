@@ -47,6 +47,36 @@ public class GameFlow : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.R))
             StartCoroutine(Restart());
+        else if (Input.GetKeyDown(KeyCode.Escape))
+            MainMenu.OpenPause();
+    }
+
+    /// <summary>Duraklatma menüsünden "ANA MENÜ": kararır, sahne yeniden yüklenir, başlangıç ekranı gelir.</summary>
+    public void GoToMainMenu()
+    {
+        if (!restarting)
+            StartCoroutine(ToMenu());
+    }
+
+    private IEnumerator ToMenu()
+    {
+        restarting = true;
+
+        yield return ScreenFade.Instance.FadeTo(1f, 0.5f);
+
+        MainMenu old = Object.FindFirstObjectByType<MainMenu>();
+        if (old != null) Object.Destroy(old.gameObject);
+
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+
+        yield return null;
+        yield return null;
+
+        ScreenFade.Instance.Set(1f);
+        new GameObject("~MainMenu").AddComponent<MainMenu>();
+
+        restarting = false;
     }
 
     private IEnumerator Restart()
@@ -155,6 +185,18 @@ public class MainMenu : MonoBehaviour
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
 
+    private static readonly Row[] PauseRows =
+    {
+        new Row { label = "DEVAM ET", kanji = "再開", kind = 0 },
+        new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
+        new Row { label = "ANA MENÜ", kanji = "題名", kind = 0 },
+    };
+
+    private Row[] CurRows()
+    {
+        return page == Page.Settings ? SettingsRows : (pauseMode ? PauseRows : MainRows);
+    }
+
     private static readonly Row[] SettingsRows =
     {
         new Row { label = "SES", kanji = "音量", kind = 1 },
@@ -187,6 +229,23 @@ public class MainMenu : MonoBehaviour
 
     private PlayerController player;
 
+    // duraklatma modu
+    private bool pauseMode;
+    private bool prevCanControl = true;
+    private float prevTimeScale = 1f;
+    private static bool nextIsPause;
+    private Text titleText, subtitleText;
+    private Image sealImage;
+
+    public static void OpenPause()
+    {
+        if (Active)
+            return;
+
+        nextIsPause = true;
+        new GameObject("~PauseMenu").AddComponent<MainMenu>();
+    }
+
     // sayfa elemanları
     private RectTransform[] rowRects = new RectTransform[0];
     private Text[] labelTexts = new Text[0];
@@ -204,6 +263,9 @@ public class MainMenu : MonoBehaviour
     private void Awake()
     {
         Active = true;
+        pauseMode = nextIsPause;
+        nextIsPause = false;
+
         fontBold = Resources.Load<Font>("UI/ProjectM_Serif_Bold");
         fontRegular = Resources.Load<Font>("UI/ProjectM_Serif_Regular");
 
@@ -218,7 +280,23 @@ public class MainMenu : MonoBehaviour
         BuildCanvas();
         BuildPage(Page.Main);
 
-        StartCoroutine(Intro());
+        if (pauseMode)
+        {
+            age = 2f; // giriş animasyonu yok
+            titleText.text = "DURAKLATILDI";
+            subtitleText.text = "停　止";
+            sealImage.gameObject.SetActive(false);
+
+            prevTimeScale = Time.timeScale > 0.01f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+
+            player = FindFirstObjectByType<PlayerController>();
+            if (player != null) prevCanControl = player.canControl;
+        }
+        else
+        {
+            StartCoroutine(Intro());
+        }
     }
 
     private void OnDestroy()
@@ -274,17 +352,17 @@ public class MainMenu : MonoBehaviour
         RectTransform trt = tg.AddComponent<RectTransform>();
         Stretch(trt);
 
-        Text jp = NewText("Subtitle", tg.transform, "影 の 刃", 28, Gold, TextAnchor.MiddleCenter, fontRegular);
+        Text jp = subtitleText = NewText("Subtitle", tg.transform, "影 の 刃", 28, Gold, TextAnchor.MiddleCenter, fontRegular);
         Place(jp.rectTransform, new Vector2(0f, 372f), new Vector2(900f, 70f));
 
-        Text title = NewText("Name", tg.transform, "PROJECT M", 92, Paper, TextAnchor.MiddleCenter, fontBold);
+        Text title = titleText = NewText("Name", tg.transform, "PROJECT M", 92, Paper, TextAnchor.MiddleCenter, fontBold);
         Place(title.rectTransform, new Vector2(-20f, 262f), new Vector2(1400f, 220f));
         AddShadow(title.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -6f));
 
         float pw = title.preferredWidth;
 
         // Kırmızı mühür.
-        Image seal = NewImage("Seal", tg.transform, Vermilion, null);
+        Image seal = sealImage = NewImage("Seal", tg.transform, Vermilion, null);
         Place(seal.rectTransform, new Vector2(-20f + pw * 0.5f + 78f, 292f), new Vector2(96f, 96f));
         seal.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -5f);
 
@@ -329,7 +407,7 @@ public class MainMenu : MonoBehaviour
         for (int i = menuRoot.childCount - 1; i >= 0; i--)
             Destroy(menuRoot.GetChild(i).gameObject);
 
-        Row[] rows = p == Page.Main ? MainRows : SettingsRows;
+        Page prevPage = page; page = p; Row[] rows = CurRows(); page = prevPage;
         int n = rows.Length;
 
         rowRects = new RectTransform[n];
@@ -441,10 +519,16 @@ public class MainMenu : MonoBehaviour
         if (player != null && !starting)
             player.canControl = false;
 
+        if (pauseMode && page == Page.Main && !starting && Input.GetKeyDown(KeyCode.Escape))
+        {
+            Resume();
+            return;
+        }
+
         if (starting || age < 1.2f)
             return;
 
-        Row[] rows = page == Page.Main ? MainRows : SettingsRows;
+        Row[] rows = CurRows();
         int n = rows.Length;
 
         // --- fare ---
@@ -486,6 +570,20 @@ public class MainMenu : MonoBehaviour
 
     private void ActivateMain(int i)
     {
+        if (pauseMode)
+        {
+            if (i == 0) Resume();
+            else if (i == 1) BuildPage(Page.Settings);
+            else
+            {
+                GameSettings.Save();
+                starting = true;
+                FindFirstObjectByType<GameFlow>().GoToMainMenu();
+            }
+
+            return;
+        }
+
         switch (i)
         {
             case 0:
@@ -505,6 +603,18 @@ public class MainMenu : MonoBehaviour
 #endif
                 break;
         }
+    }
+
+    private void Resume()
+    {
+        GameSettings.Save();
+        Time.timeScale = prevTimeScale;
+
+        if (player != null)
+            player.canControl = prevCanControl;
+
+        Active = false;
+        Destroy(gameObject);
     }
 
     private void UpdateSettings(bool confirm, bool click)
