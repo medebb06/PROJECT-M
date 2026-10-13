@@ -29,7 +29,7 @@ public static class AtmosphereBuilder
     // Yeni sorting düzeni (mevcut order'lar x10 yapılır; araya katman girebilsin).
     const int OrderSky = -200, OrderMoonHalo = -181, OrderMoon = -180;
     const int OrderHorizonGlow = -60, OrderRays = -55, OrderFogFar = -35, OrderFogNear = -15;
-    const int OrderGroundGlow = 12, OrderShadow = 15, OrderDust = 300;
+    const int OrderGroundGlow = -3, OrderShadow = 5, OrderDust = 300;
 
     static StringBuilder log;
 

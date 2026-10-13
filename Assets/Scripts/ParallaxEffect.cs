@@ -38,8 +38,32 @@ public class ParallaxEffect : MonoBehaviour
 
     public Reference reference = Reference.PlacedPosition;
 
+    [Header("Derinlikten hesapla (gerçek perspektif modeli)")]
+    [Tooltip("Açıkken X/Y oranları aşağıdaki derinlikten otomatik hesaplanır: oran = derinlik / (derinlik + odak). " +
+             "Tek bir anlamlı ayar: derinlik. 0 = oyun düzlemi, + = arkada (uzak), - = kameraya yakın (ön plan).")]
+    public bool driveFromDepth = false;
+    [Tooltip("Oyun düzleminden uzaklık (dünya birimi). 18 = arka çalı şeridi, 100+ = bulut.")]
+    public float depth = 0f;
+    [Tooltip("Perspektif odak mesafesi. Büyütürsen bütün katmanlar kameraya daha az bağlanır.")]
+    public float focal = 12f;
+    [Tooltip("Dikey oran = yatay oran x bu. Zıplarken katmanlar zeminden kopmasın diye yatayın yarısı civarı.")]
+    [Range(0f, 1f)] public float yRatio = 0.5f;
+
     [Tooltip("Boş bırakılırsa Main Camera.")]
     public Transform cameraTransform;
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!driveFromDepth)
+            return;
+
+        float d = depth + focal;
+        float f = Mathf.Abs(d) < 0.01f ? 1f : depth / d;
+        parallaxX = Mathf.Clamp(f, -1f, 1f);
+        parallaxY = Mathf.Clamp(parallaxX * yRatio, -1f, 1f);
+    }
+#endif
 
     private Vector2 refCam;
     private Vector2 appliedOffset;

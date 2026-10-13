@@ -15,7 +15,7 @@ public class ProjectedShadow : MonoBehaviour
 {
     public Material shadowMaterial;
     public LayerMask groundMask;
-    public int sortingOrder = 15;
+    public int sortingOrder = 5;
 
     [Header("Görünüm")]
     [Range(0f, 1f)] public float opacity = 0.55f;
