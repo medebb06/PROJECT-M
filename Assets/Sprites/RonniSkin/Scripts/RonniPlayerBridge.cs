@@ -40,13 +40,17 @@ namespace RonniSkin
         [Tooltip("Klibin kesme aralığı (klip zamanı 0..1).")] public float atkClipCutA = 0.38f, atkClipCutB = 0.64f;
         // yavaş başla -> kesmede hızlan -> çok yavaş bitir
         [Tooltip("Saldırı bitince idle/sonraki görünüme geçiş (çapraz solma) süresi, sn.")] public float atkCrossfade = 0f;
-        bool atkWasOn, atkHoldIdle; float atkFade;
+        [Tooltip("Saldırı bitince, yeni girdi yoksa kesme pozunda bekleme süresi (sn).")] public float atkHoldTime3 = 0.5f;
+        [Tooltip("Bekleme pozu (klip zamanı 0..1; kesme sonrası duruş).")] public float atkHoldPhase = 0.80f;
+        [Tooltip("Bekledikten sonra idle duruşa dönüş süresi (sn).")] public float atkReturnTime3 = 0.8f;
+        [Tooltip("Vuruş bitişinde ulaşılan poz; buradan bekleme pozuna yavaşça geçilir.")] public float atkSettlePhase = 0.68f;
+        bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
         void RestoreFadeTop() { if (fadeTop != null) { fadeTop.SetSorting(fadeTop.sortingLayerName, fadeTopBase); fadeTop = null; } }
         float AtkRemap(float p)
         {
             if (p <= atkCutStart) { float u = p / atkCutStart; return atkClipCutA * u * u; }
-            if (p >= atkCutEnd) { float u = (p - atkCutEnd) / (1f - atkCutEnd); float e = 1f - (1f - u) * (1f - u) * (1f - u); return Mathf.Lerp(atkClipCutB, 1f, e); }
+            if (p >= atkCutEnd) { float u = (p - atkCutEnd) / (1f - atkCutEnd); float e = 1f - (1f - u) * (1f - u) * (1f - u); return Mathf.Lerp(atkClipCutB, atkSettlePhase, e); }
             return Mathf.Lerp(atkClipCutA, atkClipCutB, (p - atkCutStart) / (atkCutEnd - atkCutStart));
         }
         [Tooltip("Zıplama anında yatay hız bundan küçükse 'yerinde zıplama' sayılır.")] public float standJumpMaxSpeed = 1.0f;
@@ -417,12 +421,24 @@ namespace RonniSkin
                     if (atkOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
+                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
                     }
                     else
                     {
                         Color bc = originalSprite != null ? originalSprite.color : Color.white;
-                        if (atkWasOn) { atkFade = atkCrossfade; atkWasOn = false; atkHoldIdle = true; }
+                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
+                        bool atkInterrupt = mode != 0 || atkClip != null || Mathf.Abs(player.moveInput) >= 0.1f;
+                        if (atkInterrupt && (atkHoldT > 0f || atkRetT > 0f)) { atkHoldT = 0f; atkRetT = 0f; atkFade = atkCrossfade; }
+                        if (atkHoldT > 0f || atkRetT > 0f)
+                        {
+                            float ph;
+                            if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, atkHoldTime3)); hu = hu * hu * (3f - 2f * hu); ph = Mathf.Lerp(atkSettlePhase, atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = atkReturnTime3; }
+                            else { atkRetT -= Time.deltaTime; float u = 1f - Mathf.Clamp01(atkRetT / Mathf.Max(0.01f, atkReturnTime3)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(atkHoldPhase, 1f, u); }
+                            rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
+                            rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = ph;
+                            atkHoldIdle = true;
+                        }
+                        else
                         if (atkFade > 0f && mode == 0 && atkCrossfade > 0f)
                         {
                             // eski görünüm opak kalır, yeni görünüm üstüne yavaşça belirir (yarı saydam üst üste binme "yok olma" yapıyordu)
