@@ -45,8 +45,8 @@ public static class TrainingDummyCreator
 
         GameObject body = new GameObject("Body");
         body.transform.SetParent(root.transform, false);
-        const float W = 3f;
-        const float H = 6f;
+        const float W = 7.5f;
+        const float H = 15f;
 
         body.transform.localPosition = new Vector3(0f, H * 0.5f, 0f);
 
