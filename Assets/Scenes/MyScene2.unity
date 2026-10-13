@@ -13522,8 +13522,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a229a0927645db14e82505ae375b909f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RespawnManager
-  player: {fileID: 2122615062}
-  playerHealth: {fileID: 0}
 --- !u!114 &1942622297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14517,17 +14515,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
   m_PrefabInstance: {fileID: 4655997543057025493}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2122615062 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9045930727589892200, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-  m_PrefabInstance: {fileID: 4655997543057025493}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 329658975}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 716cf96fdc0bab44ebe80c78212a4183, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
 --- !u!114 &2122615080
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14817,6 +14804,10 @@ PrefabInstance:
     - target: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
