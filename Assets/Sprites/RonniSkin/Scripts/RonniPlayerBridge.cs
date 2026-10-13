@@ -30,6 +30,10 @@ namespace RonniSkin
         [Tooltip("Koşu çiziminin boyu (1 = Ronni ile aynı boy).")] public float runScale = 1f;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
+        RonniDashTrail dashTrail; bool dashPrev; float dashEndT = -10f;
+        [Tooltip("Dash bitince koşuya geçerken idle'a düşmesin diye tutulan süre (sn).")] public float dashRunGrace = 0.25f;
+        [Tooltip("Dash sırasında karakterin her bölgesinden renkli iz.")] public bool dashTrailEnabled = true;
+        [Tooltip("Dash'in yüzde kaçında iz yazmayı bıraksın (iz oraya kadar uzar, uç yerinde kalıp solar)."), Range(0.3f, 1f)] public float dashTrailEndFrac = 0.75f;
         [Header("Transitions")]
         [Tooltip("Squash 'turn' when switching between the front and side drawings.")] public float switchPopTime = 0.11f;
         [Tooltip("Landing squash duration.")] public float landTime = 0.16f;
@@ -270,9 +274,20 @@ namespace RonniSkin
             {
                 bool right = anim.faceRight;
                 bool air = useProfileJump && !anim.grounded && !anim.ActionActive;
-                bool run = useProfileRun && anim.running && anim.grounded && !anim.ActionActive;
+                // dash bitiminden hemen sonra (moveInput henüz gelmediyse) idle'a düşmeden koşuda kal
+                if (player.isDashing) dashPrev = true;
+                else if (dashPrev) { dashPrev = false; dashEndT = Time.time; }
+                bool afterDash = Time.time - dashEndT < dashRunGrace && anim.grounded && player.rb != null && Mathf.Abs(player.rb.linearVelocity.x) > 0.5f;
+                bool run = useProfileRun && (anim.running || afterDash) && anim.grounded && !anim.ActionActive;
                 bool dashP = player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
                 int mode = dashP ? 3 : air ? 2 : run ? 1 : 0;
+                if (dashTrailEnabled && rigRun != null && rigRun.IsBuilt)
+                {
+                    if (dashTrail == null) dashTrail = gameObject.AddComponent<RonniDashTrail>();
+                    dashTrail.Init(rigRun);
+                    float dashFrac = (Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale);
+                    dashTrail.SetEmitting(player.isDashing && dashP && dashFrac < dashTrailEndFrac); // iz dash bitmeden kesilir, ucu orada kalır
+                }
                 if (mode != bMode || (mode != 0 && right != bRight))
                 {
                     if (rigB != null) rigB.SetShown(false);

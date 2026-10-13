@@ -15,7 +15,10 @@ public class DashState : IPlayerState
     private const float DashBellPower = 3f;
 
     // Dash süresi çarpanı (mesafe sabit kalır, hız buna göre düşer). Animasyon köprüsü de bunu kullanır.
-    public const float DurationScale = 1.5f;
+    public const float DurationScale = 2.2f;
+
+    // Dash mesafesi çarpanı (dashDistance * bu).
+    public const float DistanceScale = 1.5f;
 
     private int originalLayer;
     private GameObject colObject;
@@ -64,7 +67,7 @@ public class DashState : IPlayerState
 
         dir = player.GetDashDirection();
 
-        speed = player.dashDistance / (player.dashTime * DurationScale);
+        speed = player.dashDistance * DistanceScale / (player.dashTime * DurationScale);
 
         // collision layer save
         originalLayer = player.gameObject.layer;
