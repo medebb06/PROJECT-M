@@ -71,6 +71,9 @@ public class EnemyArchetype : MonoBehaviour
             case EnemyArchetypeType.Bomber:
                 return "Patlayan";
 
+            case EnemyArchetypeType.Practice:
+                return "Antrenman Düellocusu";
+
             default:
                 return "Düellocu";
         }
@@ -388,6 +391,12 @@ public class EnemyArchetype : MonoBehaviour
                 case EnemyArchetypeType.Shielded:
                     moveset.moves = EnemyMoveset.CreateDuelistMoves();
                     break;
+
+                case EnemyArchetypeType.Practice:
+                    // Sadece normal vuruşlar (parry / block): süpürme, yakalama, imza yok.
+                    moveset.moves = EnemyMoveset.CreateDuelistMoves();
+                    moveset.moves.RemoveAll(m => m == null || m.hits.Exists(h => h.type != MoveHitType.Normal));
+                    break;
             }
         }
 
@@ -398,7 +407,7 @@ public class EnemyArchetype : MonoBehaviour
         {
             EnemyMoveset ms = GetComponent<EnemyMoveset>();
 
-            if (ms != null && ms.moves != null && !ms.moves.Exists(m => m != null && m.signature))
+            if (type != EnemyArchetypeType.Practice && ms != null && ms.moves != null && !ms.moves.Exists(m => m != null && m.signature))
             {
                 AttackMove sig = EnemyMoveset.Signature(type);
 
@@ -428,7 +437,8 @@ public enum EnemyArchetypeType
     Swarm,      // SONA eklendi (kayıtlı değerler kaymasın)
     Shielded,   // 40. adım: önden vuruşu kalkanla engeller
     Flyer,      // 40. adım: uçar, dalış saldırısı
-    Bomber      // 40. adım: yaklaşınca fitil + patlama
+    Bomber,     // 40. adım: yaklaşınca fitil + patlama
+    Practice    // Antrenman Düellocusu: özel saldırı yok, oyuncuya 0 hasar
 }
 
 // Tipin çarpanları (1 = değişiklik yok).

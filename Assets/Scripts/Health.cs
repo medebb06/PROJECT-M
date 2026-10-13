@@ -53,7 +53,16 @@ public class Health : MonoBehaviour
 
         // Player hiçbir zaman Health tarafından Destroy edilmez.
         isPlayer = GetComponent<PlayerController>() != null;
+
+        // TEST: oyuncu canı sabit 1000 (0 = kapalı).
+        if (isPlayer && PlayerMaxHealthOverride > 0)
+        {
+            maxHealth = Mathf.Max(maxHealth, PlayerMaxHealthOverride);
+            currentHealth = maxHealth;
+        }
     }
+
+    private const int PlayerMaxHealthOverride = 1000;
 
     private void Update()
     {
@@ -210,6 +219,9 @@ public class Health : MonoBehaviour
     public void SetMaxHealth(int newMax, bool refill = true)
     {
         maxHealth = Mathf.Max(1, newMax);
+
+        if (isPlayer && PlayerMaxHealthOverride > 0)
+            maxHealth = Mathf.Max(maxHealth, PlayerMaxHealthOverride);
 
         currentHealth =
             refill

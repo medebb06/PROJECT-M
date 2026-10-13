@@ -1286,11 +1286,16 @@ public class EnemyAttackState : IEnemyState
                 ? enemy.unblockableDamage
                 : enemy.attackDamage;
 
+        EnemyArchetype harmlessArch = enemy.GetComponent<EnemyArchetype>();
+        bool harmless = harmlessArch != null && harmlessArch.type == EnemyArchetypeType.Practice;
+
         int damage =
-            Mathf.Max(
-                1,
-                Mathf.RoundToInt(baseDamage * stepDamageMultiplier)
-            );
+            harmless
+                ? 0
+                : Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(baseDamage * stepDamageMultiplier)
+                );
 
         float knockbackMultiplier =
             isUnblockable
