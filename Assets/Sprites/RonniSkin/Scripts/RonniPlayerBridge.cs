@@ -35,6 +35,16 @@ namespace RonniSkin
         RonniSkinRig rigIdle; RonniClipPlayer playerIdle; Vector3 baseIdle = Vector3.one;
         [Header("Yerinde zıplama (idle gövde + zıplama bacakları)")]
         [Tooltip("Yatay hareket olmadan zıplarken kullanılan karma çizim (Resources/<klasör>, 'air' klibi). Boş = kapalı.")] public string standJumpFolder = "RonniJump";
+        [Tooltip("Saldırı smear parlaklığı (HDR; Impact Mat _Color ≈ 8.5). Bloom varsa parlar.")] public float smearGlow = 6f;
+        [Tooltip("Saldırı ritmi: vuruş (kesme) anı hızlanması bu ilerleme aralığında olur.")] public float atkCutStart = 0.42f, atkCutEnd = 0.56f;
+        [Tooltip("Klibin kesme aralığı (klip zamanı 0..1).")] public float atkClipCutA = 0.38f, atkClipCutB = 0.64f;
+        // yavaş başla -> kesmede hızlan -> çok yavaş bitir
+        float AtkRemap(float p)
+        {
+            if (p <= atkCutStart) { float u = p / atkCutStart; return atkClipCutA * u * u; }
+            if (p >= atkCutEnd) { float u = (p - atkCutEnd) / (1f - atkCutEnd); float e = 1f - (1f - u) * (1f - u) * (1f - u); return Mathf.Lerp(atkClipCutB, 1f, e); }
+            return Mathf.Lerp(atkClipCutA, atkClipCutB, (p - atkCutStart) / (atkCutEnd - atkCutStart));
+        }
         [Tooltip("Zıplama anında yatay hız bundan küçükse 'yerinde zıplama' sayılır.")] public float standJumpMaxSpeed = 1.0f;
         RonniSkinRig rigJump; RonniClipPlayer playerJump; Vector3 baseJump = Vector3.one; bool standJump;
         [Header("Saldırı 1 (yeni çizim + kılıç izi)")]
@@ -402,7 +412,7 @@ namespace RonniSkin
                     if (atkOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = Mathf.Clamp01(atkProg);
+                        rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
                     }
                     else rigAtk.SetShown(false);
                 }
