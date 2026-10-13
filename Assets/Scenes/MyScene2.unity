@@ -783,6 +783,7 @@ GameObject:
   - component: {fileID: 224015602}
   - component: {fileID: 224015601}
   - component: {fileID: 224015604}
+  - component: {fileID: 224015605}
   m_Layer: 0
   m_Name: Demirci
   m_TagString: Untagged
@@ -910,6 +911,25 @@ MonoBehaviour:
   skewPerUnit: 0.06
   maxSkew: 0.9
   maxJumpHeight: 5
+--- !u!114 &224015605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 224015600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f2ce96e36fd37c488d443605ae451c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
+  rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
+  color: {r: 1, g: 0.8, b: 0.55, a: 1}
+  innerWidth: 0.05
+  innerIntensity: 0.6
+  outerWidth: 0.11
+  outerIntensity: 0.22
+  upBias: 0.6
 --- !u!1 &231609406
 GameObject:
   m_ObjectHideFlags: 0
@@ -2296,6 +2316,9 @@ MonoBehaviour:
   - {fileID: 188165384}
   - {fileID: 187656820}
   - {fileID: 1204217941}
+  - {fileID: 2122615081}
+  - {fileID: 1942622307}
+  - {fileID: 224015605}
   globalLight: {fileID: 619394801}
   globalLightIntensity: 1
   globalLightColor: {r: 1, g: 1, b: 1, a: 1}
@@ -8997,7 +9020,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 11.16
+  orthographic size: 11.28
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -13002,6 +13025,7 @@ GameObject:
   - component: {fileID: 1942622302}
   - component: {fileID: 1942622305}
   - component: {fileID: 1942622306}
+  - component: {fileID: 1942622307}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -13437,6 +13461,25 @@ MonoBehaviour:
   skewPerUnit: 0.06
   maxSkew: 0.9
   maxJumpHeight: 5
+--- !u!114 &1942622307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1942622292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f2ce96e36fd37c488d443605ae451c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
+  rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
+  color: {r: 1, g: 0.8, b: 0.55, a: 1}
+  innerWidth: 0.05
+  innerIntensity: 0.6
+  outerWidth: 0.11
+  outerIntensity: 0.22
+  upBias: 0.6
 --- !u!1 &1980620597
 GameObject:
   m_ObjectHideFlags: 0
@@ -14040,6 +14083,25 @@ MonoBehaviour:
   skewPerUnit: 0.06
   maxSkew: 0.9
   maxJumpHeight: 5
+--- !u!114 &2122615081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329658975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f2ce96e36fd37c488d443605ae451c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
+  rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
+  color: {r: 1, g: 0.8, b: 0.55, a: 1}
+  innerWidth: 0.05
+  innerIntensity: 0.6
+  outerWidth: 0.11
+  outerIntensity: 0.22
+  upBias: 0.6
 --- !u!1 &2136288078
 GameObject:
   m_ObjectHideFlags: 0
@@ -14280,6 +14342,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2122615080}
+    - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2122615081}
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
