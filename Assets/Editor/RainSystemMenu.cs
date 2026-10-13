@@ -13,6 +13,12 @@ public static class RainSystemMenu
 
         if (existing != null)
         {
+            if (existing.rainLoop == null)
+            {
+                existing.rainLoop = RainSystem.FindRainClipInEditor();
+                EditorUtility.SetDirty(existing);
+            }
+
             Selection.activeGameObject = existing.gameObject;
             Debug.Log("Sahnede zaten RainSystem var, seçtim.");
             return;
@@ -20,7 +26,8 @@ public static class RainSystemMenu
 
         GameObject go = new GameObject("RainSystem");
         Undo.RegisterCreatedObjectUndo(go, "Add Rain System");
-        go.AddComponent<RainSystem>();
+        RainSystem rs = go.AddComponent<RainSystem>();
+        rs.rainLoop = RainSystem.FindRainClipInEditor();
         Selection.activeGameObject = go;
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log("RainSystem eklendi. Inspector'dan her şeyi açıp kapatabilirsin (Play sırasında da canlı çalışır). Play dışında düzenleyip sahneyi kaydet.");

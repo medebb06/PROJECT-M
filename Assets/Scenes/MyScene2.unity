@@ -734,7 +734,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -746,7 +746,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 190c5e17b07c31c419ea7d7acfa022a8, type: 3}
+  m_Resource: {fileID: 8300000, guid: e09f2629e3abcda4abddd17b63780f95, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 0.25
   m_Pitch: 1
@@ -3523,7 +3523,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!82 &713646142
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3537,7 +3537,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: a4ca3779b86ca4742b09ea8f677adb66, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.1
+  m_Volume: 0.05
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -14199,6 +14199,7 @@ MonoBehaviour:
   lightningLight: 1
   lightningWhiteFlash: 1
   thunder: 1
+  rainSound: 1
   intensity: 0.8
   fadeTime: 3
   hotkeys: 1
@@ -14216,6 +14217,8 @@ MonoBehaviour:
   splashRate: 103.1
   playerSplashRate: 50
   waterRippleBoost: 3
+  rainLoop: {fileID: 0}
+  rainVolume: 0.6
   lightningInterval: {x: 7, y: 18}
   flashBoost: 2.2
   whiteFlash: 0.14

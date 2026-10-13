@@ -975,6 +975,8 @@ public class MainMenu : MonoBehaviour
                     () => Rain.groundSplashes || Rain.waterSplashes || Rain.characterSplashes,
                     v => { Rain.groundSplashes = v; Rain.waterSplashes = v; Rain.characterSplashes = v; }));
                 testRows.Add(Toggle("ŞİMŞEK", () => Rain.lightning, v => Rain.lightning = v));
+                testRows.Add(Toggle("YAĞMUR SESİ", () => Rain.rainSound, v => Rain.rainSound = v));
+                testRows.Add(Slider("SES SEVİYESİ", 0f, 1f, 0.05f, () => Rain.rainVolume, v => Rain.rainVolume = v, v => Mathf.RoundToInt(v * 100f) + "%"));
                 testRows.Add(Btn("ŞİMŞEK ÇAKTIR", () => Rain.StartBolt()));
                 testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
                 break;

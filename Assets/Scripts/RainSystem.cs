@@ -47,6 +47,8 @@ public class RainSystem : MonoBehaviour
     public bool lightningWhiteFlash = true;
     [Tooltip("Şimşekten sonra kamera sarsıntısı + gök gürültüsü.")]
     public bool thunder = true;
+    [Tooltip("Yağmur sesi (sadece yağmur yağarken, şiddetle birlikte yumuşakça açılıp kapanır).")]
+    public bool rainSound = true;
 
     [Header("Genel")]
     [Range(0f, 1f)] public float intensity = 0.8f;
@@ -85,6 +87,11 @@ public class RainSystem : MonoBehaviour
     [Tooltip("Yağmurla suyun kendi halka sıklığı da artar.")]
     public float waterRippleBoost = 3f;
 
+    [Header("Yağmur sesi")]
+    [Tooltip("Döngüde çalan yağmur ses dosyası. Boşsa (Editor'de) Assets/Sounds'taki '10 Minutes of Rain...' otomatik bulunur.")]
+    public AudioClip rainLoop;
+    [Range(0f, 1f)] public float rainVolume = 0.6f;
+
     [Header("Şimşek")]
     public Vector2 lightningInterval = new Vector2(7f, 18f);
     [Tooltip("Global ışığın şiddeti flaşta ne kadar katlanır.")]
@@ -121,6 +128,7 @@ public class RainSystem : MonoBehaviour
     private float pendingThunderAt = -1f;
     private SpriteRenderer flashSr;
     private AudioSource audioSrc;
+    private AudioSource rainSrc;
     private float baseRipple = -1f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -160,6 +168,8 @@ public class RainSystem : MonoBehaviour
         if (front != null && front.ps != null) Destroy(front.ps.gameObject);
         if (splashPs != null) Destroy(splashPs.gameObject);
         if (flashSr != null) Destroy(flashSr.gameObject);
+        if (rainSrc != null) Destroy(rainSrc);
+        rainSrc = null;
 
         back = mid = front = null;
         splashPs = null;
@@ -328,6 +338,76 @@ public class RainSystem : MonoBehaviour
         audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false;
         audioSrc.spatialBlend = 0f;
+
+#if UNITY_EDITOR
+        if (rainLoop == null)
+            rainLoop = FindRainClipInEditor();
+#endif
+
+        rainSrc = gameObject.AddComponent<AudioSource>();
+        rainSrc.playOnAwake = false;
+        rainSrc.loop = true;
+        rainSrc.spatialBlend = 0f;
+        rainSrc.volume = 0f;
+        rainSrc.ignoreListenerPause = false;
+
+        if (rainLoop == null)
+            Debug.LogWarning("RainSystem: yağmur sesi bulunamadı. RainSystem'in 'Rain Loop' alanına klibi ata (Tools > Rain > Add Rain System To Scene bunu otomatik yapar).");
+    }
+
+#if UNITY_EDITOR
+    // Assets/Sounds'taki yağmur kaydını bul + 10 dk'lık dosya için Streaming'e al (RAM'i şişirmesin).
+    public static AudioClip FindRainClipInEditor()
+    {
+        string[] guids = UnityEditor.AssetDatabase.FindAssets("10 Minutes of Rain t:AudioClip");
+
+        if (guids.Length == 0)
+            return null;
+
+        string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+
+        UnityEditor.AudioImporter imp = UnityEditor.AssetImporter.GetAtPath(path) as UnityEditor.AudioImporter;
+
+        if (imp != null && imp.defaultSampleSettings.loadType != AudioClipLoadType.Streaming)
+        {
+            UnityEditor.AudioImporterSampleSettings ss = imp.defaultSampleSettings;
+            ss.loadType = AudioClipLoadType.Streaming;
+            imp.defaultSampleSettings = ss;
+            imp.SaveAndReimport();
+        }
+
+        return UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+    }
+#endif
+
+    // Yağmur sesi: sadece yağmur varken çalar, şiddete göre yumuşakça açılır/kapanır.
+    private void UpdateRainSound()
+    {
+        if (rainSrc == null)
+            return;
+
+        if (rainSrc.clip != rainLoop)
+        {
+            rainSrc.Stop();
+            rainSrc.clip = rainLoop;
+        }
+
+        float target = rainSound && rainLoop != null ? level * rainVolume : 0f;
+
+        rainSrc.volume = Mathf.MoveTowards(rainSrc.volume, target, Time.unscaledDeltaTime * 0.6f);
+
+        if (rainSrc.volume > 0.003f)
+        {
+            if (!rainSrc.isPlaying && rainLoop != null)
+            {
+                rainSrc.time = Random.Range(0f, Mathf.Max(0f, rainLoop.length - 1f)); // her seferinde farklı yerden
+                rainSrc.Play();
+            }
+        }
+        else if (rainSrc.isPlaying)
+        {
+            rainSrc.Stop();
+        }
     }
 
     // ================= YARDIMCILAR =================
@@ -390,6 +470,7 @@ public class RainSystem : MonoBehaviour
         }
 
         UpdateLightning(dt);
+        UpdateRainSound();
     }
 
     private void LateUpdate()
