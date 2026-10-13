@@ -652,30 +652,14 @@
    "pinPow": 1.2
   },
   {
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false,
-   "name": "atk_hilt",
-   "x": 1459,
-   "y": 2149,
-   "w": 836,
-   "h": 302,
-   "bones": [
-    "sword"
-   ],
-   "order": 16,
-   "runOrder": 16,
-   "actOrder": 16
-  },
-  {
    "name": "idle_sag_el",
    "x": 829,
    "y": 2086,
    "w": 337,
    "h": 632,
-   "order": 17,
-   "runOrder": 17,
-   "actOrder": 17,
+   "order": 16,
+   "runOrder": 16,
+   "actOrder": 16,
    "bones": [
     "armR1",
     "armR2",
@@ -688,6 +672,22 @@
     5,
     8
    ]
+  },
+  {
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "name": "atk_hilt",
+   "x": 1459,
+   "y": 2149,
+   "w": 836,
+   "h": 302,
+   "bones": [
+    "sword"
+   ],
+   "order": 17,
+   "runOrder": 17,
+   "actOrder": 17
   },
   {
    "name": "idle_sol_kol_ic",
