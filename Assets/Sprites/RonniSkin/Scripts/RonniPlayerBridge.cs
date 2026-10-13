@@ -37,6 +37,9 @@ namespace RonniSkin
         [Tooltip("Yatay hareket olmadan zıplarken kullanılan karma çizim (Resources/<klasör>, 'air' klibi). Boş = kapalı.")] public string standJumpFolder = "RonniJump";
         [Tooltip("Zıplama anında yatay hız bundan küçükse 'yerinde zıplama' sayılır.")] public float standJumpMaxSpeed = 1.0f;
         RonniSkinRig rigJump; RonniClipPlayer playerJump; Vector3 baseJump = Vector3.one; bool standJump;
+        [Header("Saldırı 1 (yeni çizim + kılıç izi)")]
+        [Tooltip("Attack1 için karma çizim (Resources/<klasör>, 'attack1' klibi). Boş = eski ön görünüm saldırısı.")] public string attackFolder = "RonniAtk";
+        RonniSkinRig rigAtk; RonniClipPlayer playerAtk; Vector3 baseAtk = Vector3.one; string atkClip; float atkProg;
         [Header("Bekleme (ateş böceği)")]
         [Tooltip("Idle'da hareketsiz kalınca arada bir elini uzatıp konan ateş böceğine bakar (RonniIdle 'wait' klibi).")] public bool fireflyWait = true;
         [Tooltip("Hareketsiz kaldıktan sonra bekleme animasyonunun başlaması için geçecek süre aralığı (sn).")] public Vector2 waitDelay = new Vector2(12f, 24f);
@@ -152,6 +155,18 @@ namespace RonniSkin
                 }
             }
 
+            // Attack1: kılıç çekili karma çizim
+            if (!string.IsNullOrEmpty(attackFolder))
+            {
+                MakeProfile(attackFolder, "Ronni_Attack", out rigAtk, out playerAtk);
+                if (rigAtk != null)
+                {
+                    rigAtk.transform.localScale *= idleScale;
+                    baseAtk = rigAtk.transform.localScale;
+                    playerAtk.clip = "attack1"; playerAtk.autoGlance = false;
+                }
+            }
+
             // Yerinde zıplama: idle gövdesi + zıplama bacakları
             if (!string.IsNullOrEmpty(standJumpFolder))
             {
@@ -213,6 +228,7 @@ namespace RonniSkin
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
         {
+            atkClip = null;
             // ---- dash: quick low lunge, everything streams back ----
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
@@ -237,6 +253,7 @@ namespace RonniSkin
                 wasAttacking = true;
                 anim.swordReady = true; shClip = null;   // attacking always draws the katana
                 anim.SetAction("attack" + attackStep, prog);
+                atkClip = "attack" + attackStep; atkProg = prog;
                 return;
             }
             if (wasAttacking) { wasAttacking = false; lastAttackEnd = Time.time; }
@@ -298,6 +315,7 @@ namespace RonniSkin
                     if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigJump != null) rigJump.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigAtk != null) rigAtk.SetSorting(best.sortingLayerName, best.sortingOrder);
                 }
             }
             if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;
@@ -309,6 +327,7 @@ namespace RonniSkin
                 if (rigRun != null && rigRun.IsBuilt) rigRun.SetColor(originalSprite.color, true);
                 if (rigIdle != null && rigIdle.IsBuilt) rigIdle.SetColor(originalSprite.color, true);
                 if (rigJump != null && rigJump.IsBuilt) rigJump.SetColor(originalSprite.color, true);
+                if (rigAtk != null && rigAtk.IsBuilt) rigAtk.SetColor(originalSprite.color, true);
             }
             // side-profile drawing: run (left/right rigs) and jump/air (left rig, katana hand hidden)
             if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
@@ -377,6 +396,16 @@ namespace RonniSkin
                 // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
                 bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && !anim.ActionActive && shClip == null;
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
+                if (rigAtk != null && rigAtk.IsBuilt)
+                {
+                    bool atkOn = mode == 0 && atkClip == "attack1" && playerAtk != null && playerAtk.HasClip("attack1");
+                    if (atkOn)
+                    {
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
+                        rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = Mathf.Clamp01(atkProg);
+                    }
+                    else rigAtk.SetShown(false);
+                }
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
@@ -431,6 +460,7 @@ namespace RonniSkin
             if (rigBR != null && rigBR != rigBL) rigBR.transform.localScale = visualId == 2 ? Vector3.Scale(baseBR, sc) : baseBR;
             if (rigRun != null) rigRun.transform.localScale = (visualId > 0 && rigB == rigRun) ? Vector3.Scale(baseRun, sc) : baseRun;
             if (rigIdle != null) rigIdle.transform.localScale = visualId <= 0 ? Vector3.Scale(baseIdle, sc) : baseIdle;
+            if (rigAtk != null) rigAtk.transform.localScale = visualId <= 0 ? Vector3.Scale(baseAtk, sc) : baseAtk;
             if (rigJump != null) rigJump.transform.localScale = (visualId > 0 && rigB == rigJump) ? Vector3.Scale(baseJump, sc) : baseJump;
         }
 
