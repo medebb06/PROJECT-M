@@ -15814,35 +15814,59 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1HitTime
-      value: 0.4
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack2HitTime
-      value: 0.4
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack3HitTime
-      value: 0.7
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack4HitTime
-      value: 0.7
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1Duration
-      value: 0.35
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack2Duration
-      value: 0.35
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack3Duration
-      value: 0.35
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack4Duration
       value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkHold5x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkSettle2
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkEndPause
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkEndPause2
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkHoldTime5
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkReturnTime5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Name

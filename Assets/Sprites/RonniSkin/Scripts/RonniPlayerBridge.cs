@@ -44,8 +44,10 @@ namespace RonniSkin
         [Tooltip("Bekleme pozu (klip zamanı 0..1; kesme sonrası duruş).")] public float atkHoldPhase = 0.80f;
         [Tooltip("Bekledikten sonra idle duruşa dönüş süresi (sn).")] public float atkReturnTime3 = 0.8f;
         [Tooltip("Vuruş bitişinde ulaşılan poz; buradan bekleme pozuna yavaşça geçilir.")] public float atkSettlePhase = 0.68f;
-        [Tooltip("Attack2: kesim bitişinde ulaşılan klip zamanı / bekleme pozu klip zamanı.")] public float atkSettle2 = 0.55f, atkHold3x = 0.97f;
-        [Tooltip("Attack2 bitiş bekleme süresi (sn).")] public float atkHoldTime4 = 0.9f;
+        [Tooltip("Attack2: kesim bitişinde ulaşılan klip zamanı / bekleme pozu klip zamanı.")] public float atkSettle2 = 0.55f, atkHold5x = 0.40f;
+        [Tooltip("Attack2 bitiş bekleme süresi (sn).")] public float atkHoldTime5 = 2.2f;
+        [Tooltip("Attack2: son pozda toparlanmadan önce kısa bekleme (sn).")] public float atkEndPause2 = 0.8f;
+        [Tooltip("Attack2: bekleme sonrası kılıcı geri çekip idle'a dönüş süresi (sn). Büyük = daha yavaş.")] public float atkReturnTime5 = 3.5f;
         string lastAtkClip = "attack1";
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
@@ -55,8 +57,8 @@ namespace RonniSkin
         [Tooltip("Smear yönünü yatay çevirir (sağdan sola açılır, sağ taraftan solar).")] public bool smearFlip2 = true;
         static readonly float[] TipT2 = { 0.44f, 0.62f };
         static readonly float[] TipU2 = { 0f, 1f };
-        static readonly float[] TipT = { 0.396f, 0.43f, 0.45f, 0.47f, 0.49f, 0.506f, 0.526f, 0.543f, 0.563f, 0.582f, 0.60f, 0.62f };
-        static readonly float[] TipU = { 0f, 0.02f, 0.11f, 0.2f, 0.3f, 0.45f, 0.53f, 0.69f, 0.86f, 0.905f, 0.98f, 1f };
+        static readonly float[] TipT = { 0.396f, 0.418f, 0.440f, 0.462f, 0.484f, 0.506f, 0.528f, 0.550f, 0.572f, 0.594f, 0.616f, 0.638f };
+        static readonly float[] TipU = { 0f, 0.014f, 0.063f, 0.190f, 0.265f, 0.458f, 0.547f, 0.767f, 0.874f, 0.958f, 1f, 1f };
         // Smear: kılıç ucunu takip eden ay şeklinde iz (baş = ucun konumu, kuyruk solar)
         void SmearWin(float ph)
         {
@@ -484,16 +486,16 @@ namespace RonniSkin
                     else
                     {
                         Color bc = originalSprite != null ? originalSprite.color : Color.white;
-                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack2" ? atkHoldTime4 : atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
+                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack2" ? atkHoldTime5 : atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
                         bool atkInterrupt = mode != 0 || atkClip != null || Mathf.Abs(player.moveInput) >= 0.1f;
                         if (atkInterrupt && (atkHoldT > 0f || atkRetT > 0f)) { atkHoldT = 0f; atkRetT = 0f; atkFade = atkCrossfade; }
                         if (atkHoldT > 0f || atkRetT > 0f)
                         {
                             float ph;
-                            if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, lastAtkClip == "attack2" ? atkHoldTime4 : atkHoldTime3)); if (lastAtkClip != "attack2") hu = hu * hu * (3f - 2f * hu); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkSettle2 : atkSettlePhase, lastAtkClip == "attack2" ? atkHold3x : atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = atkReturnTime3; }
-                            else { atkRetT -= Time.deltaTime; float u = 1f - Mathf.Clamp01(atkRetT / Mathf.Max(0.01f, atkReturnTime3)); u = lastAtkClip == "attack2" ? u * (2f - u) : u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold3x : atkHoldPhase, 1f, u); }
+                            if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, lastAtkClip == "attack2" ? atkHoldTime5 : atkHoldTime3)); if (lastAtkClip != "attack2") hu = hu * hu * (3f - 2f * hu); else hu = hu * hu; ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkSettle2 : atkSettlePhase, lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = (lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3) + (lastAtkClip == "attack2" ? atkEndPause2 : 0f); }
+                            else { atkRetT -= Time.deltaTime; float pz = lastAtkClip == "attack2" ? atkEndPause2 : 0f; float rt = lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3; float u = Mathf.Clamp01((rt - atkRetT) / Mathf.Max(0.01f, rt)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                            rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; SmearWin(ph);
+                            rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
                             atkHoldIdle = true;
                         }
                         else
