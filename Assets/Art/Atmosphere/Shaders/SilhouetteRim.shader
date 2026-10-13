@@ -25,6 +25,13 @@ Shader "ProjectM/SilhouetteRim"
         _NormalPower ("Rounded Light Falloff", Range(0.5,6)) = 1.6
         _LightBack ("Light From Behind", Range(0,2)) = 0.35
         _CoreShadow ("Core Shadow (ışıksız taraf)", Range(0,1)) = 0.2
+
+        [Header(Wind)]
+        _WindAmount ("Sway Amount (tepe, dünya birimi)", Range(0,2)) = 0
+        _WindSpeed ("Sway Speed", Range(0,6)) = 1
+        _FlutterAmount ("Leaf Flutter (px)", Range(0,8)) = 0
+        _FlutterSpeed ("Leaf Flutter Speed", Range(0,12)) = 3
+        _WindLight ("Light Reacts To Sway", Range(0,2)) = 0.6
     }
 
     SubShader
@@ -62,7 +69,14 @@ Shader "ProjectM/SilhouetteRim"
             half _NormalPower;
             half _LightBack;
             half _CoreShadow;
+            half _WindAmount;
+            half _WindSpeed;
+            half _FlutterAmount;
+            half _FlutterSpeed;
+            half _WindLight;
         CBUFFER_END
+
+        #include "ProjectMWind.hlsl"
 
         TEXTURE2D(_NormalMap);
         SAMPLER(sampler_NormalMap);
@@ -88,6 +102,7 @@ Shader "ProjectM/SilhouetteRim"
             float2 uv : TEXCOORD0;
             float3 positionWS : TEXCOORD1;
             float2 flip : TEXCOORD2;
+            float2 wind : TEXCOORD3;   // x = yükseklik oranı, y = salınım (-1..1)
             UNITY_VERTEX_OUTPUT_STEREO
         };
 
@@ -100,7 +115,15 @@ Shader "ProjectM/SilhouetteRim"
             SetUpSpriteInstanceProperties();
             v.positionOS = UnityFlipSprite(v.positionOS, unity_SpriteProps.xy);
 
-            o.positionWS = TransformObjectToWorld(v.positionOS);
+            float3 w = TransformObjectToWorld(v.positionOS);
+
+            // Rüzgâr: kök sabit, tepe yana salınır (obje başına faz/hız WindSway'den).
+            float h = 0, sway = 0;
+            if (_WindAmount > 0.0001)
+                w = WindBend(w, _WindAmount, _WindSpeed, h, sway);
+
+            o.wind = float2(h, sway);
+            o.positionWS = w;
             o.positionCS = TransformWorldToHClip(o.positionWS);
             o.uv = v.uv;
             o.color = v.color * _Color * unity_SpriteColor;
@@ -110,14 +133,27 @@ Shader "ProjectM/SilhouetteRim"
 
         half4 frag(Varyings i) : SV_Target
         {
-            half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+            // Yaprak titremesi: üst kısımlar küçük, düzensiz kıpırdar.
+            float2 uv = i.uv;
+            half flutter = 0;
+
+            if (_FlutterAmount > 0.001h && i.wind.x > 0.001)
+            {
+                float ft = _Time.y * _FlutterSpeed * max(_WindParams.w, 0.01) + _WindParams.x * 3.1;
+                float fx = sin(ft + i.positionWS.x * 2.1 + i.positionWS.y * 1.3) * cos(ft * 0.7 + i.positionWS.y * 2.7);
+                float fy = sin(ft * 1.3 + i.positionWS.x * 1.7 + 0.8) * 0.6;
+                flutter = fx;
+                uv += float2(fx, fy) * _MainTex_TexelSize.xy * _FlutterAmount * i.wind.x * max(_ProjectM_WindStrength, 0);
+            }
+
+            half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
             half4 c = tex * i.color;
 
             if (c.a <= 0.001h)
                 discard;
 
             // Atmosferik pus: uzaktakiler ve alt kısım havaya karışır.
-            half haze = saturate(_Haze + _HazeBottom * (1.0h - i.uv.y));
+            half haze = saturate(_Haze + _HazeBottom * (1.0h - uv.y));
             half3 rgb = lerp(c.rgb, _HazeColor.rgb, haze);
 
             // Kenar ışığı: ışığa doğru bakan komşu pikseller boşsa kenar yanar.
@@ -128,21 +164,28 @@ Shader "ProjectM/SilhouetteRim"
 
             float2 stepUV = dir * _MainTex_TexelSize.xy * _RimWidth;
 
-            half a1 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + stepUV * 0.33).a;
-            half a2 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + stepUV * 0.66).a;
-            half a3 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + stepUV).a;
+            half a1 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.33).a;
+            half a2 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.66).a;
+            half a3 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV).a;
 
             half empty = 1.0h - (a1 * 0.5h + a2 * 0.3h + a3 * 0.2h);
             half rim = saturate(empty) * tex.a;
 
-            rgb += _RimColor.rgb * rim * _RimIntensity;
+            // Işığa doğru eğilince kenar parlar, ışıktan uzaklaşınca söner.
+            half towardLight = (half)(i.wind.y * i.wind.x * dir.x);
+            half windGlow = saturate(1.0h + _WindLight * towardLight * 1.5h + _WindLight * flutter * 0.15h * i.wind.x);
+
+            rgb += _RimColor.rgb * rim * _RimIntensity * windGlow;
 
             // Yuvarlak ışık: sprite'tan üretilen kubbe normal map'i, arkadan/yandan gelen ışıkla.
             // Işığa bakan kenarlar yumuşakça parlar, ortası karanlık kalır -> hacim hissi.
             if (_NormalIntensity > 0.001h)
             {
-                half3 n = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.uv).xyz * 2.0h - 1.0h;
+                half3 n = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, uv).xyz * 2.0h - 1.0h;
                 n.xy *= i.flip;                       // çevrilmiş sprite'ta normal de çevrilir
+
+                // Eğilen yaprak yüzeyi ışığa göre döner: ışık tepkisi doğal olarak değişir.
+                n.x += (half)(i.wind.y * i.wind.x) * _WindLight * 0.6h + flutter * _WindLight * 0.12h * (half)i.wind.x;
                 n = normalize(n);
 
                 half3 L = normalize(half3(dir, -_LightBack));
@@ -152,7 +195,7 @@ Shader "ProjectM/SilhouetteRim"
                 half away = saturate(dot(n.xy, -dir)) * (1.0h - n.z);
                 rgb *= 1.0h - _CoreShadow * away;
 
-                rgb += _RimColor.rgb * lit * _NormalIntensity * tex.a;
+                rgb += _RimColor.rgb * lit * _NormalIntensity * tex.a * windGlow;
             }
 
             return half4(rgb, c.a);

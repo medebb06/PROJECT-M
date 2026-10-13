@@ -166,6 +166,7 @@ public static class AtmosphereBuilder
         AddTreeShadows(restore);
         AddCharacterRims(restore);
         AddCloudDrift(restore);
+        AddWind(restore);
 
         // ---- 5. global ışık ----
         TuneGlobalLight(restore);
@@ -823,6 +824,94 @@ public static class AtmosphereBuilder
         EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
         Debug.Log(log.ToString() + "Hareket Play'de görünür. Ayar: her bulutta CloudDrift bileşeni.");
+    }
+
+    // Rüzgâr: materyal başına salınım ayarları (miktar dünya birimi, hız, yaprak titremesi, ışık tepkisi).
+    static void ApplyWindMaterials()
+    {
+        SetWind("M_Rim_Tree", 0.28f, 0.85f, 2.0f, 3.0f, 0.7f);
+        SetWind("M_Rim_BackBush", 0.12f, 1.05f, 1.2f, 3.5f, 0.5f);
+        SetWind("M_Rim_GroundBush", 0.18f, 1.7f, 1.0f, 5.0f, 0.5f);
+        SetWind("M_Rim_Foreground", 0.35f, 0.7f, 1.5f, 2.5f, 0f);  // ön plana ışık yok
+    }
+
+    static void SetWind(string mat, float amount, float speed, float flutter, float flutterSpeed, float light)
+    {
+        Material m = AssetDatabase.LoadAssetAtPath<Material>(MatDir + "/" + mat + ".mat");
+
+        if (m == null || !m.HasProperty("_WindAmount"))
+            return;
+
+        Undo.RecordObject(m, "Wind");
+        m.SetFloat("_WindAmount", amount);
+        m.SetFloat("_WindSpeed", speed);
+        m.SetFloat("_FlutterAmount", flutter);
+        m.SetFloat("_FlutterSpeed", flutterSpeed);
+        m.SetFloat("_WindLight", light);
+        EditorUtility.SetDirty(m);
+    }
+
+    static void AddWind(AtmosphereRestoreData restore)
+    {
+        ApplyWindMaterials();
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        int n = 0;
+
+        foreach (SpriteRenderer sr in Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include))
+        {
+            if (sr == null || sr.GetComponent<WindSway>() != null)
+                continue;
+
+            string cat = Category(sr.transform, groundLayer);
+
+            if (cat != "tree" && cat != "back" && cat != "grass" && cat != "front")
+                continue;
+
+            Material m = sr.sharedMaterial;
+
+            if (m == null || m.shader == null || m.shader.name != "ProjectM/SilhouetteRim")
+                continue;
+
+            WindSway ws = Undo.AddComponent<WindSway>(sr.gameObject);
+
+            if (restore != null)
+                restore.addedComponents.Add(ws);
+
+            n++;
+        }
+
+        if (log != null)
+            log.AppendLine("Rüzgâr: " + n + " bitki (her biri kendi ritminde).");
+    }
+
+    [MenuItem("Tools/Lighting/Add Wind (ağaç, çalı, ot, yaprak)")]
+    public static void AddWindMenu()
+    {
+        if (Application.isPlaying)
+        {
+            Debug.LogWarning("Atmosphere: Play modunda çalışmaz.");
+            return;
+        }
+
+        GameObject atmos = GameObject.Find(AtmosName);
+        AtmosphereRestoreData restore = atmos != null ? atmos.GetComponent<AtmosphereRestoreData>() : null;
+
+        log = new StringBuilder("RÜZGÂR\n");
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Wind");
+        int g = Undo.GetCurrentGroup();
+
+        AddWind(restore);
+
+        if (restore != null)
+            EditorUtility.SetDirty(restore);
+
+        Undo.CollapseUndoOperations(g);
+        EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+
+        Debug.Log(log.ToString() + "Genel güç: [ATMOSPHERE] > AtmosphereLight > Wind Strength. Ayrıntı: M_Rim_* materyalleri > Wind.");
     }
 
     static void CollectNpc(Transform t, List<Transform> owners)

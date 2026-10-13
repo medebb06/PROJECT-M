@@ -25,6 +25,9 @@ namespace RonniSkin
         [Tooltip("Test: always play the run animation.")] public bool forceRun = false;
         [Tooltip("Use the side-profile drawing (Resources/RonniSkinB) while running.")] public bool useProfileRun = true;
         [Tooltip("Use the side-profile drawing (facing left) while in the air.")] public bool useProfileJump = true;
+        [Tooltip("Koşu çizimi klasörü (Resources/<klasör>, ör. RonniRun = Koşu2.psd). Boş bırakılırsa eski profil çizimi koşar.")]
+        public string runFolder = "RonniRun";
+        [Tooltip("Koşu çiziminin boyu (1 = Ronni ile aynı boy).")] public float runScale = 1f;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
         [Header("Transitions")]
@@ -34,6 +37,7 @@ namespace RonniSkin
         int visualId = -1; float popT = 1f, landT = 1f; bool wasGrounded = true;
         Transform partsA; Vector3 baseBL = Vector3.one, baseBR = Vector3.one;
         RonniSkinRig rigB, rigBL, rigBR; RonniClipPlayer playerB, playerBL, playerBR; bool showingB; bool bRight;
+        RonniSkinRig rigRun; RonniClipPlayer playerRun; Vector3 baseRun = Vector3.one;
 
         RonniSkinRig rig; RonniSkinAnimator anim;
         PlayerCombatController combat; PlayerDefenseController defense; Animator oldAnim;
@@ -107,6 +111,17 @@ namespace RonniSkin
             rigB = rigBL; playerB = playerBL;
             if (rigBL != null) baseBL = rigBL.transform.localScale;
             if (rigBR != null) baseBR = rigBR.transform.localScale;
+
+            // Ayrı koşu çizimi (her iki yön için aynı çizim; sağa bakınca kök zaten aynalanır)
+            if (!string.IsNullOrEmpty(runFolder))
+            {
+                MakeProfile(runFolder, "Ronni_Run", out rigRun, out playerRun);
+                if (rigRun != null)
+                {
+                    rigRun.transform.localScale *= runScale;
+                    baseRun = rigRun.transform.localScale;
+                }
+            }
         }
 
         void MakeProfile(string folder, string goName, out RonniSkinRig r, out RonniClipPlayer p)
@@ -238,6 +253,7 @@ namespace RonniSkin
                     rig.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigBL != null) rigBL.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder);
                 }
             }
             if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;
@@ -246,6 +262,7 @@ namespace RonniSkin
                 rig.SetColor(originalSprite.color, true);
                 if (rigBL != null && rigBL.IsBuilt) rigBL.SetColor(originalSprite.color, true);
                 if (rigBR != null && rigBR != rigBL && rigBR.IsBuilt) rigBR.SetColor(originalSprite.color, true);
+                if (rigRun != null && rigRun.IsBuilt) rigRun.SetColor(originalSprite.color, true);
             }
             // side-profile drawing: run (left/right rigs) and jump/air (left rig, katana hand hidden)
             if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
@@ -260,6 +277,7 @@ namespace RonniSkin
                     bool newJump = mode == 2 && bMode != 2;
                     bMode = mode; bRight = right;
                     rigB = right ? rigBR : rigBL; playerB = right ? playerBR : playerBL;
+                    if (mode == 1 && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
                     if (mode != 0)
                     {
                         if (newJump) jumpCount++;
@@ -303,6 +321,7 @@ namespace RonniSkin
             if (partsA != null) partsA.localScale = visualId <= 0 ? sc : Vector3.one;
             if (rigBL != null) rigBL.transform.localScale = visualId == 1 ? Vector3.Scale(baseBL, sc) : baseBL;
             if (rigBR != null && rigBR != rigBL) rigBR.transform.localScale = visualId == 2 ? Vector3.Scale(baseBR, sc) : baseBR;
+            if (rigRun != null) rigRun.transform.localScale = (visualId > 0 && rigB == rigRun) ? Vector3.Scale(baseRun, sc) : baseRun;
         }
 
         void OnDisable()

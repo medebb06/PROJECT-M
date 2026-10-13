@@ -20,6 +20,10 @@ public class AtmosphereLight : MonoBehaviour
     [Tooltip("Kenar ışığının geldiği nokta: kameranın X'i + bu, ufuk Y'si + bu.")]
     public Vector2 lightOffset = new Vector2(0f, 3f);
 
+    [Header("Rüzgâr")]
+    [Tooltip("Bütün ağaç/çalı/ot salınımının genel gücü. 0 = rüzgâr yok.")]
+    [Range(0f, 3f)] public float windStrength = 1f;
+
     [Header("Işık hüzmeleri")]
     public SpriteRenderer[] rays;
     [Range(0f, 1f)] public float rayPulse = 0.35f;
@@ -28,6 +32,7 @@ public class AtmosphereLight : MonoBehaviour
     private float[] rayBaseAlpha;
 
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
+    private static readonly int WindStrengthId = Shader.PropertyToID("_ProjectM_WindStrength");
 
     private void OnEnable()
     {
@@ -48,6 +53,8 @@ public class AtmosphereLight : MonoBehaviour
 
     private void LateUpdate()
     {
+        Shader.SetGlobalFloat(WindStrengthId, windStrength);
+
         Camera cam = Camera.main;
 
         if (cam == null)

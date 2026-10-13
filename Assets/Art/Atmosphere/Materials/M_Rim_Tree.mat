@@ -34,6 +34,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _CoreShadow: 0.15
+    - _FlutterAmount: 2
+    - _FlutterSpeed: 3
     - _Haze: 0
     - _HazeBottom: 0.676
     - _LightBack: 0.78
@@ -42,6 +44,9 @@ Material:
     - _RimIntensity: 1.83
     - _RimTop: 0.545
     - _RimWidth: 25.6
+    - _WindAmount: 0.28
+    - _WindLight: 0.7
+    - _WindSpeed: 0.85
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _HazeColor: {r: 0.36, g: 0.31, b: 0.27, a: 1}

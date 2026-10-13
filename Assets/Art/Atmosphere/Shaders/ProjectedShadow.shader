@@ -61,6 +61,11 @@ Shader "ProjectM/ProjectedShadow"
                 half _AlphaCut;
             CBUFFER_END
 
+            // Ağaç gölgesi ağaçla birlikte sallansın (WindSway bunları MaterialPropertyBlock ile verir).
+            #include "ProjectMWind.hlsl"
+            float _ShadowWindAmount;
+            float _ShadowWindSpeed;
+
             struct Attributes
             {
                 float3 positionOS : POSITION;
@@ -91,6 +96,13 @@ Shader "ProjectM/ProjectedShadow"
                 }
 
                 float3 w = TransformObjectToWorld(pos);
+
+                if (_ShadowWindAmount > 0.0001)
+                {
+                    float wh, ws;
+                    w = WindBend(w, _ShadowWindAmount, _ShadowWindSpeed, wh, ws);
+                }
+
                 float h = max(0.0, w.y - _FeetY);
 
                 // Yere yatır: ayak çizgisinin altına aynala, boyu kısalt, yana kaydır.
