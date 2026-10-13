@@ -27,11 +27,19 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _CoreShadow: 0.25
     - _Haze: 0.32
     - _HazeBottom: 0.35
-    - _RimIntensity: 0.9
+    - _LightBack: 0.55
+    - _NormalIntensity: 0.8
+    - _NormalPower: 2.5
+    - _RimIntensity: 1.58
     - _RimTop: 0.5
     - _RimWidth: 8
     m_Colors:

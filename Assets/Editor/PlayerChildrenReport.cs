@@ -17,7 +17,7 @@ public static class PlayerChildrenReport
     [MenuItem("Tools/Report Player Children")]
     public static void Report()
     {
-        PlayerController pc = Object.FindFirstObjectByType<PlayerController>();
+        PlayerController pc = Object.FindAnyObjectByType<PlayerController>();
 
         if (pc == null)
         {

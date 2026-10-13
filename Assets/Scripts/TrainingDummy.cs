@@ -17,7 +17,7 @@ using UnityEngine.InputSystem;
 public class TrainingDummy : MonoBehaviour
 {
     [Header("Boyut (dünya birimi, genişlik x yükseklik)")]
-    public Vector2 size = new Vector2(3f, 6f);
+    public Vector2 size = new Vector2(7.5f, 15f);
 
     [Header("Posture")]
     public float maxPosture = 100f;

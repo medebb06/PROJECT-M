@@ -139,25 +139,9 @@ public static class AtmosphereBuilder
         // Ufuk parıltısı (çalıların arkasında)
         Spr(horizonAnchor, "Horizon Glow", horizon, mAdd, new Color(1f, 0.74f, 0.48f, 0.85f), OrderHorizonGlow, new Vector2(0f, 0f), new Vector2(viewW * 2.4f, viewH * 0.55f));
 
-        // Işık hüzmeleri
-        float[] rx = { -0.24f, -0.11f, 0.0f, 0.09f, 0.21f };
-        float[] rw = { 0.07f, 0.05f, 0.09f, 0.045f, 0.065f };
-        float[] ra = { 0.20f, 0.14f, 0.26f, 0.12f, 0.18f };
-        float[] rr = { 5f, 2.5f, 0f, -2.5f, -5f };
+        // Çapraz ışık hüzmeleri (GodRays: Inspector'dan açı/sayı/şiddet ayarlanır)
         List<SpriteRenderer> rays = new List<SpriteRenderer>();
-
-        for (int i = 0; i < rx.Length; i++)
-        {
-            SpriteRenderer r = Spr(
-                horizonAnchor, "Light Ray " + (i + 1), ray, mAdd,
-                new Color(1f, 0.86f, 0.66f, ra[i]), OrderRays,
-                new Vector2(viewW * rx[i], viewH * 0.12f),
-                new Vector2(viewW * rw[i], viewH * 0.85f)
-            );
-
-            r.transform.localRotation = Quaternion.Euler(0f, 0f, rr[i]);
-            rays.Add(r);
-        }
+        CreateGodRays(skyAnchor, mAdd);
 
         // Sis bantları
         Spr(horizonAnchor, "Fog Far", fog, mUnlit, new Color(0.86f, 0.80f, 0.72f, 0.40f), OrderFogFar, new Vector2(0f, -viewH * 0.06f), new Vector2(viewW * 3f, viewH * 0.22f));
@@ -181,6 +165,7 @@ public static class AtmosphereBuilder
         AddShadows(blob, mUnlit, restore);
         AddTreeShadows(restore);
         AddCharacterRims(restore);
+        AddCloudDrift(restore);
 
         // ---- 5. global ışık ----
         TuneGlobalLight(restore);
@@ -703,6 +688,141 @@ public static class AtmosphereBuilder
         EditorSceneManager.MarkSceneDirty(atmos.scene);
 
         Debug.Log(log.ToString() + "Kenar ışığı Play'de görünür.");
+    }
+
+    static GodRays CreateGodRays(Transform skyAnchor, Material mAdd)
+    {
+        Sprite sprite = LoadSprite("god_ray.png", FilterMode.Bilinear);
+
+        if (sprite == null || skyAnchor == null)
+            return null;
+
+        GameObject g = new GameObject("God Rays (çapraz)");
+        Undo.RegisterCreatedObjectUndo(g, "God Rays");
+        g.transform.SetParent(skyAnchor, false);
+
+        GodRays gr = g.AddComponent<GodRays>();
+        gr.raySprite = sprite;
+        gr.material = mAdd;
+        gr.Build();
+
+        return gr;
+    }
+
+    // Mevcut kuruluma çapraz hüzmeleri ekle, eski dik hüzmeleri kapat.
+    [MenuItem("Tools/Lighting/Add Diagonal God Rays")]
+    public static void AddGodRaysMenu()
+    {
+        if (Application.isPlaying)
+        {
+            Debug.LogWarning("Atmosphere: Play modunda çalışmaz.");
+            return;
+        }
+
+        GameObject atmos = GameObject.Find(AtmosName);
+        Transform sky = atmos != null ? FindDeep(atmos.transform, "SkyAnchor (kamerayı izler)") : null;
+        Material mAdd = AssetDatabase.LoadAssetAtPath<Material>(MatDir + "/M_Additive.mat");
+
+        if (sky == null || mAdd == null)
+        {
+            Debug.LogWarning("Atmosphere kurulu değil (SkyAnchor / M_Additive yok). Önce Build Moonlit Atmosphere.");
+            return;
+        }
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Diagonal God Rays");
+        int g = Undo.GetCurrentGroup();
+
+        // Eski dik hüzmeleri kapat
+        int off = 0;
+
+        foreach (Transform t in atmos.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name.StartsWith("Light Ray ") && t.gameObject.activeSelf)
+            {
+                Undo.RecordObject(t.gameObject, "Disable ray");
+                t.gameObject.SetActive(false);
+                off++;
+            }
+        }
+
+        AtmosphereLight al = atmos.GetComponent<AtmosphereLight>();
+
+        if (al != null)
+        {
+            Undo.RecordObject(al, "Rays");
+            al.rays = new SpriteRenderer[0];
+        }
+
+        Transform existing = sky.Find("God Rays (çapraz)");
+
+        if (existing != null)
+            Undo.DestroyObjectImmediate(existing.gameObject);
+
+        GodRays gr = CreateGodRays(sky, mAdd);
+
+        Undo.CollapseUndoOperations(g);
+        EditorSceneManager.MarkSceneDirty(atmos.scene);
+
+        if (gr != null)
+            Selection.activeGameObject = gr.gameObject;
+
+        Debug.Log("Çapraz ışık hüzmeleri eklendi (" + off + " eski dik hüzme kapatıldı). Ayarlar: 'God Rays (çapraz)' > GodRays bileşeni.");
+    }
+
+    // Bulutlara çok hafif salınım.
+    static void AddCloudDrift(AtmosphereRestoreData restore)
+    {
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        int n = 0;
+
+        foreach (SpriteRenderer sr in Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include))
+        {
+            if (sr == null || Category(sr.transform, groundLayer) != "cloud")
+                continue;
+
+            if (sr.GetComponent<CloudDrift>() != null)
+                continue;
+
+            CloudDrift cd = Undo.AddComponent<CloudDrift>(sr.gameObject);
+
+            if (restore != null)
+                restore.addedComponents.Add(cd);
+
+            n++;
+        }
+
+        if (log != null)
+            log.AppendLine("Bulut salınımı: " + n + " bulut.");
+    }
+
+    [MenuItem("Tools/Lighting/Add Cloud Drift")]
+    public static void AddCloudDriftMenu()
+    {
+        if (Application.isPlaying)
+        {
+            Debug.LogWarning("Atmosphere: Play modunda çalışmaz.");
+            return;
+        }
+
+        GameObject atmos = GameObject.Find(AtmosName);
+        AtmosphereRestoreData restore = atmos != null ? atmos.GetComponent<AtmosphereRestoreData>() : null;
+
+        log = new StringBuilder("BULUTLAR\n");
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Cloud Drift");
+        int g = Undo.GetCurrentGroup();
+
+        AddCloudDrift(restore);
+
+        if (restore != null)
+            EditorUtility.SetDirty(restore);
+
+        Undo.CollapseUndoOperations(g);
+        EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+
+        Debug.Log(log.ToString() + "Hareket Play'de görünür. Ayar: her bulutta CloudDrift bileşeni.");
     }
 
     static void CollectNpc(Transform t, List<Transform> owners)

@@ -23,9 +23,10 @@ public static class NormalMapGenerator
     // Kategori başına kubbe yarıçapı (dokunun kısa kenarına oranla).
     static readonly Dictionary<string, float> RadiusFrac = new Dictionary<string, float>
     {
-        { "tree", 0.09f },
-        { "back", 0.11f },
-        { "grass", 0.05f },
+        { "tree", 0.035f },
+        { "back", 0.045f },
+        { "grass", 0.03f },
+        { "cloud", 0.16f },   // bulutlar kabarık: geniş, yumuşak kubbe
     };
 
     [MenuItem("Tools/Lighting/Generate Rounded Light (Normal Maps)")]
@@ -89,7 +90,7 @@ public static class NormalMapGenerator
         }
 
         ApplyMaterialSettings();
-        log.AppendLine(done + "/" + texCat.Count + " doku. Materyaller güncellendi (M_Rim_Tree / BackBush / GroundBush).");
+        log.AppendLine(done + "/" + texCat.Count + " doku. Materyaller güncellendi (M_Rim_Tree / BackBush / GroundBush / Cloud).");
         Debug.Log(log.ToString());
     }
 
@@ -99,9 +100,13 @@ public static class NormalMapGenerator
         Set("M_Rim_Tree", 1.25f, 0.12f, 0.15f);
         Set("M_Rim_BackBush", 0.8f, 0.15f, 0.25f);
         Set("M_Rim_GroundBush", 0.6f, 0.3f, 0.15f);
+
+        // Bulut: ışık ufuktan (aşağıdan-arkadan) geliyor -> alt/yan kenarlar sıcak parlar,
+        // ışıksız taraf hafif gölgelenir; geniş ve yumuşak geçiş (hacim hissi).
+        Set("M_Rim_Cloud", 0.75f, 0.1f, 0.35f, 1.2f, 0.15f);
     }
 
-    static void Set(string mat, float normalIntensity, float rimIntensity, float coreShadow)
+    static void Set(string mat, float normalIntensity, float rimIntensity, float coreShadow, float power = 2.5f, float lightBack = 0.55f)
     {
         Material m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Atmosphere/Materials/" + mat + ".mat");
 
@@ -112,8 +117,8 @@ public static class NormalMapGenerator
         m.SetFloat("_NormalIntensity", normalIntensity);
         m.SetFloat("_RimIntensity", rimIntensity);
         m.SetFloat("_CoreShadow", coreShadow);
-        m.SetFloat("_NormalPower", 1.3f);
-        m.SetFloat("_LightBack", 0.35f);
+        m.SetFloat("_NormalPower", power);
+        m.SetFloat("_LightBack", lightBack);
         EditorUtility.SetDirty(m);
     }
 

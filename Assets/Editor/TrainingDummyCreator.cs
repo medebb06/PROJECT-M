@@ -22,7 +22,7 @@ public static class TrainingDummyCreator
 
         // Konum: oyuncunun 3 birim sağı, zemine oturtulmuş (yoksa scene view merkezi).
         Vector3 pos = Vector3.zero;
-        PlayerController player = Object.FindFirstObjectByType<PlayerController>();
+        PlayerController player = Object.FindAnyObjectByType<PlayerController>();
 
         if (player != null)
             pos = player.transform.position + Vector3.right * 3f;

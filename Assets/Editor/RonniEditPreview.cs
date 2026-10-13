@@ -13,7 +13,7 @@ using RonniSkin;
 ///   - Play'e basarken yok edilir, Play bitince yeniden kurulur.
 ///   - Player'ı sürükleyince önizleme de takip eder.
 ///
-/// Menü: Tools > Ronni > Edit Preview (aç/kapa)   |   Tools > Ronni > Refresh Preview
+/// Menü: Tools > Ronni > Toggle Edit Preview   |   Tools > Ronni > Refresh Preview
 /// </summary>
 [InitializeOnLoad]
 public static class RonniEditPreview
@@ -38,7 +38,7 @@ public static class RonniEditPreview
         set { EditorPrefs.SetBool(PrefKey, value); }
     }
 
-    [MenuItem("Tools/Ronni/Edit Preview (aç/kapa)")]
+    [MenuItem("Tools/Ronni/Toggle Edit Preview")]
     static void Toggle()
     {
         Enabled = !Enabled;
@@ -46,10 +46,10 @@ public static class RonniEditPreview
         Debug.Log("Ronni Edit Preview: " + (Enabled ? "AÇIK" : "KAPALI"));
     }
 
-    [MenuItem("Tools/Ronni/Edit Preview (aç/kapa)", true)]
+    [MenuItem("Tools/Ronni/Toggle Edit Preview", true)]
     static bool ToggleValidate()
     {
-        Menu.SetChecked("Tools/Ronni/Edit Preview (aç/kapa)", Enabled);
+        Menu.SetChecked("Tools/Ronni/Toggle Edit Preview", Enabled);
         return true;
     }
 
