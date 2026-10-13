@@ -58,7 +58,7 @@ namespace RonniSkin
         static readonly float[] TipT2 = { 0.44f, 0.62f };
         static readonly float[] TipU2 = { 0f, 1f };
         static readonly float[] TipT = { 0.396f, 0.418f, 0.440f, 0.462f, 0.484f, 0.506f, 0.528f, 0.550f, 0.572f, 0.594f, 0.616f, 0.638f };
-        static readonly float[] TipU = { 0f, 0.014f, 0.063f, 0.190f, 0.265f, 0.458f, 0.547f, 0.767f, 0.874f, 0.958f, 1f, 1f };
+        static readonly float[] TipU = { 0.000f, 0.013f, 0.061f, 0.181f, 0.250f, 0.439f, 0.529f, 0.754f, 0.866f, 0.954f, 1.000f, 1.000f };
         // Smear: kılıç ucunu takip eden ay şeklinde iz (baş = ucun konumu, kuyruk solar)
         void SmearWin(float ph)
         {
