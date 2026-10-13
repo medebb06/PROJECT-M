@@ -338,8 +338,8 @@
   {
    "name": "smear",
    "parent": "root",
-   "x": 3271,
-   "y": 1013
+   "x": 3861,
+   "y": 549
   }
  ],
  "parts": [
@@ -390,6 +390,50 @@
    ]
   },
   {
+   "name": "idle_sag_kol_ic",
+   "x": 773,
+   "y": 2172,
+   "w": 425,
+   "h": 238,
+   "order": 2,
+   "runOrder": 2,
+   "actOrder": 2,
+   "bones": [
+    "slR1",
+    "slR2",
+    "slR_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "grid": [
+    6,
+    6
+   ]
+  },
+  {
+   "name": "idle_sag_kol",
+   "x": 775,
+   "y": 1515,
+   "w": 623,
+   "h": 881,
+   "order": 3,
+   "runOrder": 3,
+   "actOrder": 3,
+   "bones": [
+    "slR1",
+    "slR2",
+    "slR_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "grid": [
+    8,
+    10
+   ]
+  },
+  {
    "name": "jump_foot_B",
    "x": 1618,
    "y": 3253,
@@ -401,9 +445,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 2,
-   "runOrder": 2,
-   "actOrder": 2
+   "order": 4,
+   "runOrder": 4,
+   "actOrder": 4
   },
   {
    "name": "jump_shin_B",
@@ -417,9 +461,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 3,
-   "runOrder": 3,
-   "actOrder": 3
+   "order": 5,
+   "runOrder": 5,
+   "actOrder": 5
   },
   {
    "name": "jump_thigh_B",
@@ -433,9 +477,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 4,
-   "runOrder": 4,
-   "actOrder": 4
+   "order": 6,
+   "runOrder": 6,
+   "actOrder": 6
   },
   {
    "name": "jump_foot_F",
@@ -449,9 +493,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 5,
-   "runOrder": 5,
-   "actOrder": 5
+   "order": 7,
+   "runOrder": 7,
+   "actOrder": 7
   },
   {
    "name": "jump_shin_F",
@@ -465,9 +509,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 6,
-   "runOrder": 6,
-   "actOrder": 6
+   "order": 8,
+   "runOrder": 8,
+   "actOrder": 8
   },
   {
    "name": "jump_thigh_F",
@@ -481,9 +525,9 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false,
-   "order": 7,
-   "runOrder": 7,
-   "actOrder": 7
+   "order": 9,
+   "runOrder": 9,
+   "actOrder": 9
   },
   {
    "name": "idle_boyun",
@@ -491,9 +535,9 @@
    "y": 1407,
    "w": 272,
    "h": 363,
-   "order": 8,
-   "runOrder": 8,
-   "actOrder": 8,
+   "order": 10,
+   "runOrder": 10,
+   "actOrder": 10,
    "bones": [
     "neck"
    ],
@@ -507,9 +551,9 @@
    "y": 1504,
    "w": 870,
    "h": 882,
-   "order": 9,
-   "runOrder": 9,
-   "actOrder": 9,
+   "order": 11,
+   "runOrder": 11,
+   "actOrder": 11,
    "bones": [
     "chestS"
    ],
@@ -523,9 +567,9 @@
    "y": 2257,
    "w": 861,
    "h": 492,
-   "order": 10,
-   "runOrder": 10,
-   "actOrder": 10,
+   "order": 12,
+   "runOrder": 12,
+   "actOrder": 12,
    "bones": [
     "belly"
    ],
@@ -539,9 +583,9 @@
    "y": 1508,
    "w": 480,
    "h": 1482,
-   "order": 11,
-   "runOrder": 11,
-   "actOrder": 11,
+   "order": 13,
+   "runOrder": 13,
+   "actOrder": 13,
    "bones": [
     "hR1",
     "hR2",
@@ -565,9 +609,9 @@
    "y": 1955,
    "w": 1807,
    "h": 1064,
-   "order": 12,
-   "runOrder": 12,
-   "actOrder": 12,
+   "order": 14,
+   "runOrder": 14,
+   "actOrder": 14,
    "bones": [
     "katana",
     "katTip",
@@ -587,9 +631,9 @@
    "y": 1517,
    "w": 592,
    "h": 1512,
-   "order": 13,
-   "runOrder": 13,
-   "actOrder": 13,
+   "order": 15,
+   "runOrder": 15,
+   "actOrder": 15,
    "bones": [
     "hL1",
     "hL2",
@@ -619,31 +663,9 @@
    "bones": [
     "sword"
    ],
-   "order": 14,
-   "runOrder": 14,
-   "actOrder": 14
-  },
-  {
-   "name": "idle_sag_kol_ic",
-   "x": 773,
-   "y": 2172,
-   "w": 425,
-   "h": 238,
-   "order": 15,
-   "runOrder": 15,
-   "actOrder": 15,
-   "bones": [
-    "slR1",
-    "slR2",
-    "slR_end"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false,
-   "grid": [
-    6,
-    6
-   ]
+   "order": 16,
+   "runOrder": 16,
+   "actOrder": 16
   },
   {
    "name": "idle_sag_el",
@@ -651,9 +673,9 @@
    "y": 2086,
    "w": 337,
    "h": 632,
-   "order": 16,
-   "runOrder": 16,
-   "actOrder": 16,
+   "order": 17,
+   "runOrder": 17,
+   "actOrder": 17,
    "bones": [
     "armR1",
     "armR2",
@@ -665,28 +687,6 @@
    "grid": [
     5,
     8
-   ]
-  },
-  {
-   "name": "idle_sag_kol",
-   "x": 775,
-   "y": 1515,
-   "w": 623,
-   "h": 881,
-   "order": 17,
-   "runOrder": 17,
-   "actOrder": 17,
-   "bones": [
-    "slR1",
-    "slR2",
-    "slR_end"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false,
-   "grid": [
-    8,
-    10
    ]
   },
   {
@@ -762,7 +762,7 @@
    "name": "atk_blade",
    "x": 2295,
    "y": 2149,
-   "w": 1356,
+   "w": 1762,
    "h": 302,
    "bones": [
     "sword"
@@ -776,10 +776,10 @@
    "wFall": 0.12,
    "hidden": false,
    "name": "atk_smear",
-   "x": -2316,
-   "y": 953,
-   "w": 5647,
-   "h": 1442,
+   "x": -3136,
+   "y": 489,
+   "w": 7057,
+   "h": 1871,
    "bones": [
     "smear"
    ],

@@ -58,7 +58,7 @@ namespace RonniSkin
         static readonly float[] TipT2 = { 0.44f, 0.62f };
         static readonly float[] TipU2 = { 0f, 1f };
         static readonly float[] TipT = { 0.396f, 0.418f, 0.440f, 0.462f, 0.484f, 0.506f, 0.528f, 0.550f, 0.572f, 0.594f, 0.616f, 0.638f };
-        static readonly float[] TipU = { 0.000f, 0.013f, 0.061f, 0.181f, 0.250f, 0.439f, 0.529f, 0.754f, 0.866f, 0.954f, 1.000f, 1.000f };
+        static readonly float[] TipU = { 0.000f, 0.017f, 0.081f, 0.209f, 0.274f, 0.446f, 0.528f, 0.731f, 0.839f, 0.928f, 0.997f, 1.000f };
         // Smear: kılıç ucunu takip eden ay şeklinde iz (baş = ucun konumu, kuyruk solar)
         void SmearWin(float ph)
         {
@@ -306,6 +306,7 @@ namespace RonniSkin
         // --- parry / block (attack rig clips) ---
         [Header("Parry / Block (RonniAtk)")]
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
+        public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
         static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
@@ -559,7 +560,23 @@ namespace RonniSkin
                             other.SetColor(new Color(bc.r, bc.g, bc.b, bc.a * (1f - a)), true);
                             if (atkFade <= 0f) { RestoreFadeTop(); other.SetColor(bc, true); rigAtk.SetShown(false); }
                         }
-                        else { if (atkFade > 0f) { atkFade = 0f; } RestoreFadeTop(); rigAtk.SetShown(false); (idleNow ? rigIdle : rig).SetColor(bc, true); }
+                        else
+                        {
+                            if (atkFade > 0f) { atkFade = 0f; }
+                            RestoreFadeTop();
+                            // kılıç çekikken (R ile / saldırı sonrası) dururken nefes alan "kılıç çekik idle"
+                            bool dIdle = mode == 0 && idleNow && anim.swordReady && playerAtk != null && playerAtk.HasClip("idle_drawn");
+                            if (dIdle)
+                            {
+                                if (rigIdle != null) rigIdle.SetShown(false); rig.SetShown(false); idleNow = false;
+                                if (!idleDrawnOn) rigAtk.SetColor(bc, true);
+                                idleDrawnOn = true;
+                                rigAtk.SetShown(true); playerAtk.clip = "idle_drawn";
+                                playerAtk.manual01 = (Time.time % idleDrawnPeriod2) / idleDrawnPeriod2;
+                                rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
+                            }
+                            else { idleDrawnOn = false; rigAtk.SetShown(false); (idleNow ? rigIdle : rig).SetColor(bc, true); }
+                        }
                     }
                 }
                 UpdateWait(idleNow);
