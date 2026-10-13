@@ -12,7 +12,7 @@ namespace RonniSkin
 
         public void Init(RonniSkinRig r, Texture2D tex, Material mat, Transform[] chain, Vector3 min, Vector3 max, int cols, int rows, string layer, int order, float wPow = 4f, float wFall = 0.12f)
         {
-            rig = r; joints = chain;
+            rig = r; joints = chain; qMin = min; qMax = max;
             nBones = Mathf.Max(1, chain.Length - 1);
             var mf = gameObject.AddComponent<MeshFilter>();
             var mr = gameObject.AddComponent<MeshRenderer>();
@@ -97,6 +97,21 @@ namespace RonniSkin
             return Vector3.Distance(p, a + ab * t);
         }
 
+        Vector3 qMin, qMax; Vector2[] winUv = new Vector2[4]; Color[] winCol = new Color[4];
+        /// Tek parça (quad) için: görüntünün yatayda [u0,u1] aralığını gösterir; sol kenar c0, sağ kenar c1 renginde (iz solması).
+        public void SetWindow(float u0, float u1, Color c0, Color c1, bool mirror = false)
+        {
+            if (mesh == null || bindVerts == null || bindVerts.Length != 4) return;
+            bool vis = u1 - u0 > 0.003f;
+            SetVisible(vis); if (!vis) return;
+            float x0 = Mathf.Lerp(qMin.x, qMax.x, u0), x1 = Mathf.Lerp(qMin.x, qMax.x, u1);
+            bindVerts[0].x = x0; bindVerts[2].x = x0; bindVerts[1].x = x1; bindVerts[3].x = x1;
+            float v0 = mirror ? 1f - u0 : u0, v1 = mirror ? 1f - u1 : u1;
+            winUv[0] = new Vector2(v0, 0f); winUv[1] = new Vector2(v1, 0f); winUv[2] = new Vector2(v0, 1f); winUv[3] = new Vector2(v1, 1f);
+            winCol[0] = c0; winCol[1] = c1; winCol[2] = c0; winCol[3] = c1;
+            mesh.uv = winUv; mesh.colors = winCol;
+            curColor = new Color(-1f, -1f, -1f, -1f);
+        }
         Color curColor = Color.white; Color[] colBuf; MeshRenderer mrCache;
         bool partVisible = true, rigShown = true;
         public void SetVisible(bool v) { partVisible = v; ApplyVis(); }

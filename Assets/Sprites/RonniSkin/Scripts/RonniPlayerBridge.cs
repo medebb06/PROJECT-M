@@ -47,6 +47,28 @@ namespace RonniSkin
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
         void RestoreFadeTop() { if (fadeTop != null) { fadeTop.SetSorting(fadeTop.sortingLayerName, fadeTopBase); fadeTop = null; } }
+        [Tooltip("Smear izinin uzunluğu (yayın oranı): kılıç ucunun arkasında bu kadar iz kalır.")] public float smearTrail = 0.55f;
+        [Tooltip("İzin kuyruğunun tamamen silinmeye başladığı klip zamanı.")] public float smearEndStart = 0.60f;
+        [Tooltip("Smear yönünü yatay çevirir (sağdan sola açılır, sağ taraftan solar).")] public bool smearFlip2 = true;
+        static readonly float[] TipT = { 0.396f, 0.43f, 0.45f, 0.47f, 0.49f, 0.506f, 0.526f, 0.543f, 0.563f, 0.582f, 0.60f, 0.62f };
+        static readonly float[] TipU = { 0f, 0.02f, 0.11f, 0.2f, 0.3f, 0.45f, 0.53f, 0.69f, 0.86f, 0.905f, 0.98f, 1f };
+        // Smear: kılıç ucunu takip eden ay şeklinde iz (baş = ucun konumu, kuyruk solar)
+        void SmearWin(float ph)
+        {
+            float head = 0f;
+            if (ph > TipT[0])
+            {
+                head = 1f;
+                for (int i = 1; i < TipT.Length; i++)
+                    if (ph <= TipT[i]) { head = Mathf.Lerp(TipU[i - 1], TipU[i], (ph - TipT[i - 1]) / (TipT[i] - TipT[i - 1])); break; }
+            }
+            float k = Mathf.Clamp01((ph - smearEndStart) / 0.18f); k = k * k * (3f - 2f * k);
+            float tail = Mathf.Max(head - smearTrail, k);
+            if (ph <= TipT[0]) tail = head = 0f;
+            Color ct = new Color(smearGlow, smearGlow, smearGlow, 0f), ch = new Color(smearGlow, smearGlow, smearGlow, 1f);
+            if (smearFlip2) rigAtk.SetPartWindow("atk_smear", 1f - head, 1f - tail, ch, ct, true);
+            else rigAtk.SetPartWindow("atk_smear", tail, head, ct, ch);
+        }
         float AtkRemap(float p)
         {
             if (p <= atkCutStart) { float u = p / atkCutStart; return atkClipCutA * u * u; }
@@ -421,7 +443,7 @@ namespace RonniSkin
                     if (atkOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
+                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); SmearWin(playerAtk.manual01);
                     }
                     else
                     {
@@ -435,7 +457,7 @@ namespace RonniSkin
                             if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, atkHoldTime3)); hu = hu * hu * (3f - 2f * hu); ph = Mathf.Lerp(atkSettlePhase, atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = atkReturnTime3; }
                             else { atkRetT -= Time.deltaTime; float u = 1f - Mathf.Clamp01(atkRetT / Mathf.Max(0.01f, atkReturnTime3)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                            rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = ph;
+                            rigAtk.SetShown(true); playerAtk.clip = "attack1"; playerAtk.manual01 = ph; SmearWin(ph);
                             atkHoldIdle = true;
                         }
                         else

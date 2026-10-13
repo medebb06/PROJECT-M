@@ -27,6 +27,7 @@ namespace RonniSkin
         public void SetShown(bool on) { if (on == rigShown) return; rigShown = on; foreach (var p in parts) if (p != null) p.SetRigShown(on); }
         public bool Shown => rigShown;
         public void SetPartColor(string part, Color c) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetColor(c, true); }
+        public void SetPartWindow(string part, float u0, float u1, Color c0, Color c1, bool mirror = false) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetWindow(u0, u1, c0, c1, mirror); }
         public void SetVisible(string part, bool v) { if (partByName.TryGetValue(part, out var p) && p != null) p.SetVisible(v); }
         readonly List<int> baseOrder = new List<int>(), runOrderList = new List<int>(), actOrderList = new List<int>();
         bool actLayers;
