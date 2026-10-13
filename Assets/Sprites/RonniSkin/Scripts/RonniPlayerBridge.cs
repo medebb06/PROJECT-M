@@ -307,7 +307,9 @@ namespace RonniSkin
         [Header("Parry / Block (RonniAtk)")]
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
-        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.6f; float chiburiT = -1f;
+        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.6f; float chiburiT = -1f; bool bladeCut;
+        // chiburi: kılıç kına ucundan girerken bıçağın kınının ağzından ötesi görünmez (klip fazı 0.74 -> 0.93)
+        static float ChiBladeU(float p) { const float t0 = 0.74f, t1 = 0.93f; if (p <= t0) return 1f; if (p >= t1) return 0f; float u = (p - t0) / (t1 - t0); return 1f - u * u * (3f - 2f * u); }
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
         static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
@@ -534,6 +536,8 @@ namespace RonniSkin
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
                     float dPh = defAtk != null ? defPhase : Mathf.Clamp01(chiburiT / Mathf.Max(0.1f, chiburiDur));
                     bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
+                    Color bcc = originalSprite != null ? originalSprite.color : Color.white;
+                    if (bladeCut && !(dOn && dClip == "chiburi")) { rigAtk.SetPartWindow("atk_blade", 0f, 1f, bcc, bcc); bladeCut = false; }
                     if (dOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
@@ -541,6 +545,7 @@ namespace RonniSkin
                         defWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; atkWasOn = false;
                         rigAtk.SetShown(true); playerAtk.manual01 = dPh;
                         playerAtk.clip = dClip; rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
+                        if (dClip == "chiburi") { float ub = ChiBladeU(dPh); if (ub < 0.999f) { rigAtk.SetPartWindow("atk_blade", 0f, ub, bcc, bcc); bladeCut = true; } else if (bladeCut) { rigAtk.SetPartWindow("atk_blade", 0f, 1f, bcc, bcc); bladeCut = false; } }
                     }
                     else if (atkOn)
                     {
