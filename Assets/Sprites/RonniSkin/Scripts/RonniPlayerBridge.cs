@@ -39,6 +39,8 @@ namespace RonniSkin
         [Tooltip("Saldırı ritmi: vuruş (kesme) anı hızlanması bu ilerleme aralığında olur.")] public float atkCutStart = 0.42f, atkCutEnd = 0.56f;
         [Tooltip("Klibin kesme aralığı (klip zamanı 0..1).")] public float atkClipCutA = 0.38f, atkClipCutB = 0.64f;
         // yavaş başla -> kesmede hızlan -> çok yavaş bitir
+        [Tooltip("Saldırı bitince idle/sonraki görünüme geçiş (çapraz solma) süresi, sn.")] public float atkFadeTime = 0.4f;
+        bool atkWasOn, atkHoldIdle; float atkFade;
         float AtkRemap(float p)
         {
             if (p <= atkCutStart) { float u = p / atkCutStart; return atkClipCutA * u * u; }
@@ -404,7 +406,8 @@ namespace RonniSkin
                     else airU = -1f;
                 }
                 // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
-                bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && !anim.ActionActive && shClip == null;
+                if (atkHoldIdle && (atkClip != null || mode != 0 || !anim.ActionActive)) atkHoldIdle = false;
+                bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && (!anim.ActionActive || atkHoldIdle) && shClip == null;
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
@@ -412,9 +415,23 @@ namespace RonniSkin
                     if (atkOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
+                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkFade = 0f; rigAtk.SetShown(true); rigAtk.SetPartColor("atk_smear", new Color(smearGlow, smearGlow, smearGlow, 1f)); playerAtk.clip = "attack1"; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg));
                     }
-                    else rigAtk.SetShown(false);
+                    else
+                    {
+                        Color bc = originalSprite != null ? originalSprite.color : Color.white;
+                        if (atkWasOn) { atkFade = atkFadeTime; atkWasOn = false; atkHoldIdle = true; }
+                        if (atkFade > 0f && mode == 0 && atkFadeTime > 0f)
+                        {
+                            atkFade -= Time.deltaTime;
+                            float a = Mathf.Clamp01(atkFade / atkFadeTime); a = a * a * (3f - 2f * a);
+                            RonniSkinRig other = idleNow ? rigIdle : rig;
+                            rigAtk.SetShown(true); rigAtk.SetColor(new Color(bc.r, bc.g, bc.b, bc.a * a), true);
+                            other.SetColor(new Color(bc.r, bc.g, bc.b, bc.a * (1f - a)), true);
+                            if (atkFade <= 0f) { other.SetColor(bc, true); rigAtk.SetShown(false); }
+                        }
+                        else { if (atkFade > 0f) { atkFade = 0f; (idleNow ? rigIdle : rig).SetColor(bc, true); } rigAtk.SetShown(false); }
+                    }
                 }
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
