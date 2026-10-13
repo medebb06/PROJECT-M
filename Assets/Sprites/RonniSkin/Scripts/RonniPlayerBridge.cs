@@ -305,13 +305,14 @@ namespace RonniSkin
         PlayerPosture posture; int lastPosture; bool wasBroken; string defClip; float defStart;
         // --- parry / block (attack rig clips) ---
         [Header("Parry / Block (RonniAtk)")]
-        public float parryRaise5 = 0.07f, parryHold3 = 0.40f, parryReturn3 = 0.38f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
+        public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
         static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
         {
             atkClip = null;
+            if (player.isDashing || (combat != null && combat.IsAttacking)) defAtk = null;   // saldırı / dash savunma animasyonunu keser
             // ---- dash: quick low lunge, everything streams back ----
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
@@ -356,9 +357,10 @@ namespace RonniSkin
             wasParrying = parrying;
             if (playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
             {
+                defClip = null;   // eski parry / block_hit klipleri bunun üstüne binmesin
                 float dtd = Time.deltaTime;
                 bool succEdge = oldSucc && !wasOldSucc; wasOldSucc = oldSucc;
-                if (succEdge) { defParryFrom = defAtk == "parry" ? 0.62f : 0.72f; defAtk = "parry"; defAtkT = 0f; defRel = false; }
+                if (succEdge) { defParryFrom = 0f; defAtk = "parry"; defAtkT = 0f; defRel = false; }
                 else if (defAtk == null && (blocking || parrying)) { defAtk = "block"; defAtkT = 0f; defRel = false; }
                 else if (defAtk == "block" && postureHit && (blocking || parrying)) blockKick = 1f;
                 if (defAtk != null)
@@ -366,9 +368,14 @@ namespace RonniSkin
                     defAtkT += dtd; blockKick = Mathf.Max(0f, blockKick - dtd / 0.25f);
                     if (defAtk == "parry")
                     {
-                        if (!defRel && defAtkT > parryRaise5 + parryHold3) { defRel = true; defRelT = 0f; }
-                        if (!defRel) defPhase = Mathf.Lerp(defParryFrom, 1f, Mathf.Clamp01(defAtkT / Mathf.Max(0.01f, parryRaise5)));
-                        else { defRelT += dtd; defPhase = 1f - Sm01(defRelT / Mathf.Max(0.01f, parryReturn3)); if (defRelT >= parryReturn3) defAtk = null; }
+                        float T1 = Mathf.Max(0.01f, parryRaise9), T2 = parryHold5, T3 = Mathf.Max(0.05f, parryReturn5);
+                        if (defAtkT < T1) { float u = defAtkT / T1; defPhase = 1f - (1f - u) * (1f - u) * (1f - u); }
+                        else if (defAtkT < T1 + T2) defPhase = 1f;
+                        else
+                        {
+                            float u = Sm01((defAtkT - T1 - T2) / T3); defPhase = 1f - u;
+                            if (u >= 1f) { if (blocking || parrying) { defAtk = "block"; defAtkT = 10f; defPhase = 0.6f; defRel = false; } else defAtk = null; }
+                        }
                     }
                     else
                     {
@@ -509,21 +516,21 @@ namespace RonniSkin
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
-                    bool atkOn = mode == 0 && (atkClip == "attack1" || atkClip == "attack2") && playerAtk != null && playerAtk.HasClip(atkClip);
+                    bool atkOn = mode == 0 && (atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk != null && playerAtk.HasClip(atkClip);
                     bool dOn = mode == 0 && defAtk != null && atkClip == null && playerAtk != null && playerAtk.HasClip(defAtk);
                     if (dOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                         if (!defWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true);
                         defWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; atkWasOn = false;
-                        rigAtk.SetShown(true); playerAtk.clip = defAtk; playerAtk.manual01 = Mathf.Clamp01(defPhase);
-                        rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
+                        rigAtk.SetShown(true); playerAtk.manual01 = Mathf.Clamp01(defPhase);
+                        playerAtk.clip = defAtk; rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
                     }
                     else if (atkOn)
                     {
                         defWasOn = false;
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); SmearWin(playerAtk.manual01);
+                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); if (atkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(playerAtk.manual01);
                     }
                     else
                     {
@@ -537,7 +544,7 @@ namespace RonniSkin
                             if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, lastAtkClip == "attack2" ? atkHoldTime5 : atkHoldTime3)); if (lastAtkClip != "attack2") hu = hu * hu * (3f - 2f * hu); else hu = hu * hu; ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkSettle2 : atkSettlePhase, lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = (lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3) + (lastAtkClip == "attack2" ? atkEndPause2 : 0f); }
                             else { atkRetT -= Time.deltaTime; float pz = lastAtkClip == "attack2" ? atkEndPause2 : 0f; float rt = lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3; float u = Mathf.Clamp01((rt - atkRetT) / Mathf.Max(0.01f, rt)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                            rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
+                            rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2" || lastAtkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
                             atkHoldIdle = true;
                         }
                         else

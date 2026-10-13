@@ -15865,16 +15865,48 @@ PrefabInstance:
       value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: parryHold4
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: parryHold5
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkEndPause
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: blockRaise2
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: parryRaise7
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkEndPause2
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: atkHoldTime3
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkHoldTime5
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: blockReturn2
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: parryReturn4
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: parryReturn5
+      value: 0.01
       objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkReturnTime5

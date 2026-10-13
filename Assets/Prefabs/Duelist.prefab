@@ -189,6 +189,7 @@ GameObject:
   - component: {fileID: 2707043965123876500}
   - component: {fileID: 4706036756625254638}
   - component: {fileID: 7502996902466412553}
+  - component: {fileID: 6122375724758134201}
   m_Layer: 10
   m_Name: Duelist
   m_TagString: Enemy
@@ -778,6 +779,36 @@ MonoBehaviour:
   sweepReachMultiplier: 1.4
   sweepIgnoresDash: 1
   sweepColor: {r: 0.3, g: 0.75, b: 1, a: 1}
+--- !u!114 &6122375724758134201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3697985245505729534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc6ad19e11b58894184d0671d66ca765, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyArchetype
+  type: 8
+  applyMoveset: 1
+  applyScale: 1
+  overrideProfile: 0
+  custom:
+    health: 1
+    maxBalance: 1
+    chaseSpeed: 1
+    attackDamage: 1
+    unblockableDamage: 1
+    attackRecovery: 1
+    parryBalanceDamage: 1
+    blockPostureDamage: 1
+    attackKnockback: 1
+    knockbackTaken: 1
+    scale: 1
+    attackRangeOverride: 0
+    chaseStopOverride: 0
 --- !u!1 &5727438279676675484
 GameObject:
   m_ObjectHideFlags: 0
