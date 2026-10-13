@@ -209,6 +209,8 @@ MonoBehaviour:
   useProfileJump: 1
   runFolder: RonniRun
   runScale: 1
+  idleFolder: RonniIdle
+  idleScale: 1
   airVelocityRange: 12
   dashRunGrace: 0.25
   dashDustEnabled: 1

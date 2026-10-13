@@ -23,6 +23,13 @@ namespace RonniSkin
         [Range(0f, 1f)] public float doubleBlinkChance = 0.2f;
         Transform eyeA, eyeB; float blinkTimer = -1f, blinkPhase = -1f; bool blinkAgain;
 
+        [Header("Bakış kaçırma (gözler)")]
+        [Tooltip("Idle'da arada bir gözleri ters tarafa çekip geri getirir (klipte göz izi yoksa).")] public bool autoGlance = true;
+        public Vector2 glanceInterval = new Vector2(3.5f, 8f);
+        [Tooltip("Gözlerin kayma miktarı (kaynak piksel). Çizimin bakış yönünün tersine, sağa doğru.")] public float glanceX = 55f;
+        public Vector2 glanceHold = new Vector2(0.6f, 1.4f);
+        float glanceTimer = -1f, glanceT = -1f, glanceHoldT, glanceAmp = 1f, glanceDy;
+
         RonniSkinRig rig;
         readonly Dictionary<string, Clip> clips = new Dictionary<string, Clip>();
         readonly Dictionary<Transform, Vector3> basePos = new Dictionary<Transform, Vector3>();
@@ -72,7 +79,38 @@ namespace RonniSkin
             if (eyeB != null) eyeB.localScale = new Vector3(1f, eyeY, 1f);
         }
 
+        // Bakış kaçırma: gözler hızla yana kayar, kısa süre bakar, geri döner. Klipte göz izi varsa (ör. "wait") karışmaz.
+        void UpdateGlance()
+        {
+            if (!autoGlance || eyeA == null || eyeB == null || used.Contains("eyeA")) { glanceT = -1f; return; }
+            float dt = Time.deltaTime;
+            if (glanceT < 0f)
+            {
+                if (glanceTimer < 0f) glanceTimer = Random.Range(glanceInterval.x, glanceInterval.y);
+                glanceTimer -= dt;
+                if (glanceTimer > 0f) return;
+                glanceTimer = -1f; glanceT = 0f;
+                glanceHoldT = Random.Range(glanceHold.x, glanceHold.y);
+                glanceAmp = Random.Range(0.65f, 1f); glanceDy = Random.Range(-14f, 8f);
+            }
+            glanceT += dt;
+            const float tOut = 0.11f, tBack = 0.2f;
+            float k;
+            if (glanceT < tOut) { k = glanceT / tOut; k = k * k * (3f - 2f * k); }
+            else if (glanceT < tOut + glanceHoldT) k = 1f;
+            else if (glanceT < tOut + glanceHoldT + tBack) { k = 1f - (glanceT - tOut - glanceHoldT) / tBack; k = k * k * (3f - 2f * k); }
+            else { glanceT = -1f; return; }
+            float upp = rig.unitsPerPixel;
+            var off = new Vector3(glanceX * glanceAmp * k * upp, glanceDy * k * upp, 0f);
+            eyeA.localPosition = basePos[eyeA] + off; eyeB.localPosition = basePos[eyeB] + off;
+        }
+
         public bool HasClip(string name) { return clips.ContainsKey(name); }
+
+        /// Oynayan klibin normalleştirilmiş konumu (0..1).
+        public float Phase01 { get { return clips.TryGetValue(clip, out var c) && c.duration > 0f ? Mathf.Repeat(t, c.duration) / c.duration : 0f; } }
+        /// Döngüsüz klip sonuna geldi mi?
+        public bool ClipFinished { get { return clips.TryGetValue(clip, out var c) && !c.loop && t >= c.duration; } }
 
         public void Restart(float phase01 = 0f)
         {
@@ -123,6 +161,7 @@ namespace RonniSkin
                 Vector3 p = w < 1f ? Vector3.Lerp(snapP[b], basePos[b], w) : basePos[b];
                 b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p; b.localScale = Vector3.one;
             }
+            UpdateGlance();
             UpdateBlink();
         }
     }

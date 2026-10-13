@@ -33,6 +33,10 @@ namespace RonniSkin
         public string idleFolder = "RonniIdle";
         [Tooltip("Idle çiziminin boyu (1 = Ronni ile aynı boy).")] public float idleScale = 1f;
         RonniSkinRig rigIdle; RonniClipPlayer playerIdle; Vector3 baseIdle = Vector3.one;
+        [Header("Bekleme (ateş böceği)")]
+        [Tooltip("Idle'da hareketsiz kalınca arada bir elini uzatıp konan ateş böceğine bakar (RonniIdle 'wait' klibi).")] public bool fireflyWait = true;
+        [Tooltip("Hareketsiz kaldıktan sonra bekleme animasyonunun başlaması için geçecek süre aralığı (sn).")] public Vector2 waitDelay = new Vector2(12f, 24f);
+        float idleSince = -1f, waitAfter; bool waiting; RonniFirefly firefly;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
         RonniDashDust dashDust; bool dustPrev; bool dashPrev; float dashEndT = -10f;
@@ -348,10 +352,40 @@ namespace RonniSkin
                 // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
                 bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && !anim.ActionActive && shClip == null;
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
+                UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
             ApplyTransitionScale();
+        }
+
+        // Idle'da hareketsiz kalınca "wait" klibi (el uzat, ateş böceği konsun) arada bir oynar; oyuncu kıpırdarsa kesilir.
+        void UpdateWait(bool idleNow)
+        {
+            if (rigIdle == null || playerIdle == null || !playerIdle.HasClip("wait")) return;
+            if (!idleNow)
+            {
+                if (waiting) EndWait(true);
+                idleSince = -1f;
+                return;
+            }
+            if (idleSince < 0f) { idleSince = Time.time; waitAfter = Random.Range(waitDelay.x, waitDelay.y); }
+            if (waiting) { if (playerIdle.ClipFinished) EndWait(false); return; }
+            if (!fireflyWait || Time.time - idleSince < waitAfter) return;
+            if (playerIdle.Phase01 > 0.03f) return;   // idle döngüsünün başında geç: dikişsiz
+            Transform perch;
+            if (!rigIdle.bones.TryGetValue("perch", out perch)) return;
+            playerIdle.clip = "wait"; playerIdle.Restart(0f); waiting = true;
+            if (firefly == null) { var go = new GameObject("Ronni_Firefly"); firefly = go.AddComponent<RonniFirefly>(); }
+            float outward = Mathf.Sign(perch.position.x - rigIdle.transform.position.x); if (outward == 0f) outward = -1f;
+            firefly.Begin(rigIdle, perch, outward);
+        }
+
+        void EndWait(bool abort)
+        {
+            waiting = false; idleSince = -1f;
+            if (playerIdle != null) { playerIdle.clip = "idle"; playerIdle.Restart(0f); }
+            if (abort && firefly != null) firefly.Cancel();
         }
 
         void ApplyTransitionScale()
@@ -376,6 +410,7 @@ namespace RonniSkin
 
         void OnDisable()
         {
+            if (firefly != null) firefly.Cancel();
             if (hidden != null) foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
         }
     }

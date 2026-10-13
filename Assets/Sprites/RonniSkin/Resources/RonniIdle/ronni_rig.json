@@ -292,6 +292,12 @@
    "parent": "root",
    "x": 1800,
    "y": 3300
+  },
+  {
+   "name": "perch",
+   "parent": "armR_end",
+   "x": 850,
+   "y": 2600
   }
  ],
  "parts": [
