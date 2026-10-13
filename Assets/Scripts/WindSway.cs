@@ -9,6 +9,8 @@ using UnityEngine;
 /// Genel rüzgâr gücü: [ATMOSPHERE] > AtmosphereLight > Wind Strength.
 /// Salınım miktarı/hızı: materyalde (M_Rim_Tree / BackBush / GroundBush / Foreground > Wind).
 /// </summary>
+// Parallax (10000) kameradan sonra kaydırır; bu da ondan sonra çalışsın.
+[DefaultExecutionOrder(10020)]
 [ExecuteAlways]
 [DisallowMultipleComponent]
 public class WindSway : MonoBehaviour

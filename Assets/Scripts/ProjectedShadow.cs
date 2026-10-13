@@ -9,6 +9,8 @@ using UnityEngine;
 /// Ronni gibi oyunda kurulan modeller için de çalışır (parçalar sonradan eklenince yakalanır).
 /// Sadece Play modunda çalışır.
 /// </summary>
+// Parallax (10000) kameradan sonra kaydırır; bu da ondan sonra çalışsın.
+[DefaultExecutionOrder(10020)]
 public class ProjectedShadow : MonoBehaviour
 {
     public Material shadowMaterial;

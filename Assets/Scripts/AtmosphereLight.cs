@@ -8,6 +8,8 @@ using UnityEngine;
 ///   - Işık hüzmelerini çok hafif dalgalandırır.
 /// Edit modunda da çalışır, sahnede görünür.
 /// </summary>
+// Parallax (10000) kameradan sonra kaydırır; bu da ondan sonra çalışsın.
+[DefaultExecutionOrder(10010)]
 [ExecuteAlways]
 public class AtmosphereLight : MonoBehaviour
 {
