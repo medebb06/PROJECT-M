@@ -44,6 +44,8 @@ namespace RonniSkin
         [Tooltip("Bekleme pozu (klip zamanı 0..1; kesme sonrası duruş).")] public float atkHoldPhase = 0.80f;
         [Tooltip("Bekledikten sonra idle duruşa dönüş süresi (sn).")] public float atkReturnTime3 = 0.8f;
         [Tooltip("Vuruş bitişinde ulaşılan poz; buradan bekleme pozuna yavaşça geçilir.")] public float atkSettlePhase = 0.68f;
+        [Tooltip("Attack2: kesim bitişinde ulaşılan klip zamanı / bekleme pozu klip zamanı.")] public float atkSettle2 = 0.55f, atkHold3x = 0.97f;
+        [Tooltip("Attack2 bitiş bekleme süresi (sn).")] public float atkHoldTime4 = 0.9f;
         string lastAtkClip = "attack1";
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
@@ -89,9 +91,10 @@ namespace RonniSkin
         // attack2 = attack1'in tersi (ileri uzanmış duruştan hazır duruşa). Ritim: hafif geri çekiş -> hızlı ters kesim -> yavaş yerleşme
         float AtkRemap2(float p)
         {
-            if (p <= 0.35f) { float u = p / 0.35f; return 0.22f * u * u; }
-            if (p <= 0.50f) return Mathf.Lerp(0.22f, 0.42f, (p - 0.35f) / 0.15f);
-            float v = (p - 0.50f) / 0.50f; return Mathf.Lerp(0.42f, 1f, 1f - (1f - v) * (1f - v) * (1f - v));
+            // çok yavaş geri çekiş (kılıç ortaya gelene kadar) -> hızlı ters kesim -> yerleşme
+            if (p <= 0.58f) { float u = p / 0.58f; return 0.30f * Mathf.Pow(u, 1.3f); }
+            if (p <= 0.72f) return Mathf.Lerp(0.30f, 0.46f, (p - 0.58f) / 0.14f);
+            float v = (p - 0.72f) / 0.28f; return Mathf.Lerp(0.46f, atkSettle2, v);
         }
         static readonly float[] Tau2T = { 0f, 0.12f, 0.22f, 0.42f, 0.60f, 1f };
         static readonly float[] Tau2V = { 0.80f, 0.74f, 0.62f, 0.42f, 0.12f, 0f };
@@ -481,14 +484,14 @@ namespace RonniSkin
                     else
                     {
                         Color bc = originalSprite != null ? originalSprite.color : Color.white;
-                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack1" ? atkHoldTime3 : 0f; atkRetT = 0f; atkFade = 0f; }
+                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack2" ? atkHoldTime4 : atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
                         bool atkInterrupt = mode != 0 || atkClip != null || Mathf.Abs(player.moveInput) >= 0.1f;
                         if (atkInterrupt && (atkHoldT > 0f || atkRetT > 0f)) { atkHoldT = 0f; atkRetT = 0f; atkFade = atkCrossfade; }
                         if (atkHoldT > 0f || atkRetT > 0f)
                         {
                             float ph;
-                            if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, atkHoldTime3)); hu = hu * hu * (3f - 2f * hu); ph = Mathf.Lerp(atkSettlePhase, atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = atkReturnTime3; }
-                            else { atkRetT -= Time.deltaTime; float u = 1f - Mathf.Clamp01(atkRetT / Mathf.Max(0.01f, atkReturnTime3)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(atkHoldPhase, 1f, u); }
+                            if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, lastAtkClip == "attack2" ? atkHoldTime4 : atkHoldTime3)); if (lastAtkClip != "attack2") hu = hu * hu * (3f - 2f * hu); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkSettle2 : atkSettlePhase, lastAtkClip == "attack2" ? atkHold3x : atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = atkReturnTime3; }
+                            else { atkRetT -= Time.deltaTime; float u = 1f - Mathf.Clamp01(atkRetT / Mathf.Max(0.01f, atkReturnTime3)); u = lastAtkClip == "attack2" ? u * (2f - u) : u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold3x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                             rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; SmearWin(ph);
                             atkHoldIdle = true;
