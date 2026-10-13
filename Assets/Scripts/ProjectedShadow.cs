@@ -100,7 +100,8 @@ public class ProjectedShadow : MonoBehaviour
         float k = Mathf.Clamp01(1f - jump / Mathf.Max(0.01f, maxJumpHeight));
 
         // Su üstünde gölge olmaz (yansıma var).
-        if (WaterSurface.Instance != null && feetY <= WaterSurface.Instance.WaterY + 0.3f)
+        // Su üstünde gölge düşmez; sadece yansıma kalır (ikisi üst üste binince garip duruyordu).
+        if (WaterSurface.Instance != null && WaterSurface.Instance.Covers(p.x))
             k = 0f;
 
         Vector4 light = Shader.GetGlobalVector(LightPosId);

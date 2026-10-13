@@ -157,7 +157,7 @@ Shader "ProjectM/Water"
             float2 off = float2(wave * _WaveAmp * grow + n1.y * _WaveAmp * 0.35 * grow, 0.0);
 
             // ---- halkalar ----
-            float ringLight = 0.0;
+            float ringLight = 0.0;   // + sırt (ışık alır), - çukur (gölge)
             [unroll]
             for (int k = 0; k < 16; k++)
             {
@@ -177,7 +177,9 @@ Shader "ProjectM/Water"
 
                     off.x += (e.x / max(dist, 0.001)) * ring * _RippleDistort;
                     off.y += (e.y / max(dist, 0.001)) / _RippleAspect * ring * _RippleDistort * 0.5;
-                    ringLight += ring;
+                    // Halkanın dış yüzü ışığı yakalar, iç yüzü kararır (gerçek dalgacık gibi).
+                    float slope = -band * exp(-band * band) * life * life * r.w;
+                    ringLight += slope;
                 }
             }
 
@@ -209,14 +211,25 @@ Shader "ProjectM/Water"
             float w = _MoonWidth * (1.0 + d * _MoonSpread);
             float across = (x - _WaterMoonX) / w;
             float mask = exp(-across * across);
-            float sx = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, float2(x * 0.12, ph * 0.08) + float2(t * 0.02, -t * 0.05)).b;
-            float dash = pow(saturate(sin(ph * 1.0 - t * 1.7 + sx * 9.0) * 0.5 + 0.5), _SparkleSharp * 3.0);
-            float sparkle = dash * smoothstep(0.45, 0.75, sx) * 4.0;
+            // Yumuşak, yatay ışık çizgileri (düşük frekanslı gürültü: pürüz/gren yok).
+            float ga = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, float2(x * 0.03 + t * 0.01, ph * 0.04 - t * 0.03)).r;
+            float gb = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, float2(x * 0.05 - t * 0.013, ph * 0.07 - t * 0.02)).g;
+            float row = pow(saturate(sin(ph * 3.0 - t * 1.2 + ga * 6.0) * 0.5 + 0.5), _SparkleSharp + 1.0);
+            float blob = smoothstep(0.45, 0.8, ga * 0.55 + gb * 0.55 - 0.05);
+            float sparkle = row * blob * 2.5;
             float vfade = saturate(1.0 - d / (_FadeDistance * 1.2));
             col += _MoonColor.rgb * mask * vfade * (sparkle * _MoonIntensity + _MoonGlow);
 
             // ---- halka ışığı ----
-            col += _LineColor.rgb * ringLight * _RippleLight * (0.35 + 0.65 * near);
+            // Halka rengi ışıktan: ay yolunda ayın rengi, başka yerde yansıyan gökyüzünün rengi.
+            {
+                half3 sky = (_WaterHasRefl > 0.5) ? SampleRefl(float2(x, _WaterY + d + 1.5)).rgb : _ShallowColor.rgb;
+                half3 lightCol = lerp(sky * 1.2, _MoonColor.rgb, saturate(mask * 1.5));
+                float hi = max(ringLight, 0.0);
+                float lo = max(-ringLight, 0.0);
+                col += lightCol * hi * _RippleLight * 0.5 * (0.4 + 0.6 * near);
+                col *= 1.0 - lo * _RippleLight * 0.35;
+            }
 
             return half4(col, spr.a);
         }

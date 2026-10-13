@@ -18,7 +18,8 @@ public class WaterSurface : MonoBehaviour
     public static WaterSurface Instance { get; private set; }
 
     [Header("Yansıma")]
-    [Range(0.25f, 1f)] public float resolutionScale = 0.85f;
+    [Tooltip("Yansıma çözünürlüğü (1 = ekranla aynı, en net).")]
+    [Range(0.25f, 1f)] public float reflectionResolution = 1f;
     [Tooltip("Bu sorting order ve üstü yansımaz (ön plan çalıları, HUD, yazılar).")]
     public int excludeOrderFrom = 450;
     [Tooltip("Yansıma kamerasının en küçük ortho boyutu (ekranın tamamı yansısın diye).")]
@@ -43,8 +44,12 @@ public class WaterSurface : MonoBehaviour
     public bool autoInteract = true;
     [Tooltip("Ayak su çizgisine bu kadar yakınsa suda sayılır.")]
     public float contactHeight = 0.4f;
-    [Tooltip("Kaç birim yürüyünce bir adım halkası.")]
-    public float stepDistance = 1.3f;
+    [Tooltip("Adım halkaları arasındaki en az mesafe (birim). Büyüdükçe daha nadir.")]
+    public float stepSpacing = 6f;
+    [Tooltip("Her aralıkta halka çıkma ihtimali (0-1). Düşük = daha nadir, daha doğal.")]
+    [Range(0f, 1f)] public float stepChance = 0.45f;
+    [Tooltip("Adım halkasının gücü (küçük, ince halka).")]
+    [Range(0.05f, 1f)] public float stepStrength = 0.18f;
     [Tooltip("Bu hızdan sert inişler sıçratır.")]
     public float landSpeed = 7f;
 
@@ -54,6 +59,14 @@ public class WaterSurface : MonoBehaviour
     public int splashSortingOrder = 140;
 
     public float WaterY { get; private set; }
+
+    /// <summary>Bu X'te su var mı (su yüzeyinin yatay sınırları içinde mi).</summary>
+    public bool Covers(float x)
+    {
+        if (sr == null) return false;
+        Bounds b = sr.bounds;
+        return x >= b.min.x && x <= b.max.x;
+    }
 
     // ---- iç ----
     private SpriteRenderer sr;
@@ -75,6 +88,7 @@ public class WaterSurface : MonoBehaviour
         public Vector2 last;
         public float vy;
         public float walked;
+        public float nextStep = 4f;
         public bool inWater;
     }
     private readonly List<Body> bodies = new List<Body>();
@@ -168,8 +182,8 @@ public class WaterSurface : MonoBehaviour
             return;
         }
 
-        int w = Mathf.Max(64, Mathf.RoundToInt(mainCam.pixelWidth * resolutionScale));
-        int h = Mathf.Max(64, Mathf.RoundToInt(mainCam.pixelHeight * resolutionScale));
+        int w = Mathf.Max(64, Mathf.RoundToInt(mainCam.pixelWidth * reflectionResolution));
+        int h = Mathf.Max(64, Mathf.RoundToInt(mainCam.pixelHeight * reflectionResolution));
 
         if (rt == null || rt.width != w || rt.height != h)
         {
@@ -229,7 +243,7 @@ public class WaterSurface : MonoBehaviour
         excluded.Clear();
 
         foreach (Renderer r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-            if (r == sr || r.sortingOrder >= excludeOrderFrom)
+            if (r == sr || r.sortingOrder >= excludeOrderFrom || r.name == "~shadow")
                 excluded.Add(r);
     }
 
@@ -379,13 +393,19 @@ public class WaterSurface : MonoBehaviour
                 {
                     b.walked += dx;
 
-                    if (b.walked >= stepDistance)
+                    if (b.walked >= b.nextStep)
                     {
                         b.walked = 0f;
-                        RippleAtSurface(feet.x, Mathf.Clamp(0.25f + speedX * 0.03f, 0.25f, 0.7f));
+                        b.nextStep = stepSpacing * Random.Range(0.8f, 1.6f);
 
-                        if (speedX > 9f)   // dash / koşu: birkaç damla
-                            Splash(new Vector2(feet.x, WaterY), 3, 0.6f);
+                        if (Random.value < stepChance)
+                        {
+                            float s = stepStrength * Random.Range(0.7f, 1.15f) * (speedX > 9f ? 1.4f : 1f);
+                            RippleAtSurface(feet.x + Random.Range(-0.2f, 0.2f), s);
+
+                            if (speedX > 9f && Random.value < 0.3f)   // dash: ara sıra birkaç damla
+                                Splash(new Vector2(feet.x, WaterY), 2, 0.5f);
+                        }
                     }
                 }
             }
