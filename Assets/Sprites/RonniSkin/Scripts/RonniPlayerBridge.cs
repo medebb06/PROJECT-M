@@ -26,7 +26,7 @@ namespace RonniSkin
         [Tooltip("Use the side-profile drawing (Resources/RonniSkinB) while running.")] public bool useProfileRun = true;
         [Tooltip("Use the side-profile drawing (facing left) while in the air.")] public bool useProfileJump = true;
         [Tooltip("Koşu çizimi klasörü (Resources/<klasör>, ör. RonniRun = Koşu2.psd). Boş bırakılırsa eski profil çizimi koşar.")]
-        public string runFolder = "RonniRun";
+        public string runFolder = "RonniRunVivid";
         [Tooltip("Koşu çiziminin boyu (1 = Ronni ile aynı boy).")] public float runScale = 1f;
         [Header("Idle (nefes + rüzgar)")]
         [Tooltip("Dururken görünen çizim klasörü (Resources/<klasör>, IDLE.psd). Boş bırakılırsa eski ön görünüm idle'ı kullanılır.")]
