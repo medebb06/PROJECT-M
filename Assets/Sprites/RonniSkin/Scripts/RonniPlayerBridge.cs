@@ -303,6 +303,11 @@ namespace RonniSkin
 
         bool wasDashing; float dashStart;
         PlayerPosture posture; int lastPosture; bool wasBroken; string defClip; float defStart;
+        // --- parry / block (attack rig clips) ---
+        [Header("Parry / Block (RonniAtk)")]
+        public float parryRaise2 = 0.28f, parryHold2 = 0.45f, parryReturn2 = 0.6f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
+        string defAtk; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
+        static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
         {
@@ -342,12 +347,38 @@ namespace RonniSkin
             lastPosture = pv;
             bool blocking = defense != null && defense.IsBlocking;
             bool parrying = defense != null && defense.IsParrying;
+            bool parryEdge = parrying && !wasParrying; bool oldSucc = OldParryPlaying();
             if (posture != null && posture.IsBroken && !wasBroken) StartDef("guard_break");
             wasBroken = posture != null && posture.IsBroken;
             if (OldParryPlaying() && defClip != "parry_success" && defClip != "guard_break") StartDef("parry_success");
             else if (postureHit && (blocking || parrying) && defClip != "guard_break") StartDef("block_hit");
             else if (parrying && !wasParrying && defClip != "parry_success") StartDef("parry");
             wasParrying = parrying;
+            if (playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
+            {
+                float dtd = Time.deltaTime;
+                if (defAtk != "parry" && oldSucc) { defParryFrom = defAtk == "block" ? 0.45f : 0f; defAtk = "parry"; defAtkT = 0f; defRel = false; }
+                else if (defAtk == null && (blocking || parrying)) { defAtk = "block"; defAtkT = 0f; defRel = false; }
+                else if (defAtk == "block" && postureHit && (blocking || parrying)) blockKick = 1f;
+                if (defAtk != null)
+                {
+                    defAtkT += dtd; blockKick = Mathf.Max(0f, blockKick - dtd / 0.25f);
+                    if (defAtk == "parry")
+                    {
+                        if (!defRel && defAtkT > parryRaise2 + parryHold2) { defRel = true; defRelT = 0f; }
+                        if (!defRel) defPhase = Mathf.Lerp(defParryFrom, 1f, Mathf.Clamp01(defAtkT / Mathf.Max(0.01f, parryRaise2)));
+                        else { defRelT += dtd; defPhase = 1f - Sm01(defRelT / Mathf.Max(0.01f, parryReturn2)); if (defRelT >= parryReturn2) defAtk = null; }
+                    }
+                    else
+                    {
+                        if (!defRel && !blocking && !parrying) { defRel = true; defRelT = 0f; defFrom = defPhase; }
+                        if (!defRel) defPhase = Mathf.Min(Sm01(defAtkT / Mathf.Max(0.01f, blockRaise2)) * 0.6f, 0.6f - 0.2f * blockKick);
+                        else { defRelT += dtd; defPhase = Mathf.Lerp(defFrom, 0f, Sm01(defRelT / Mathf.Max(0.01f, blockReturn2))); if (defRelT >= blockReturn2) defAtk = null; }
+                    }
+                }
+                if (defAtk != null) { anim.swordReady = true; shClip = null; return; }
+            }
+            else defAtk = null;
             if (defClip != null || blocking || parrying) { anim.swordReady = true; shClip = null; }
             if (defClip != null)
             {
@@ -478,8 +509,18 @@ namespace RonniSkin
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
                     bool atkOn = mode == 0 && (atkClip == "attack1" || atkClip == "attack2") && playerAtk != null && playerAtk.HasClip(atkClip);
-                    if (atkOn)
+                    bool dOn = mode == 0 && defAtk != null && atkClip == null && playerAtk != null && playerAtk.HasClip(defAtk);
+                    if (dOn)
                     {
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
+                        if (!defWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true);
+                        defWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; atkWasOn = false;
+                        rigAtk.SetShown(true); playerAtk.clip = defAtk; playerAtk.manual01 = Mathf.Clamp01(defPhase);
+                        rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
+                    }
+                    else if (atkOn)
+                    {
+                        defWasOn = false;
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                         if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); SmearWin(playerAtk.manual01);
                     }

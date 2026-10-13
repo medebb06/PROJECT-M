@@ -347,7 +347,7 @@ MonoBehaviour:
   committedHitFlashColor: {r: 1, g: 0.6, b: 0.1, a: 1}
   committedFlashDuration: 0.1
   committedHitClip: {fileID: 0}
-  useUnblockableAttacks: 1
+  useUnblockableAttacks: 0
   unblockableChance: 0.25
   unblockableMinNormalAttacksBetween: 2
   unblockableWindupMultiplier: 1
@@ -359,7 +359,7 @@ MonoBehaviour:
   unblockableDodgeGrace: 0.12
   unblockableReachMultiplier: 0.9
   unblockableDodgeCueLead: 0.4
-  unblockableFrontOnly: 1
+  unblockableFrontOnly: 0
   unblockableForwardReach: 5.5
   unblockableHitHeight: 2.2
   lockFacingDuringAttack: 1
@@ -392,7 +392,7 @@ MonoBehaviour:
   solidWhiteFlash: 1
   balanceHitFlashColor: {r: 1, g: 1, b: 1, a: 1}
   balanceHitFlashDuration: 0.09
-  attackDamage: 30
+  attackDamage: 1
   attackKnockbackForce: 5
   attackKnockbackVerticalForce: 2
   attackKnockbackDuration: 0.4

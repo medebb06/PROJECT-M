@@ -9808,7 +9808,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 22.5
+  orthographic size: 21.6
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -9837,7 +9837,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.PixelPerfectCamera
   m_ComponentVersion: 1
-  m_AssetsPPU: 24
+  m_AssetsPPU: 25
   m_RefResolutionX: 1920
   m_RefResolutionY: 1080
   m_CropFrame: 0
@@ -15771,6 +15771,18 @@ PrefabInstance:
     - target: {fileID: 3574787788961204835, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Enabled
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalPosition.x
