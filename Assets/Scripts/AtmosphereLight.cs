@@ -37,6 +37,7 @@ public class AtmosphereLight : MonoBehaviour
 
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
     private static readonly int WindStrengthId = Shader.PropertyToID("_ProjectM_WindStrength");
+    private static readonly int SkyTimeId = Shader.PropertyToID("_ProjectM_SkyTime");
 
     private void OnEnable()
     {
@@ -58,6 +59,7 @@ public class AtmosphereLight : MonoBehaviour
     private void LateUpdate()
     {
         Shader.SetGlobalFloat(WindStrengthId, Application.isPlaying || animateInEditMode ? windStrength : 0f);
+        Shader.SetGlobalFloat(SkyTimeId, Application.isPlaying ? Time.time : (animateInEditMode ? Time.realtimeSinceStartup : 0f));
 
         Camera cam = Camera.main;
 
