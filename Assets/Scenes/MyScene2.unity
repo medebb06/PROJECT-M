@@ -15813,6 +15813,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: attack1HitTime
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: attack2HitTime
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: attack3HitTime
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: attack4HitTime
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1Duration
       value: 0.35
       objectReference: {fileID: 0}
