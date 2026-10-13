@@ -25,6 +25,8 @@ public class AtmosphereLight : MonoBehaviour
     [Header("Rüzgâr")]
     [Tooltip("Bütün ağaç/çalı/ot salınımının genel gücü. 0 = rüzgâr yok.")]
     [Range(0f, 3f)] public float windStrength = 1f;
+    [Tooltip("Kapalıysa Scene/Game ekranında (Play dışında) ağaçlar ve çalılar sabit durur. Play'de her zaman oynar.")]
+    public bool animateInEditMode = false;
 
     [Header("Işık hüzmeleri")]
     public SpriteRenderer[] rays;
@@ -55,7 +57,7 @@ public class AtmosphereLight : MonoBehaviour
 
     private void LateUpdate()
     {
-        Shader.SetGlobalFloat(WindStrengthId, windStrength);
+        Shader.SetGlobalFloat(WindStrengthId, Application.isPlaying || animateInEditMode ? windStrength : 0f);
 
         Camera cam = Camera.main;
 

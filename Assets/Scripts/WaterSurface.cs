@@ -106,7 +106,10 @@ public class WaterSurface : MonoBehaviour
     private static readonly int RipplesId = Shader.PropertyToID("_WaterRipples");
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
 
-    private static float Now => Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
+    [Tooltip("Kapalıysa Scene/Game ekranında (Play dışında) su sabit durur. Play'de her zaman akar.")]
+    public bool animateInEditMode = false;
+
+    private float Now => Application.isPlaying ? Time.time : (animateInEditMode ? Time.realtimeSinceStartup : 0f);
 
     // =====================================================================
 
