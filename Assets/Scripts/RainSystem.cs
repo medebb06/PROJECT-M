@@ -229,6 +229,7 @@ public class RainSystem : MonoBehaviour
         l.ps = NewSystem(name, rainMat, order);
 
         var main = l.ps.main;
+        main.useUnscaledTime = true;   // duraklatma menüsünde ayar yaparken de aksın
         main.loop = true;
         main.playOnAwake = false;
         main.prewarm = false;
@@ -287,6 +288,7 @@ public class RainSystem : MonoBehaviour
         // Zemin / karakter sıçraması: küçük damlacıklar, yerçekimiyle yay çizer.
         splashPs = NewSystem("~rain splash", splashMat, splashOrder);
         var sm = splashPs.main;
+        sm.useUnscaledTime = true;
         sm.loop = false;
         sm.playOnAwake = false;
         sm.simulationSpace = ParticleSystemSimulationSpace.World;

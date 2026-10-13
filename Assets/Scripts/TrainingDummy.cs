@@ -91,6 +91,43 @@ public class TrainingDummy : MonoBehaviour
         All.Remove(this);
     }
 
+    // Oyun içinden (menüden) dummy kurar. pos = yaklaşık zemin noktası; yere oturtulur.
+    public static TrainingDummy Spawn(Vector3 pos)
+    {
+        int enemyLayer = LayerMask.NameToLayer("Enemy");
+
+        if (enemyLayer < 0)
+        {
+            Debug.LogError("TrainingDummy.Spawn: 'Enemy' layer'ı yok.");
+            return null;
+        }
+
+        pos.z = 0f;
+
+        RaycastHit2D hit = Physics2D.Raycast((Vector2)pos + Vector2.up * 6f, Vector2.down, 40f, LayerMask.GetMask("Ground"));
+
+        if (hit.collider != null)
+            pos.y = hit.point.y;
+
+        GameObject root = new GameObject("TrainingDummy");
+        root.layer = enemyLayer;
+        root.transform.position = pos;
+
+        GameObject body = new GameObject("Body");
+        body.transform.SetParent(root.transform, false);
+        body.layer = enemyLayer;
+
+        SpriteRenderer sr = body.AddComponent<SpriteRenderer>();
+        sr.sprite = GetCapsuleSprite();
+        sr.color = new Color(0.82f, 0.7f, 0.52f);
+        sr.sortingOrder = 5;
+
+        root.AddComponent<BoxCollider2D>();
+
+        // Awake bileşen eklenir eklenmez çalışır: collider/görsel boyutu orada uygulanır.
+        return root.AddComponent<TrainingDummy>();
+    }
+
     // Collider'ı ve "Body" görselini 'size' değerine göre ayarlar.
     [ContextMenu("Boyutu Uygula")]
     public void ApplySize()

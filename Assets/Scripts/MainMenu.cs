@@ -169,7 +169,7 @@ public class MainMenu : MonoBehaviour
 {
     public static bool Active { get; private set; }
 
-    private enum Page { Main, Settings }
+    private enum Page { Main, Settings, Test, Time, Rain, Tools }
 
     private struct Row
     {
@@ -188,12 +188,21 @@ public class MainMenu : MonoBehaviour
     private static readonly Row[] PauseRows =
     {
         new Row { label = "DEVAM ET", kanji = "再開", kind = 0 },
+        new Row { label = "TEST", kanji = "試験", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ANA MENÜ", kanji = "題名", kind = 0 },
     };
 
+    private static bool IsTestPage(Page p)
+    {
+        return p == Page.Test || p == Page.Time || p == Page.Rain || p == Page.Tools;
+    }
+
     private Row[] CurRows()
     {
+        if (IsTestPage(page))
+            return testRowCache;
+
         return page == Page.Settings ? SettingsRows : (pauseMode ? PauseRows : MainRows);
     }
 
@@ -407,6 +416,9 @@ public class MainMenu : MonoBehaviour
         for (int i = menuRoot.childCount - 1; i >= 0; i--)
             Destroy(menuRoot.GetChild(i).gameObject);
 
+        if (IsTestPage(p))
+            BuildTestRows(p);
+
         Page prevPage = page; page = p; Row[] rows = CurRows(); page = prevPage;
         int n = rows.Length;
 
@@ -420,6 +432,14 @@ public class MainMenu : MonoBehaviour
 
         float top = p == Page.Main ? 40f : 110f;
         float step = p == Page.Main ? -84f : -66f;
+        bool compact = IsTestPage(p);
+
+        if (compact)
+        {
+            // Çok satırlı test sayfaları: sıkı dizilim, kanji satırı yok.
+            step = n > 8 ? -56f : -64f;
+            top = (n - 1) * 0.5f * -step;
+        }
 
         for (int i = 0; i < n; i++)
         {
@@ -442,14 +462,17 @@ public class MainMenu : MonoBehaviour
             }
             else
             {
-                Text label = NewText("Label", row.transform, rows[i].label, 28, PaperDim, TextAnchor.MiddleLeft, fontBold);
-                Place(label.rectTransform, new Vector2(-250f, 8f), new Vector2(520f, 60f));
+                Text label = NewText("Label", row.transform, rows[i].label, compact ? 26 : 28, PaperDim, TextAnchor.MiddleLeft, fontBold);
+                Place(label.rectTransform, new Vector2(-250f, compact ? 0f : 8f), new Vector2(520f, 60f));
                 AddShadow(label.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -3f));
                 labelTexts[i] = label;
 
-                Text kj = NewText("Kanji", row.transform, rows[i].kanji, 20, PaperDim, TextAnchor.MiddleLeft, fontRegular);
-                Place(kj.rectTransform, new Vector2(-250f, -30f), new Vector2(520f, 30f));
-                kanjiTexts[i] = kj;
+                if (!compact)
+                {
+                    Text kj = NewText("Kanji", row.transform, rows[i].kanji, 20, PaperDim, TextAnchor.MiddleLeft, fontRegular);
+                    Place(kj.rectTransform, new Vector2(-250f, -30f), new Vector2(520f, 30f));
+                    kanjiTexts[i] = kj;
+                }
 
                 if (rows[i].kind == 1)
                 {
@@ -473,7 +496,7 @@ public class MainMenu : MonoBehaviour
                     Place(val.rectTransform, new Vector2(250f + Track * 0.5f + 80f, 0f), new Vector2(140f, 44f));
                     valueTexts[i] = val;
                 }
-                else if (rows[i].kind == 2)
+                else if (rows[i].kind == 2 || rows[i].kind == 3)
                 {
                     Text val = NewText("Value", row.transform, "", 28, Paper, TextAnchor.MiddleCenter, fontBold);
                     Place(val.rectTransform, new Vector2(250f, 0f), new Vector2(Track, 56f));
@@ -558,6 +581,10 @@ public class MainMenu : MonoBehaviour
             if (confirm || click)
                 ActivateMain(index);
         }
+        else if (IsTestPage(page))
+        {
+            UpdateTest(confirm, click);
+        }
         else
         {
             UpdateSettings(confirm, click);
@@ -573,7 +600,8 @@ public class MainMenu : MonoBehaviour
         if (pauseMode)
         {
             if (i == 0) Resume();
-            else if (i == 1) BuildPage(Page.Settings);
+            else if (i == 1) BuildPage(Page.Test);
+            else if (i == 2) BuildPage(Page.Settings);
             else
             {
                 GameSettings.Save();
@@ -712,11 +740,17 @@ public class MainMenu : MonoBehaviour
     {
         GameSettings.Save();
         BuildPage(Page.Main);
-        index = 1;
+        index = pauseMode ? 2 : 1;
     }
 
     private void RefreshValues()
     {
+        if (IsTestPage(page))
+        {
+            RefreshTestValues();
+            return;
+        }
+
         if (page != Page.Settings)
             return;
 
@@ -752,7 +786,9 @@ public class MainMenu : MonoBehaviour
     {
         float breathe = 0.85f + 0.15f * Mathf.Sin(Time.unscaledTime * 3f);
 
-        for (int i = 0; i < rows.Length; i++)
+        int cnt = Mathf.Min(rows.Length, labelTexts.Length);
+
+        for (int i = 0; i < cnt; i++)
         {
             bool sel = i == index;
 
@@ -782,6 +818,303 @@ public class MainMenu : MonoBehaviour
             Vector3 s = Vector3.one * breathe;
             diamondL.localScale = s;
             diamondR.localScale = s;
+        }
+    }
+
+    // =========================================================
+    // TEST SAYFALARI (duraklatma menüsü > TEST)
+    // =========================================================
+
+    private class TestRow
+    {
+        public string label;
+        public int kind;                 // 0 düğme, 1 kaydırıcı, 2 aç/kapa, 3 seçici
+        public System.Func<float> get;
+        public System.Action<float> set;
+        public float min, max, step = 0.05f;
+        public System.Func<float, string> fmt;
+        public System.Action click;
+        public System.Action<int> cycle;
+        public System.Func<string> text;
+    }
+
+    private System.Collections.Generic.List<TestRow> testRows = new System.Collections.Generic.List<TestRow>();
+    private Row[] testRowCache = new Row[0];
+    private int quickIdx = 3;
+
+    private static TimeOfDay Tod
+    {
+        get { return TimeOfDay.Instance != null ? TimeOfDay.Instance : FindFirstObjectByType<TimeOfDay>(); }
+    }
+
+    private static RainSystem Rain
+    {
+        get
+        {
+            if (RainSystem.Instance != null)
+                return RainSystem.Instance;
+
+            RainSystem r = FindFirstObjectByType<RainSystem>();
+            return r != null ? r : new GameObject("RainSystem").AddComponent<RainSystem>();
+        }
+    }
+
+    private static string Hm(float h)
+    {
+        int m = Mathf.RoundToInt(Mathf.Repeat(h, 24f) * 60f);
+        return (m / 60 % 24).ToString("00") + ":" + (m % 60).ToString("00");
+    }
+
+    private static TestRow Btn(string label, System.Action click)
+    {
+        return new TestRow { label = label, kind = 0, click = click };
+    }
+
+    private static TestRow Slider(string label, float min, float max, float step, System.Func<float> get, System.Action<float> set, System.Func<float, string> fmt)
+    {
+        return new TestRow { label = label, kind = 1, min = min, max = max, step = step, get = get, set = set, fmt = fmt };
+    }
+
+    private static TestRow Toggle(string label, System.Func<bool> get, System.Action<bool> set)
+    {
+        return new TestRow { label = label, kind = 2, get = () => get() ? 1f : 0f, set = v => set(v > 0.5f) };
+    }
+
+    private void BuildTestRows(Page p)
+    {
+        testRows.Clear();
+
+        if (player == null)
+            player = FindFirstObjectByType<PlayerController>();
+
+        switch (p)
+        {
+            case Page.Test:
+                testRows.Add(Btn("SAAT  /  GÖKYÜZÜ", () => BuildPage(Page.Time)));
+                testRows.Add(Btn("YAĞMUR  /  ŞİMŞEK", () => BuildPage(Page.Rain)));
+                testRows.Add(Btn("ARAÇLAR  (DUMMY ...)", () => BuildPage(Page.Tools)));
+                testRows.Add(Btn("GERİ", () => { BuildPage(Page.Main); index = 1; }));
+                break;
+
+            case Page.Time:
+                testRows.Add(Slider("SAAT", 0f, 24f, 0.25f,
+                    () => Tod != null ? Mathf.Repeat(Tod.hour, 24f) : 0f,
+                    v => { if (Tod != null) Tod.SetHour(Mathf.Min(v, 23.99f), true); },
+                    v => Hm(v)));
+
+                testRows.Add(Toggle("ZAMAN AKIŞI", () => Tod != null && Tod.autoCycle, v => { if (Tod != null) Tod.autoCycle = v; }));
+
+                testRows.Add(Slider("GÜN UZUNLUĞU (dk)", 0.5f, 30f, 0.5f,
+                    () => Tod != null ? Tod.dayLengthMinutes : 6f,
+                    v => { if (Tod != null) Tod.dayLengthMinutes = Mathf.Max(0.5f, v); },
+                    v => v.ToString("0.0") + " dk"));
+
+                testRows.Add(new TestRow
+                {
+                    label = "HAZIR AYAR  < >",
+                    kind = 3,
+                    cycle = d => { if (Tod != null) Tod.StepPreset(d); },
+                    text = () =>
+                    {
+                        TimeOfDay t = Tod;
+
+                        if (t == null || t.keys == null || t.keys.Count == 0)
+                            return "-";
+
+                        float best = 99f;
+                        string nm = "-";
+
+                        foreach (TimeOfDay.TodKey k in t.keys)
+                        {
+                            float dd = Mathf.Abs(Mathf.DeltaAngle(k.hour * 15f, t.hour * 15f)) / 15f;
+
+                            if (dd < best)
+                            {
+                                best = dd;
+                                nm = k.name;
+                            }
+                        }
+
+                        return nm;
+                    }
+                });
+
+                string[] qn = { "GECE YARISI", "ŞAFAK", "SABAH", "ÖĞLE", "İKİNDİ", "GÜN BATIMI", "ALACA", "GECE" };
+                float[] qh = { 0f, 5.5f, 8f, 12f, 16f, 18f, 19.5f, 22f };
+
+                testRows.Add(new TestRow
+                {
+                    label = "ANİ ZAMAN  < >",
+                    kind = 3,
+                    cycle = d =>
+                    {
+                        if (Tod == null)
+                            return;
+
+                        quickIdx = (quickIdx + d + qh.Length) % qh.Length;
+                        Tod.SetHour(qh[quickIdx], true);
+                    },
+                    text = () => qn[Mathf.Clamp(quickIdx, 0, qn.Length - 1)] + "  " + Hm(qh[Mathf.Clamp(quickIdx, 0, qh.Length - 1)])
+                });
+
+                testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
+                break;
+
+            case Page.Rain:
+                testRows.Add(Toggle("YAĞMUR", () => Rain.raining, v => Rain.raining = v));
+                testRows.Add(Slider("ŞİDDET", 0f, 1f, 0.05f, () => Rain.intensity, v => Rain.intensity = v, v => Mathf.RoundToInt(v * 100f) + "%"));
+                testRows.Add(Slider("ÇİZGİ UZUNLUĞU", 0.5f, 8f, 0.25f, () => Rain.streakLength, v => Rain.streakLength = v, v => v.ToString("0.0") + "x"));
+                testRows.Add(Slider("RÜZGÂR", -8f, 8f, 0.5f,
+                    () => Rain.windEnabled ? Rain.wind : 0f,
+                    v => { Rain.wind = v; Rain.windEnabled = Mathf.Abs(v) > 0.05f; },
+                    v => v.ToString("0.0")));
+                testRows.Add(Toggle("ARKA KATMAN", () => Rain.backLayer, v => Rain.backLayer = v));
+                testRows.Add(Toggle("ORTA KATMAN", () => Rain.midLayer, v => Rain.midLayer = v));
+                testRows.Add(Toggle("ÖN KATMAN", () => Rain.frontLayer, v => Rain.frontLayer = v));
+                testRows.Add(Toggle("SIÇRAMALAR",
+                    () => Rain.groundSplashes || Rain.waterSplashes || Rain.characterSplashes,
+                    v => { Rain.groundSplashes = v; Rain.waterSplashes = v; Rain.characterSplashes = v; }));
+                testRows.Add(Toggle("ŞİMŞEK", () => Rain.lightning, v => Rain.lightning = v));
+                testRows.Add(Btn("ŞİMŞEK ÇAKTIR", () => Rain.StartBolt()));
+                testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
+                break;
+
+            case Page.Tools:
+                testRows.Add(Btn("DUMMY OLUŞTUR", SpawnDummy));
+                testRows.Add(Btn("DUMMY'LERİ SİL", () =>
+                {
+                    foreach (TrainingDummy d in new System.Collections.Generic.List<TrainingDummy>(TrainingDummy.All))
+                        if (d != null)
+                            Destroy(d.gameObject);
+                }));
+                testRows.Add(Btn("DUMMY İSTATİSTİĞİNİ SIFIRLA", () =>
+                {
+                    foreach (TrainingDummy d in TrainingDummy.All)
+                        if (d != null)
+                            d.ResetStats();
+                }));
+                testRows.Add(Btn("CANI DOLDUR", () =>
+                {
+                    Health h = player != null ? player.GetComponent<Health>() : null;
+
+                    if (h != null)
+                        h.Heal(h.MaxHealth);
+                }));
+                testRows.Add(Slider("OYUN HIZI", 0.1f, 2f, 0.1f, () => prevTimeScale, v => prevTimeScale = Mathf.Max(0.05f, v), v => v.ToString("0.0") + "x"));
+                testRows.Add(Toggle("KAMERA NEFESİ",
+                    () => { RunCameraZoom z = FindFirstObjectByType<RunCameraZoom>(); return z != null && z.idleBreathing; },
+                    v => { RunCameraZoom z = FindFirstObjectByType<RunCameraZoom>(); if (z != null) z.idleBreathing = v; }));
+                testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
+                break;
+        }
+
+        testRowCache = new Row[testRows.Count];
+
+        for (int i = 0; i < testRows.Count; i++)
+            testRowCache[i] = new Row { label = testRows[i].label, kanji = "", kind = testRows[i].kind == 3 ? 2 : testRows[i].kind };
+    }
+
+    private void SpawnDummy()
+    {
+        if (player == null)
+            player = FindFirstObjectByType<PlayerController>();
+
+        Vector3 pos = Vector3.zero;
+
+        if (player != null)
+        {
+            // Oyuncunun baktığı yöne doğru ~4 birim ileriye.
+            float dir = player.transform.localScale.x < 0f ? -1f : 1f;
+            pos = player.transform.position + Vector3.right * 4f * dir;
+        }
+        else if (Camera.main != null)
+        {
+            pos = Camera.main.transform.position;
+        }
+
+        if (TrainingDummy.Spawn(pos) == null)
+            Debug.LogWarning("Dummy oluşturulamadı.");
+    }
+
+    private void UpdateTest(bool confirm, bool click)
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (page == Page.Test)
+            {
+                BuildPage(Page.Main);
+                index = 1;
+            }
+            else
+            {
+                BuildPage(Page.Test);
+            }
+
+            return;
+        }
+
+        if (index < 0 || index >= testRows.Count)
+            return;
+
+        int dir = 0;
+
+        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) dir = -1;
+        if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) dir = 1;
+
+        TestRow r = testRows[index];
+        int row = index;
+
+        switch (r.kind)
+        {
+            case 0:
+                if (confirm || click)
+                    r.click();
+                break;
+
+            case 1:
+                if (dir != 0)
+                    r.set(Mathf.Clamp(r.get() + dir * r.step, r.min, r.max));
+
+                DragSlider(row, v => r.set(v), r.min, r.max);
+                break;
+
+            case 2:
+                if (dir != 0 || confirm || click)
+                    r.set(r.get() > 0.5f ? 0f : 1f);
+                break;
+
+            case 3:
+                if (dir != 0)
+                    r.cycle(dir);
+                else if (confirm || click)
+                    r.cycle(1);
+                break;
+        }
+
+        // Sayfa değişmiş olabilir (BuildPage); değilse değerleri tazele.
+        if (index < testRows.Count && testRows[index] == r)
+            RefreshTestValues();
+    }
+
+    private void RefreshTestValues()
+    {
+        for (int i = 0; i < testRows.Count && i < valueTexts.Length; i++)
+        {
+            TestRow r = testRows[i];
+
+            if (r.kind == 1)
+            {
+                float v = r.get();
+                SetSlider(i, Mathf.InverseLerp(r.min, r.max, v), r.fmt != null ? r.fmt(v) : v.ToString("0.00"));
+            }
+            else if (r.kind == 2 && valueTexts[i] != null)
+            {
+                valueTexts[i].text = r.get() > 0.5f ? "AÇIK" : "KAPALI";
+            }
+            else if (r.kind == 3 && valueTexts[i] != null)
+            {
+                valueTexts[i].text = r.text != null ? r.text() : "";
+            }
         }
     }
 
