@@ -99,13 +99,13 @@
    "name": "coatF2",
    "parent": "coatF1",
    "x": 510,
-   "y": 780
+   "y": 808.0
   },
   {
    "name": "coatF_end",
    "parent": "coatF2",
    "x": 500,
-   "y": 935
+   "y": 1017.2
   },
   {
    "name": "coatB1",
@@ -117,19 +117,19 @@
    "name": "coatB2",
    "parent": "coatB1",
    "x": 700,
-   "y": 760
+   "y": 781.0
   },
   {
    "name": "coatB3",
    "parent": "coatB2",
    "x": 770,
-   "y": 840
+   "y": 889.0
   },
   {
    "name": "coatB_end",
    "parent": "coatB3",
    "x": 820,
-   "y": 910
+   "y": 983.5
   },
   {
    "name": "legF1",
@@ -265,14 +265,37 @@
    "hidden": false
   },
   {
+   "name": "coat_back",
+   "x": 556,
+   "y": 592,
+   "w": 283,
+   "h": 423,
+   "order": 4,
+   "runOrder": 4,
+   "actOrder": 4,
+   "bones": [
+    "coatB1",
+    "coatB2",
+    "coatB3",
+    "coatB_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.1,
+   "hidden": false,
+   "grid": [
+    12,
+    12
+   ]
+  },
+  {
    "name": "foot_B",
    "x": 578,
    "y": 1071,
    "w": 128,
    "h": 138,
-   "order": 4,
-   "runOrder": 4,
-   "actOrder": 4,
+   "order": 5,
+   "runOrder": 5,
+   "actOrder": 5,
    "bones": [
     "footB"
    ],
@@ -282,13 +305,13 @@
   },
   {
    "name": "shin_B",
-   "x": 560,
-   "y": 930,
-   "w": 104,
-   "h": 202,
-   "order": 5,
-   "runOrder": 5,
-   "actOrder": 5,
+   "x": 544,
+   "y": 914,
+   "w": 136,
+   "h": 218,
+   "order": 6,
+   "runOrder": 6,
+   "actOrder": 6,
    "bones": [
     "legB2"
    ],
@@ -298,13 +321,13 @@
   },
   {
    "name": "thigh_B",
-   "x": 548,
+   "x": 532,
    "y": 790,
-   "w": 128,
-   "h": 244,
-   "order": 6,
-   "runOrder": 6,
-   "actOrder": 6,
+   "w": 160,
+   "h": 260,
+   "order": 7,
+   "runOrder": 7,
+   "actOrder": 7,
    "bones": [
     "legB1"
    ],
@@ -318,9 +341,9 @@
    "y": 582,
    "w": 74,
    "h": 409,
-   "order": 7,
-   "runOrder": 7,
-   "actOrder": 7,
+   "order": 8,
+   "runOrder": 8,
+   "actOrder": 8,
    "bones": [
     "chest"
    ],
@@ -334,75 +357,11 @@
    "y": 597,
    "w": 182,
    "h": 253,
-   "order": 8,
-   "runOrder": 8,
-   "actOrder": 8,
-   "bones": [
-    "chest"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false
-  },
-  {
-   "name": "foot_F",
-   "x": 554,
-   "y": 1067,
-   "w": 120,
-   "h": 160,
    "order": 9,
    "runOrder": 9,
    "actOrder": 9,
    "bones": [
-    "footF"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false
-  },
-  {
-   "name": "shin_F",
-   "x": 536,
-   "y": 930,
-   "w": 104,
-   "h": 202,
-   "order": 10,
-   "runOrder": 10,
-   "actOrder": 10,
-   "bones": [
-    "legF2"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false
-  },
-  {
-   "name": "thigh_F",
-   "x": 524,
-   "y": 790,
-   "w": 128,
-   "h": 244,
-   "order": 11,
-   "runOrder": 11,
-   "actOrder": 11,
-   "bones": [
-    "legF1"
-   ],
-   "wPow": 4,
-   "wFall": 0.12,
-   "hidden": false
-  },
-  {
-   "name": "belt",
-   "x": 510,
-   "y": 775,
-   "w": 192,
-   "h": 75,
-   "order": 12,
-   "runOrder": 12,
-   "actOrder": 12,
-   "bones": [
-    "hip"
+    "chest"
    ],
    "wPow": 4,
    "wFall": 0.12,
@@ -413,10 +372,10 @@
    "x": 470,
    "y": 623,
    "w": 89,
-   "h": 317,
-   "order": 13,
-   "runOrder": 13,
-   "actOrder": 13,
+   "h": 401,
+   "order": 10,
+   "runOrder": 10,
+   "actOrder": 10,
    "bones": [
     "coatF1",
     "coatF2",
@@ -431,27 +390,68 @@
    ]
   },
   {
-   "name": "coat_back",
-   "x": 556,
-   "y": 592,
-   "w": 283,
-   "h": 341,
+   "name": "foot_F",
+   "x": 554,
+   "y": 1067,
+   "w": 120,
+   "h": 160,
+   "order": 11,
+   "runOrder": 11,
+   "actOrder": 11,
+   "bones": [
+    "footF"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false
+  },
+  {
+   "name": "shin_F",
+   "x": 520,
+   "y": 914,
+   "w": 136,
+   "h": 218,
+   "order": 12,
+   "runOrder": 12,
+   "actOrder": 12,
+   "bones": [
+    "legF2"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false
+  },
+  {
+   "name": "thigh_F",
+   "x": 508,
+   "y": 790,
+   "w": 160,
+   "h": 260,
+   "order": 13,
+   "runOrder": 13,
+   "actOrder": 13,
+   "bones": [
+    "legF1"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false
+  },
+  {
+   "name": "belt",
+   "x": 510,
+   "y": 775,
+   "w": 192,
+   "h": 75,
    "order": 14,
    "runOrder": 14,
    "actOrder": 14,
    "bones": [
-    "coatB1",
-    "coatB2",
-    "coatB3",
-    "coatB_end"
+    "hip"
    ],
    "wPow": 4,
-   "wFall": 0.1,
-   "hidden": false,
-   "grid": [
-    12,
-    12
-   ]
+   "wFall": 0.12,
+   "hidden": false
   },
   {
    "name": "katana",

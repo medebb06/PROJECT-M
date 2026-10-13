@@ -207,7 +207,7 @@ MonoBehaviour:
   forceRun: 0
   useProfileRun: 1
   useProfileJump: 1
-  runFolder: RonniRun
+  runFolder: RonniRunVivid
   runScale: 1
   idleFolder: RonniIdle
   idleScale: 1

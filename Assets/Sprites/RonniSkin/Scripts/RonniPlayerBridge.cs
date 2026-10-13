@@ -33,6 +33,10 @@ namespace RonniSkin
         public string idleFolder = "RonniIdle";
         [Tooltip("Idle çiziminin boyu (1 = Ronni ile aynı boy).")] public float idleScale = 1f;
         RonniSkinRig rigIdle; RonniClipPlayer playerIdle; Vector3 baseIdle = Vector3.one;
+        [Header("Yerinde zıplama (idle gövde + zıplama bacakları)")]
+        [Tooltip("Yatay hareket olmadan zıplarken kullanılan karma çizim (Resources/<klasör>, 'air' klibi). Boş = kapalı.")] public string standJumpFolder = "RonniJump";
+        [Tooltip("Zıplama anında yatay hız bundan küçükse 'yerinde zıplama' sayılır.")] public float standJumpMaxSpeed = 1.0f;
+        RonniSkinRig rigJump; RonniClipPlayer playerJump; Vector3 baseJump = Vector3.one; bool standJump;
         [Header("Bekleme (ateş böceği)")]
         [Tooltip("Idle'da hareketsiz kalınca arada bir elini uzatıp konan ateş böceğine bakar (RonniIdle 'wait' klibi).")] public bool fireflyWait = true;
         [Tooltip("Hareketsiz kaldıktan sonra bekleme animasyonunun başlaması için geçecek süre aralığı (sn).")] public Vector2 waitDelay = new Vector2(12f, 24f);
@@ -145,6 +149,18 @@ namespace RonniSkin
                     rigIdle.transform.localScale *= idleScale;
                     baseIdle = rigIdle.transform.localScale;
                     playerIdle.clip = "idle";
+                }
+            }
+
+            // Yerinde zıplama: idle gövdesi + zıplama bacakları
+            if (!string.IsNullOrEmpty(standJumpFolder))
+            {
+                MakeProfile(standJumpFolder, "Ronni_StandJump", out rigJump, out playerJump);
+                if (rigJump != null)
+                {
+                    rigJump.transform.localScale *= idleScale;
+                    baseJump = rigJump.transform.localScale;
+                    playerJump.clip = "air"; playerJump.autoBlink = true; playerJump.autoGlance = false;
                 }
             }
         }
@@ -281,6 +297,7 @@ namespace RonniSkin
                     if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigJump != null) rigJump.SetSorting(best.sortingLayerName, best.sortingOrder);
                 }
             }
             if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;
@@ -291,6 +308,7 @@ namespace RonniSkin
                 if (rigBR != null && rigBR != rigBL && rigBR.IsBuilt) rigBR.SetColor(originalSprite.color, true);
                 if (rigRun != null && rigRun.IsBuilt) rigRun.SetColor(originalSprite.color, true);
                 if (rigIdle != null && rigIdle.IsBuilt) rigIdle.SetColor(originalSprite.color, true);
+                if (rigJump != null && rigJump.IsBuilt) rigJump.SetColor(originalSprite.color, true);
             }
             // side-profile drawing: run (left/right rigs) and jump/air (left rig, katana hand hidden)
             if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
@@ -320,13 +338,20 @@ namespace RonniSkin
                 {
                     if (rigB != null) rigB.SetShown(false);
                     bool newJump = mode == 2 && bMode != 2;
+                    if (newJump)
+                    {
+                        float vx0 = player.rb != null ? Mathf.Abs(player.rb.linearVelocity.x) : 0f;
+                        standJump = rigJump != null && rigJump.IsBuilt && playerJump != null && playerJump.HasClip("air")
+                                    && vx0 < standJumpMaxSpeed && Mathf.Abs(player.moveInput) < 0.1f;
+                    }
                     bMode = mode; bRight = right;
                     rigB = right ? rigBR : rigBL; playerB = right ? playerBR : playerBL;
                     if ((mode == 1 || mode == 3 || (mode == 2 && playerRun != null && playerRun.HasClip("air_a"))) && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
+                    if (mode == 2 && standJump) { rigB = rigJump; playerB = playerJump; }
                     if (mode != 0)
                     {
                         if (newJump) jumpCount++;
-                        playerB.clip = mode == 3 ? "dash" : mode == 2 ? ((jumpCount % 2 == 1) ? "air_a" : "air_b") : "run";
+                        playerB.clip = mode == 3 ? "dash" : mode == 2 ? (standJump ? "air" : ((jumpCount % 2 == 1) ? "air_a" : "air_b")) : "run";
                         playerB.manual01 = -1f;
                         playerB.Restart(0f); rigB.SetShown(true);
                     }
@@ -406,6 +431,7 @@ namespace RonniSkin
             if (rigBR != null && rigBR != rigBL) rigBR.transform.localScale = visualId == 2 ? Vector3.Scale(baseBR, sc) : baseBR;
             if (rigRun != null) rigRun.transform.localScale = (visualId > 0 && rigB == rigRun) ? Vector3.Scale(baseRun, sc) : baseRun;
             if (rigIdle != null) rigIdle.transform.localScale = visualId <= 0 ? Vector3.Scale(baseIdle, sc) : baseIdle;
+            if (rigJump != null) rigJump.transform.localScale = (visualId > 0 && rigB == rigJump) ? Vector3.Scale(baseJump, sc) : baseJump;
         }
 
         void OnDisable()
