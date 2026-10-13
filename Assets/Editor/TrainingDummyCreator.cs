@@ -41,7 +41,7 @@ public static class TrainingDummyCreator
         root.layer = enemyLayer;
 
         // Görsel: gövde + baş (yerleşik beyaz sprite, gri ton).
-        Sprite sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+        Sprite sprite = TrainingDummy.GetCapsuleSprite();
 
         GameObject body = new GameObject("Body");
         body.transform.SetParent(root.transform, false);
@@ -58,7 +58,7 @@ public static class TrainingDummyCreator
         SpriteRenderer sr = body.AddComponent<SpriteRenderer>();
         sr.sprite = sprite;
         sr.drawMode = SpriteDrawMode.Simple;
-        sr.color = new Color(0.62f, 0.55f, 0.45f);
+        sr.color = new Color(0.82f, 0.7f, 0.52f);
         sr.sortingOrder = 5;
 
         // Çarpışma: oyuncu saldırısı bunu bulur.
@@ -69,6 +69,27 @@ public static class TrainingDummyCreator
         TrainingDummy dummy = root.AddComponent<TrainingDummy>();
         dummy.size = new Vector2(W, H);
         dummy.ApplySize();
+
+        // Düşman prefab'ından vuruş seslerini al (varsa).
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab"))
+        {
+            GameObject pf = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+
+            if (pf == null)
+                continue;
+
+            EnemyHitFeedback fb = pf.GetComponentInChildren<EnemyHitFeedback>(true);
+
+            if (fb == null)
+                continue;
+
+            if (fb.BalanceHitSounds != null && fb.BalanceHitSounds.Length > 0) dummy.balanceHitSounds = fb.BalanceHitSounds;
+            if (fb.HealthHitSounds != null && fb.HealthHitSounds.Length > 0) dummy.healthHitSounds = fb.HealthHitSounds;
+            if (fb.BalanceBreakSound != null) dummy.balanceBreakSound = fb.BalanceBreakSound;
+
+            if (dummy.balanceHitSounds != null && dummy.balanceHitSounds.Length > 0)
+                break;
+        }
 
         Selection.activeGameObject = root;
         EditorSceneManagerMarkDirty();

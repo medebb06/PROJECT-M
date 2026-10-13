@@ -19,6 +19,16 @@ public class TrainingDummy : MonoBehaviour
     [Header("Boyut (dünya birimi, genişlik x yükseklik)")]
     public Vector2 size = new Vector2(7.5f, 15f);
 
+    [Header("Görünüm")]
+    [Tooltip("Açık: gövde yüksek çözünürlüklü, yumuşak kenarlı kapsül sprite'ı olur.")]
+    public bool useCapsuleSprite = true;
+
+    [Header("Ses (boşsa sahnedeki/prefab'taki düşman sesleri kullanılır)")]
+    public AudioClip[] balanceHitSounds;
+    public AudioClip[] healthHitSounds;
+    public AudioClip balanceBreakSound;
+    [Range(0f, 1f)] public float hitVolume = 1f;
+
     [Header("Posture")]
     public float maxPosture = 100f;
     [Tooltip("Posture bu süre vurulmazsa azalmaya başlar.")]
@@ -102,6 +112,9 @@ public class TrainingDummy : MonoBehaviour
 
         SpriteRenderer sr = body.GetComponent<SpriteRenderer>();
 
+        if (sr != null && useCapsuleSprite)
+            sr.sprite = GetCapsuleSprite();
+
         Vector2 sp = sr != null && sr.sprite != null ? (Vector2)sr.sprite.bounds.size : Vector2.one;
 
         body.localScale = new Vector3(size.x / sp.x, size.y / sp.y, 1f);
@@ -122,6 +135,7 @@ public class TrainingDummy : MonoBehaviour
     private void Awake()
     {
         ApplySize();
+        SetupAudio();
 
         homePos = transform.position;
         homeScale = transform.localScale;
@@ -237,6 +251,15 @@ public class TrainingDummy : MonoBehaviour
         squash = Mathf.Min(1f, squash + 0.6f);
         flashUntil = Time.unscaledTime + flashTime;
 
+        // Ses (düşmanla aynı klipler).
+        if (wasBroken)
+            PlaySfx(healthHitSounds);
+        else
+            PlaySfx(balanceHitSounds);
+
+        if (brokeNow && balanceBreakSound != null)
+            PlaySfx(balanceBreakSound);
+
         // Vuruş efekti (normal düşmanla aynı CombatVFXManager hattı).
         if (CombatVFXManager.Instance == null)
             Debug.LogWarning("TrainingDummy: sahnede CombatVFXManager yok, impact VFX oynatılamaz.");
@@ -288,6 +311,136 @@ public class TrainingDummy : MonoBehaviour
             CameraShake.Instance.Shake(heavy ? cameraShake * 1.6f : cameraShake);
 
         RefreshText();
+    }
+
+    // =========================================================
+    // SES
+    // =========================================================
+
+    private AudioSource audioSrc;
+
+    private void SetupAudio()
+    {
+        audioSrc = GetComponent<AudioSource>();
+
+        if (audioSrc == null)
+            audioSrc = gameObject.AddComponent<AudioSource>();
+
+        audioSrc.playOnAwake = false;
+        audioSrc.loop = false;
+        audioSrc.spatialBlend = 0f;
+
+        bool need =
+            (balanceHitSounds == null || balanceHitSounds.Length == 0) ||
+            (healthHitSounds == null || healthHitSounds.Length == 0) ||
+            balanceBreakSound == null;
+
+        if (!need)
+            return;
+
+        // Sahnede / sonradan doğan düşmanlardan ödünç al.
+        EnemyHitFeedback[] fbs =
+            FindObjectsByType<EnemyHitFeedback>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < fbs.Length; i++)
+        {
+            EnemyHitFeedback f = fbs[i];
+
+            if ((balanceHitSounds == null || balanceHitSounds.Length == 0) && f.BalanceHitSounds != null && f.BalanceHitSounds.Length > 0)
+                balanceHitSounds = f.BalanceHitSounds;
+
+            if ((healthHitSounds == null || healthHitSounds.Length == 0) && f.HealthHitSounds != null && f.HealthHitSounds.Length > 0)
+                healthHitSounds = f.HealthHitSounds;
+
+            if (balanceBreakSound == null && f.BalanceBreakSound != null)
+                balanceBreakSound = f.BalanceBreakSound;
+
+            if (f.Source != null && audioSrc.outputAudioMixerGroup == null)
+                audioSrc.outputAudioMixerGroup = f.Source.outputAudioMixerGroup;
+        }
+    }
+
+    private void PlaySfx(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0)
+        {
+            // Düşman sonradan sahneye girmiş olabilir: bir kez daha dene.
+            if (Time.unscaledTime > nextAudioRetry)
+            {
+                nextAudioRetry = Time.unscaledTime + 2f;
+                SetupAudio();
+            }
+
+            return;
+        }
+
+        PlaySfx(clips[Random.Range(0, clips.Length)]);
+    }
+
+    private float nextAudioRetry;
+
+    private void PlaySfx(AudioClip clip)
+    {
+        if (clip == null || audioSrc == null)
+            return;
+
+        audioSrc.PlayOneShot(clip, hitVolume);
+    }
+
+    // =========================================================
+    // KAPSÜL SPRITE (yüksek çözünürlük, yumuşak kenar)
+    // =========================================================
+
+    private static Sprite capsuleSprite;
+
+    public static Sprite GetCapsuleSprite()
+    {
+        if (capsuleSprite != null)
+            return capsuleSprite;
+
+        const int W = 256;
+        const int H = 512;
+
+        Texture2D tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        tex.name = "DummyCapsule";
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        Color[] px = new Color[W * H];
+
+        float r = W * 0.5f - 3f;            // yarıçap (kenarda AA payı)
+        float cx = W * 0.5f;
+        float y0 = r + 3f;                  // alt yarım daire merkezi
+        float y1 = H - r - 3f;              // üst yarım daire merkezi
+
+        for (int y = 0; y < H; y++)
+        {
+            for (int x = 0; x < W; x++)
+            {
+                float cy = Mathf.Clamp(y, y0, y1);
+                float dx = x + 0.5f - cx;
+                float dy = y + 0.5f - cy;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+
+                float alpha = Mathf.Clamp01(r - d + 0.5f);
+
+                // Hafif silindir gölgesi (sol parlak, sağ koyu) + ince koyu kenar.
+                float nx = Mathf.Clamp(dx / r, -1f, 1f);
+                float shade = 1f - 0.22f * (nx * 0.5f + 0.5f);
+                float rim = Mathf.SmoothStep(0.9f, 1f, d / r);
+                shade *= 1f - 0.18f * rim;
+
+                px[y * W + x] = new Color(shade, shade, shade, alpha);
+            }
+        }
+
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+
+        // 1 x 2 birimlik sprite (ApplySize bunu size'a ölçekler).
+        capsuleSprite = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), W);
+
+        return capsuleSprite;
     }
 
     // =========================================================

@@ -29,6 +29,14 @@ public class EnemyHitFeedback : MonoBehaviour
     [SerializeField] private AudioClip blockSound;
     [SerializeField] private GameObject blockVFX;
 
+    // Dışarıdan (ör. TrainingDummy) aynı sesleri kullanmak için.
+    public AudioClip[] BalanceHitSounds => balanceHitSounds;
+    public AudioClip[] HealthHitSounds => healthHitSounds;
+    public AudioClip BalanceBreakSound => balanceBreakSound;
+    public AudioClip ParrySound => parrySound;
+    public AudioClip BlockSound => blockSound;
+    public AudioSource Source => audioSource;
+
     private void Awake()
     {
         if (audioSource == null)
