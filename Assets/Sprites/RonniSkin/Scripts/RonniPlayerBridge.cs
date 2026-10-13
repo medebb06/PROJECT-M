@@ -305,8 +305,8 @@ namespace RonniSkin
         PlayerPosture posture; int lastPosture; bool wasBroken; string defClip; float defStart;
         // --- parry / block (attack rig clips) ---
         [Header("Parry / Block (RonniAtk)")]
-        public float parryRaise3 = 0.10f, parryHold3 = 0.40f, parryReturn3 = 0.38f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
-        string defAtk; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
+        public float parryRaise5 = 0.07f, parryHold3 = 0.40f, parryReturn3 = 0.38f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
+        string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
         static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
@@ -357,7 +357,8 @@ namespace RonniSkin
             if (playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
             {
                 float dtd = Time.deltaTime;
-                if (defAtk != "parry" && oldSucc) { defParryFrom = defAtk == "block" ? 0.45f : 0f; defAtk = "parry"; defAtkT = 0f; defRel = false; }
+                bool succEdge = oldSucc && !wasOldSucc; wasOldSucc = oldSucc;
+                if (succEdge) { defParryFrom = defAtk == "parry" ? 0.62f : 0.72f; defAtk = "parry"; defAtkT = 0f; defRel = false; }
                 else if (defAtk == null && (blocking || parrying)) { defAtk = "block"; defAtkT = 0f; defRel = false; }
                 else if (defAtk == "block" && postureHit && (blocking || parrying)) blockKick = 1f;
                 if (defAtk != null)
@@ -365,8 +366,8 @@ namespace RonniSkin
                     defAtkT += dtd; blockKick = Mathf.Max(0f, blockKick - dtd / 0.25f);
                     if (defAtk == "parry")
                     {
-                        if (!defRel && defAtkT > parryRaise3 + parryHold3) { defRel = true; defRelT = 0f; }
-                        if (!defRel) defPhase = Mathf.Lerp(defParryFrom, 1f, Mathf.Clamp01(defAtkT / Mathf.Max(0.01f, parryRaise3)));
+                        if (!defRel && defAtkT > parryRaise5 + parryHold3) { defRel = true; defRelT = 0f; }
+                        if (!defRel) defPhase = Mathf.Lerp(defParryFrom, 1f, Mathf.Clamp01(defAtkT / Mathf.Max(0.01f, parryRaise5)));
                         else { defRelT += dtd; defPhase = 1f - Sm01(defRelT / Mathf.Max(0.01f, parryReturn3)); if (defRelT >= parryReturn3) defAtk = null; }
                     }
                     else
