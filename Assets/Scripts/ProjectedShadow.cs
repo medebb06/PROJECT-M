@@ -224,7 +224,7 @@ public class ProjectedShadow : MonoBehaviour
 
     private static bool Eligible(Renderer r)
     {
-        if (r.gameObject.name == ShadowName || r.gameObject.name == "GroundShadow")
+        if (r.gameObject.name.StartsWith("~") || r.gameObject.name == "GroundShadow")
             return false;
 
         if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer)

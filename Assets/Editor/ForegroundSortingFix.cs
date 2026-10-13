@@ -49,7 +49,7 @@ public static class ForegroundSortingFix
 
         // ---- ön plan sprite'larını topla ----
         HashSet<SpriteRenderer> set = new HashSet<SpriteRenderer>();
-        SpriteRenderer[] all = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        SpriteRenderer[] all = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
 
         for (int i = 0; i < all.Length; i++)
         {

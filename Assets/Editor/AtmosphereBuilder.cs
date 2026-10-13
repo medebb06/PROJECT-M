@@ -82,6 +82,7 @@ public static class AtmosphereBuilder
         Sprite ray = LoadSprite("light_ray.png", FilterMode.Bilinear);
         Sprite fog = LoadSprite("fog_band.png", FilterMode.Bilinear);
         Sprite blob = LoadSprite("shadow_blob.png", FilterMode.Bilinear);
+        Sprite groundLight = LoadSprite("ground_light.png", FilterMode.Bilinear);
 
         if (sky == null || moon == null || glow == null || horizon == null || ray == null || fog == null || blob == null)
         {
@@ -163,7 +164,7 @@ public static class AtmosphereBuilder
         Spr(horizonAnchor, "Fog Near", fog, mUnlit, new Color(0.55f, 0.50f, 0.46f, 0.30f), OrderFogNear, new Vector2(0f, -viewH * 0.17f), new Vector2(viewW * 3f, viewH * 0.18f));
 
         // Yerde ışık lekesi
-        Spr(horizonAnchor, "Ground Light", glow, mAdd, GroundLightColor, OrderGroundGlow, GroundLightPos(viewH), GroundLightSize(viewW, viewH));
+        Spr(horizonAnchor, "Ground Light", groundLight != null ? groundLight : glow, mAdd, GroundLightColor, OrderGroundGlow, GroundLightPos(viewH), GroundLightSize(viewW, viewH));
 
         // Toz
         CreateDust(skyAnchor, glow, viewW, viewH);
@@ -179,6 +180,7 @@ public static class AtmosphereBuilder
         // ---- 4. karakter gölgeleri ----
         AddShadows(blob, mUnlit, restore);
         AddTreeShadows(restore);
+        AddCharacterRims(restore);
 
         // ---- 5. global ışık ----
         TuneGlobalLight(restore);
@@ -579,7 +581,7 @@ public static class AtmosphereBuilder
         Debug.Log(log.ToString() + "Gölgeler Play'de görünür.");
     }
 
-    // Yerdeki ışık: ilk halindeki yumuşak leke, yatayda daha geniş, dikeyde biraz daha yüksek.
+    // Yerdeki ışık: üstü ilk halindeki genişlikte, tabanı aşağı doğru yayılan yumuşak leke (ground_light.png).
     static readonly Color GroundLightColor = new Color(1f, 0.78f, 0.55f, 0.2f);
     static Vector2 GroundLightPos(float viewH) { return new Vector2(0f, -viewH * 0.24f); }
     static Vector2 GroundLightSize(float viewW, float viewH) { return new Vector2(viewW * 1.6f, viewH * 0.2f); }
@@ -597,7 +599,7 @@ public static class AtmosphereBuilder
             return;
         }
 
-        Sprite horizon = LoadSprite("glow_soft.png", FilterMode.Bilinear);
+        Sprite horizon = LoadSprite("ground_light.png", FilterMode.Bilinear);
         SpriteRenderer sr = t.GetComponent<SpriteRenderer>();
 
         if (sr == null || horizon == null)
@@ -637,6 +639,70 @@ public static class AtmosphereBuilder
         }
 
         return null;
+    }
+
+    // Karakterlerin dış kenarına arkadan gelen sıcak ışık.
+    static void AddCharacterRims(AtmosphereRestoreData restore)
+    {
+        Shader sh = Shader.Find("ProjectM/CharacterRim");
+
+        if (sh == null)
+        {
+            Debug.LogError("Atmosphere: ProjectM/CharacterRim shader bulunamadı (derleme hatası?).");
+            return;
+        }
+
+        EnsureFolder(MatDir);
+        Material mat = GetMat("M_CharacterRim", sh, null);
+        int n = 0;
+
+        foreach (Transform o in ShadowOwners())
+        {
+            if (o == null || o.GetComponent<CharacterRim>() != null)
+                continue;
+
+            CharacterRim cr = Undo.AddComponent<CharacterRim>(o.gameObject);
+            cr.rimMaterial = mat;
+
+            restore.addedComponents.Add(cr);
+            n++;
+        }
+
+        if (log != null)
+            log.AppendLine("Karakter kenar ışığı: " + n + " obje.");
+    }
+
+    [MenuItem("Tools/Lighting/Add Character Rim Light")]
+    public static void AddCharacterRimsMenu()
+    {
+        if (Application.isPlaying)
+        {
+            Debug.LogWarning("Atmosphere: Play modunda çalışmaz.");
+            return;
+        }
+
+        GameObject atmos = GameObject.Find(AtmosName);
+        AtmosphereRestoreData restore = atmos != null ? atmos.GetComponent<AtmosphereRestoreData>() : null;
+
+        if (restore == null)
+        {
+            Debug.LogWarning("Atmosphere kurulu değil. Önce Tools > Lighting > Build Moonlit Atmosphere.");
+            return;
+        }
+
+        log = new StringBuilder("KARAKTER KENAR IŞIĞI\n");
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("Add Character Rim Light");
+        int g = Undo.GetCurrentGroup();
+
+        AddCharacterRims(restore);
+
+        EditorUtility.SetDirty(restore);
+        Undo.CollapseUndoOperations(g);
+        EditorSceneManager.MarkSceneDirty(atmos.scene);
+
+        Debug.Log(log.ToString() + "Kenar ışığı Play'de görünür.");
     }
 
     static void CollectNpc(Transform t, List<Transform> owners)
