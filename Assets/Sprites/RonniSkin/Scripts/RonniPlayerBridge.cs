@@ -307,13 +307,14 @@ namespace RonniSkin
         [Header("Parry / Block (RonniAtk)")]
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
+        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.6f; float chiburiT = -1f;
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
         static float Sm01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
         void StartDef(string c) { if (anim.HasClip(c)) { defClip = c; defStart = Time.time; } }
         void UpdateCombat()
         {
             atkClip = null;
-            if (player.isDashing || (combat != null && combat.IsAttacking)) defAtk = null;   // saldırı / dash savunma animasyonunu keser
+            if (player.isDashing || (combat != null && combat.IsAttacking)) { defAtk = null; chiburiT = -1f; }   // saldırı / dash savunma animasyonunu keser
             // ---- dash: quick low lunge, everything streams back ----
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
@@ -385,7 +386,7 @@ namespace RonniSkin
                         else { defRelT += dtd; defPhase = Mathf.Lerp(defFrom, 0f, Sm01(defRelT / Mathf.Max(0.01f, blockReturn2))); if (defRelT >= blockReturn2) defAtk = null; }
                     }
                 }
-                if (defAtk != null) { anim.swordReady = true; shClip = null; return; }
+                if (defAtk != null) { chiburiT = -1f; anim.swordReady = true; shClip = null; return; }
             }
             else defAtk = null;
             if (defClip != null || blocking || parrying) { anim.swordReady = true; shClip = null; }
@@ -398,6 +399,18 @@ namespace RonniSkin
             if (blocking || parrying) { anim.SetAction("block", Time.time); return; }
 
             // ---- sheathe / draw on key (grounded, idle) ----
+            // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
+            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && playerAtk != null && playerAtk.HasClip("chiburi")) chiburiT = 0f;
+            if (chiburiT >= 0f)
+            {
+                if (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded) chiburiT = -1f;
+                else
+                {
+                    chiburiT += Time.deltaTime;
+                    if (chiburiT >= chiburiDur) { chiburiT = -1f; anim.swordReady = false; }
+                    else { anim.swordReady = true; shClip = null; return; }
+                }
+            }
             if (shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.HasClip("sheathe") && anim.HasClip("unsheathe"))
             {
                 shClip = anim.swordReady ? "sheathe" : "unsheathe"; shStart = Time.time;
@@ -518,14 +531,16 @@ namespace RonniSkin
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
                     bool atkOn = mode == 0 && (atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk != null && playerAtk.HasClip(atkClip);
-                    bool dOn = mode == 0 && defAtk != null && atkClip == null && playerAtk != null && playerAtk.HasClip(defAtk);
+                    string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
+                    float dPh = defAtk != null ? defPhase : Mathf.Clamp01(chiburiT / Mathf.Max(0.1f, chiburiDur));
+                    bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
                     if (dOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                         if (!defWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true);
                         defWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; atkWasOn = false;
-                        rigAtk.SetShown(true); playerAtk.manual01 = Mathf.Clamp01(defPhase);
-                        playerAtk.clip = defAtk; rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
+                        rigAtk.SetShown(true); playerAtk.manual01 = dPh;
+                        playerAtk.clip = dClip; rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
                     }
                     else if (atkOn)
                     {
