@@ -734,7 +734,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -2059,6 +2059,15 @@ MonoBehaviour:
   fullSpeed: 8
   smoothIn: 0.9
   smoothOut: 0.6
+  idleDelay: 6
+  breathFadeIn: 3.5
+  breathFadeOut: 0.7
+  idleZoomIn: 0.07
+  breathZoomWobble: 0.006
+  breathPeriod: 4.5
+  swayAmount: {x: 0.1, y: 0.07}
+  swayRoll: 0.35
+  idleBreathing: 1
   showDebug: 1
   status: 
 --- !u!1 &600068899
@@ -2545,7 +2554,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TimeOfDay
   hour: 23
   autoCycle: 1
-  dayLengthMinutes: 5
+  dayLengthMinutes: 25
   transitionSpeed: 8
   hotkeys: 1
   sunrise: 6
@@ -3514,7 +3523,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &713646142
 AudioSource:
   m_ObjectHideFlags: 0
@@ -14149,6 +14158,85 @@ MonoBehaviour:
   sway: 0.04
   swaySpeed: 0.35
   angleSway: 2.5
+--- !u!1 &1858287305
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1858287307}
+  - component: {fileID: 1858287306}
+  m_Layer: 0
+  m_Name: RainSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1858287306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1858287305}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b93e8ee3ca6d0de42bf533ec344102cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RainSystem
+  raining: 1
+  backLayer: 1
+  midLayer: 1
+  frontLayer: 1
+  groundSplashes: 1
+  waterSplashes: 1
+  characterSplashes: 1
+  windEnabled: 1
+  lightning: 1
+  lightningLight: 1
+  lightningWhiteFlash: 1
+  thunder: 1
+  intensity: 0.8
+  fadeTime: 3
+  hotkeys: 1
+  backAmount: 0.1
+  midAmount: 0.1
+  frontAmount: 0.1
+  streakLength: 8
+  wind: -2.5
+  windGust: 1.2
+  backOrder: -2
+  midOrder: 300
+  frontOrder: 520
+  splashOrder: 310
+  rainColor: {r: 0.74, g: 0.84, b: 1, a: 1}
+  splashRate: 26
+  playerSplashRate: 9
+  waterRippleBoost: 3
+  lightningInterval: {x: 7, y: 18}
+  flashBoost: 2.2
+  whiteFlash: 0.14
+  thunderShake: 0.35
+  thunderSounds: []
+  thunderVolume: 1
+--- !u!4 &1858287307
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1858287305}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1864831967
 GameObject:
   m_ObjectHideFlags: 0
@@ -15931,3 +16019,4 @@ SceneRoots:
   - {fileID: 2041453754}
   - {fileID: 447081945}
   - {fileID: 627874780}
+  - {fileID: 1858287307}
