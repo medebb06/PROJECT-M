@@ -89,7 +89,7 @@ public class AtmosphereDust : MonoBehaviour
         vel.space = ParticleSystemSimulationSpace.World;
         vel.x = new ParticleSystem.MinMaxCurve(drift.x * 0.4f, drift.x * 1.4f);
         vel.y = new ParticleSystem.MinMaxCurve(-0.03f + drift.y, 0.08f + drift.y);
-        vel.z = 0f;
+        vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);   // x/y/z hepsi aynı modda (iki sabit) olmalı
 
         var nz = ps.noise;
         nz.enabled = true;

@@ -164,7 +164,12 @@ namespace RonniSkin
                 float f = Mathf.Clamp01(t / c.duration) * (c.frames - 1); i0 = Mathf.Min(Mathf.FloorToInt(f), c.frames - 1);
                 i1 = Mathf.Min(i0 + 1, c.frames - 1); u = f - i0;
             }
-            k = RT(Mathf.Lerp(tr.r[i0], tr.r[i1], u), Mathf.Lerp(tr.x[i0], tr.x[i1], u), Mathf.Lerp(tr.y[i0], tr.y[i1], u));
+            // Dizi frames sayısından kısaysa (eksik / uyumsuz klip verisi) taşmasın.
+            if (tr.r == null || tr.x == null || tr.y == null || tr.r.Length == 0 || tr.x.Length == 0 || tr.y.Length == 0) return true;
+            int a0 = Mathf.Min(i0, tr.r.Length - 1), a1 = Mathf.Min(i1, tr.r.Length - 1);
+            int x0 = Mathf.Min(i0, tr.x.Length - 1), x1 = Mathf.Min(i1, tr.x.Length - 1);
+            int y0 = Mathf.Min(i0, tr.y.Length - 1), y1 = Mathf.Min(i1, tr.y.Length - 1);
+            k = RT(Mathf.Lerp(tr.r[a0], tr.r[a1], u), Mathf.Lerp(tr.x[x0], tr.x[x1], u), Mathf.Lerp(tr.y[y0], tr.y[y1], u));
             return true;
         }
 

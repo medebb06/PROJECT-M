@@ -191,7 +191,7 @@ public class WaterSurface : MonoBehaviour
         if (rt == null || rt.width != w || rt.height != h)
         {
             if (rt != null) { rt.Release(); DestroyImmediate(rt); }
-            rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32) { name = "WaterReflection", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { name = "WaterReflection", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
             rt.Create();
         }
 
