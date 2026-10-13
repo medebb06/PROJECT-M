@@ -207,20 +207,8 @@ public class SkyBackdrop : MonoBehaviour
 
     private int WantedSky()
     {
-        RunManager run = RunManager.Instance;
-
-        if (run == null || run.State == RunState.Lobby)
-            return lobbySky;
-
-        if (bossSky >= 0 && run.CurrentRoom == RoomType.Boss)
-            return bossSky;
-
-        if (skyForAct == null || skyForAct.Length == 0)
-            return 0;
-
-        int act = Mathf.Clamp(run.Act, 1, skyForAct.Length);
-
-        return skyForAct[act - 1];
+        // Run sistemi kaldırıldı: tek gökyüzü.
+        return lobbySky;
     }
 
     private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
