@@ -90,7 +90,9 @@ public class RainSystem : MonoBehaviour
     [Header("Yağmur sesi")]
     [Tooltip("Döngüde çalan yağmur ses dosyası. Boşsa (Editor'de) Assets/Sounds'taki '10 Minutes of Rain...' otomatik bulunur.")]
     public AudioClip rainLoop;
-    [Range(0f, 1f)] public float rainVolume = 0.6f;
+    [Range(0f, 1f)] public float rainVolume = 1f;
+    [Tooltip("Kayıt kısıksa: aynı sesi ikinci bir kaynaktan da çalar (+6 dB, yaklaşık 2 kat gürültü).")]
+    public bool rainBoost = true;
 
     [Header("Şimşek")]
     public Vector2 lightningInterval = new Vector2(7f, 18f);
@@ -128,7 +130,7 @@ public class RainSystem : MonoBehaviour
     private float pendingThunderAt = -1f;
     private SpriteRenderer flashSr;
     private AudioSource audioSrc;
-    private AudioSource rainSrc;
+    private AudioSource rainSrc, rainSrc2;
     private float baseRipple = -1f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -169,7 +171,8 @@ public class RainSystem : MonoBehaviour
         if (splashPs != null) Destroy(splashPs.gameObject);
         if (flashSr != null) Destroy(flashSr.gameObject);
         if (rainSrc != null) Destroy(rainSrc);
-        rainSrc = null;
+        if (rainSrc2 != null) Destroy(rainSrc2);
+        rainSrc = rainSrc2 = null;
 
         back = mid = front = null;
         splashPs = null;
@@ -351,6 +354,14 @@ public class RainSystem : MonoBehaviour
         rainSrc.volume = 0f;
         rainSrc.ignoreListenerPause = false;
 
+        rainSrc2 = gameObject.AddComponent<AudioSource>();
+        rainSrc2.playOnAwake = false;
+        rainSrc2.loop = true;
+        rainSrc2.spatialBlend = 0f;
+        rainSrc2.volume = 0f;
+        rainSrc2.priority = 0;
+        rainSrc.priority = 0;
+
         if (rainLoop == null)
             Debug.LogWarning("RainSystem: yağmur sesi bulunamadı. RainSystem'in 'Rain Loop' alanına klibi ata (Tools > Rain > Add Rain System To Scene bunu otomatik yapar).");
     }
@@ -392,9 +403,19 @@ public class RainSystem : MonoBehaviour
             rainSrc.clip = rainLoop;
         }
 
-        float target = rainSound && rainLoop != null ? level * rainVolume : 0f;
+        if (rainSrc2 != null && rainSrc2.clip != rainLoop)
+        {
+            rainSrc2.Stop();
+            rainSrc2.clip = rainLoop;
+        }
+
+        // Hafif yağmurda bile duyulsun: şiddet kareköküyle ölçeklenir.
+        float target = rainSound && rainLoop != null ? Mathf.Sqrt(level) * rainVolume : 0f;
 
         rainSrc.volume = Mathf.MoveTowards(rainSrc.volume, target, Time.unscaledDeltaTime * 0.6f);
+
+        if (rainSrc2 != null)
+            rainSrc2.volume = rainBoost ? rainSrc.volume : 0f;
 
         if (rainSrc.volume > 0.003f)
         {
@@ -403,10 +424,24 @@ public class RainSystem : MonoBehaviour
                 rainSrc.time = Random.Range(0f, Mathf.Max(0f, rainLoop.length - 1f)); // her seferinde farklı yerden
                 rainSrc.Play();
             }
+
+            if (rainSrc2 != null)
+            {
+                if (rainBoost && !rainSrc2.isPlaying && rainLoop != null)
+                {
+                    rainSrc2.time = rainSrc.time;
+                    rainSrc2.Play();
+                }
+                else if (!rainBoost && rainSrc2.isPlaying)
+                {
+                    rainSrc2.Stop();
+                }
+            }
         }
-        else if (rainSrc.isPlaying)
+        else
         {
-            rainSrc.Stop();
+            if (rainSrc.isPlaying) rainSrc.Stop();
+            if (rainSrc2 != null && rainSrc2.isPlaying) rainSrc2.Stop();
         }
     }
 

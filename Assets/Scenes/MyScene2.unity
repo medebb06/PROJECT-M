@@ -2533,6 +2533,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1858287307}
   - {fileID: 1215873781}
   - {fileID: 1426343561}
   - {fileID: 1429516889}
@@ -14203,22 +14204,23 @@ MonoBehaviour:
   intensity: 0.8
   fadeTime: 3
   hotkeys: 1
-  backAmount: 0.1
-  midAmount: 0.1
-  frontAmount: 0.1
+  backAmount: 0.6
+  midAmount: 0.5
+  frontAmount: 0.4
   streakLength: 8
-  wind: -2.5
+  wind: -25
   windGust: 1.2
   backOrder: -2
   midOrder: 300
   frontOrder: 520
   splashOrder: 310
-  rainColor: {r: 0.74, g: 0.84, b: 1, a: 1}
-  splashRate: 103.1
+  rainColor: {r: 0.9103774, g: 0.9443253, b: 1, a: 1}
+  splashRate: 50
   playerSplashRate: 50
   waterRippleBoost: 3
-  rainLoop: {fileID: 0}
-  rainVolume: 0.6
+  rainLoop: {fileID: 8300000, guid: 068c1dc7fe3aec746aba564d847eae08, type: 3}
+  rainVolume: 0.25
+  rainBoost: 1
   lightningInterval: {x: 7, y: 18}
   flashBoost: 2.2
   whiteFlash: 0.14
@@ -14233,12 +14235,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1858287305}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 627874780}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1864831967
 GameObject:
@@ -16022,4 +16024,3 @@ SceneRoots:
   - {fileID: 2041453754}
   - {fileID: 447081945}
   - {fileID: 627874780}
-  - {fileID: 1858287307}
