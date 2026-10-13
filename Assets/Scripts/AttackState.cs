@@ -149,8 +149,7 @@ public class AttackState : ICombatState
         // COLLISION CHECK
         // =====================================================
 
-        Collider2D playerCollider =
-            player.GetComponent<Collider2D>();
+        Collider2D playerCollider = player.col;
 
         if (
             playerCollider != null &&
@@ -389,6 +388,24 @@ public class AttackState : ICombatState
         {
             if (h == null)
                 continue;
+
+            // Antrenman dummy'si (ölmez, geri bildirim verir).
+            if (
+                TrainingDummy.TryHit(
+                    h,
+                    DamageSource.Attack,
+                    step,
+                    combat.GetBalanceDamage(step),
+                    combat.attackHealthDamage,
+                    dir,
+                    (Vector3)h.ClosestPoint(boxCenter),
+                    false
+                )
+            )
+            {
+                hitSomething = true;
+                continue;
+            }
 
             EnemyController enemy =
                 h.GetComponentInParent<EnemyController>();

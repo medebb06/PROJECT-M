@@ -213,6 +213,10 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<Collider2D>();
 
+        // Gövde collider'ı çocuk objedeyse (ör. model altında) onu kullan.
+        if (col == null)
+            col = FindBodyCollider();
+
         if (rb == null)
             Debug.LogError(
                 "PLAYER CONTROLLER: Rigidbody2D bulunamadı!"
@@ -496,9 +500,29 @@ public class PlayerController : MonoBehaviour
         movement.ResetAirData();
     }
 
+    // Kökte collider yoksa: önce CapsuleCollider2D, sonra trigger olmayan ilk collider.
+    private Collider2D FindBodyCollider()
+    {
+        Collider2D[] all = GetComponentsInChildren<Collider2D>();
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] is CapsuleCollider2D && all[i].enabled)
+                return all[i];
+        }
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i].enabled && !all[i].isTrigger)
+                return all[i];
+        }
+
+        return null;
+    }
+
     public void SpawnDust()
     {
-        Collider2D col = GetComponent<Collider2D>();
+        Collider2D col = this.col;
 
         Vector3 feet =
             col != null

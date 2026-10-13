@@ -12,6 +12,8 @@ public class DashState : IPlayerState
     private float fxTimer;
 
     private int originalLayer;
+    private GameObject colObject;
+    private int colOriginalLayer;
 
     public DashState(PlayerController player, PlayerStateMachine sm)
     {
@@ -68,6 +70,17 @@ public class DashState : IPlayerState
         if (dashLayer >= 0)
         {
             player.gameObject.layer = dashLayer;
+
+            // Gövde collider'ı çocuk objedeyse onun layer'ı da değişmeli,
+            // yoksa dash sırasında düşmanlara çarpar.
+            colObject = null;
+
+            if (player.col != null && player.col.gameObject != player.gameObject)
+            {
+                colObject = player.col.gameObject;
+                colOriginalLayer = colObject.layer;
+                colObject.layer = dashLayer;
+            }
         }
         else
         {
@@ -97,6 +110,12 @@ public class DashState : IPlayerState
 
         // restore layer
         player.gameObject.layer = originalLayer;
+
+        if (colObject != null)
+        {
+            colObject.layer = colOriginalLayer;
+            colObject = null;
+        }
 
         player.dashCooldownTimer = player.dashCooldown;
 

@@ -167,6 +167,24 @@ public class AirAttackState : ICombatState
             if (h == null)
                 continue;
 
+            // Antrenman dummy'si (ölmez, geri bildirim verir).
+            if (
+                TrainingDummy.TryHit(
+                    h,
+                    DamageSource.Attack,
+                    step,
+                    Mathf.Max(1, Mathf.RoundToInt(combat.GetBalanceDamage(1) * (down ? combat.downAttackBalanceMultiplier : 1f))),
+                    combat.attackHealthDamage,
+                    dir,
+                    (Vector3)h.ClosestPoint(center),
+                    down
+                )
+            )
+            {
+                hitSomething = true;
+                continue;
+            }
+
             EnemyController enemy = h.GetComponentInParent<EnemyController>();
 
             if (enemy == null || enemy.IsDead || !processed.Add(enemy))
