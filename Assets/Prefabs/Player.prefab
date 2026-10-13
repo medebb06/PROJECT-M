@@ -199,15 +199,20 @@ MonoBehaviour:
   originalSprite: {fileID: 0}
   hideOriginal: 1
   matchOriginalSize: 1
-  sizeMultiplier: 1
+  sizeMultiplier: 3
   offset: {x: 0, y: 0}
   mirrorSpriteColor: 1
-  sheatheKey: 114
+  sheatheKey: 9
   startDrawn: 1
   forceRun: 0
   useProfileRun: 1
   useProfileJump: 1
+  runFolder: RonniRun
+  runScale: 1
   airVelocityRange: 12
+  dashRunGrace: 0.25
+  dashDustEnabled: 1
+  dashTrailEndFrac: 0.75
   switchPopTime: 0.11
   landTime: 0.16
   landSquash: 0.12
@@ -386,6 +391,9 @@ GameObject:
   - component: {fileID: 2422139590447337524}
   - component: {fileID: 414704846381954979}
   - component: {fileID: 9135974849126324683}
+  - component: {fileID: 1528681859535128441}
+  - component: {fileID: 2029669792163037182}
+  - component: {fileID: 4567664620489053535}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -1156,3 +1164,70 @@ CapsuleCollider2D:
   m_Offset: {x: -0.019796133, y: 1.8339882}
   m_Size: {x: 2.288279, y: 3.170639}
   m_Direction: 0
+--- !u!114 &1528681859535128441
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7819838104998345150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f85489ff862666f42a9dadb68ffde8e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectedShadow
+  shadowMaterial: {fileID: 2100000, guid: af728e06b60392046901505551293f5b, type: 2}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 512
+  sortingOrder: 15
+  opacity: 0.55
+  length: 0.75
+  skewPerUnit: 0.06
+  maxSkew: 0.9
+  maxJumpHeight: 5
+--- !u!114 &2029669792163037182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7819838104998345150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f2ce96e36fd37c488d443605ae451c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
+  rimMaterial: {fileID: 2100000, guid: 44fe689319bc6ea438390121bdb291b3, type: 2}
+  color: {r: 0.62, g: 0.8, b: 1.15, a: 1}
+  innerWidth: 0.06
+  innerIntensity: 1.2
+  outerWidth: 0.13
+  outerIntensity: 0.4
+  upBias: 0.8
+  moonRim: 1
+  moonColor: {r: 0.55, g: 0.72, b: 1, a: 1}
+  moonWidth: 0.05
+  moonIntensity: 1
+--- !u!114 &4567664620489053535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7819838104998345150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b86e7cbf86c2014a98a38974ca75d7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterBackdrop
+  glowSprite: {fileID: 21300000, guid: c5867b4cc66c3a34d9871dc56576d972, type: 3}
+  additiveMaterial: {fileID: 2100000, guid: c86c61a676ec6b84d96d1590b8a29ad0, type: 2}
+  color: {r: 1, g: 1, b: 1, a: 1}
+  intensity: 0.1
+  size: {x: 7.5, y: 8.5}
+  offset: {x: 0, y: 0.2}
+  breathe: 0.06
+  breatheSpeed: 0.6
+  followSpeed: 14
+  orderBelow: 12
