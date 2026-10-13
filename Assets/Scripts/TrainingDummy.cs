@@ -280,6 +280,10 @@ public class TrainingDummy : MonoBehaviour
 
         HitStop.Request(heavy ? hitStopHeavy : hitStopNormal);
 
+        // Su varsa vuruşta halka + damla.
+        if (WaterSurface.Instance != null)
+            WaterSurface.Instance.Impact(transform.position.x, heavy ? 1f : 0.5f);
+
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(heavy ? cameraShake * 1.6f : cameraShake);
 
