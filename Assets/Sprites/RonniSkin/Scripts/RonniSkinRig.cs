@@ -17,7 +17,7 @@ namespace RonniSkin
         public Vector2Int skinGrid = new Vector2Int(8, 14);
 
         [Serializable] class BoneData { public string name; public string parent; public float x; public float y; }
-        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public float actOrder = -1f; public bool hidden; public int[] grid; }
+        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public float actOrder = -1f; public bool hidden; public int[] grid; public float pinOuter = -1f; public float pinInner = -1f; public float pinPow = 1.2f; }
         [Serializable] class RigData { public BoneData[] bones; public PartData[] parts; public float[] origin; public float heightPx; }
 
         public readonly List<RonniSoftPart> parts = new List<RonniSoftPart>();
@@ -105,6 +105,7 @@ namespace RonniSkin
                 sp.Init(this, tex, mat, bl.ToArray(), min, max,
                         skinned ? (pd.grid != null && pd.grid.Length == 2 ? pd.grid[0] : skinGrid.x) : 1, skinned ? (pd.grid != null && pd.grid.Length == 2 ? pd.grid[1] : skinGrid.y) : 1,
                         sortingLayerName, sortingOrderOffset + pd.order * 10, pd.wPow > 0 ? pd.wPow : 4f, pd.wFall > 0 ? pd.wFall : 0.12f);
+                if (skinned && pd.pinOuter >= 0f && pd.pinInner >= 0f) sp.SetPin(ToLocal(pd.pinOuter, 0f).x, ToLocal(pd.pinInner, 0f).x, pd.pinPow);
                 if (pd.hidden) sp.SetVisible(false);
             }
             IsBuilt = true;

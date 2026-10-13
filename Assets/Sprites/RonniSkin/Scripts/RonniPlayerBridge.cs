@@ -28,6 +28,11 @@ namespace RonniSkin
         [Tooltip("Koşu çizimi klasörü (Resources/<klasör>, ör. RonniRun = Koşu2.psd). Boş bırakılırsa eski profil çizimi koşar.")]
         public string runFolder = "RonniRun";
         [Tooltip("Koşu çiziminin boyu (1 = Ronni ile aynı boy).")] public float runScale = 1f;
+        [Header("Idle (nefes + rüzgar)")]
+        [Tooltip("Dururken görünen çizim klasörü (Resources/<klasör>, IDLE.psd). Boş bırakılırsa eski ön görünüm idle'ı kullanılır.")]
+        public string idleFolder = "RonniIdle";
+        [Tooltip("Idle çiziminin boyu (1 = Ronni ile aynı boy).")] public float idleScale = 1f;
+        RonniSkinRig rigIdle; RonniClipPlayer playerIdle; Vector3 baseIdle = Vector3.one;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
         RonniDashDust dashDust; bool dustPrev; bool dashPrev; float dashEndT = -10f;
@@ -124,6 +129,18 @@ namespace RonniSkin
                 {
                     rigRun.transform.localScale *= runScale;
                     baseRun = rigRun.transform.localScale;
+                }
+            }
+
+            // Dururken nefes alan + rüzgarda savrulan idle çizimi
+            if (!string.IsNullOrEmpty(idleFolder))
+            {
+                MakeProfile(idleFolder, "Ronni_Idle", out rigIdle, out playerIdle);
+                if (rigIdle != null)
+                {
+                    rigIdle.transform.localScale *= idleScale;
+                    baseIdle = rigIdle.transform.localScale;
+                    playerIdle.clip = "idle";
                 }
             }
         }
@@ -259,6 +276,7 @@ namespace RonniSkin
                     if (rigBL != null) rigBL.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder);
                     if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder);
                 }
             }
             if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;
@@ -268,6 +286,7 @@ namespace RonniSkin
                 if (rigBL != null && rigBL.IsBuilt) rigBL.SetColor(originalSprite.color, true);
                 if (rigBR != null && rigBR != rigBL && rigBR.IsBuilt) rigBR.SetColor(originalSprite.color, true);
                 if (rigRun != null && rigRun.IsBuilt) rigRun.SetColor(originalSprite.color, true);
+                if (rigIdle != null && rigIdle.IsBuilt) rigIdle.SetColor(originalSprite.color, true);
             }
             // side-profile drawing: run (left/right rigs) and jump/air (left rig, katana hand hidden)
             if (rigBL != null && rigBL.IsBuilt && rigBR != null && rigBR.IsBuilt)
@@ -326,6 +345,9 @@ namespace RonniSkin
                     }
                     else airU = -1f;
                 }
+                // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
+                bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && !anim.ActionActive && shClip == null;
+                if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
@@ -349,6 +371,7 @@ namespace RonniSkin
             if (rigBL != null) rigBL.transform.localScale = visualId == 1 ? Vector3.Scale(baseBL, sc) : baseBL;
             if (rigBR != null && rigBR != rigBL) rigBR.transform.localScale = visualId == 2 ? Vector3.Scale(baseBR, sc) : baseBR;
             if (rigRun != null) rigRun.transform.localScale = (visualId > 0 && rigB == rigRun) ? Vector3.Scale(baseRun, sc) : baseRun;
+            if (rigIdle != null) rigIdle.transform.localScale = visualId <= 0 ? Vector3.Scale(baseIdle, sc) : baseIdle;
         }
 
         void OnDisable()

@@ -75,6 +75,22 @@ namespace RonniSkin
             }
         }
 
+        // ---- Pin: dış kenar sabit (parent kemiği ile birlikte), iç kenara doğru zincir hareketi giderek artar ----
+        Transform pinAnchor; Matrix4x4 pinAnchorBindInv; float[] pinM;
+        /// xOuter / xInner = rig-yerel x. xOuter'da vertex sadece parent kemiğini izler, xInner'da zincirin tam deformasyonunu alır.
+        public void SetPin(float xOuter, float xInner, float pow)
+        {
+            if (bindVerts == null || joints == null || joints.Length == 0 || joints[0].parent == null || Mathf.Approximately(xOuter, xInner)) return;
+            pinAnchor = joints[0].parent;
+            pinAnchorBindInv = (rig.transform.worldToLocalMatrix * pinAnchor.localToWorldMatrix).inverse;
+            pinM = new float[bindVerts.Length];
+            for (int v = 0; v < pinM.Length; v++)
+            {
+                float t = Mathf.Clamp01((bindVerts[v].x - xOuter) / (xInner - xOuter));
+                pinM[v] = Mathf.Pow(Mathf.SmoothStep(0f, 1f, t), Mathf.Max(0.1f, pow));
+            }
+        }
+
         static float DistSeg(Vector3 p, Vector3 a, Vector3 b)
         {
             Vector3 ab = b - a; float t = Mathf.Clamp01(Vector3.Dot(p - a, ab) / Mathf.Max(1e-8f, ab.sqrMagnitude));
@@ -106,10 +122,12 @@ namespace RonniSkin
             if (mesh == null) return;
             Matrix4x4 rootInv = rig.transform.worldToLocalMatrix;
             for (int i = 0; i < nBones; i++) skin[i] = rootInv * joints[i].localToWorldMatrix * bindInv[i];
+            Matrix4x4 anchorSkin = pinM != null ? rootInv * pinAnchor.localToWorldMatrix * pinAnchorBindInv : Matrix4x4.identity;
             for (int v = 0; v < bindVerts.Length; v++)
             {
                 Vector3 acc = Vector3.zero;
                 for (int k = 0; k < nInf; k++) { float w = wVal[v * nInf + k]; if (w > 0) acc += skin[wIdx[v * nInf + k]].MultiplyPoint3x4(bindVerts[v]) * w; }
+                if (pinM != null) acc = Vector3.Lerp(anchorSkin.MultiplyPoint3x4(bindVerts[v]), acc, pinM[v]);
                 outVerts[v] = acc;
             }
             mesh.vertices = outVerts;

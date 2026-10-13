@@ -13,9 +13,15 @@ namespace RonniSkin
         [Tooltip("Cross-fade time when the clip changes.")] public float fadeTime = 0.12f;
         [Tooltip("If >= 0, the clip is sampled at this normalized position instead of playing by time.")] public float manual01 = -1f;
 
-        [System.Serializable] class BoneTrack { public string name; public float[] r; public float[] x; public float[] y; }
+        [System.Serializable] class BoneTrack { public string name; public float[] r; public float[] x; public float[] y; public float[] sx; public float[] sy; }
         [System.Serializable] class Clip { public string name; public float duration; public int frames; public bool loop; public BoneTrack[] bones; }
         [System.Serializable] class ClipFile { public Clip[] clips; }
+
+        [Header("Blink (bones eyeA / eyeB)")]
+        public bool autoBlink = true;
+        public Vector2 blinkInterval = new Vector2(2f, 5f);
+        [Range(0f, 1f)] public float doubleBlinkChance = 0.2f;
+        Transform eyeA, eyeB; float blinkTimer = -1f, blinkPhase = -1f; bool blinkAgain;
 
         RonniSkinRig rig;
         readonly Dictionary<string, Clip> clips = new Dictionary<string, Clip>();
@@ -36,6 +42,34 @@ namespace RonniSkin
                 if (f?.clips != null) foreach (var c in f.clips) clips[c.name] = c;
             }
             foreach (var b in rig.bones.Values) basePos[b] = b.localPosition;
+            rig.bones.TryGetValue("eyeA", out eyeA); rig.bones.TryGetValue("eyeB", out eyeB);
+            blinkTimer = Random.Range(blinkInterval.x, blinkInterval.y);
+        }
+
+        // Göz kırpma: gözler kendi kemiklerinde dikeyde kapanıp açılır (zaman rastgele, bazen çift kırpma).
+        void UpdateBlink()
+        {
+            if (!autoBlink || (eyeA == null && eyeB == null)) return;
+            float dt = Time.deltaTime, eyeY = 1f;
+            if (blinkPhase < 0f)
+            {
+                blinkTimer -= dt;
+                if (blinkTimer <= 0f) { blinkPhase = 0f; blinkAgain = Random.value < doubleBlinkChance; }
+            }
+            else
+            {
+                blinkPhase += dt / 0.16f;
+                eyeY = blinkPhase < 0.4f ? Mathf.Lerp(1f, 0.08f, blinkPhase / 0.4f)
+                     : blinkPhase < 0.6f ? 0.08f
+                     : Mathf.Lerp(0.08f, 1f, (blinkPhase - 0.6f) / 0.4f);
+                if (blinkPhase >= 1f)
+                {
+                    if (blinkAgain) { blinkAgain = false; blinkPhase = 0f; }
+                    else { blinkPhase = -1f; blinkTimer = Random.Range(blinkInterval.x, blinkInterval.y); }
+                }
+            }
+            if (eyeA != null) eyeA.localScale = new Vector3(1f, eyeY, 1f);
+            if (eyeB != null) eyeB.localScale = new Vector3(1f, eyeY, 1f);
         }
 
         public bool HasClip(string name) { return clips.ContainsKey(name); }
@@ -76,6 +110,10 @@ namespace RonniSkin
                 Vector3 p = basePos[b] + new Vector3(Mathf.Lerp(tr.x[i0], tr.x[i1], u) * upp, Mathf.Lerp(tr.y[i0], tr.y[i1], u) * upp, 0);
                 if (w < 1f) { r = Mathf.LerpAngle(snapR[b], r, w); p = Vector3.Lerp(snapP[b], p, w); }
                 b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p;
+                // optional scale tracks (breathing); clips without them keep scale 1
+                float ssx = tr.sx != null && tr.sx.Length > i1 ? Mathf.Lerp(tr.sx[i0], tr.sx[i1], u) : 1f;
+                float ssy = tr.sy != null && tr.sy.Length > i1 ? Mathf.Lerp(tr.sy[i0], tr.sy[i1], u) : 1f;
+                b.localScale = new Vector3(ssx, ssy, 1f);
             }
             foreach (var kv in rig.bones)
             {
@@ -83,8 +121,9 @@ namespace RonniSkin
                 var b = kv.Value;
                 float r = w < 1f ? Mathf.LerpAngle(snapR[b], 0f, w) : 0f;
                 Vector3 p = w < 1f ? Vector3.Lerp(snapP[b], basePos[b], w) : basePos[b];
-                b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p;
+                b.localRotation = Quaternion.Euler(0, 0, r); b.localPosition = p; b.localScale = Vector3.one;
             }
+            UpdateBlink();
         }
     }
 }
