@@ -144,10 +144,13 @@ public class TimeOfDay : MonoBehaviour
         mpb = new MaterialPropertyBlock();
         nextRefresh = 0f;
         LateUpdate();
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCamera;
     }
 
     private void OnDisable()
     {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+
         if (Instance == this)
             Instance = null;
 
@@ -418,37 +421,7 @@ public class TimeOfDay : MonoBehaviour
         Col(Get("Ground Light"), k.groundLight);
         Col(Get("Stars"), new Color(1f, 1f, 1f, k.stars));
 
-        // ---- güneş ve ay ----
-        Vector2 sunP = new Vector2(0f, -20f), moonP = new Vector2(0f, -20f);
-
-        if (cam != null)
-        {
-            float cx = cam.transform.position.x;
-            float yShift = (cam.transform.position.y - camRestY) * skyFollow;
-
-            float st = (hour - sunrise) / Mathf.Max(0.01f, sunset - sunrise);
-            sunP = new Vector2(
-                cx + Mathf.LerpUnclamped(-arcHalfWidth, arcHalfWidth, st),
-                horizonY + Mathf.Sin(st * Mathf.PI) * peak + yShift);
-
-            float mh = hour >= 12f ? hour : hour + 24f;
-            float mSpan = (moonSet + 24f) - moonRise;
-            float mt = (mh - moonRise) / Mathf.Max(0.01f, mSpan);
-            moonP = new Vector2(
-                cx + Mathf.LerpUnclamped(-arcHalfWidth, arcHalfWidth, mt),
-                horizonY + Mathf.Sin(mt * Mathf.PI) * peak + yShift);
-        }
-
-        PlaceBody("Sun", sunP, new Color(k.sunColor.r, k.sunColor.g, k.sunColor.b, k.sun * Mathf.Clamp01((sunP.y - horizonY + 1.5f) / 2f)));
-        PlaceBody("Sun Halo", sunP, new Color(k.sunColor.r, k.sunColor.g, k.sunColor.b, 0.6f * k.sun * Mathf.Clamp01((sunP.y - horizonY + 1.5f) / 2f)));
-        PlaceBody("Moon", moonP, new Color(k.moonColor.r, k.moonColor.g, k.moonColor.b, k.moon * Mathf.Clamp01((moonP.y - horizonY + 1.5f) / 2f)));
-        PlaceBody("Moon Halo", moonP, new Color(k.moonColor.r, k.moonColor.g, k.moonColor.b, 1.0f * k.moon * Mathf.Clamp01((moonP.y - horizonY + 1.5f) / 2f)));
-
-        // Baskın ışık: bulut kenar ışığı, sis parıltısı ve su ışık yolu buna göre.
-        float sw = k.sun / (k.sun + k.moon + 0.001f);
-        Vector2 dom = Vector2.Lerp(moonP, sunP, sw);
-        Shader.SetGlobalVector(MoonPosId, new Vector4(dom.x, dom.y, 0f, 0f));
-        Shader.SetGlobalFloat(WaterMoonXId, dom.x);
+        PlaceBodies(k, cam);
 
         // ---- hüzme / sis / toz ----
         if (godRays != null)
@@ -510,6 +483,49 @@ public class TimeOfDay : MonoBehaviour
         }
     }
 
+    // Güneş / ay yerleşimi. Ayrıca kamera çizilmeden hemen önce tekrar çalışır (titreme olmasın).
+    private void PlaceBodies(TodKey k, Camera cam)
+    {
+        float horizonY = al != null ? al.horizonY : 0f;
+        Vector2 sunP = new Vector2(0f, -20f), moonP = new Vector2(0f, -20f);
+
+        if (cam != null)
+        {
+            float cx = cam.transform.position.x;
+            float yShift = (cam.transform.position.y - camRestY) * skyFollow;
+
+            float st = (hour - sunrise) / Mathf.Max(0.01f, sunset - sunrise);
+            sunP = new Vector2(
+                cx + Mathf.LerpUnclamped(-arcHalfWidth, arcHalfWidth, st),
+                horizonY + Mathf.Sin(st * Mathf.PI) * peak + yShift);
+
+            float mh = hour >= 12f ? hour : hour + 24f;
+            float mSpan = (moonSet + 24f) - moonRise;
+            float mt = (mh - moonRise) / Mathf.Max(0.01f, mSpan);
+            moonP = new Vector2(
+                cx + Mathf.LerpUnclamped(-arcHalfWidth, arcHalfWidth, mt),
+                horizonY + Mathf.Sin(mt * Mathf.PI) * peak + yShift);
+        }
+
+        PlaceBody("Sun", sunP, new Color(k.sunColor.r, k.sunColor.g, k.sunColor.b, k.sun * Mathf.Clamp01((sunP.y - horizonY + 1.5f) / 2f)));
+        PlaceBody("Sun Halo", sunP, new Color(k.sunColor.r, k.sunColor.g, k.sunColor.b, 0.6f * k.sun * Mathf.Clamp01((sunP.y - horizonY + 1.5f) / 2f)));
+        PlaceBody("Moon", moonP, new Color(k.moonColor.r, k.moonColor.g, k.moonColor.b, k.moon * Mathf.Clamp01((moonP.y - horizonY + 1.5f) / 2f)));
+        PlaceBody("Moon Halo", moonP, new Color(k.moonColor.r, k.moonColor.g, k.moonColor.b, 0.5f * k.moon * Mathf.Clamp01((moonP.y - horizonY + 1.5f) / 2f)));
+
+        // Baskın ışık: bulut kenar ışığı, sis parıltısı ve su ışık yolu buna göre.
+        float sw = k.sun / (k.sun + k.moon + 0.001f);
+        Vector2 dom = Vector2.Lerp(moonP, sunP, sw);
+        Shader.SetGlobalVector(MoonPosId, new Vector4(dom.x, dom.y, 0f, 0f));
+        Shader.SetGlobalFloat(WaterMoonXId, dom.x);
+
+    }
+
+    private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera c)
+    {
+        if (c != null && c == Camera.main && srs.Count > 0)
+            PlaceBodies(cur, c);
+    }
+
     private void PlaceBody(string n, Vector2 pos, Color c)
     {
         SpriteRenderer r = Get(n);
@@ -544,7 +560,7 @@ public class TimeOfDay : MonoBehaviour
             hazeMul = new Color(0.30f, 0.42f, 0.68f), water = new Color(0.70f, 0.92f, 1.35f), glint = 1.1f,
             rays = 0.8f, rayColor = new Color(0.55f, 0.72f, 1f),
             dust = 1f, dustColor = new Color(0.65f, 0.80f, 1f),
-            grade = new Color(0.80f, 0.90f, 1.10f), exposure = 0f, saturation = -8f, contrast = 12f, bloom = 1.4f, vignette = 0.45f
+            grade = new Color(0.80f, 0.90f, 1.10f), exposure = 0f, saturation = -8f, contrast = 12f, bloom = 0.9f, vignette = 0.45f
         };
 
         var dawn = new TodKey

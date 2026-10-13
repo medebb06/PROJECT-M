@@ -49,10 +49,22 @@ public class ParallaxEffect : MonoBehaviour
     {
         initialized = false;
         appliedOffset = Vector2.zero;
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+    }
+
+    // Kamera ÇİZİLMEDEN hemen önce, kameranın SON konumuna göre yeniden hizala
+    // (Cinemachine bazen LateUpdate'ten sonra çalışır -> bir kare geriden gelip titretiyordu).
+    // Konum mutlak hesaplandığı için tekrar çağırmak güvenli.
+    private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera cam)
+    {
+        if (cam != null && cam == Camera.main)
+            LateUpdate();
     }
 
     private void OnDisable()
     {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+
         // Kapatılınca sahnedeki yerine dönsün (yeniden açılınca kaymış kalmasın).
         if (initialized)
             transform.position -= (Vector3)appliedOffset;

@@ -45,6 +45,35 @@ public class AtmosphereLight : MonoBehaviour
     {
         CacheRays();
         LateUpdate();
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCamera;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
+    }
+
+    // Kamera çizilmeden hemen önce: gökyüzü çapaları kameranın son konumuna oturur (titreme/gecikme yok).
+    private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera c)
+    {
+        if (c == null || c != Camera.main)
+            return;
+
+        Vector3 p = c.transform.position;
+
+        if (skyAnchor != null)
+            skyAnchor.position = new Vector3(p.x, p.y, 0f);
+
+        if (horizonAnchor != null)
+            horizonAnchor.position = new Vector3(p.x, horizonY, 0f);
+
+        Shader.SetGlobalVector(LightPosId, new Vector4(p.x + lightOffset.x, horizonY + lightOffset.y, 0f, 0f));
+
+        if (TimeOfDay.Instance == null && moonT != null)
+        {
+            Vector3 mp = moonT.position;
+            Shader.SetGlobalVector(MoonPosId, new Vector4(mp.x, mp.y, 0f, 0f));
+        }
     }
 
     private void CacheRays()

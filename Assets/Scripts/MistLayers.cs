@@ -78,11 +78,20 @@ public class MistLayers : MonoBehaviour
             layers = DefaultLayers();
 
         dirty = true;
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginCamera;
     }
 
     private void OnDisable()
     {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginCamera;
         Clear();
+    }
+
+    // Kamera çizilmeden hemen önce konumu son kameraya göre güncelle (titreme olmasın).
+    private void OnBeginCamera(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera c)
+    {
+        if (c != null && c == Camera.main && !dirty && builtCount == layers.Count)
+            LateUpdate();
     }
 
 #if UNITY_EDITOR

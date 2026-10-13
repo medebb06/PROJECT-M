@@ -162,6 +162,29 @@ public static class TimeOfDayBuilder
         Debug.Log("Bulut kenar parlaması kapatıldı: " + n + " materyal.");
     }
 
+    [MenuItem("Tools/Lighting/Flatten Back Bushes")]
+    private static void FlattenBackBushes()
+    {
+        int n = 0;
+        var seen = new System.Collections.Generic.HashSet<Material>();
+
+        foreach (SpriteRenderer r in Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            Material m = r.sharedMaterial;
+            if (m == null || !m.name.Contains("BackBush") || !seen.Add(m))
+                continue;
+
+            if (m.HasProperty("_RimIntensity")) m.SetFloat("_RimIntensity", 0f);
+            if (m.HasProperty("_NormalIntensity")) m.SetFloat("_NormalIntensity", 0f);
+            if (m.HasProperty("_CoreShadow")) m.SetFloat("_CoreShadow", 0f);
+            EditorUtility.SetDirty(m);
+            n++;
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("Arka çalı parlaması kapatıldı: " + n + " materyal.");
+    }
+
     private static void MakeBody(Transform parent, string name, Sprite sprite, Material mat, int order, float size, SpriteRenderer like)
     {
         SpriteRenderer sr = Find<SpriteRenderer>(parent, name);

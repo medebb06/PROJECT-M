@@ -34,10 +34,19 @@ public class GodRays : MonoBehaviour
     [Header("Canlılık (Play'de)")]
     [Range(0f, 1f)] public float flicker = 0.35f;
     public float flickerSpeed = 0.18f;
+    [Tooltip("Hüzmelerin yana doğru yavaş, düzenli salınımı (ekran genişliği cinsinden).")]
+    [Range(0f, 0.2f)] public float sway = 0.04f;
+    [Tooltip("Salınımın hızı (devir/10 sn gibi düşün; küçük = yavaş).")]
+    public float swaySpeed = 0.35f;
+    [Tooltip("Hüzme açısının derece cinsinden hafif sallanması.")]
+    [Range(0f, 8f)] public float angleSway = 2.5f;
 
     private readonly List<SpriteRenderer> beams = new List<SpriteRenderer>();
     private readonly List<float> baseAlpha = new List<float>();
     private readonly List<float> factor = new List<float>();
+    private readonly List<Vector3> basePos = new List<Vector3>();
+    private Vector2 swayDir = Vector2.right;
+    private float swayWorldW = 1f;
 
     // Saat dilimi (TimeOfDay) çarpanları: Inspector değerlerine dokunmaz.
     private bool todActive;
@@ -115,6 +124,7 @@ public class GodRays : MonoBehaviour
         beams.Clear();
         baseAlpha.Clear();
         factor.Clear();
+        basePos.Clear();
     }
 
     [ContextMenu("Yeniden Kur")]
@@ -171,7 +181,11 @@ public class GodRays : MonoBehaviour
             beams.Add(sr);
             baseAlpha.Add(a);
             factor.Add(f);
+            basePos.Add(g.transform.localPosition);
         }
+
+        swayDir = perp;
+        swayWorldW = viewW;
     }
 
     private void Update()
@@ -182,7 +196,25 @@ public class GodRays : MonoBehaviour
             Build();
         }
 
-        if (!Application.isPlaying || flicker <= 0f)
+        if (!Application.isPlaying)
+            return;
+
+        // Düzenli, yumuşak salınım: her hüzme sırayla aynı ritimde, hafif faz farkıyla yana kayar.
+        float sw = Time.time * swaySpeed;
+
+        for (int i = 0; i < beams.Count && i < basePos.Count; i++)
+        {
+            if (beams[i] == null)
+                continue;
+
+            float ph = sw + i * 0.9f;
+            float off = Mathf.Sin(ph) * sway * swayWorldW;
+            Transform tr = beams[i].transform;
+            tr.localPosition = basePos[i] + (Vector3)(swayDir * off);
+            tr.localRotation = Quaternion.Euler(0f, 0f, angle + Mathf.Sin(ph * 0.7f + 1.3f) * angleSway);
+        }
+
+        if (flicker <= 0f)
             return;
 
         float time = Time.time * flickerSpeed;

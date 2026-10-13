@@ -1502,7 +1502,7 @@ Transform:
   m_GameObject: {fileID: 440064091}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.88267, y: 1.4, z: 0}
+  m_LocalPosition: {x: 4.88267, y: 0.82, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2497,7 +2497,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TimeOfDay
   hour: 22
-  autoAdvance: 0
+  autoCycle: 1
   dayLengthMinutes: 6
   transitionSpeed: 8
   hotkeys: 1
@@ -9395,16 +9395,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AtmosphereDust
   shader: {fileID: 4800000, guid: 1ea824e6878df764d9869b820202bcb2, type: 3}
   glow: {fileID: 2800000, guid: c5867b4cc66c3a34d9871dc56576d972, type: 3}
-  fineMax: 180
-  fineRate: 12
-  fineSize: {x: 0.035, y: 0.09}
-  fineAlpha: 0.7
-  fineOrder: 440
-  bokehMax: 22
-  bokehRate: 1.2
-  bokehSize: {x: 0.25, y: 0.6}
-  bokehAlpha: 0.12
-  bokehOrder: 470
+  speckMax: 220
+  speckRate: 16
+  speckSize: {x: 0.02, y: 0.055}
+  speckAlpha: 0.7
+  speckOrder: 440
+  haloMax: 90
+  haloRate: 5
+  haloSize: {x: 0.1, y: 0.3}
+  haloAlpha: 0.07
+  haloOrder: 470
   drift: {x: 0.18, y: 0.02}
   turbulence: 0.35
 --- !u!1 &993305116
@@ -12745,7 +12745,7 @@ SpriteRenderer:
   m_SortingOrder: -40
   m_MaskInteraction: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0.654902, g: 0.5803922, b: 0.49411768, a: 1}
+  m_Color: {r: 0.18039216, g: 0.2627451, b: 0.4431373, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -14019,6 +14019,9 @@ MonoBehaviour:
   seed: 7
   flicker: 0.35
   flickerSpeed: 0.18
+  sway: 0.04
+  swaySpeed: 0.35
+  angleSway: 2.5
 --- !u!1 &1864831967
 GameObject:
   m_ObjectHideFlags: 0

@@ -12,25 +12,25 @@ public class AtmosphereDust : MonoBehaviour
     public Texture2D glow;
 
     [Header("İnce toz")]
-    public int fineMax = 180;
-    public float fineRate = 12f;
-    public Vector2 fineSize = new Vector2(0.035f, 0.09f);
-    [Range(0f, 1f)] public float fineAlpha = 0.7f;
-    public int fineOrder = 440;
+    public int speckMax = 220;
+    public float speckRate = 16f;
+    public Vector2 speckSize = new Vector2(0.02f, 0.055f);
+    [Range(0f, 1f)] public float speckAlpha = 0.7f;
+    public int speckOrder = 440;
 
-    [Header("Büyük soluk toplar (bokeh)")]
-    public int bokehMax = 22;
-    public float bokehRate = 1.2f;
-    public Vector2 bokehSize = new Vector2(0.25f, 0.6f);
-    [Range(0f, 1f)] public float bokehAlpha = 0.12f;
-    public int bokehOrder = 470;
+    [Header("Küçük çekirdek + geniş yumuşak ışıma")]
+    public int haloMax = 90;
+    public float haloRate = 5f;
+    public Vector2 haloSize = new Vector2(0.10f, 0.30f);
+    [Range(0f, 1f)] public float haloAlpha = 0.07f;
+    public int haloOrder = 470;
 
     [Header("Hareket")]
     [Tooltip("Rüzgâr yönünde sürüklenme (birim/sn).")]
     public Vector2 drift = new Vector2(0.18f, 0.02f);
     public float turbulence = 0.35f;
 
-    private ParticleSystem fine, bokeh;
+    private ParticleSystem speck, halo;
     private Material mat;
     private Color color = new Color(1f, 0.9f, 0.75f);
     private float amount = 1f;
@@ -53,10 +53,10 @@ public class AtmosphereDust : MonoBehaviour
 
     private void OnDisable()
     {
-        if (fine != null) Destroy(fine.gameObject);
-        if (bokeh != null) Destroy(bokeh.gameObject);
+        if (speck != null) Destroy(speck.gameObject);
+        if (halo != null) Destroy(halo.gameObject);
         if (mat != null) Destroy(mat);
-        fine = bokeh = null;
+        speck = halo = null;
         mat = null;
     }
 
@@ -124,13 +124,13 @@ public class AtmosphereDust : MonoBehaviour
         mat = new Material(shader) { name = "Dust (runtime)" };
         mat.mainTexture = glow;
 
-        fine = Make("~dust fine", fineMax, fineRate, fineSize, fineOrder, 9f, 15f);
-        bokeh = Make("~dust bokeh", bokehMax, bokehRate, bokehSize, bokehOrder, 14f, 22f);
+        speck = Make("~dust speck", speckMax, speckRate, speckSize, speckOrder, 9f, 15f);
+        halo = Make("~dust halo", haloMax, haloRate, haloSize, haloOrder, 14f, 22f);
     }
 
     private void Apply()
     {
-        if (fine == null)
+        if (speck == null)
             return;
 
         if (Mathf.Approximately(amount, appliedAmount) && color == appliedColor)
@@ -139,8 +139,8 @@ public class AtmosphereDust : MonoBehaviour
         appliedAmount = amount;
         appliedColor = color;
 
-        SetSystem(fine, fineRate, fineAlpha);
-        SetSystem(bokeh, bokehRate, bokehAlpha);
+        SetSystem(speck, speckRate, speckAlpha);
+        SetSystem(halo, haloRate, haloAlpha);
     }
 
     private void SetSystem(ParticleSystem ps, float baseRate, float alpha)
@@ -156,7 +156,7 @@ public class AtmosphereDust : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!Application.isPlaying || fine == null)
+        if (!Application.isPlaying || speck == null)
             return;
 
         Camera cam = Camera.main;
@@ -167,7 +167,7 @@ public class AtmosphereDust : MonoBehaviour
             float w = h * Mathf.Max(1.2f, cam.aspect);
             Vector3 p = cam.transform.position;
 
-            foreach (ParticleSystem ps in new[] { fine, bokeh })
+            foreach (ParticleSystem ps in new[] { speck, halo })
             {
                 ps.transform.position = new Vector3(p.x, p.y, 0f);
                 var sh = ps.shape;
