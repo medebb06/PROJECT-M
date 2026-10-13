@@ -139,6 +139,29 @@ public static class TimeOfDayBuilder
                   "Play'de , . (hazır saat) ve [ ] (saat) tuşları. Sis: Mist objesi, toz: Light Dust objesi. Sahneyi kaydet (Ctrl+S).");
     }
 
+    [MenuItem("Tools/Lighting/Flatten Cloud Edges")]
+    private static void FlattenClouds()
+    {
+        int n = 0;
+        var seen = new System.Collections.Generic.HashSet<Material>();
+
+        foreach (SpriteRenderer r in Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (!r.name.StartsWith("Cloud") || r.sharedMaterial == null || !seen.Add(r.sharedMaterial))
+                continue;
+
+            Material m = r.sharedMaterial;
+            if (m.HasProperty("_RimIntensity")) m.SetFloat("_RimIntensity", 0f);
+            if (m.HasProperty("_NormalIntensity")) m.SetFloat("_NormalIntensity", 0f);
+            if (m.HasProperty("_CoreShadow")) m.SetFloat("_CoreShadow", 0f);
+            EditorUtility.SetDirty(m);
+            n++;
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("Bulut kenar parlaması kapatıldı: " + n + " materyal.");
+    }
+
     private static void MakeBody(Transform parent, string name, Sprite sprite, Material mat, int order, float size, SpriteRenderer like)
     {
         SpriteRenderer sr = Find<SpriteRenderer>(parent, name);

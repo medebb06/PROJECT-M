@@ -215,7 +215,7 @@ Shader "ProjectM/SilhouetteRim"
                 n.xy *= i.flip;                       // çevrilmiş sprite'ta normal de çevrilir
 
                 // Eğilen yaprak yüzeyi ışığa göre döner: ışık tepkisi doğal olarak değişir.
-                n.x += (half)(i.wind.y * i.wind.x) * _WindLight * 0.6h + flutter * _WindLight * 0.12h * (half)i.wind.x;
+                n.x += (half)(i.wind.y * i.wind.x) * _WindLight * 0.15h;   // titreme yok: yüzey dalgalanmaz
                 n = normalize(n);
 
                 half3 L = normalize(half3(dir, -_LightBack));

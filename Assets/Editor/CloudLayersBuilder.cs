@@ -231,6 +231,9 @@ public static class CloudLayersBuilder
         m.SetFloat("_NormalPower", normalPower);
         m.SetFloat("_LightBack", 0.35f);
         m.SetFloat("_CoreShadow", Mathf.Lerp(0.15f, 0.55f, Mathf.Clamp01(normalIntensity)));
+        m.SetFloat("_RimIntensity", 0f);      // düz bulut: kenar parlaması yok
+        m.SetFloat("_NormalIntensity", 0f);
+        m.SetFloat("_CoreShadow", 0f);
         m.SetFloat("_WindAmount", 0f);
         m.SetFloat("_FlutterAmount", 0f);
 

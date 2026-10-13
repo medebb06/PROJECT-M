@@ -84,29 +84,19 @@ Shader "ProjectM/Mist"
         {
             float t = _ProjectM_SkyTime * _Speed;
             float x = i.wpos.x - _WorldSpaceCameraPos.x * _Parallax;
+            float vy = i.uv.y;
 
-            // İki katman, ters yönde akar: sis "yuvarlanır", düz kayan bir doku gibi durmaz.
-            float2 p1 = float2(x * _Scale * 0.6 + t * 0.05, i.uv.y * 0.3);
-            float2 p2 = float2(x * _Scale * 1.3 - t * 0.09 + 0.37, i.uv.y * 0.5 + 0.2);
-            // Çok yumuşak: her katman 5 örneğin ortalaması (bulanık), eşik aralığı geniş.
-            float n = 0;
-            float2 o1 = float2(0.011, 0.017), o2 = float2(-0.017, 0.011);
-            n += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p1).r;
-            n += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p1 + o1).r;
-            n += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p1 - o1).r;
-            n += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p1 + o2).r;
-            n += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p1 - o2).r;
-            n = n / 5.0 * 0.65;
-            float m2 = 0;
-            m2 += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p2).g;
-            m2 += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p2 + o1 * 1.5).g;
-            m2 += SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, p2 - o1 * 1.5).g;
-            n += m2 / 3.0 * 0.35;
+            // Tamamen analitik, çok düşük frekanslı dalgalar: doku yok, kenar/tırtık yok.
+            // Birkaç yavaş sinüs üst üste -> yumuşak, yuvarlak pus kümeleri; ters yönlerde akar.
+            float u = x * _Scale * 14.0;
+            float n = 0.5
+                + 0.24 * sin(u * 1.00 + t * 0.30 + vy * 2.0)
+                + 0.18 * sin(u * 0.57 - t * 0.22 + 1.7 + vy * 3.1)
+                + 0.10 * sin(u * 1.83 + t * 0.45 + 4.0 - vy * 1.6);
 
             float lo = 1.0 - _Coverage;
-            float hw = 0.16 + _Softness * 0.35;
+            float hw = 0.22 + _Softness * 0.35;
             float dens = smoothstep(lo - hw, lo + hw, n);
-            dens = dens * dens * (3.0 - 2.0 * dens);
 
             // Dikey profil
             float v = i.uv.y;
