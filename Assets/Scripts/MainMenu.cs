@@ -213,6 +213,7 @@ public class MainMenu : MonoBehaviour
         new Row { label = "KENAR KARARMA", kanji = "暗さ", kind = 1 },
         new Row { label = "KARARMA ALANI", kanji = "範囲", kind = 1 },
         new Row { label = "TAM EKRAN", kanji = "全画面", kind = 2 },
+        new Row { label = "SİNEMATİK KAMERA", kanji = "映画", kind = 2 },
         new Row { label = "GERİ", kanji = "戻る", kind = 0 },
     };
 
@@ -693,7 +694,12 @@ public class MainMenu : MonoBehaviour
                     GameSettings.Fullscreen = !GameSettings.Fullscreen;
                 break;
 
-            case 5: // geri
+            case 5: // sinematik kamera (nefes alan, sallanan kamera)
+                if (dir != 0 || confirm || click)
+                    GameSettings.CinematicCamera = !GameSettings.CinematicCamera;
+                break;
+
+            case 6: // geri
                 if (confirm || click)
                     Back();
                 break;
@@ -766,6 +772,9 @@ public class MainMenu : MonoBehaviour
 
         if (valueTexts[4] != null)
             valueTexts[4].text = Screen.fullScreen ? "AÇIK" : "KAPALI";
+
+        if (valueTexts.Length > 5 && valueTexts[5] != null)
+            valueTexts[5].text = GameSettings.CinematicCamera ? "AÇIK" : "KAPALI";
     }
 
     private void SetSlider(int row, float t, string text)

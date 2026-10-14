@@ -17,6 +17,7 @@ public static class GameSettings
     private const string KeyWorld = "projectm_world_text_scale";
     private const string KeyVolume = "projectm_volume";
     private const string KeyFullscreen = "projectm_fullscreen";
+    private const string KeyCine = "projectm_cinematic_cam";
 
     public const float MinUiScale = 0.6f;
     public const float MaxUiScale = 1.6f;
@@ -93,6 +94,13 @@ public static class GameSettings
             Screen.fullScreen = value;
             PlayerPrefs.SetInt(KeyFullscreen, value ? 1 : 0);
         }
+    }
+
+    /// <summary>Sinematik kamera (bekleyince nefes alan, sallanan kamera). Varsayılan açık.</summary>
+    public static bool CinematicCamera
+    {
+        get { return PlayerPrefs.GetInt(KeyCine, 1) != 0; }
+        set { PlayerPrefs.SetInt(KeyCine, value ? 1 : 0); }
     }
 
     /// <summary>OnGUI ölçeği: ekran yüksekliği 720'ye göre × bileşen çarpanı × ayar.</summary>

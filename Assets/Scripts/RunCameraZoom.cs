@@ -24,24 +24,51 @@ public class RunCameraZoom : MonoBehaviour
     [Tooltip("Yaklaşma (durunca geri dönüş) yumuşaklığı (sn).")]
     public float smoothOut = 0.6f;
 
-    [Header("Bekleme Nefesi (idle'da uzun süre kalınca)")]
+    [Header("Olay zoom'u (savaş anlarında)")]
+    [Tooltip("Parry ve kalabalık zoom'unu açar/kapatır.")] public bool eventZoom = true;
+    [Tooltip("Parry'de yaklaşma oranı. 0.05 = %5.")] [Range(0f, 0.2f)] public float parryZoom = 0.05f;
+    [Tooltip("Dengeyi kıran (mükemmel) parry'de yaklaşma oranı.")] [Range(0f, 0.2f)] public float perfectParryZoom = 0.075f;
+    [Tooltip("Parry zoom'unun girişi (sn): kısa = vuruş hissi.")] public float parryIn = 0.05f;
+    [Tooltip("Parry'de yakın kalma süresi (sn).")] public float parryHold = 0.10f;
+    [Tooltip("Parry zoom'undan geri dönüş (sn): yavaş = sinematik.")] public float parryOut = 0.40f;
+    [Tooltip("Kalabalıkta uzaklaşma oranı. 0.10 = %10 daha geniş.")] [Range(0f, 0.4f)] public float crowdZoom = 0.10f;
+    [Tooltip("Bu kadar ya da daha fazla düşman yakındaysa kamera açılır.")] public int crowdMinEnemies = 3;
+    [Tooltip("Düşmanın 'yakın' sayıldığı mesafe (dünya birimi).")] public float crowdRadius = 14f;
+    [Tooltip("Kalabalıkta açılma süresi (sn).")] public float crowdIn = 1.2f;
+    [Tooltip("Kalabalık dağılınca geri dönüş süresi (sn).")] public float crowdOut = 1.8f;
+
+    [Header("Bekleme Nefesi / Sinematik kamera (idle'da uzun süre kalınca)")]
     [Tooltip("Girdi gelmeden bu kadar saniye geçince kamera nefes almaya başlar.")]
-    public float idleDelay = 4f;
+    public float idleDelay = 3f;
     [Tooltip("Nefes moduna yumuşak geçiş süresi (sn).")]
     public float breathFadeIn = 3.5f;
     [Tooltip("Girdi gelince normale dönüş süresi (sn).")]
     public float breathFadeOut = 0.7f;
     [Tooltip("Bekleme sırasında karaktere ne kadar yaklaşır. 0.07 = %7 daha yakın.")]
-    [Range(0f, 0.3f)] public float idleZoomIn = 0.10f;
+    [Range(0f, 0.3f)] public float idleZoomIn = 0.12f;
     [Tooltip("Nefes alıp vermeyle yakınlaşma titreşimi (oran).")]
-    [Range(0f, 0.03f)] public float breathZoomWobble = 0.006f;
+    [Range(0f, 0.05f)] public float breathZoomWobble = 0.016f;
     [Tooltip("Nefes döngüsü süresi (sn).")]
-    public float breathPeriod = 4.5f;
+    public float breathPeriod = 3.8f;
     [Tooltip("Kamera salınımı (dünya birimi, yatay / dikey).")]
-    public Vector2 swayAmount = new Vector2(0.10f, 0.07f);
+    public Vector2 swayAmount = new Vector2(0.55f, 0.42f);
     [Tooltip("Hafif yalpalama (derece).")]
-    public float swayRoll = 0.35f;
+    public float swayRoll = 2.2f;
+    [Tooltip("Elle tutulan kamera titremesi (konum, dünya birimi): nefese eklenen hızlı, düzensiz sallantı.")]
+    public float handheldPos = 0.14f;
+    [Tooltip("Elle tutulan kamera titremesinin yalpası (derece).")]
+    public float handheldRoll = 0.8f;
+    [Tooltip("Elle tutulan titremenin hızı.")]
+    public float handheldSpeed = 1.6f;
+    [Tooltip("Sinematik kamera açıkken oynarken (girdi varken) de sallanma oranı. 0 = sadece beklerken, 1 = beklerkenki kadar.")]
+    [Range(0f, 1f)] public float activeShake = 0.45f;
     public bool idleBreathing = true;
+
+    [Header("Sinematik şeritler (letterbox)")]
+    [Tooltip("Sinematik kamera açıkken ekranın üstüne ve altına siyah şerit çıkar.")] public bool letterbox = true;
+    [Tooltip("Şerit yüksekliği (ekran yüksekliğine oran, her biri). 0.16 = %16.")] [Range(0f, 0.35f)] public float barHeight = 0.16f;
+    [Tooltip("Şeritlerin açılıp kapanma süresi (sn).")] public float barSmooth = 0.5f;
+    private float bars, barsVel;
 
     [Tooltip("Ekranın sol üstünde durum yazısı göster (sorun giderme).")]
     public bool showDebug = true;
@@ -63,6 +90,22 @@ public class RunCameraZoom : MonoBehaviour
     private float breath;      // 0..1 nefes modu ağırlığı
     private float breathVel;
     private CinemachineCameraOffset camOffset;
+    private float pulse, pulseVel, pulsePeak, pulseHold;   // parry zoom'u (yaklaşma)
+    private float crowd, crowdVel, crowdTarget, nextCrowdScan;
+
+    private void OnEnable()
+    {
+        CombatEvents.ParrySucceeded += OnParry;
+    }
+
+    private void OnParry(EnemyController e, bool brokeBalance)
+    {
+        if (!eventZoom)
+            return;
+
+        pulsePeak = Mathf.Max(pulsePeak * 0.5f, brokeBalance ? perfectParryZoom : parryZoom);
+        pulseHold = parryHold;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void AutoCreate()
@@ -75,6 +118,7 @@ public class RunCameraZoom : MonoBehaviour
 
     private void OnDisable()
     {
+        CombatEvents.ParrySucceeded -= OnParry;
         Set(1f);
 
         if (vcam != null)
@@ -86,6 +130,12 @@ public class RunCameraZoom : MonoBehaviour
 
         if (camOffset != null)
             camOffset.Offset = Vector3.zero;
+
+        if (rollHelper != null)
+        {
+            rollHelper.posOffset = Vector3.zero;
+            rollHelper.roll = 0f;
+        }
     }
 
     // Herhangi bir oyuncu girdisi var mı? (klavye, fare, kol)
@@ -176,6 +226,18 @@ public class RunCameraZoom : MonoBehaviour
 
     private void OnGUI()
     {
+        if (letterbox && bars > 0.002f && Event.current.type == EventType.Repaint)
+        {
+            float h = Screen.height * barHeight * bars * (bars * (3f - 2f * bars) / Mathf.Max(bars, 0.0001f));
+            int d = GUI.depth;
+            GUI.depth = -10000;   // en önde: HUD dahil her şeyin üstünde
+            GUI.color = Color.black;
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, h), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(0f, Screen.height - h, Screen.width, h), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.depth = d;
+        }
+
         if (!showDebug)
             return;
 
@@ -238,7 +300,55 @@ public class RunCameraZoom : MonoBehaviour
         else
             idleTimer += Time.unscaledDeltaTime;
 
-        float breathTarget = idleBreathing && (forceBreath || idleTimer >= idleDelay) ? 1f : 0f;
+        bool cinematic = idleBreathing && GameSettings.CinematicCamera;
+
+        // Şeritler: sinematik açıkken görünür, menü açıkken (duraklatma/ana menü) gizlenir.
+        float barTarget = letterbox && cinematic && !MainMenu.Active ? 1f : 0f;
+        bars = Mathf.SmoothDamp(bars, barTarget, ref barsVel, Mathf.Max(0.05f, barSmooth), Mathf.Infinity, Time.unscaledDeltaTime);
+
+        // ---- Olay zoom'u: parry (yaklaş) + kalabalık (uzaklaş) ----
+        if (eventZoom && player != null && Time.unscaledTime >= nextCrowdScan)
+        {
+            nextCrowdScan = Time.unscaledTime + 0.35f;
+            EnemyController[] all = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+            int near = 0;
+            Vector2 pp = player.transform.position;
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                EnemyController en = all[i];
+
+                if (en == null || !en.gameObject.activeInHierarchy)
+                    continue;
+
+                Health eh = en.GetComponent<Health>();
+
+                if (eh != null && eh.IsDead)
+                    continue;
+
+                if (((Vector2)en.transform.position - pp).sqrMagnitude <= crowdRadius * crowdRadius)
+                    near++;
+            }
+
+            // 3 düşmandan başlar, 5'te tam açılır.
+            crowdTarget = near >= crowdMinEnemies ? Mathf.Clamp01((near - crowdMinEnemies + 1) / 3f) : 0f;
+        }
+
+        if (!eventZoom)
+            crowdTarget = 0f;
+
+        crowd = Mathf.SmoothDamp(crowd, crowdTarget, ref crowdVel, crowdTarget > crowd ? crowdIn : crowdOut, Mathf.Infinity, Time.unscaledDeltaTime);
+
+        if (pulseHold > 0f)
+            pulseHold -= Time.unscaledDeltaTime;
+
+        float pulseTarget = pulseHold > 0f ? pulsePeak : 0f;
+        pulse = Mathf.SmoothDamp(pulse, pulseTarget, ref pulseVel, pulseTarget > pulse ? parryIn : parryOut, Mathf.Infinity, Time.unscaledDeltaTime);
+
+        if (pulseHold <= 0f && pulse < 0.0005f)
+            pulsePeak = 0f;
+
+        float breathTarget = cinematic && (forceBreath || idleTimer >= idleDelay) ? 1f : 0f;
         float bs = breathTarget > breath ? breathFadeIn : breathFadeOut;
         breath = Mathf.SmoothDamp(breath, breathTarget, ref breathVel, bs, Mathf.Infinity, Time.unscaledDeltaTime);
 
@@ -248,6 +358,8 @@ public class RunCameraZoom : MonoBehaviour
 
         // Yakınlaş + nefesle hafif ileri-geri.
         float zoomK = 1f + zoomAmount * eased
+            + crowdZoom * crowd * crowd * (3f - 2f * crowd)
+            - pulse
             - idleZoomIn * bEase
             + breathZoomWobble * bEase * Mathf.Sin(phase);
 
@@ -262,14 +374,29 @@ public class RunCameraZoom : MonoBehaviour
                 camOffset = vcam.gameObject.AddComponent<CinemachineCameraOffset>();
         }
 
-        camOffset.Offset = new Vector3(
-            swayAmount.x * bEase * (Mathf.Sin(phase * 0.5f) + 0.4f * Mathf.Sin(phase * 1.3f + 1.7f)),
-            swayAmount.y * bEase * (Mathf.Sin(phase * 0.8f + 0.9f) + 0.5f * Mathf.Sin(phase * 0.37f)),
+        float sw = cinematic ? Mathf.Lerp(activeShake, 1f, bEase) : 0f;   // oynarken de sallan, beklerken tam
+        float hn = tt * handheldSpeed;
+        float hx = (Mathf.PerlinNoise(hn, 3.1f) - 0.5f) * 2f;
+        float hy = (Mathf.PerlinNoise(7.7f, hn * 1.17f) - 0.5f) * 2f;
+        float hr = (Mathf.PerlinNoise(hn * 0.83f, 11.3f) - 0.5f) * 2f;
+
+        Vector3 shakeOff = new Vector3(
+            swayAmount.x * sw * (Mathf.Sin(phase * 0.5f) + 0.4f * Mathf.Sin(phase * 1.3f + 1.7f)) + handheldPos * sw * hx,
+            swayAmount.y * sw * (Mathf.Sin(phase * 0.8f + 0.9f) + 0.5f * Mathf.Sin(phase * 0.37f)) + handheldPos * sw * hy,
             0f
         );
 
+        // Ekrana çizilen kamera vcam üstündeki Camera ise: Cinemachine yazdıktan SONRA doğrudan konuma ekle (kesin çalışır).
+        if (rollHelper != null)
+        {
+            rollHelper.posOffset = shakeOff;
+            camOffset.Offset = Vector3.zero;
+        }
+        else
+            camOffset.Offset = shakeOff;
+
         LensSettings dl = vcam.Lens;
-        roll = swayRoll * bEase * Mathf.Sin(phase * 0.43f + 0.6f);
+        roll = swayRoll * sw * Mathf.Sin(phase * 0.43f + 0.6f) + handheldRoll * sw * hr;
         dl.Dutch = roll;
         vcam.Lens = dl;
 
@@ -296,9 +423,13 @@ public class RunCameraZoom : MonoBehaviour
 public class RunCameraRoll : MonoBehaviour
 {
     public float roll;
+    public Vector3 posOffset;
 
     private void LateUpdate()
     {
+        if (posOffset.sqrMagnitude > 1e-10f)
+            transform.position += posOffset;
+
         if (Mathf.Abs(roll) < 0.0001f)
             return;
 
