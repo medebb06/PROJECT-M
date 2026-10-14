@@ -2059,6 +2059,17 @@ MonoBehaviour:
   fullSpeed: 8
   smoothIn: 0.9
   smoothOut: 0.6
+  eventZoom: 1
+  parryZoom: 0.05
+  perfectParryZoom: 0.075
+  parryIn: 0.05
+  parryHold: 0.1
+  parryOut: 0.4
+  crowdZoom: 0.1
+  crowdMinEnemies: 3
+  crowdRadius: 14
+  crowdIn: 1.2
+  crowdOut: 1.8
   idleDelay: 6
   breathFadeIn: 3.5
   breathFadeOut: 0.7
@@ -2067,7 +2078,14 @@ MonoBehaviour:
   breathPeriod: 4.5
   swayAmount: {x: 0.1, y: 0.07}
   swayRoll: 0.35
+  handheldPos: 0.07
+  handheldRoll: 0.45
+  handheldSpeed: 1.1
+  activeShake: 0.45
   idleBreathing: 1
+  letterbox: 1
+  barHeight: 0.1
+  barSmooth: 0.5
   showDebug: 1
   status: 
 --- !u!1 &600068899
@@ -16129,6 +16147,18 @@ PrefabInstance:
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkReturnTime5
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: frameSmearColor.b
+      value: 6.0078535
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: frameSmearColor.g
+      value: 6.0078535
+      objectReference: {fileID: 0}
+    - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: frameSmearColor.r
+      value: 6.0078535
       objectReference: {fileID: 0}
     - target: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Name

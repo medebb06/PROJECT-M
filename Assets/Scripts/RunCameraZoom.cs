@@ -71,7 +71,7 @@ public class RunCameraZoom : MonoBehaviour
     private float bars, barsVel;
 
     [Tooltip("Ekranın sol üstünde durum yazısı göster (sorun giderme).")]
-    public bool showDebug = true;
+    public bool showDebug = false;
 
     [Header("Durum (sadece bilgi, Play'de güncellenir)")]
     [SerializeField] private string status = "";
@@ -92,6 +92,9 @@ public class RunCameraZoom : MonoBehaviour
     private CinemachineCameraOffset camOffset;
     private float pulse, pulseVel, pulsePeak, pulseHold;   // parry zoom'u (yaklaşma)
     private float crowd, crowdVel, crowdTarget, nextCrowdScan;
+    private readonly Collider2D[] crowdBuf = new Collider2D[32];
+    private readonly EnemyController[] crowdSeen = new EnemyController[32];
+    private ContactFilter2D crowdFilter; private bool crowdFilterInit;
 
     private void OnEnable()
     {
@@ -292,7 +295,7 @@ public class RunCameraZoom : MonoBehaviour
         if (busyWhy != lastLoggedWhy)
         {
             lastLoggedWhy = busyWhy;
-            Debug.Log("[RunCameraZoom] bekleme engeli: " + (busyWhy == "" ? "YOK (sayaç işliyor)" : busyWhy));
+            if (showDebug) Debug.Log("[RunCameraZoom] bekleme engeli: " + (busyWhy == "" ? "YOK (sayaç işliyor)" : busyWhy));
         }
 
         if (busy)
@@ -309,25 +312,44 @@ public class RunCameraZoom : MonoBehaviour
         // ---- Olay zoom'u: parry (yaklaş) + kalabalık (uzaklaş) ----
         if (eventZoom && player != null && Time.unscaledTime >= nextCrowdScan)
         {
-            nextCrowdScan = Time.unscaledTime + 0.35f;
-            EnemyController[] all = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+            nextCrowdScan = Time.unscaledTime + 0.4f;
             int near = 0;
             Vector2 pp = player.transform.position;
 
-            for (int i = 0; i < all.Length; i++)
+            if (crowdFilterInit == false)
             {
-                EnemyController en = all[i];
+                crowdFilter = new ContactFilter2D { useLayerMask = true, layerMask = LayerMask.GetMask("Enemy"), useTriggers = true };
+                crowdFilterInit = true;
+            }
 
-                if (en == null || !en.gameObject.activeInHierarchy)
+            // Çöp üretmeyen sorgu (FindObjectsByType her seferinde dizi ayırıp takılma yapıyordu).
+            int n = Physics2D.OverlapCircle(pp, crowdRadius, crowdFilter, crowdBuf);
+            int seenCount = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                EnemyController en = crowdBuf[i] != null ? crowdBuf[i].GetComponentInParent<EnemyController>() : null;
+
+                if (en == null)
                     continue;
+
+                bool dup = false;
+
+                for (int k = 0; k < seenCount; k++)
+                    if (crowdSeen[k] == en) { dup = true; break; }
+
+                if (dup)
+                    continue;
+
+                if (seenCount < crowdSeen.Length)
+                    crowdSeen[seenCount++] = en;
 
                 Health eh = en.GetComponent<Health>();
 
                 if (eh != null && eh.IsDead)
                     continue;
 
-                if (((Vector2)en.transform.position - pp).sqrMagnitude <= crowdRadius * crowdRadius)
-                    near++;
+                near++;
             }
 
             // 3 düşmandan başlar, 5'te tam açılır.
@@ -400,13 +422,13 @@ public class RunCameraZoom : MonoBehaviour
         dl.Dutch = roll;
         vcam.Lens = dl;
 
-        if (Time.unscaledTime >= nextLog && (speed > 0.5f || nextLog == 0f))
+        if (showDebug && Time.unscaledTime >= nextLog && (speed > 0.5f || nextLog == 0f))
         {
             nextLog = Time.unscaledTime + 1.5f;
             Debug.Log($"[RunCameraZoom] player={(player != null)} rb={(player != null && player.rb != null)} vcam={vcam.name} | hız {speed:0.0} | miktar {amount:0.00} | taban {baseOrtho:0.0} | lens {vcam.Lens.OrthographicSize:0.00} | kamera {(Camera.main != null ? (ownCam != null ? ownCam.orthographicSize : Camera.main.orthographicSize) : 0f):0.00}");
         }
 
-        if (breath > 0.02f && Time.unscaledTime >= nextBreathLog)
+        if (showDebug && breath > 0.02f && Time.unscaledTime >= nextBreathLog)
         {
             nextBreathLog = Time.unscaledTime + 1.0f;
             Camera mc = Camera.main;
@@ -414,7 +436,7 @@ public class RunCameraZoom : MonoBehaviour
             Debug.Log($"[RunCameraZoom] NEFES {breath:0.00} | istenen ortho {baseOrtho * zoomK:0.00} | vcam.Lens {vcam.Lens.OrthographicSize:0.00} | Camera.main {(mc != null ? mc.orthographicSize : 0f):0.00} | ofset {camOffset.Offset} | dutch {vcam.Lens.Dutch:0.00} | brain {(br != null ? br.name : "YOK")} canlı: {(br != null && br.ActiveVirtualCamera != null ? ((Component)br.ActiveVirtualCamera).name : "?")}");
         }
 
-        status = $"bekleme {idleTimer:0.0}s engel [{busyWhy}] nefes {breath:0.00} | hız {speed:0.0} | miktar {amount:0.00} | taban {baseOrtho:0.0} | lens {vcam.Lens.OrthographicSize:0.00} | kamera {(Camera.main != null ? (ownCam != null ? ownCam.orthographicSize : Camera.main.orthographicSize) : 0f):0.00}";
+        if (showDebug) status = $"bekleme {idleTimer:0.0}s engel [{busyWhy}] nefes {breath:0.00} | hız {speed:0.0} | miktar {amount:0.00} | taban {baseOrtho:0.0} | lens {vcam.Lens.OrthographicSize:0.00} | kamera {(Camera.main != null ? (ownCam != null ? ownCam.orthographicSize : Camera.main.orthographicSize) : 0f):0.00}";
     }
 }
 
