@@ -47,6 +47,34 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float blockSlowTime = 0.12f;
     [SerializeField] private float blockSlowScale = 0.3f;
 
+    // ---- Vuruş hissi v2 (kombo adımına göre artan, orantılı) ----
+    // Dizi sırası: Attack1, Attack2, Attack3, Attack4.
+    [Header("Vuruş Hissi v2 (adım başına: A1, A2, A3, A4)")]
+    [Tooltip("Vuruşta tam donma süresi (gerçek sn).")]
+    [SerializeField] private float[] hitFreeze = { 0.05f, 0.06f, 0.085f, 0.10f };
+    [Tooltip("Donmadan sonra kısa ağır çekim (gerçek sn). 0 = yok.")]
+    [SerializeField] private float[] hitSlowTime = { 0.04f, 0.05f, 0.08f, 0.10f };
+    [Range(0f, 1f)] [SerializeField] private float hitSlowScale = 0.35f;
+    [Tooltip("Kamera sarsıntısı (vuruş yönünde itme).")]
+    [SerializeField] private float[] hitShake = { 0.18f, 0.22f, 0.35f, 0.42f };
+    [Tooltip("Karakter squash/stretch vuruş darbesi (kare kare çizimde, RonniPlayerBridge uygular).")]
+    [SerializeField] private float[] hitKick = { 0.06f, 0.07f, 0.10f, 0.10f };
+    [Tooltip("Aynı vuruşta her ek düşman için donma/sarsıntı çarpanı artışı (en çok +%40).")]
+    [SerializeField] private float multiHitBonus = 0.15f;
+    [Tooltip("Sarsıntının aşağı bileşeni (0 = tam yatay itme).")]
+    [Range(0f, 1f)] [SerializeField] private float shakeDown = 0.35f;
+
+    [Header("Parry / Denge Kırma v2")]
+    [SerializeField] private float parryShake2 = 0.6f;
+    [SerializeField] private float breakFreeze2 = 0.14f;
+    [SerializeField] private float breakSlowTime2 = 0.2f;
+    [Range(0f, 1f)] [SerializeField] private float breakSlowScale2 = 0.2f;
+    [SerializeField] private float breakShake2 = 0.75f;
+    [SerializeField] private float breakKick2 = 0.12f;
+
+    /// <summary>Vuruş anı: (kombo adımı, squash darbesi). RonniPlayerBridge dinler.</summary>
+    public static System.Action<int, float> AttackImpact;
+
     [Header("Balance Break Impact")]
     [SerializeField] private float balanceBreakHitStopTimeScale = 0.01f;
     [SerializeField] private float balanceBreakHitStopDuration = 0.12f;
@@ -85,16 +113,42 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayAttackImpact()
     {
-        HitStop.Request(
-            attackHitStopDuration,
-            attackHitStopTimeScale,
-            NormalPriority
-        );
+        PlayAttackImpact(1, Vector2.right, 1);
+    }
 
-        PlayPunch(
-            attackPunchAmount,
-            attackPunchDuration
-        );
+    static float Pick(float[] a, int step, float fallback)
+    {
+        if (a == null || a.Length == 0) return fallback;
+        return a[Mathf.Clamp(step - 1, 0, a.Length - 1)];
+    }
+
+    /// <summary>Kombo adımına göre ölçeklenen vuruş hissi: donma + kısa ağır çekim + yönlü sarsıntı + squash darbesi.</summary>
+    public void PlayAttackImpact(int step, Vector2 dir, int hitCount)
+    {
+        float m = 1f + Mathf.Min(0.4f, multiHitBonus * Mathf.Max(0, hitCount - 1));
+
+        float freeze = Pick(hitFreeze, step, attackHitStopDuration) * m;
+        float slow = Pick(hitSlowTime, step, 0f);
+
+        HitStop.Request(freeze, 0f, NormalPriority);
+
+        if (slow > 0f)
+            HitStop.RequestRamp(freeze + slow, hitSlowScale, 1f, 2f, NormalPriority);
+
+        PlayDirectionalShake(Pick(hitShake, step, 0f) * m, dir);
+
+        AttackImpact?.Invoke(step, Pick(hitKick, step, 0f));
+    }
+
+    private void PlayDirectionalShake(float force, Vector2 dir)
+    {
+        if (impulseSource == null || force <= 0f)
+            return;
+
+        float sx = Mathf.Abs(dir.x) > 0.01f ? Mathf.Sign(dir.x) : 1f;
+        Vector3 v = new Vector3(sx, -shakeDown, 0f).normalized * force;
+
+        impulseSource.GenerateImpulseWithVelocity(v);
     }
 
     // =========================================================
@@ -107,7 +161,7 @@ public class CombatImpactFeedback : MonoBehaviour
         HitStop.Request(parryFreezeTime, 0f, ParryPriority);
         HitStop.RequestRamp(parryFreezeTime + parrySlowTime, parrySlowScale, 1f, 2f, ParryPriority);
 
-        PlayScreenShake(parryShakeForce);
+        PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 
         PlayPunch(
             parryPunchAmount,
@@ -138,20 +192,13 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayBalanceBreakImpact()
     {
-        HitStop.Request(
-            balanceBreakHitStopDuration,
-            balanceBreakHitStopTimeScale,
-            BalanceBreakPriority
-        );
+        // En ağır his: tam donma + ağır çekimden dönüş + güçlü sarsıntı.
+        HitStop.Request(breakFreeze2, 0f, BalanceBreakPriority);
+        HitStop.RequestRamp(breakFreeze2 + breakSlowTime2, breakSlowScale2, 1f, 2f, BalanceBreakPriority);
 
-        PlayScreenShake(
-            balanceBreakShakeForce
-        );
+        PlayScreenShake(breakShake2);
 
-        PlayPunch(
-            balanceBreakPunchAmount,
-            balanceBreakPunchDuration
-        );
+        AttackImpact?.Invoke(0, breakKick2);
     }
 
     // =========================================================

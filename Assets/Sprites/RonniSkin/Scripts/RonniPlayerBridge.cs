@@ -57,6 +57,35 @@ namespace RonniSkin
         [Tooltip("Kare kare çizimin ayak noktasına göre kayması (birim, sağa bakarken).")] public Vector2 frameAtkOffset = Vector2.zero;
         [Tooltip("Rig sıralamasına eklenen sıra (rig parçalarının önünde kalsın).")] public int frameAtkOrder = 60;
         SpriteRenderer frameSR; Sprite frameLast; bool lastAtkFrames, frameWant;
+        [Header("Kare kare squash & stretch")]
+        [Tooltip("Saldırı karelerinde squash/stretch (pivot ayakta: karakter yere basılı esner).")] public bool frameSquash = true;
+        [Tooltip("Genel şiddet çarpanı (0 = kapalı, 1 = varsayılan, 2 = çok abartılı).")] [Range(0f, 2f)] public float squashAmount = 1f;
+        [Tooltip("Hedef şekle oturma hızı. Büyük = daha sert/anlık.")] public float squashSpeed = 26f;
+        Vector2 sqCur = Vector2.one; bool sqWas;
+        // [saldırı, kare] = (x, y) ölçek. Kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur.
+        static readonly Vector2[,] SquashTable =
+        {
+            { new Vector2(1.06f, 0.94f), new Vector2(1.12f, 0.92f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack1: yatay kesim -> yukarı yay
+            { new Vector2(1.04f, 0.96f), new Vector2(1.14f, 0.91f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack2: öne uzanma -> yukarı yay
+            { new Vector2(1.08f, 0.92f), new Vector2(1.18f, 0.90f), new Vector2(1.07f, 0.96f), Vector2.one },   // Attack3: gerilme -> saplama
+        };
+        void OnEnable() { CombatImpactFeedback.AttackImpact += OnAttackImpact; }
+        // Vuruş anı: donma sırasında görünsün diye anında uygula (sonra yumuşakça hedefe döner).
+        void OnAttackImpact(int step, float kick)
+        {
+            if (!frameSquash || frameSR == null || !frameSR.enabled) return;
+            sqCur.x += kick * squashAmount;
+            sqCur.y -= kick * 0.8f * squashAmount;
+        }
+        Vector2 SquashTarget(Sprite s)
+        {
+            if (!frameSquash || s == null) return Vector2.one;
+            string n = s.name;   // "Attack2HD_3"
+            if (n.Length < 11) return Vector2.one;
+            int a = n[6] - '1', k = n[n.Length - 1] - '1';
+            if (a < 0 || a >= SquashTable.GetLength(0) || k < 0 || k >= SquashTable.GetLength(1)) return Vector2.one;
+            return Vector2.one + (SquashTable[a, k] - Vector2.one) * squashAmount;
+        }
         bool FrameAtkActive()
         {
             string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : atkClip == "attack3" && frameAttack3 ? "Attack3HD" : null;
@@ -87,7 +116,10 @@ namespace RonniSkin
             // dünya boyu: 1 sayfa pikseli = frameAtkPxScale saldırı-rig pikseli
             float L = rig.unitsPerPixel * Mathf.Abs(r.transform.lossyScale.y) * frameAtkPxScale * s.pixelsPerUnit;
             Vector3 ls = transform.lossyScale;
-            frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f), L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f), 1f);
+            Vector2 sqT = SquashTarget(s);
+            if (!sqWas) { sqCur = sqT; sqWas = true; }
+            else sqCur = Vector2.Lerp(sqCur, sqT, 1f - Mathf.Exp(-squashSpeed * Time.deltaTime));
+            frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x, L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y, 1f);
             float fx = frameSR.flipX ? -1f : 1f;
             frameSR.transform.position = r.transform.position + new Vector3(frameAtkOffset.x * fx, frameAtkOffset.y, 0f);
         }
@@ -648,7 +680,7 @@ namespace RonniSkin
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
-            if (!frameWant && frameSR != null && frameSR.enabled) frameSR.enabled = false;
+            if (!frameWant && frameSR != null && frameSR.enabled) { frameSR.enabled = false; sqWas = false; }
             ApplyTransitionScale();
         }
 
@@ -705,6 +737,7 @@ namespace RonniSkin
 
         void OnDisable()
         {
+            CombatImpactFeedback.AttackImpact -= OnAttackImpact;
             if (firefly != null) firefly.Cancel();
             if (hidden != null) foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
         }

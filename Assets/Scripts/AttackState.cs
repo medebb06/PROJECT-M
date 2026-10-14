@@ -379,6 +379,7 @@ public class AttackState : ICombatState
             );
 
         bool hitSomething = false;
+        int hitCount = 0;
 
         // Vazo / sandık.
         if (LevelProps.HitArea(boxCenter, box))
@@ -404,6 +405,7 @@ public class AttackState : ICombatState
             )
             {
                 hitSomething = true;
+                hitCount++;
                 continue;
             }
 
@@ -429,6 +431,7 @@ public class AttackState : ICombatState
             processedEnemies.Add(enemy);
 
             hitSomething = true;
+            hitCount++;
 
             // =================================================
             // VFX POSITION
@@ -490,7 +493,7 @@ public class AttackState : ICombatState
 
             if (combatFeedback != null)
             {
-                combatFeedback.PlayAttackImpact();
+                combatFeedback.PlayAttackImpact(step, dir, Mathf.Max(1, hitCount));
             }
         }
 
