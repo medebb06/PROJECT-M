@@ -16004,6 +16004,10 @@ PrefabInstance:
       propertyPath: attack4Duration
       value: 0.4
       objectReference: {fileID: 0}
+    - target: {fileID: 6881005926789426159, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkHold5x
       value: 0

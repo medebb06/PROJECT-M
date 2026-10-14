@@ -49,6 +49,45 @@ namespace RonniSkin
         [Tooltip("Attack2: son pozda toparlanmadan önce kısa bekleme (sn).")] public float atkEndPause2 = 0.8f;
         [Tooltip("Attack2: bekleme sonrası kılıcı geri çekip idle'a dönüş süresi (sn). Büyük = daha yavaş.")] public float atkReturnTime5 = 3.5f;
         string lastAtkClip = "attack1";
+        [Header("Attack1 kare kare (Animator: Sprites/Player/Attack1.anim)")]
+        [Tooltip("Attack1'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack1HD_*) göster.")] public bool frameAttack1 = true;
+        [Tooltip("Kare kare çizimin boyu: saldırı rig pikseli / sayfa pikseli (sayfa tam çözünürlük). Büyük = daha büyük karakter.")] public float frameAtkPxScale = 3.7f;
+        [Tooltip("Kare kare çizimin ayak noktasına göre kayması (birim, sağa bakarken).")] public Vector2 frameAtkOffset = Vector2.zero;
+        [Tooltip("Rig sıralamasına eklenen sıra (rig parçalarının önünde kalsın).")] public int frameAtkOrder = 60;
+        SpriteRenderer frameSR; Sprite frameLast; bool lastAtkFrames, frameWant;
+        bool FrameAtkActive()
+        {
+            if (!frameAttack1 || atkClip != "attack1" || originalSprite == null) return false;
+            Sprite s = originalSprite.sprite;
+            if (s != null && s.name.StartsWith("Attack1HD")) { frameLast = s; return true; }
+            return lastAtkFrames && frameLast != null;   // Animator klibi swing'den önce biterse son karede kal
+        }
+        void ShowFrame(Sprite s)
+        {
+            if (s == null) return;
+            if (frameSR == null)
+            {
+                var go = new GameObject("Ronni_Atk1Frames");
+                go.transform.SetParent(transform, false);
+                frameSR = go.AddComponent<SpriteRenderer>();
+                Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+                if (sh == null) sh = Shader.Find("Sprites/Default");
+                if (sh != null) frameSR.sharedMaterial = new Material(sh) { name = "Ronni_Atk1Frames" };
+            }
+            frameWant = true;
+            frameSR.enabled = true;
+            frameSR.sprite = s;
+            frameSR.flipX = originalSprite != null && originalSprite.flipX;
+            frameSR.color = mirrorSpriteColor && originalSprite != null ? originalSprite.color : Color.white;
+            RonniSkinRig r = rigAtk != null ? rigAtk : rig;
+            frameSR.sortingLayerName = r.sortingLayerName; frameSR.sortingOrder = r.sortingOrderOffset + frameAtkOrder;
+            // dünya boyu: 1 sayfa pikseli = frameAtkPxScale saldırı-rig pikseli
+            float L = rig.unitsPerPixel * Mathf.Abs(r.transform.lossyScale.y) * frameAtkPxScale * s.pixelsPerUnit;
+            Vector3 ls = transform.lossyScale;
+            frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f), L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f), 1f);
+            float fx = frameSR.flipX ? -1f : 1f;
+            frameSR.transform.position = r.transform.position + new Vector3(frameAtkOffset.x * fx, frameAtkOffset.y, 0f);
+        }
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
         void RestoreFadeTop() { if (fadeTop != null) { fadeTop.SetSorting(fadeTop.sortingLayerName, fadeTopBase); fadeTop = null; } }
@@ -430,6 +469,7 @@ namespace RonniSkin
 
         void LateUpdate()
         {
+            frameWant = false;
             if (!aligned && hidden != null && Time.frameCount > 1)
             {
                 Renderer best = null; float bs = 0.01f;
@@ -552,6 +592,7 @@ namespace RonniSkin
                         defWasOn = false;
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                         if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); if (atkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(playerAtk.manual01);
+                        if (FrameAtkActive()) { rigAtk.SetShown(false); ShowFrame(frameLast); lastAtkFrames = true; } else lastAtkFrames = false;
                     }
                     else
                     {
@@ -566,10 +607,11 @@ namespace RonniSkin
                             else { atkRetT -= Time.deltaTime; float pz = lastAtkClip == "attack2" ? atkEndPause2 : 0f; float rt = lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3; float u = Mathf.Clamp01((rt - atkRetT) / Mathf.Max(0.01f, rt)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                             rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2" || lastAtkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
+                            if (lastAtkFrames && frameLast != null) { Sprite cs = originalSprite != null ? originalSprite.sprite : null; if (cs != null && cs.name.StartsWith("Attack1HD")) frameLast = cs; rigAtk.SetShown(false); ShowFrame(frameLast); if (atkHoldT <= 0f) { atkRetT = 0f; lastAtkFrames = false; } }   // kare kare: son karede bekle, sonra direkt idle
                             atkHoldIdle = true;
                         }
                         else
-                        if (atkFade > 0f && mode == 0 && atkCrossfade > 0f)
+                        if (atkFade > 0f && mode == 0 && atkCrossfade > 0f && !lastAtkFrames)
                         {
                             // eski görünüm opak kalır, yeni görünüm üstüne yavaşça belirir (yarı saydam üst üste binme "yok olma" yapıyordu)
                             atkFade -= Time.deltaTime;
@@ -603,6 +645,7 @@ namespace RonniSkin
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
+            if (!frameWant && frameSR != null && frameSR.enabled) frameSR.enabled = false;
             ApplyTransitionScale();
         }
 
