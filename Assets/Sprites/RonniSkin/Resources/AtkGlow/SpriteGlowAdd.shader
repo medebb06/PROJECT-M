@@ -65,7 +65,7 @@ Shader "ProjectM/SpriteGlowAdd"
 
                 o.positionCS = TransformObjectToHClip(pos);
                 o.uv = v.uv;
-                o.color = v.color;
+                o.color = v.color * unity_SpriteColor;   // Unity 6: SpriteRenderer.color burada gelir (Sprite-Unlit-Default ile aynı)
                 return o;
             }
 
