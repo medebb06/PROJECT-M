@@ -130,6 +130,13 @@ public class EnemyAttackState : IEnemyState
 
     public bool IsWindingUp => !attackDone;
 
+    // Okunabilir saldırı için hazırlık taban süreleri (sn). Boss'lara uygulanmaz.
+    public static float MinFirstWindup = 0.5f;
+    public static float MinFollowWindup = 0.32f;
+
+    private bool IsBossEnemy => enemy != null && enemy.GetComponent<BossController>() != null;
+
+
     public bool IsUnblockable => isUnblockable;
 
     public float RemainingWindup =>
@@ -240,6 +247,10 @@ public class EnemyAttackState : IEnemyState
         baseWindup =
             enemy.WindupFor(plannedUnblockable);
 
+        // Okunabilirlik: tek vuruşun hazırlığı en az MinFirstWindup.
+        if (!IsBossEnemy)
+            baseWindup = Mathf.Max(baseWindup, MinFirstWindup);
+
         // Felç Edici Zehir: zehirli düşmanın uyarısı uzar.
         BeginWindup(
             baseWindup * EnemyStatus.WindupMultiplierFor(enemy)
@@ -264,6 +275,10 @@ public class EnemyAttackState : IEnemyState
         // Kombonun İLK vuruşu biraz daha uzun hazırlanır: noktaları okuyacak zaman.
         if (stepIndex == 0 && IsCombo && moveset != null)
             baseWindup += moveset.comboFirstWindupBonus;
+
+        // Okunabilirlik tabanı: ilk vuruş uzun, kombo devamı daha kısa.
+        if (!IsBossEnemy)
+            baseWindup = Mathf.Max(baseWindup, stepIndex == 0 ? MinFirstWindup : MinFollowWindup);
 
         if (comboIndicator != null)
             comboIndicator.SetCurrent(stepIndex);
@@ -329,7 +344,7 @@ public class EnemyAttackState : IEnemyState
         PlayWarning();
 
         if (telegraph != null)
-            telegraph.StartWarning(isUnblockable);
+            telegraph.StartWarning(isUnblockable, warningDuration);
 
         if (isUnblockable)
         {

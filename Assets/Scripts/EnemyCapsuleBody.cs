@@ -20,9 +20,13 @@ public class EnemyCapsuleBody : MonoBehaviour
     public float parrySquash = 0.5f;
     public float breakSquash = 0.9f;
     [Tooltip("Saldırı hazırlığında çömelme.")]
-    public float windupCrouch = 0.28f;
+    public float windupCrouch = 0.55f;
     [Tooltip("Vuruş kararlı olunca esneme (negatif).")]
-    public float commitStretch = -0.2f;
+    public float commitStretch = -0.3f;
+    [Tooltip("Hazırlıkta hedeften uzağa eğilme (derece).")]
+    public float leanBack = 9f;
+    [Tooltip("Vuruşta hedefe doğru atılma eğimi (derece).")]
+    public float leanForward = 7f;
     public float knockbackWobble = 0.22f;
 
     public SpriteRenderer Renderer { get; private set; }
@@ -34,6 +38,7 @@ public class EnemyCapsuleBody : MonoBehaviour
 
     private float impulse;
     private float state;
+    private float lean;
     private Vector2 wobbleOffset;
     private Vector2 wobbleVel;
 
@@ -167,7 +172,26 @@ public class EnemyCapsuleBody : MonoBehaviour
                 target = windupCrouch;
         }
 
-        state = Mathf.MoveTowards(state, target, dt * 4f);
+        state = Mathf.MoveTowards(state, target, dt * 6f);
+
+        // Eğim: hazırlıkta hedeften uzağa, vuruşta hedefe doğru.
+        float dir = 1f;
+
+        if (enemy != null && enemy.target != null)
+            dir = enemy.target.position.x >= transform.position.x ? 1f : -1f;
+
+        float leanTarget = 0f;
+
+        if (telegraph != null)
+        {
+            if (telegraph.IsCommitted)
+                leanTarget = -dir * leanForward;
+            else if (telegraph.IsWarning)
+                leanTarget = dir * leanBack;
+        }
+
+        lean = Mathf.MoveTowards(lean, leanTarget, dt * 120f);
+        body.localRotation = Quaternion.Euler(0f, 0f, lean);
 
         float sq = Mathf.Clamp(impulse + state, -0.5f, 1f);
 

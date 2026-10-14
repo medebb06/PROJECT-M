@@ -58,6 +58,12 @@ public class TimeOfDay : MonoBehaviour
         public Color water = Color.white;
         [Range(0f, 3f)] public float glint = 1f;
 
+        [Header("Ön plan (kameraya yakın otlar)")]
+        [Tooltip("Ön plan yaprak rengi (a = opaklık). Düz siyah yerine koyu petrol/yeşil.")]
+        public Color fgColor = new Color(0.07f, 0.08f, 0.08f, 1f);
+        [Tooltip("Işık gelen kenarlarda ince parlak çizgi şiddeti (0 = yok).")]
+        [Range(0f, 3f)] public float fgRim = 0f;
+
         [Header("Hüzme ve toz")]
         [Range(0f, 3f)] public float rays = 1f;
         public Color rayColor = new Color(1f, 0.87f, 0.68f);
@@ -76,6 +82,10 @@ public class TimeOfDay : MonoBehaviour
     }
 
     [Range(0f, 24f)] public float hour = 22f;
+
+    // Hazır saat paleti sürümü. Artırınca sahnedeki anahtarlar otomatik sıfırlanır.
+    private const int CurrentKeysVersion = 2;
+    [HideInInspector] public int keysVersion = 0;
 
     [Header("Akış (Play)")]
     [Tooltip("Açıksa gün kendiliğinden döner (gece-şafak-gündüz-gün batımı).")]
@@ -124,6 +134,8 @@ public class TimeOfDay : MonoBehaviour
     private static readonly int LightColorId = Shader.PropertyToID("_ProjectM_LightColor");
     private static readonly int WaterMulId = Shader.PropertyToID("_ProjectM_WaterMul");
     private static readonly int GlintId = Shader.PropertyToID("_ProjectM_Glint");
+    private static readonly int FgColorId = Shader.PropertyToID("_ProjectM_FgColor");
+    private static readonly int FgRimId = Shader.PropertyToID("_ProjectM_FgRim");
     private static readonly int MoonPosId = Shader.PropertyToID("_ProjectM_MoonPos");
     private static readonly int WaterMoonXId = Shader.PropertyToID("_WaterMoonX");
     private static readonly int TopId = Shader.PropertyToID("_Top");
@@ -138,8 +150,20 @@ public class TimeOfDay : MonoBehaviour
     {
         Instance = this;
 
-        if (keys == null || keys.Count == 0)
+        if (keys == null || keys.Count == 0 || keysVersion != CurrentKeysVersion)
+        {
+            // Palet güncellendi: sahnede kayıtlı eski anahtarları yenisiyle değiştir (bir kez).
             keys = DefaultKeys();
+
+            if (keysVersion != CurrentKeysVersion)
+                hour = 8.5f;
+
+            keysVersion = CurrentKeysVersion;
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                UnityEditor.EditorUtility.SetDirty(this);
+#endif
+        }
 
         mpb = new MaterialPropertyBlock();
         nextRefresh = 0f;
@@ -357,6 +381,8 @@ public class TimeOfDay : MonoBehaviour
         o.hazeMul = Color.Lerp(a.hazeMul, b.hazeMul, t);
         o.water = Color.Lerp(a.water, b.water, t);
         o.glint = Mathf.Lerp(a.glint, b.glint, t);
+        o.fgColor = Color.Lerp(a.fgColor, b.fgColor, t);
+        o.fgRim = Mathf.Lerp(a.fgRim, b.fgRim, t);
 
         o.rays = Mathf.Lerp(a.rays, b.rays, t);
         o.rayColor = Color.Lerp(a.rayColor, b.rayColor, t);
@@ -400,6 +426,8 @@ public class TimeOfDay : MonoBehaviour
         Shader.SetGlobalVector(LightColorId, new Vector4(k.light.r, k.light.g, k.light.b, k.rimGain));
         Shader.SetGlobalVector(WaterMulId, k.water);
         Shader.SetGlobalVector(GlintId, new Vector4(k.glint, 0f, 0f, 0f));
+        Shader.SetGlobalColor(FgColorId, k.fgColor);
+        Shader.SetGlobalVector(FgRimId, new Vector4(k.light.r * k.fgRim, k.light.g * k.fgRim, k.light.b * k.fgRim, k.fgRim));
 
         // ---- gökyüzü ----
         SpriteRenderer sky = Get("Sky Gradient");
@@ -584,21 +612,22 @@ public class TimeOfDay : MonoBehaviour
 
         var day = new TodKey
         {
-            name = "Gündüz", hour = 8.5f,
-            skyTop = new Color(0.25f, 0.50f, 0.86f), skyMid = new Color(0.46f, 0.69f, 0.93f), skyHorizon = new Color(0.82f, 0.91f, 0.98f),
-            glow = new Color(1f, 0.95f, 0.85f, 0.22f), stars = 0f,
-            sunColor = new Color(1f, 0.95f, 0.82f), sun = 1f,
+            name = "Altın sabah", hour = 8.5f,
+            skyTop = new Color(0.30f, 0.52f, 0.80f), skyMid = new Color(0.62f, 0.76f, 0.90f), skyHorizon = new Color(1.0f, 0.86f, 0.66f),
+            glow = new Color(1f, 0.80f, 0.52f, 0.50f), stars = 0f,
+            sunColor = new Color(1f, 0.86f, 0.62f), sun = 1f,
             moonColor = new Color(0.9f, 0.95f, 1f), moon = 0f,
-            fogFar = new Color(0.85f, 0.91f, 0.97f, 0.30f), fogNear = new Color(0.60f, 0.68f, 0.76f, 0.18f),
-            mist = new Color(0.88f, 0.93f, 0.98f), mistAmount = 0.28f,
-            light = new Color(1.15f, 1.08f, 0.95f), rimGain = 0.40f,
-            ambient = new Color(1f, 1f, 1f), ambientIntensity = 1.15f,
-            groundLight = new Color(1f, 0.95f, 0.8f, 0.05f),
-            bodyTint = new Color(1.1f, 1.1f, 1.1f), bodyLift = new Color(0.07f, 0.09f, 0.08f),
-            hazeMul = new Color(1.2f, 1.3f, 1.45f), water = new Color(1.8f, 2.4f, 3.0f), glint = 1.0f,
-            rays = 0.55f, rayColor = new Color(1f, 0.96f, 0.82f),
-            dust = 0.7f, dustColor = new Color(1f, 0.95f, 0.8f),
-            grade = new Color(1f, 1f, 1f), exposure = 0.12f, saturation = 6f, contrast = 6f, bloom = 0.4f, vignette = 0.2f
+            fogFar = new Color(0.98f, 0.86f, 0.72f, 0.34f), fogNear = new Color(0.50f, 0.62f, 0.62f, 0.20f),
+            mist = new Color(1f, 0.88f, 0.74f), mistAmount = 0.55f,
+            light = new Color(1.30f, 1.05f, 0.76f), rimGain = 1.10f,
+            ambient = new Color(0.78f, 0.88f, 1.0f), ambientIntensity = 0.95f,
+            groundLight = new Color(1f, 0.82f, 0.50f, 0.16f),
+            bodyTint = new Color(1.08f, 1.02f, 0.94f), bodyLift = new Color(0.03f, 0.05f, 0.06f),
+            hazeMul = new Color(1.18f, 1.10f, 1.05f), water = new Color(0.35f, 2.7f, 3.4f), glint = 1.9f,
+            fgColor = new Color(0.10f, 0.20f, 0.22f, 0.92f), fgRim = 1.4f,
+            rays = 1.25f, rayColor = new Color(1f, 0.84f, 0.58f),
+            dust = 1.0f, dustColor = new Color(1f, 0.88f, 0.62f),
+            grade = new Color(1.05f, 1.0f, 0.93f), exposure = 0.05f, saturation = 6f, contrast = 9f, bloom = 0.75f, vignette = 0.28f
         };
 
         var day2 = day.Clone();

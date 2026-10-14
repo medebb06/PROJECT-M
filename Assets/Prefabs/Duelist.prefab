@@ -1226,6 +1226,6 @@ MonoBehaviour:
   hitSquash: 0.6
   parrySquash: 0.5
   breakSquash: 0.9
-  windupCrouch: 0.28
-  commitStretch: -0.2
+  windupCrouch: 0.55
+  commitStretch: -0.3
   knockbackWobble: 0.22

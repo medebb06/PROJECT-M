@@ -37,6 +37,10 @@ Shader "Custom/ForegroundGrassBlur"
                 float _BlurSize;
             CBUFFER_END
 
+            float _ProjectM_TodOn;
+            float4 _ProjectM_FgColor;   // rgb: yaprak rengi, a: opaklık
+            float4 _ProjectM_FgRim;     // rgb: kenar ışığı rengi*şiddet
+
             float4 _MainTex_TexelSize;
 
             struct Attributes
@@ -112,6 +116,21 @@ Shader "Custom/ForegroundGrassBlur"
                 );
 
                 col /= 12.0;
+
+                // Saat dilimi: düz siyah yerine renkli yaprak + ışık gelen kenarda ince parlak çizgi.
+                if (_ProjectM_TodOn > 0.5)
+                {
+                    half a0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).a;
+                    half aUp = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + float2(0, stepUV.y * 2.0)).a;
+                    half aSide = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + float2(-stepUV.x * 1.5, stepUV.y)).a;
+                    half rim = saturate(a0 - min(aUp, aSide));
+
+                    half lum = dot(col.rgb, half3(0.333, 0.333, 0.333));
+                    half3 leaf = _ProjectM_FgColor.rgb * (1.0 + lum * 2.0);
+                    col.rgb = leaf + _ProjectM_FgRim.rgb * rim;
+                    col.a *= _ProjectM_FgColor.a;
+                }
+
                 col *= input.color;
 
                 return col;

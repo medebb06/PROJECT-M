@@ -27,6 +27,21 @@ public class EnemyAttackTelegraph : MonoBehaviour
     [Tooltip("Vuruşa yaklaştıkça yanıp sönme bu kata kadar hızlanır.")]
     [SerializeField] private float unblockableMaxSpeedMultiplier = 2.4f;
 
+    [Header("Okunabilirlik (tek net işaret)")]
+    [Tooltip("Hazırlık başında parlak kırmızı çakma süresi.")]
+    [SerializeField] private float warnPopTime = 0.14f;
+
+    [Tooltip("Çakmadan sonra kırmızının yoğunluğu: başlangıç → vuruşa yakın.")]
+    [SerializeField] private float warnBaseIntensity = 0.6f;
+    [SerializeField] private float warnEndIntensity = 0.9f;
+
+    [Tooltip("Vuruş kesinleşince kısa beyaz çakma süresi.")]
+    [SerializeField] private float commitFlashTime = 0.09f;
+
+    private float warnElapsed;
+    private float warnDuration = 0.5f;
+    private float commitElapsed;
+
     private Color originalColor;
     private bool isWarning;
     private bool isCommitted;
@@ -84,41 +99,41 @@ public class EnemyAttackTelegraph : MonoBehaviour
                 return;
             }
 
-            // Baştan itibaren hızlı sarı; vuruşa yaklaştıkça hızlanır.
-            float speed =
-                unblockableFlashSpeed *
-                Mathf.Lerp(
-                    1f,
-                    unblockableMaxSpeedMultiplier,
-                    unblockableProgress
-                );
+            // Çakmadan SABİT parlak sarı: "kaçman gerek". Sadece başta kısa bir çakma.
+            warnElapsed += EnemyTime.DeltaTime;
 
-            unblockablePhase += EnemyTime.DeltaTime * speed;
-
-            pulse =
-                (Mathf.Sin(unblockablePhase) + 1f) * 0.5f;
-
-            pulse =
-                Mathf.Lerp(0.55f, 1f, pulse);
+            pulse = warnElapsed < warnPopTime ? 1f : 0.9f;
 
             targetColor = unblockableColor;
         }
         else if (isCommitted)
         {
-            // Hızlı ve her zaman belirgin kırmızı:
-            // "bu saldırı artık vazgeçmeyecek".
-            pulse =
-                (Mathf.Sin(Time.time * committedFlashSpeed) + 1f) * 0.5f;
+            // Vuruş kesinleşti: kısa beyaz çakma, sonra sabit parlak kırmızı.
+            commitElapsed += EnemyTime.DeltaTime;
 
-            pulse =
-                Mathf.Lerp(0.5f, 1f, pulse);
+            if (commitElapsed < commitFlashTime)
+            {
+                spriteRenderer.color = Color.white;
+                return;
+            }
 
+            pulse = 1f;
             targetColor = committedColor;
         }
         else
         {
-            pulse =
-                (Mathf.Sin(Time.time * flashSpeed) + 1f) * 0.5f;
+            // Başta bir kez parlak kırmızı çakma, sonra vuruşa doğru yavaşça yoğunlaşan sabit kırmızı.
+            warnElapsed += EnemyTime.DeltaTime;
+
+            if (warnElapsed < warnPopTime)
+            {
+                pulse = 1f;
+            }
+            else
+            {
+                float t = Mathf.Clamp01((warnElapsed - warnPopTime) / Mathf.Max(0.05f, warnDuration - warnPopTime));
+                pulse = Mathf.Lerp(warnBaseIntensity, warnEndIntensity, t);
+            }
 
             targetColor = warningColor;
         }
@@ -131,8 +146,11 @@ public class EnemyAttackTelegraph : MonoBehaviour
             );
     }
 
-    public void StartWarning(bool unblockable = false)
+    public void StartWarning(bool unblockable = false, float duration = 0.5f)
     {
+        warnElapsed = 0f;
+        warnDuration = Mathf.Max(0.1f, duration);
+        commitElapsed = 0f;
         isWarning = true;
         isCommitted = false;
         isUnblockable = unblockable;
@@ -163,6 +181,7 @@ public class EnemyAttackTelegraph : MonoBehaviour
             return;
 
         isCommitted = true;
+        commitElapsed = 0f;
     }
 
     // Kararlı saldırı vurulduğunda flaş görünsün diye
