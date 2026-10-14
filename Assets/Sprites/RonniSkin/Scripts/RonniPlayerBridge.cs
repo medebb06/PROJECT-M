@@ -52,13 +52,14 @@ namespace RonniSkin
         [Header("Attack1 kare kare (Animator: Sprites/Player/Attack1.anim)")]
         [Tooltip("Attack1'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack1HD_*) göster.")] public bool frameAttack1 = true;
         [Tooltip("Attack2'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack2HD_*) göster.")] public bool frameAttack2 = true;
+        [Tooltip("Attack3'te rig yerine Animator'ün oynattığı kare kare çizimi (Attack3HD_*) göster.")] public bool frameAttack3 = true;
         [Tooltip("Kare kare çizimin boyu: saldırı rig pikseli / sayfa pikseli (sayfa tam çözünürlük). Büyük = daha büyük karakter.")] public float frameAtkPxScale = 3.7f;
         [Tooltip("Kare kare çizimin ayak noktasına göre kayması (birim, sağa bakarken).")] public Vector2 frameAtkOffset = Vector2.zero;
         [Tooltip("Rig sıralamasına eklenen sıra (rig parçalarının önünde kalsın).")] public int frameAtkOrder = 60;
         SpriteRenderer frameSR; Sprite frameLast; bool lastAtkFrames, frameWant;
         bool FrameAtkActive()
         {
-            string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : null;
+            string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : atkClip == "attack3" && frameAttack3 ? "Attack3HD" : null;
             if (pfx == null || originalSprite == null) return false;
             Sprite s = originalSprite.sprite;
             if (s != null && s.name.StartsWith(pfx)) { frameLast = s; return true; }
