@@ -304,8 +304,8 @@ public class TrainingDummy : MonoBehaviour
         else
             HitClickAudio.PlayEnemyPostureHit();
 
-        if (brokeNow && balanceBreakSound != null)
-            PlaySfx(balanceBreakSound);
+        if (brokeNow)
+            HitClickAudio.PlayPostureBreak();
 
         // Vuruş efekti (normal düşmanla aynı CombatVFXManager hattı).
         if (CombatVFXManager.Instance == null)

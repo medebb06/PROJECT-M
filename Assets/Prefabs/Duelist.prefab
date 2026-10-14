@@ -190,6 +190,7 @@ GameObject:
   - component: {fileID: 4706036756625254638}
   - component: {fileID: 7502996902466412553}
   - component: {fileID: 6122375724758134201}
+  - component: {fileID: 7770000000000000001}
   m_Layer: 10
   m_Name: Duelist
   m_TagString: Enemy
@@ -423,8 +424,8 @@ MonoBehaviour:
   executeDistance: 2
   executeDuration: 0.15
   hitAudioSource: {fileID: 0}
-  healthHitClip: {fileID: 8300000, guid: 800e01649ad724e459bcbd732c3a81cb, type: 3}
-  postureHitClip: {fileID: 8300000, guid: a7babd95fd937b84d8c70b880b830a63, type: 3}
+  healthHitClip: {fileID: 0}
+  postureHitClip: {fileID: 0}
   knockbackClip: {fileID: 0}
   target: {fileID: 0}
   chaseRange: 10
@@ -441,7 +442,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7ca65978ec59c48a384579cde03103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 100
+  maxHealth: 400
   currentHealth: 0
   destroyOnDeath: 1
   enableRecovery: 0
@@ -463,6 +464,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHitFeedback
   audioSource: {fileID: 1683981631884351114}
   balanceHitSounds: []
+  playOldBalanceHitSound: 0
   balanceHitVFX: {fileID: 0}
   healthHitSounds: []
   healthHitVFX: {fileID: 0}
@@ -506,7 +508,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83671b96497f18541a7582c9068c0553, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBalance
-  maxBalance: 100
+  maxBalance: 35
   currentBalance: 0
   canRecover: 1
   recoveryDelay: 2
@@ -659,7 +661,7 @@ Animator:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3697985245505729534}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: d1afa8fe8dfb498488d7c66ee1f1b033, type: 2}
   m_CullingMode: 0
@@ -1207,3 +1209,23 @@ MonoBehaviour:
   balance: {fileID: 449339544802574334}
   slider: {fileID: 557996581602208872}
   hideWhenEmpty: 1
+--- !u!114 &7770000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3697985245505729534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c3e7a19b2d84f06a1e9d4c7b8f20a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCapsuleBody
+  bodyColor: {r: 0.9, g: 0.91, b: 0.94, a: 1}
+  sizeMultiplier: {x: 1, y: 1}
+  hitSquash: 0.6
+  parrySquash: 0.5
+  breakSquash: 0.9
+  windupCrouch: 0.28
+  commitStretch: -0.2
+  knockbackWobble: 0.22

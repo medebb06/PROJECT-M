@@ -734,7 +734,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3542,7 +3542,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &713646142
 AudioSource:
   m_ObjectHideFlags: 0
@@ -14266,7 +14266,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b93e8ee3ca6d0de42bf533ec344102cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RainSystem
-  raining: 1
+  raining: 0
   backLayer: 1
   midLayer: 1
   frontLayer: 1

@@ -38,6 +38,19 @@ public class EnemyAttackTelegraph : MonoBehaviour
     private float unblockableProgress;
     private float cueUntil;
 
+    public bool IsWarning => isWarning;
+    public bool IsCommitted => isCommitted;
+
+    // Gövde başka bir renderer'a taşındığında (kapsül) flaş orada görünsün.
+    public void SetRenderer(SpriteRenderer sr)
+    {
+        if (sr == null)
+            return;
+
+        spriteRenderer = sr;
+        originalColor = sr.color;
+    }
+
     private void Awake()
     {
         if (spriteRenderer == null)

@@ -20,7 +20,12 @@ public class HitClickAudio : MonoBehaviour
     [Header("Posture (denge) vuruşu - tahta adım sesleri")]
     public bool enableStep = true;
     [Range(0f, 1f)] public float stepVolume = 1f;
-    public Vector2 stepPitch = new Vector2(0.8f, 0.95f);
+    public Vector2 stepPitch = new Vector2(0.93f, 1.06f);
+
+    [Header("Posture kırılma sesi (luggage drop, kalınlaştırılmış)")]
+    public bool enableBreak = true;
+    [Range(0f, 1f)] public float breakVolume = 1f;
+    public Vector2 breakPitch = new Vector2(0.97f, 1.03f);
 
     [Header("Hasar alma (oyuncu canı)")]
     public bool enableHurt = true;
@@ -33,9 +38,9 @@ public class HitClickAudio : MonoBehaviour
     [Tooltip("Aynı karede birden çok düşmana vurulursa sesler üst üste binmesin (sn).")]
     public float minInterval = 0.045f;
 
-    AudioClip[] hit, hurt, fire, both, step;
+    AudioClip[] hit, hurt, fire, both, step, brk;
     AudioSource src;
-    int lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
+    int lastBrk = -1, lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
     float lastT = -10f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -57,16 +62,19 @@ public class HitClickAudio : MonoBehaviour
         var h = new System.Collections.Generic.List<AudioClip>();
         var f = new System.Collections.Generic.List<AudioClip>();
         var st = new System.Collections.Generic.List<AudioClip>();
+        var bk = new System.Collections.Generic.List<AudioClip>();
         var u = new System.Collections.Generic.List<AudioClip>();
 
         foreach (var c in all)
         {
             if (c.name.StartsWith("hit_")) h.Add(c);
+            else if (c.name.StartsWith("break_")) bk.Add(c);
             else if (c.name.StartsWith("step_")) st.Add(c);
             else if (c.name.StartsWith("fire_")) f.Add(c);
             else if (c.name.StartsWith("hurt_")) u.Add(c);
         }
 
+        brk = bk.ToArray();
         step = st.ToArray();
         fire = f.ToArray();
         var b = new System.Collections.Generic.List<AudioClip>(h); b.AddRange(f); both = b.ToArray();
@@ -97,6 +105,13 @@ public class HitClickAudio : MonoBehaviour
         if (instance != null) instance.PlayHealthHitSound();
     }
 
+    /// <summary>Posture kırılma anı: düşman ya da dummy.</summary>
+    public static void PlayPostureBreak()
+    {
+        if (instance != null && instance.enableBreak)
+            instance.Play(instance.brk, ref instance.lastBrk, instance.breakVolume, instance.breakPitch, true);
+    }
+
     public static void PlayEnemyPostureHit()
     {
         if (instance != null && instance.enableStep)
@@ -116,7 +131,7 @@ public class HitClickAudio : MonoBehaviour
         // Posture (denge) vuruşu: tahta adım sesi.
         if (r.hit && r.onBalance && r.amount > 0)
         {
-            if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
+            if (enableStep && !r.brokeBalance) Play(step, ref lastStep, stepVolume, stepPitch); // kırılma anında break sesi çalar
             return;
         }
 
@@ -134,10 +149,10 @@ public class HitClickAudio : MonoBehaviour
         Play(hurt, ref lastHurt, hurtVolume, hurtPitch);
     }
 
-    void Play(AudioClip[] set, ref int last, float vol, Vector2 pitch)
+    void Play(AudioClip[] set, ref int last, float vol, Vector2 pitch, bool force = false)
     {
         if (set == null || set.Length == 0 || src == null) return;
-        if (Time.unscaledTime - lastT < minInterval) return;
+        if (!force && Time.unscaledTime - lastT < minInterval) return;
         lastT = Time.unscaledTime;
 
         int i = Random.Range(0, set.Length);

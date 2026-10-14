@@ -10,6 +10,8 @@ public class EnemyHitFeedback : MonoBehaviour
     [SerializeField] private AudioClip[] balanceHitSounds;
     [Tooltip("Kapalı: eski posture vuruş sesi çalmaz (yerine HitClickAudio adım sesleri).")]
     [SerializeField] private bool playOldBalanceHitSound = false;
+    [Tooltip("Kapalı: eski posture kırılma sesi çalmaz (yerine HitClickAudio break sesi).")]
+    [SerializeField] private bool playOldBalanceBreakSound = false;
     [SerializeField] private GameObject balanceHitVFX;
 
     [Header("Health Hit")]
@@ -136,7 +138,7 @@ public class EnemyHitFeedback : MonoBehaviour
                 "Balance Break AudioSource bulunamadı!"
             );
         }
-        else
+        else if (playOldBalanceBreakSound)
         {
             balanceBreakAudioSource.PlayOneShot(
                 balanceBreakSound
@@ -146,6 +148,8 @@ public class EnemyHitFeedback : MonoBehaviour
                 "BALANCE BREAK SOUND PLAYED!"
             );
         }
+
+        HitClickAudio.PlayPostureBreak();
 
         if (CombatVFXManager.Instance != null)
         {

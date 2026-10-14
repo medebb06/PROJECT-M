@@ -35,6 +35,10 @@ public class PlayerCombatController : MonoBehaviour
     [Tooltip("Aşağı vuruş isabet edince yukarı sıçrama hızı.")]
     public float pogoBounceVelocity = 15f;
 
+    [Header("Otomatik Saldırı")]
+    [Tooltip("Açık: saldırı tuşu basılı tutulduğu sürece kombo otomatik devam eder.")]
+    public bool autoAttackHold = true;
+
     private float bufferTimer;
     private float comboTimer;
     private int comboStep;
@@ -220,7 +224,18 @@ public class PlayerCombatController : MonoBehaviour
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
         if (Input.GetMouseButtonDown(0))
+        {
             bufferTimer = Mathf.Max(inputBufferTime, player.minInputBuffer);
+        }
+        else if (
+            autoAttackHold &&
+            Input.GetMouseButton(0) &&
+            !(defenseController != null && defenseController.IsDefending)
+        )
+        {
+            // TUŞ BASILI: bir saldırı bitince sıradaki otomatik başlar.
+            bufferTimer = Mathf.Max(bufferTimer, Mathf.Max(inputBufferTime, player.minInputBuffer));
+        }
 
         if (
             defenseController != null &&
