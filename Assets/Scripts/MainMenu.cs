@@ -61,6 +61,7 @@ public class GameFlow : MonoBehaviour
     private IEnumerator ToMenu()
     {
         restarting = true;
+        EndlessMode.Active = false;
 
         yield return ScreenFade.Instance.FadeTo(1f, 0.5f);
 
@@ -181,6 +182,7 @@ public class MainMenu : MonoBehaviour
     private static readonly Row[] MainRows =
     {
         new Row { label = "BAŞLA", kanji = "開始", kind = 0 },
+        new Row { label = "SONSUZ MOD", kanji = "無限", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
@@ -214,7 +216,6 @@ public class MainMenu : MonoBehaviour
         new Row { label = "KARARMA ALANI", kanji = "範囲", kind = 1 },
         new Row { label = "TAM EKRAN", kanji = "全画面", kind = 2 },
         new Row { label = "SİNEMATİK KAMERA", kanji = "映画", kind = 2 },
-        new Row { label = "ŞERİT BOYUTU", kanji = "帯", kind = 1 },
         new Row { label = "GERİ", kanji = "戻る", kind = 0 },
     };
 
@@ -432,8 +433,8 @@ public class MainMenu : MonoBehaviour
         fillRects = new RectTransform[n];
         knobRects = new RectTransform[n];
 
-        float top = p == Page.Main ? 40f : 110f;
-        float step = p == Page.Main ? -84f : (p == Page.Settings ? -58f : -66f);
+        float top = p == Page.Main ? 40f + (n - 3) * 42f : 110f;
+        float step = p == Page.Main ? -84f : -66f;
         bool compact = IsTestPage(p);
 
         if (compact)
@@ -617,14 +618,21 @@ public class MainMenu : MonoBehaviour
         switch (i)
         {
             case 0:
+                EndlessMode.Active = false;
                 StartCoroutine(StartGame());
                 break;
 
             case 1:
-                BuildPage(Page.Settings);
+                // SONSUZ MOD: sürekli düşman, can küreleri, ölmeden ne kadar kesebilirsin
+                EndlessMode.Active = true;
+                StartCoroutine(StartGame());
                 break;
 
             case 2:
+                BuildPage(Page.Settings);
+                break;
+
+            case 3:
                 GameSettings.Save();
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
@@ -700,14 +708,7 @@ public class MainMenu : MonoBehaviour
                     GameSettings.CinematicCamera = !GameSettings.CinematicCamera;
                 break;
 
-            case 6: // sinematik şerit boyutu
-                if (dir != 0)
-                    GameSettings.BarHeight = GameSettings.BarHeight + dir * 0.01f;
-
-                DragSlider(6, v => GameSettings.BarHeight = v, 0f, GameSettings.MaxBarHeight);
-                break;
-
-            case 7: // geri
+            case 6: // geri
                 if (confirm || click)
                     Back();
                 break;
@@ -754,7 +755,7 @@ public class MainMenu : MonoBehaviour
     {
         GameSettings.Save();
         BuildPage(Page.Main);
-        index = pauseMode ? 2 : 1;
+        index = 2;
     }
 
     private void RefreshValues()
@@ -783,12 +784,6 @@ public class MainMenu : MonoBehaviour
 
         if (valueTexts.Length > 5 && valueTexts[5] != null)
             valueTexts[5].text = GameSettings.CinematicCamera ? "AÇIK" : "KAPALI";
-
-        if (valueTexts.Length > 6)
-        {
-            float bh = GameSettings.BarHeight;
-            SetSlider(6, bh / GameSettings.MaxBarHeight, Mathf.RoundToInt(bh * 100f) + "%");
-        }
     }
 
     private void SetSlider(int row, float t, string text)
