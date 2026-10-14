@@ -84,7 +84,7 @@ public class TimeOfDay : MonoBehaviour
     [Range(0f, 24f)] public float hour = 22f;
 
     // Hazır saat paleti sürümü. Artırınca sahnedeki anahtarlar otomatik sıfırlanır.
-    private const int CurrentKeysVersion = 2;
+    private const int CurrentKeysVersion = 7;
     [HideInInspector] public int keysVersion = 0;
 
     [Header("Akış (Play)")]
@@ -613,21 +613,21 @@ public class TimeOfDay : MonoBehaviour
         var day = new TodKey
         {
             name = "Altın sabah", hour = 8.5f,
-            skyTop = new Color(0.30f, 0.52f, 0.80f), skyMid = new Color(0.62f, 0.76f, 0.90f), skyHorizon = new Color(1.0f, 0.86f, 0.66f),
-            glow = new Color(1f, 0.80f, 0.52f, 0.50f), stars = 0f,
-            sunColor = new Color(1f, 0.86f, 0.62f), sun = 1f,
+            skyTop = new Color(0.32f, 0.54f, 0.84f), skyMid = new Color(0.60f, 0.78f, 0.92f), skyHorizon = new Color(1.0f, 0.88f, 0.70f),
+            glow = new Color(1f, 0.82f, 0.56f, 0.42f), stars = 0f,
+            sunColor = new Color(1f, 0.84f, 0.55f), sun = 1f,
             moonColor = new Color(0.9f, 0.95f, 1f), moon = 0f,
             fogFar = new Color(0.98f, 0.86f, 0.72f, 0.34f), fogNear = new Color(0.50f, 0.62f, 0.62f, 0.20f),
             mist = new Color(1f, 0.88f, 0.74f), mistAmount = 0.55f,
-            light = new Color(1.30f, 1.05f, 0.76f), rimGain = 1.10f,
+            light = new Color(1.36f, 1.08f, 0.78f), rimGain = 1.15f,
             ambient = new Color(0.78f, 0.88f, 1.0f), ambientIntensity = 0.95f,
-            groundLight = new Color(1f, 0.82f, 0.50f, 0.16f),
+            groundLight = new Color(1f, 0.82f, 0.52f, 0.18f),
             bodyTint = new Color(1.08f, 1.02f, 0.94f), bodyLift = new Color(0.03f, 0.05f, 0.06f),
-            hazeMul = new Color(1.18f, 1.10f, 1.05f), water = new Color(0.35f, 2.7f, 3.4f), glint = 1.9f,
+            hazeMul = new Color(1.18f, 1.10f, 1.05f), water = new Color(0.85f, 1.55f, 1.9f), glint = 1.9f,
             fgColor = new Color(0.10f, 0.20f, 0.22f, 0.92f), fgRim = 1.4f,
-            rays = 1.25f, rayColor = new Color(1f, 0.84f, 0.58f),
+            rays = 1.3f, rayColor = new Color(1f, 0.85f, 0.60f),
             dust = 1.0f, dustColor = new Color(1f, 0.88f, 0.62f),
-            grade = new Color(1.05f, 1.0f, 0.93f), exposure = 0.05f, saturation = 6f, contrast = 9f, bloom = 0.75f, vignette = 0.28f
+            grade = new Color(1.05f, 1.0f, 0.93f), exposure = 0.05f, saturation = 8f, contrast = 7f, bloom = 0.8f, vignette = 0.28f
         };
 
         var day2 = day.Clone();
@@ -642,10 +642,10 @@ public class TimeOfDay : MonoBehaviour
             moonColor = new Color(0.95f, 0.92f, 0.9f), moon = 0.1f,
             fogFar = new Color(1f, 0.60f, 0.40f, 0.36f), fogNear = new Color(0.55f, 0.30f, 0.26f, 0.30f),
             mist = new Color(1f, 0.66f, 0.46f), mistAmount = 0.5f,
-            light = new Color(1.45f, 0.86f, 0.46f), rimGain = 1.25f,
+            light = new Color(1.45f, 0.86f, 0.46f), rimGain = 1.5f,
             ambient = new Color(1f, 0.80f, 0.66f), ambientIntensity = 0.88f,
             groundLight = new Color(1f, 0.62f, 0.34f, 0.24f),
-            bodyTint = new Color(1.05f, 0.9f, 0.8f), bodyLift = new Color(0.04f, 0.014f, 0f),
+            bodyTint = new Color(1.25f, 1.15f, 1.10f), bodyLift = new Color(0.07f, 0.06f, 0.11f),
             hazeMul = new Color(1.25f, 0.85f, 0.60f), water = new Color(1.4f, 0.95f, 0.75f), glint = 1.5f,
             rays = 1.5f, rayColor = new Color(1f, 0.70f, 0.40f),
             dust = 1.2f, dustColor = new Color(1f, 0.78f, 0.50f),

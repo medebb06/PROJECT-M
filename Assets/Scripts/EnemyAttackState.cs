@@ -133,6 +133,16 @@ public class EnemyAttackState : IEnemyState
     // Okunabilir saldırı için hazırlık taban süreleri (sn). Boss'lara uygulanmaz.
     public static float MinFirstWindup = 0.5f;
     public static float MinFollowWindup = 0.32f;
+    // Kapsül (Duelist) düşmanlarda uyarı sesi (~0.48 sn) biter bitmez vuruş gelsin: hazırlık bu süreyi geçmesin.
+    public static float MaxCapsuleWindup = 0.6f;
+
+    private float CapWindup(float w)
+    {
+        if (IsBossEnemy || isUnblockable || enemy.GetComponent<EnemyCapsuleBody>() == null)
+            return w;
+
+        return Mathf.Min(w, MaxCapsuleWindup);
+    }
 
     private bool IsBossEnemy => enemy != null && enemy.GetComponent<BossController>() != null;
 
@@ -251,6 +261,8 @@ public class EnemyAttackState : IEnemyState
         if (!IsBossEnemy)
             baseWindup = Mathf.Max(baseWindup, MinFirstWindup);
 
+        baseWindup = CapWindup(baseWindup);
+
         // Felç Edici Zehir: zehirli düşmanın uyarısı uzar.
         BeginWindup(
             baseWindup * EnemyStatus.WindupMultiplierFor(enemy)
@@ -279,6 +291,8 @@ public class EnemyAttackState : IEnemyState
         // Okunabilirlik tabanı: ilk vuruş uzun, kombo devamı daha kısa.
         if (!IsBossEnemy)
             baseWindup = Mathf.Max(baseWindup, stepIndex == 0 ? MinFirstWindup : MinFollowWindup);
+
+        baseWindup = CapWindup(baseWindup);
 
         if (comboIndicator != null)
             comboIndicator.SetCurrent(stepIndex);

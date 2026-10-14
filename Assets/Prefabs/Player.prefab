@@ -918,7 +918,7 @@ MonoBehaviour:
   player: {fileID: 9045930727589892200}
   defenseVisual: {fileID: 0}
   combatFeedback: {fileID: 1500514311952413261}
-  parryWindow: 0.5
+  parryWindow: 0.3
   parryVisual: {fileID: 0}
   inputBuffer: 0.15
   allowAirDefense: 1
