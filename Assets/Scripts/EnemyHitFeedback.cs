@@ -8,6 +8,8 @@ public class EnemyHitFeedback : MonoBehaviour
 
     [Header("Balance Hit")]
     [SerializeField] private AudioClip[] balanceHitSounds;
+    [Tooltip("Kapalı: eski posture vuruş sesi çalmaz (yerine HitClickAudio adım sesleri).")]
+    [SerializeField] private bool playOldBalanceHitSound = false;
     [SerializeField] private GameObject balanceHitVFX;
 
     [Header("Health Hit")]
@@ -80,7 +82,9 @@ public class EnemyHitFeedback : MonoBehaviour
         Vector3 hitPosition,
         Vector2 hitDirection)
     {
-        PlayRandomSound(balanceHitSounds);
+        // Posture vuruş sesi artık HitClickAudio (adım sesleri) tarafından çalınıyor.
+        if (playOldBalanceHitSound)
+            PlayRandomSound(balanceHitSounds);
 
         if (CombatVFXManager.Instance != null)
         {

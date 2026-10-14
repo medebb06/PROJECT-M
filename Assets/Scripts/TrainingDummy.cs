@@ -19,6 +19,9 @@ public class TrainingDummy : MonoBehaviour
     [Header("Boyut (dünya birimi, genişlik x yükseklik)")]
     public Vector2 size = new Vector2(7.5f, 15f);
 
+    [Tooltip("Boyut çarpanı: 1 = yukarıdaki boyut, 0.5 = yarısı. Dummy'yi küçültmek için bunu kullan.")]
+    [Range(0.2f, 2f)] public float sizeMultiplier = 0.5f;
+
     [Header("Görünüm")]
     [Tooltip("Açık: gövde yüksek çözünürlüklü, yumuşak kenarlı kapsül sprite'ı olur.")]
     public bool useCapsuleSprite = true;
@@ -132,6 +135,8 @@ public class TrainingDummy : MonoBehaviour
     [ContextMenu("Boyutu Uygula")]
     public void ApplySize()
     {
+        Vector2 size = this.size * sizeMultiplier;
+
         BoxCollider2D col = GetComponent<BoxCollider2D>();
 
         if (col != null)
@@ -291,11 +296,13 @@ public class TrainingDummy : MonoBehaviour
         // Ses (düşmanla aynı klipler).
         if (wasBroken)
             PlaySfx(healthHitSounds);
-        else
-            PlaySfx(balanceHitSounds);
+        // (posture vuruş sesi: HitClickAudio adım sesleri)
 
-        // Test için: dummy'de HER vuruşta klavye/ateş sesi çalar.
-        HitClickAudio.PlayEnemyHealthHit();
+        // Test için: dummy'de HER vuruşta ses çalar (posture: adım, can: ateş).
+        if (wasBroken)
+            HitClickAudio.PlayEnemyHealthHit();
+        else
+            HitClickAudio.PlayEnemyPostureHit();
 
         if (brokeNow && balanceBreakSound != null)
             PlaySfx(balanceBreakSound);
@@ -341,7 +348,7 @@ public class TrainingDummy : MonoBehaviour
 
         bool heavy = crit || brokeNow || comboStep >= 3;
 
-        HitStop.Request(heavy ? hitStopHeavy : hitStopNormal);
+        // Hitstop kaldırıldı: dummy'de vuruş donmadan, direkt kesiyormuş gibi hissettirir.
 
         // Su varsa vuruşta halka + damla.
         if (WaterSurface.Instance != null)

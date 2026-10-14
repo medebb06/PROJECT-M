@@ -12,6 +12,13 @@ public class PlayerAudio : MonoBehaviour
     public AudioClip dashClip;
     public AudioClip runClip;
 
+
+    [Header("Koşu Sesi")]
+    [Tooltip("Koşu pitch çarpanı: büyüdükçe adımlar tizleşir/hızlanır (1 = eski ses).")]
+    [Range(0.5f, 1.6f)] public float runPitchMul = 1.2f;
+    [Tooltip("Adımların gücü (tok hissi için biraz yüksek tut).")]
+    [Range(0f, 1f)] public float runVol = 1f;
+
     [Header("Attack Woosh")]
     public AudioClip attack1WooshClip;
     public AudioClip attack2WooshClip;
@@ -20,7 +27,7 @@ public class PlayerAudio : MonoBehaviour
 
     [Range(0f, 1f)]
     [Tooltip("Kılıç savurma sesi seviyesi.")]
-    public float wooshVolume = 0.3f;
+    public float wooshVol = 0.1f;
 
     void Awake()
     {
@@ -131,7 +138,7 @@ public class PlayerAudio : MonoBehaviour
 
         sfxSource.PlayOneShot(
             clip,
-            wooshVolume
+            wooshVol
         );
     }
 
@@ -157,7 +164,8 @@ public class PlayerAudio : MonoBehaviour
                 0.05f
             );
 
-        movementSource.pitch = pitch;
+        movementSource.pitch = pitch * runPitchMul;
+        movementSource.volume = runVol;
         movementSource.clip = runClip;
 
         if (!movementSource.isPlaying)

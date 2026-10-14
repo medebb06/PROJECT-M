@@ -15,12 +15,17 @@ public class HitClickAudio : MonoBehaviour
     public HitSet hitSet = HitSet.Fire;
     public bool enableHit = true;
     [Range(0f, 1f)] public float hitVolume = 1f;
-    public Vector2 hitPitch = new Vector2(0.93f, 1.08f);
+    public Vector2 hitPitch = new Vector2(0.78f, 0.9f);
+
+    [Header("Posture (denge) vuruşu - tahta adım sesleri")]
+    public bool enableStep = true;
+    [Range(0f, 1f)] public float stepVolume = 1f;
+    public Vector2 stepPitch = new Vector2(0.8f, 0.95f);
 
     [Header("Hasar alma (oyuncu canı)")]
     public bool enableHurt = true;
     [Range(0f, 1f)] public float hurtVolume = 1f;
-    public Vector2 hurtPitch = new Vector2(0.9f, 1.04f);
+    public Vector2 hurtPitch = new Vector2(0.8f, 0.92f);
 
     [Tooltip("Tüm klavye seslerine ek çarpan (1 üstü = daha yüksek, klip sınırında kırpılabilir).")]
     [Range(0f, 3f)] public float masterBoost = 1.6f;
@@ -28,9 +33,9 @@ public class HitClickAudio : MonoBehaviour
     [Tooltip("Aynı karede birden çok düşmana vurulursa sesler üst üste binmesin (sn).")]
     public float minInterval = 0.045f;
 
-    AudioClip[] hit, hurt, fire, both;
+    AudioClip[] hit, hurt, fire, both, step;
     AudioSource src;
-    int lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
+    int lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
     float lastT = -10f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -51,15 +56,18 @@ public class HitClickAudio : MonoBehaviour
         var all = Resources.LoadAll<AudioClip>("HitClicks");
         var h = new System.Collections.Generic.List<AudioClip>();
         var f = new System.Collections.Generic.List<AudioClip>();
+        var st = new System.Collections.Generic.List<AudioClip>();
         var u = new System.Collections.Generic.List<AudioClip>();
 
         foreach (var c in all)
         {
             if (c.name.StartsWith("hit_")) h.Add(c);
+            else if (c.name.StartsWith("step_")) st.Add(c);
             else if (c.name.StartsWith("fire_")) f.Add(c);
             else if (c.name.StartsWith("hurt_")) u.Add(c);
         }
 
+        step = st.ToArray();
         fire = f.ToArray();
         var b = new System.Collections.Generic.List<AudioClip>(h); b.AddRange(f); both = b.ToArray();
         hit = h.ToArray(); hurt = u.ToArray();
@@ -89,6 +97,12 @@ public class HitClickAudio : MonoBehaviour
         if (instance != null) instance.PlayHealthHitSound();
     }
 
+    public static void PlayEnemyPostureHit()
+    {
+        if (instance != null && instance.enableStep)
+            instance.Play(instance.step, ref instance.lastStep, instance.stepVolume, instance.stepPitch);
+    }
+
     void PlayHealthHitSound()
     {
         if (!enableHit) return;
@@ -99,6 +113,13 @@ public class HitClickAudio : MonoBehaviour
 
     void OnEnemyHit(EnemyController e, DamageInfo d, HitResult r)
     {
+        // Posture (denge) vuruşu: tahta adım sesi.
+        if (r.hit && r.onBalance && r.amount > 0)
+        {
+            if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
+            return;
+        }
+
         if (!enableHit) return;
         // Sadece CANA vurunca çalsın; posture (denge) vuruşunda çalmasın.
         if (!r.hit || r.onBalance || r.amount <= 0) return;
