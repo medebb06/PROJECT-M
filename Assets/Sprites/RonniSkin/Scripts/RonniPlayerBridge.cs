@@ -62,6 +62,9 @@ namespace RonniSkin
         [Tooltip("Genel şiddet çarpanı (0 = kapalı, 1 = varsayılan, 2 = çok abartılı).")] [Range(0f, 2f)] public float squashAmount = 1f;
         [Tooltip("Hedef şekle oturma hızı. Büyük = daha sert/anlık.")] public float squashSpeed = 26f;
         Vector2 sqCur = Vector2.one; bool sqWas;
+        [Tooltip("Saldırı bitince son kare, altındaki kılıçlı idle'ın üstünde bu sürede (sn) yavaşça kaybolur. 0 = anında geçiş.")] public float frameFadeOut = 0.16f;
+        [Tooltip("Kaybolurken son karenin düz duruşa oturma miktarı (squash'ı yumuşakça 1'e indirir).")] public bool frameFadeSettle = true;
+        float frameFadeT; bool frameFading;
         // [saldırı, kare] = (x, y) ölçek. Kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur.
         static readonly Vector2[,] SquashTable =
         {
@@ -106,7 +109,7 @@ namespace RonniSkin
                 if (sh == null) sh = Shader.Find("Sprites/Default");
                 if (sh != null) frameSR.sharedMaterial = new Material(sh) { name = "Ronni_Atk1Frames" };
             }
-            frameWant = true;
+            frameWant = true; frameFading = false;
             frameSR.enabled = true;
             frameSR.sprite = s;
             frameSR.flipX = originalSprite != null && originalSprite.flipX;
@@ -680,7 +683,28 @@ namespace RonniSkin
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
-            if (!frameWant && frameSR != null && frameSR.enabled) { frameSR.enabled = false; sqWas = false; }
+            if (!frameWant && frameSR != null && frameSR.enabled)
+            {
+                // Çapraz geçiş: altta kılıçlı idle (rig) zaten görünüyor; son kare üstte yavaşça söner.
+                if (!frameFading) { frameFading = frameFadeOut > 0.001f; frameFadeT = frameFadeOut; sqWas = false; }
+                if (frameFading)
+                {
+                    frameFadeT -= Time.deltaTime;
+                    float a = Mathf.Clamp01(frameFadeT / frameFadeOut); a = a * a * (3f - 2f * a);
+                    Color c = mirrorSpriteColor && originalSprite != null ? originalSprite.color : Color.white;
+                    c.a *= a; frameSR.color = c;
+                    if (frameFadeSettle)
+                    {
+                        Vector3 sc = frameSR.transform.localScale;
+                        float k = 1f - Mathf.Exp(-squashSpeed * 0.5f * Time.deltaTime);
+                        Vector2 nsq = Vector2.Lerp(sqCur, Vector2.one, k);
+                        if (Mathf.Abs(sqCur.x) > 1e-4f && Mathf.Abs(sqCur.y) > 1e-4f) frameSR.transform.localScale = new Vector3(sc.x / sqCur.x * nsq.x, sc.y / sqCur.y * nsq.y, sc.z);
+                        sqCur = nsq;
+                    }
+                    if (frameFadeT <= 0f) { frameFading = false; frameSR.enabled = false; }
+                }
+                else frameSR.enabled = false;
+            }
             ApplyTransitionScale();
         }
 
