@@ -65,6 +65,42 @@ namespace RonniSkin
         [Tooltip("Saldırı bitince son kare, altındaki kılıçlı idle'ın üstünde bu sürede (sn) yavaşça kaybolur. 0 = anında geçiş.")] public float frameFadeOut = 0.16f;
         [Tooltip("Kaybolurken son karenin düz duruşa oturma miktarı (squash'ı yumuşakça 1'e indirir).")] public bool frameFadeSettle = true;
         float frameFadeT; bool frameFading;
+        [Header("Smear parlaması (Impact gibi)")]
+        [Tooltip("Kare kare saldırılardaki smear'ın üstüne toplamalı HDR parlama (Resources/AtkGlow). Bloom ile parlar.")] public bool frameSmearGlow = true;
+        [Tooltip("Smear parlama rengi (HDR). Impact Mat ≈ 8.5 beyaz; burada hafif mavi.")] [ColorUsage(true, true)] public Color frameSmearColor = new Color(1.2f, 2.2f, 4.5f, 1f);
+        SpriteRenderer glowSR; Material glowMat; readonly System.Collections.Generic.Dictionary<string, Sprite> glowSprites = new System.Collections.Generic.Dictionary<string, Sprite>();
+        readonly System.Collections.Generic.HashSet<string> glowLoaded = new System.Collections.Generic.HashSet<string>();
+        Sprite GlowFor(Sprite s)
+        {
+            if (s == null) return null;
+            string n = s.name;   // "Attack2HD_3" -> sayfa "Attack2_glow", sprite "Attack2G_3"
+            int u = n.IndexOf("HD_");
+            if (u < 0) return null;
+            string sheet = n.Substring(0, u) + "_glow";
+            if (glowLoaded.Add(sheet))
+                foreach (var g in Resources.LoadAll<Sprite>("AtkGlow/" + sheet)) glowSprites[g.name] = g;
+            Sprite r; return glowSprites.TryGetValue(n.Substring(0, u) + "G_" + n.Substring(u + 3), out r) ? r : null;
+        }
+        void UpdateGlow(Sprite s, float alpha)
+        {
+            Sprite g = frameSmearGlow ? GlowFor(s) : null;
+            if (g == null) { if (glowSR != null) glowSR.enabled = false; return; }
+            if (glowSR == null)
+            {
+                var go = new GameObject("~atk_glow");   // "~": arka ışık / gölge kopyası almasın
+                go.transform.SetParent(frameSR.transform, false);
+                glowSR = go.AddComponent<SpriteRenderer>();
+                Shader gs = Resources.Load<Shader>("AtkGlow/SpriteGlowAdd");
+                if (gs == null) gs = Shader.Find("ProjectM/SpriteGlowAdd");
+                if (gs != null) { glowMat = new Material(gs) { name = "Ronni_AtkGlow" }; glowSR.sharedMaterial = glowMat; }
+            }
+            if (glowMat != null) glowMat.SetColor("_GlowColor", frameSmearColor);
+            glowSR.enabled = true;
+            glowSR.sprite = g;
+            glowSR.flipX = frameSR.flipX;
+            glowSR.sortingLayerID = frameSR.sortingLayerID; glowSR.sortingOrder = frameSR.sortingOrder + 1;
+            glowSR.color = new Color(1f, 1f, 1f, alpha);
+        }
         // [saldırı, kare] = (x, y) ölçek. Kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur.
         static readonly Vector2[,] SquashTable =
         {
@@ -108,6 +144,10 @@ namespace RonniSkin
                 Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
                 if (sh == null) sh = Shader.Find("Sprites/Default");
                 if (sh != null) frameSR.sharedMaterial = new Material(sh) { name = "Ronni_Atk1Frames" };
+                // Arka ışık (CharacterRim) yeni sprite'ı yarım saniye beklemeden hemen tanısın.
+                var rimC = GetComponentInParent<CharacterRim>();
+                if (rimC == null && player != null) rimC = player.GetComponentInChildren<CharacterRim>(true);
+                if (rimC != null) rimC.RequestScan();
             }
             frameWant = true; frameFading = false;
             frameSR.enabled = true;
@@ -123,6 +163,7 @@ namespace RonniSkin
             if (!sqWas) { sqCur = sqT; sqWas = true; }
             else sqCur = Vector2.Lerp(sqCur, sqT, 1f - Mathf.Exp(-squashSpeed * Time.deltaTime));
             frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x, L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y, 1f);
+            UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
             frameSR.transform.position = r.transform.position + new Vector3(frameAtkOffset.x * fx, frameAtkOffset.y, 0f);
         }
@@ -693,6 +734,7 @@ namespace RonniSkin
                     float a = Mathf.Clamp01(frameFadeT / frameFadeOut); a = a * a * (3f - 2f * a);
                     Color c = mirrorSpriteColor && originalSprite != null ? originalSprite.color : Color.white;
                     c.a *= a; frameSR.color = c;
+                    if (glowSR != null && glowSR.enabled) glowSR.color = new Color(1f, 1f, 1f, c.a);
                     if (frameFadeSettle)
                     {
                         Vector3 sc = frameSR.transform.localScale;
@@ -701,9 +743,9 @@ namespace RonniSkin
                         if (Mathf.Abs(sqCur.x) > 1e-4f && Mathf.Abs(sqCur.y) > 1e-4f) frameSR.transform.localScale = new Vector3(sc.x / sqCur.x * nsq.x, sc.y / sqCur.y * nsq.y, sc.z);
                         sqCur = nsq;
                     }
-                    if (frameFadeT <= 0f) { frameFading = false; frameSR.enabled = false; }
+                    if (frameFadeT <= 0f) { frameFading = false; frameSR.enabled = false; if (glowSR != null) glowSR.enabled = false; }
                 }
-                else frameSR.enabled = false;
+                else { frameSR.enabled = false; if (glowSR != null) glowSR.enabled = false; }
             }
             ApplyTransitionScale();
         }

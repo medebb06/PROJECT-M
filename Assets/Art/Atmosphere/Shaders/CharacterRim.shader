@@ -62,6 +62,7 @@ Shader "ProjectM/CharacterRim"
             {
                 float3 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -69,6 +70,7 @@ Shader "ProjectM/CharacterRim"
             {
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -91,6 +93,7 @@ Shader "ProjectM/CharacterRim"
 
                 o.positionCS = TransformWorldToHClip(w);
                 o.uv = v.uv;
+                o.color = v.color;
                 return o;
             }
 
@@ -98,7 +101,9 @@ Shader "ProjectM/CharacterRim"
             {
                 half a = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a;
                 clip(a - _AlphaCut);
-                return half4(_RimColor.rgb * _Intensity, 0);
+                // Sprite kopyası kaynağın saydamlığını taşır (kaybolan / yanıp sönen karakterle birlikte söner).
+                half k = _IsSprite > 0.5 ? i.color.a : 1.0;
+                return half4(_RimColor.rgb * (_Intensity * k), 0);
             }
             ENDHLSL
         }

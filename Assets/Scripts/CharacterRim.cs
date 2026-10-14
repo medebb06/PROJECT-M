@@ -56,6 +56,12 @@ public class CharacterRim : MonoBehaviour
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
 
+    /// <summary>Yeni bir parça (ör. saldırı karesi sprite'ı) oluşturulunca hemen taranması için çağır.</summary>
+    public void RequestScan()
+    {
+        nextScan = 0f;
+    }
+
     private void OnEnable()
     {
         if (rimMaterial == null)
@@ -246,6 +252,7 @@ public class CharacterRim : MonoBehaviour
     private static void Copy(SpriteRenderer from, SpriteRenderer to)
     {
         to.sprite = from.sprite;
+        to.color = from.color;   // saydamlık shader'da ışığı söndürür
         to.flipX = from.flipX;
         to.flipY = from.flipY;
         to.drawMode = from.drawMode;
