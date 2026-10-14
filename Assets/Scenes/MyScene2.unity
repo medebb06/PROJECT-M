@@ -9381,7 +9381,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: -200
+  m_SortingOrder: -199
   m_MaskInteraction: 0
   m_Sprite: {fileID: -6526507533865924640, guid: 5a1c36df24ffd37489015901e56f0f56, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12521,6 +12521,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WindSway
   phase: -1
   speedMultiplier: 0
+--- !u!1 &1570307604 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+  m_PrefabInstance: {fileID: 4655997543057025493}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1581633565
 GameObject:
   m_ObjectHideFlags: 0
@@ -15690,7 +15695,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1528681859535128441, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
   m_PrefabInstance: {fileID: 4655997543057025493}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1570307604}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f85489ff862666f42a9dadb68ffde8e3, type: 3}
@@ -15701,12 +15706,65 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2029669792163037182, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
   m_PrefabInstance: {fileID: 4655997543057025493}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1570307604}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f2ce96e36fd37c488d443605ae451c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterRim
+--- !u!114 &2122615101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1570307604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32a6ab1ae00a15b419d13f8e593ba8b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SmearLightSpill
+  halo: 1
+  haloColor: {r: 0.35, g: 0.75, b: 2, a: 1}
+  haloScale: 1
+  haloAlpha: 0.1
+  shape: 1
+  shapeColor: {r: 0.6, g: 1.2, b: 3, a: 1}
+  shapeScale: 1.05
+  shapeAlpha: 0.4
+  riseSpeed: 18
+  fallSpeed: 5
+  order: 399
+--- !u!114 &2122615102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1570307604}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57768a0612a96114ca0d2c1e16d62d7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterGrounding
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  contactShadow: 1
+  shadowColor: {r: 0.01, g: 0.03, b: 0.09, a: 1}
+  coreOpacity: 0.75
+  haloOpacity: 0.4
+  coreWidth: 1.15
+  haloWidth: 2.1
+  flatten: 0.2
+  yOffset: -0.02
+  maxJumpHeight: 4
+  footShade: 1
+  shadeColor: {r: 0.03, g: 0.06, b: 0.14, a: 1}
+  shadeStrength: 0.55
+  shadeHeight: 0.2
+  shadePower: 1.5
+  feetOffset: 0
 --- !u!1 &2136288078
 GameObject:
   m_ObjectHideFlags: 0
@@ -16071,7 +16129,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2122615102}
+    - targetCorrespondingSourceObject: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2122615101}
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
