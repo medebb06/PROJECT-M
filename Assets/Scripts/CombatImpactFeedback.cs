@@ -51,10 +51,10 @@ public class CombatImpactFeedback : MonoBehaviour
     // Dizi sırası: Attack1, Attack2, Attack3, Attack4.
     [Header("Vuruş Hissi v2 (adım başına: A1, A2, A3, A4)")]
     [Tooltip("Vuruşta tam donma süresi (gerçek sn).")]
-    [SerializeField] private float[] hitFreeze = { 0.05f, 0.06f, 0.085f, 0.10f };
+    [SerializeField] private float[] hitFreezeSharp = { 0.03f, 0.035f, 0.05f, 0.06f };
     [Tooltip("Donmadan sonra kısa ağır çekim (gerçek sn). 0 = yok.")]
-    [SerializeField] private float[] hitSlowTime = { 0.04f, 0.05f, 0.08f, 0.10f };
-    [Range(0f, 1f)] [SerializeField] private float hitSlowScale = 0.35f;
+    [SerializeField] private float[] hitSlowSharp = { 0f, 0f, 0.025f, 0.03f };
+    [Range(0f, 1f)] [SerializeField] private float hitSlowScaleSharp = 0.5f;
     [Tooltip("Kamera sarsıntısı (vuruş yönünde itme).")]
     [SerializeField] private float[] hitShake = { 0.18f, 0.22f, 0.35f, 0.42f };
     [Tooltip("Karakter squash/stretch vuruş darbesi (kare kare çizimde, RonniPlayerBridge uygular).")]
@@ -127,13 +127,13 @@ public class CombatImpactFeedback : MonoBehaviour
     {
         float m = 1f + Mathf.Min(0.4f, multiHitBonus * Mathf.Max(0, hitCount - 1));
 
-        float freeze = Pick(hitFreeze, step, attackHitStopDuration) * m;
-        float slow = Pick(hitSlowTime, step, 0f);
+        float freeze = Pick(hitFreezeSharp, step, attackHitStopDuration) * m;
+        float slow = Pick(hitSlowSharp, step, 0f);
 
         HitStop.Request(freeze, 0f, NormalPriority);
 
         if (slow > 0f)
-            HitStop.RequestRamp(freeze + slow, hitSlowScale, 1f, 2f, NormalPriority);
+            HitStop.RequestRamp(freeze + slow, hitSlowScaleSharp, 1f, 2f, NormalPriority);
 
         PlayDirectionalShake(Pick(hitShake, step, 0f) * m, dir);
 
