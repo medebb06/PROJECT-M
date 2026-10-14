@@ -14,6 +14,12 @@ TextureImporter:
   - first:
       213: -993201104372649076
     second: Attack2HD_4
+  - first:
+      213: -903903061399447739
+    second: Attack2HD_5
+  - first:
+      213: 1447433033256064616
+    second: Attack2HD_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -209,6 +215,42 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Attack2HD_5
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 2123
+        width: 1673
+        height: 962
+      alignment: 9
+      pivot: {x: 0.33092, y: 0.00520}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5ff23a91f41405eb03a797cab93df0e
+      internalID: -903903061399447739
+    - serializedVersion: 2
+      name: Attack2HD_6
+      rect:
+        serializedVersion: 2
+        x: 1681
+        y: 2123
+        width: 1673
+        height: 962
+      alignment: 9
+      pivot: {x: 0.33092, y: 0.00520}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 056f1539272743e1bc759df42d5f5474
+      internalID: 1447433033256064616
     outline: []
     customData: 
     physicsShape: []
@@ -229,6 +271,8 @@ TextureImporter:
       Attack2HD_2: 824480091199685284
       Attack2HD_3: 2076004892392429093
       Attack2HD_4: -993201104372649076
+      Attack2HD_5: -903903061399447739
+      Attack2HD_6: 1447433033256064616
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

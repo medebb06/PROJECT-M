@@ -14,6 +14,12 @@ TextureImporter:
   - first:
       213: -3396155620090428446
     second: Attack2G_4
+  - first:
+      213: -4538232340047107437
+    second: Attack2G_5
+  - first:
+      213: -2028477849790718855
+    second: Attack2G_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -209,6 +215,42 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Attack2G_5
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 2123
+        width: 1673
+        height: 962
+      alignment: 9
+      pivot: {x: 0.33092, y: 0.00520}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5dffc7d852fe4d0f903cea32c7c85818
+      internalID: -4538232340047107437
+    - serializedVersion: 2
+      name: Attack2G_6
+      rect:
+        serializedVersion: 2
+        x: 1681
+        y: 2123
+        width: 1673
+        height: 962
+      alignment: 9
+      pivot: {x: 0.33092, y: 0.00520}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 26fc8dbc9a7146b498104805213c6494
+      internalID: -2028477849790718855
     outline: []
     customData: 
     physicsShape: []
@@ -229,6 +271,8 @@ TextureImporter:
       Attack2G_2: 2975707950115185952
       Attack2G_3: -1379725868098252607
       Attack2G_4: -3396155620090428446
+      Attack2G_5: -4538232340047107437
+      Attack2G_6: -2028477849790718855
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

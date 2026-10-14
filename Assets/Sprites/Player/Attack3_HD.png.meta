@@ -14,6 +14,12 @@ TextureImporter:
   - first:
       213: 131483235845625182
     second: Attack3HD_4
+  - first:
+      213: 3144011835727759573
+    second: Attack3HD_5
+  - first:
+      213: 4465248325649817493
+    second: Attack3HD_6
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -209,6 +215,42 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Attack3HD_5
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 1559
+        width: 1565
+        height: 721
+      alignment: 9
+      pivot: {x: 0.30662, y: 0.00555}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1a4e85d66db146d890739230ae89025c
+      internalID: 3144011835727759573
+    - serializedVersion: 2
+      name: Attack3HD_6
+      rect:
+        serializedVersion: 2
+        x: 1573
+        y: 1559
+        width: 1565
+        height: 721
+      alignment: 9
+      pivot: {x: 0.30662, y: 0.00555}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7884afc6ba6147dc855e2d2d0eff4cc7
+      internalID: 4465248325649817493
     outline: []
     customData: 
     physicsShape: []
@@ -229,6 +271,8 @@ TextureImporter:
       Attack3HD_2: 1515563984663418501
       Attack3HD_3: 2032952136425584841
       Attack3HD_4: 131483235845625182
+      Attack3HD_5: 3144011835727759573
+      Attack3HD_6: 4465248325649817493
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

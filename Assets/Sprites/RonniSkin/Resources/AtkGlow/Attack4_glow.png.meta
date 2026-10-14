@@ -1,22 +1,28 @@
 fileFormatVersion: 2
-guid: 72b213141eb844759f01fdd49cfb1a68
+guid: cdd60affbbfe4ae8bee37acaa3041fdb
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1151292910558552054
+      213: -320522538786994592
     second: Attack4G_1
   - first:
-      213: -2741936079303136739
+      213: -3224037903422026131
     second: Attack4G_2
   - first:
-      213: -2020776520975249094
+      213: 495953499412173318
     second: Attack4G_3
   - first:
-      213: -3191245578961918688
+      213: 4530991150619179019
     second: Attack4G_4
   - first:
-      213: -2709574430720133724
+      213: 3270349323179254160
     second: Attack4G_5
+  - first:
+      213: 741320681841253565
+    second: Attack4G_6
+  - first:
+      213: 677425556923513263
+    second: Attack4G_7
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -140,8 +146,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5e893824f97d49bbb7b8d9db1ce61e8e
-      internalID: 1151292910558552054
+      spriteID: 4a1fa7defb8d496f89beccbc02cbb1bf
+      internalID: -320522538786994592
       vertices: []
       indices: 
       edges: []
@@ -162,8 +168,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5280ca7b9f7a4e0e80eda25341741749
-      internalID: -2741936079303136739
+      spriteID: 42221ce684fc4c88b0784c0de895b5d4
+      internalID: -3224037903422026131
       vertices: []
       indices: 
       edges: []
@@ -184,8 +190,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b55670999d9a478ea1a39c83e5c75d3e
-      internalID: -2020776520975249094
+      spriteID: 7676b2590aed46f79e6dbd2d505660e7
+      internalID: 495953499412173318
       vertices: []
       indices: 
       edges: []
@@ -206,8 +212,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 15b5d373909d40369fa99538b00a9714
-      internalID: -3191245578961918688
+      spriteID: 06c26f3504244d539acc43cf2f3d32d2
+      internalID: 4530991150619179019
       vertices: []
       indices: 
       edges: []
@@ -228,8 +234,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 11c71d2159f4457ab0579f93630c57c9
-      internalID: -2709574430720133724
+      spriteID: 5d20f4febc144480a69d5e164f39f790
+      internalID: 3270349323179254160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Attack4G_6
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 2931
+        width: 1919
+        height: 941
+      alignment: 9
+      pivot: {x: 0.39495, y: 0.01913}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8d4d0679ac649159d9e5f073e993f95
+      internalID: 741320681841253565
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Attack4G_7
+      rect:
+        serializedVersion: 2
+        x: 1927
+        y: 2931
+        width: 1919
+        height: 941
+      alignment: 9
+      pivot: {x: 0.39495, y: 0.01913}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97c2b461c9ac4056a4826190ab11cf69
+      internalID: 677425556923513263
       vertices: []
       indices: 
       edges: []
@@ -238,7 +288,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: c8e1801c775c44de8c1bd08e0d8e9f03
+    spriteID: 92f61818df0d4647bb928a7875c9a006
     internalID: 0
     vertices: []
     indices: 
@@ -250,11 +300,13 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.0},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":1,"spriteAlignment":7,"pivotUnitMode":1,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      Attack4G_1: 1151292910558552054
-      Attack4G_2: -2741936079303136739
-      Attack4G_3: -2020776520975249094
-      Attack4G_4: -3191245578961918688
-      Attack4G_5: -2709574430720133724
+      Attack4G_1: -320522538786994592
+      Attack4G_2: -3224037903422026131
+      Attack4G_3: 495953499412173318
+      Attack4G_4: 4530991150619179019
+      Attack4G_5: 3270349323179254160
+      Attack4G_6: 741320681841253565
+      Attack4G_7: 677425556923513263
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

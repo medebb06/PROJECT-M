@@ -68,6 +68,14 @@ namespace RonniSkin
         float frameFadeT; bool frameFading;
         [Header("Smear parlaması (Impact gibi)")]
         [Tooltip("Kare kare saldırılardaki smear'ın üstüne toplamalı HDR parlama (Resources/AtkGlow). Bloom ile parlar.")] public bool frameSmearGlow = true;
+        [Tooltip("Smear karesi bitince smear sis gibi genişleyip soluklaşarak dağılsın (sonraki saldırıdan bağımsız).")] public bool smearDissolve = true;
+        [Tooltip("Dağılma süresi (sn).")] [Range(0.1f, 2f)] public float dissolveLife = 0.5f;
+        [Tooltip("Dağılırken büyüme çarpanı (1 = hiç büyümez, 1.1 = %10).")] [Range(1f, 2f)] public float dissolveGrow = 1.1f;
+        [Tooltip("Başlangıç opaklığı.")] [Range(0f, 1f)] public float dissolveAlpha = 0.7f;
+        [Tooltip("Dağılırken yukarı süzülme (dünya birimi).")] [Range(0f, 1f)] public float dissolveRise = 0.1f;
+        [Tooltip("Sis katmanı (daha büyük, soluk ikinci kopya).")] public bool dissolveHaze = true;
+        [Tooltip("Sis katmanının ek büyümesi (ana büyümeye göre çarpan).")] [Range(1f, 2f)] public float dissolveHazeGrow = 1.12f;
+        SmearGhostSpawner ghostSp;
         [Tooltip("Smear parlama rengi (HDR). Impact Mat ≈ 8.5 beyaz; burada hafif mavi.")] [ColorUsage(true, true)] public Color frameSmearColor = new Color(1.2f, 2.2f, 4.5f, 1f);
         SpriteRenderer glowSR; Material glowMat; readonly System.Collections.Generic.Dictionary<string, Sprite> glowSprites = new System.Collections.Generic.Dictionary<string, Sprite>();
         readonly System.Collections.Generic.HashSet<string> glowLoaded = new System.Collections.Generic.HashSet<string>();
@@ -91,11 +99,13 @@ namespace RonniSkin
                 var go = new GameObject("~atk_glow");   // "~": arka ışık / gölge kopyası almasın
                 go.transform.SetParent(frameSR.transform, false);
                 glowSR = go.AddComponent<SpriteRenderer>();
+                if (smearDissolve) ghostSp = go.AddComponent<SmearGhostSpawner>();
                 Shader gs = Resources.Load<Shader>("AtkGlow/SpriteGlowAdd");
                 if (gs == null) gs = Shader.Find("ProjectM/SpriteGlowAdd");
                 if (gs != null) { glowMat = new Material(gs) { name = "Ronni_AtkGlow" }; glowSR.sharedMaterial = glowMat; }
             }
             if (glowMat != null) glowMat.SetColor("_GlowColor", frameSmearColor);
+            if (ghostSp != null) { ghostSp.life = dissolveLife; ghostSp.grow = dissolveGrow; ghostSp.startAlpha = dissolveAlpha; ghostSp.rise = dissolveRise; ghostSp.haze = dissolveHaze; ghostSp.hazeGrow = dissolveHazeGrow; }
             glowSR.enabled = true;
             glowSR.sprite = g;
             glowSR.flipX = frameSR.flipX;
