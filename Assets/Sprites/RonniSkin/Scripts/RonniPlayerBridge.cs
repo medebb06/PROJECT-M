@@ -51,16 +51,18 @@ namespace RonniSkin
         string lastAtkClip = "attack1";
         [Header("Attack1 kare kare (Animator: Sprites/Player/Attack1.anim)")]
         [Tooltip("Attack1'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack1HD_*) göster.")] public bool frameAttack1 = true;
+        [Tooltip("Attack2'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack2HD_*) göster.")] public bool frameAttack2 = true;
         [Tooltip("Kare kare çizimin boyu: saldırı rig pikseli / sayfa pikseli (sayfa tam çözünürlük). Büyük = daha büyük karakter.")] public float frameAtkPxScale = 3.7f;
         [Tooltip("Kare kare çizimin ayak noktasına göre kayması (birim, sağa bakarken).")] public Vector2 frameAtkOffset = Vector2.zero;
         [Tooltip("Rig sıralamasına eklenen sıra (rig parçalarının önünde kalsın).")] public int frameAtkOrder = 60;
         SpriteRenderer frameSR; Sprite frameLast; bool lastAtkFrames, frameWant;
         bool FrameAtkActive()
         {
-            if (!frameAttack1 || atkClip != "attack1" || originalSprite == null) return false;
+            string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : null;
+            if (pfx == null || originalSprite == null) return false;
             Sprite s = originalSprite.sprite;
-            if (s != null && s.name.StartsWith("Attack1HD")) { frameLast = s; return true; }
-            return lastAtkFrames && frameLast != null;   // Animator klibi swing'den önce biterse son karede kal
+            if (s != null && s.name.StartsWith(pfx)) { frameLast = s; return true; }
+            return lastAtkFrames && frameLast != null && frameLast.name.StartsWith(pfx);   // Animator klibi swing'den önce biterse son karede kal
         }
         void ShowFrame(Sprite s)
         {
@@ -597,7 +599,7 @@ namespace RonniSkin
                     else
                     {
                         Color bc = originalSprite != null ? originalSprite.color : Color.white;
-                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack2" ? atkHoldTime5 : atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
+                        if (atkWasOn) { atkWasOn = false; atkHoldIdle = true; atkHoldT = lastAtkClip == "attack2" && !lastAtkFrames ? atkHoldTime5 : atkHoldTime3; atkRetT = 0f; atkFade = 0f; }
                         bool atkInterrupt = mode != 0 || atkClip != null || Mathf.Abs(player.moveInput) >= 0.1f;
                         if (atkInterrupt && (atkHoldT > 0f || atkRetT > 0f)) { atkHoldT = 0f; atkRetT = 0f; atkFade = atkCrossfade; }
                         if (atkHoldT > 0f || atkRetT > 0f)
@@ -607,7 +609,7 @@ namespace RonniSkin
                             else { atkRetT -= Time.deltaTime; float pz = lastAtkClip == "attack2" ? atkEndPause2 : 0f; float rt = lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3; float u = Mathf.Clamp01((rt - atkRetT) / Mathf.Max(0.01f, rt)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                             rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2" || lastAtkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
-                            if (lastAtkFrames && frameLast != null) { Sprite cs = originalSprite != null ? originalSprite.sprite : null; if (cs != null && cs.name.StartsWith("Attack1HD")) frameLast = cs; rigAtk.SetShown(false); ShowFrame(frameLast); if (atkHoldT <= 0f) { atkRetT = 0f; lastAtkFrames = false; } }   // kare kare: son karede bekle, sonra direkt idle
+                            if (lastAtkFrames && frameLast != null) { Sprite cs = originalSprite != null ? originalSprite.sprite : null; if (cs != null && frameLast != null && cs.name.StartsWith(frameLast.name.Substring(0, 9))) frameLast = cs; rigAtk.SetShown(false); ShowFrame(frameLast); if (atkHoldT <= 0f) { atkRetT = 0f; lastAtkFrames = false; } }   // kare kare: son karede bekle, sonra direkt idle
                             atkHoldIdle = true;
                         }
                         else
