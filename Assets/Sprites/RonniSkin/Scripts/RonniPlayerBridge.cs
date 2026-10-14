@@ -53,6 +53,7 @@ namespace RonniSkin
         [Tooltip("Attack1'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack1HD_*) göster.")] public bool frameAttack1 = true;
         [Tooltip("Attack2'de rig yerine Animator'ün oynattığı kare kare çizimi (Attack2HD_*) göster.")] public bool frameAttack2 = true;
         [Tooltip("Attack3'te rig yerine Animator'ün oynattığı kare kare çizimi (Attack3HD_*) göster.")] public bool frameAttack3 = true;
+        [Tooltip("Attack4'te rig yerine Animator'ün oynattığı kare kare çizimi (Attack4HD_*) göster.")] public bool frameAttack4 = true;
         [Tooltip("Kare kare çizimin boyu: saldırı rig pikseli / sayfa pikseli (sayfa tam çözünürlük). Büyük = daha büyük karakter.")] public float frameAtkPxScale = 3.7f;
         [Tooltip("Kare kare çizimin ayak noktasına göre kayması (birim, sağa bakarken).")] public Vector2 frameAtkOffset = Vector2.zero;
         [Tooltip("Rig sıralamasına eklenen sıra (rig parçalarının önünde kalsın).")] public int frameAtkOrder = 60;
@@ -107,6 +108,7 @@ namespace RonniSkin
             { new Vector2(1.06f, 0.94f), new Vector2(1.12f, 0.92f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack1: yatay kesim -> yukarı yay
             { new Vector2(1.04f, 0.96f), new Vector2(1.14f, 0.91f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack2: öne uzanma -> yukarı yay
             { new Vector2(1.08f, 0.92f), new Vector2(1.18f, 0.90f), new Vector2(1.07f, 0.96f), Vector2.one },   // Attack3: gerilme -> saplama
+            { new Vector2(1.05f, 0.95f), new Vector2(0.97f, 1.05f), new Vector2(1.16f, 0.90f), Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
         };
         void OnEnable() { CombatImpactFeedback.AttackImpact += OnAttackImpact; }
         // Vuruş anı: donma sırasında görünsün diye anında uygula (sonra yumuşakça hedefe döner).
@@ -127,7 +129,7 @@ namespace RonniSkin
         }
         bool FrameAtkActive()
         {
-            string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : atkClip == "attack3" && frameAttack3 ? "Attack3HD" : null;
+            string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : atkClip == "attack3" && frameAttack3 ? "Attack3HD" : atkClip == "attack4" && frameAttack4 ? "Attack4HD" : null;
             if (pfx == null || originalSprite == null) return false;
             Sprite s = originalSprite.sprite;
             if (s != null && s.name.StartsWith(pfx)) { frameLast = s; return true; }
@@ -651,7 +653,7 @@ namespace RonniSkin
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
-                    bool atkOn = mode == 0 && (atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk != null && playerAtk.HasClip(atkClip);
+                    bool atkOn = mode == 0 && playerAtk != null && ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip) || atkClip == "attack4" && FrameAtkActive());
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
                     float dPh = defAtk != null ? defPhase : Mathf.Clamp01(chiburiT / Mathf.Max(0.1f, chiburiDur));
                     bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
@@ -670,7 +672,7 @@ namespace RonniSkin
                     {
                         defWasOn = false;
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); if (atkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(playerAtk.manual01);
+                        if (!atkWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true); atkWasOn = true; atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; rigAtk.SetShown(true); lastAtkClip = atkClip; if (playerAtk.HasClip(atkClip)) playerAtk.clip = atkClip; playerAtk.manual01 = AtkRemap(Mathf.Clamp01(atkProg)); if (atkClip == "attack3" || atkClip == "attack4") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(playerAtk.manual01);
                         if (FrameAtkActive()) { rigAtk.SetShown(false); ShowFrame(frameLast); lastAtkFrames = true; } else lastAtkFrames = false;
                     }
                     else
@@ -685,7 +687,7 @@ namespace RonniSkin
                             if (atkHoldT > 0f) { atkHoldT -= Time.deltaTime; float hu = 1f - Mathf.Clamp01(atkHoldT / Mathf.Max(0.01f, lastAtkClip == "attack2" ? atkHoldTime5 : atkHoldTime3)); if (lastAtkClip != "attack2") hu = hu * hu * (3f - 2f * hu); else hu = hu * hu; ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkSettle2 : atkSettlePhase, lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, hu); if (atkHoldT <= 0f) atkRetT = (lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3) + (lastAtkClip == "attack2" ? atkEndPause2 : 0f); }
                             else { atkRetT -= Time.deltaTime; float pz = lastAtkClip == "attack2" ? atkEndPause2 : 0f; float rt = lastAtkClip == "attack2" ? atkReturnTime5 : atkReturnTime3; float u = Mathf.Clamp01((rt - atkRetT) / Mathf.Max(0.01f, rt)); u = u * u * (3f - 2f * u); ph = Mathf.Lerp(lastAtkClip == "attack2" ? atkHold5x : atkHoldPhase, 1f, u); }
                             rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
-                            rigAtk.SetShown(true); playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2" || lastAtkClip == "attack3") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
+                            rigAtk.SetShown(true); if (playerAtk.HasClip(lastAtkClip)) playerAtk.clip = lastAtkClip; playerAtk.manual01 = ph; if (lastAtkClip == "attack2" || lastAtkClip == "attack3" || lastAtkClip == "attack4") rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear); else SmearWin(ph);
                             if (lastAtkFrames && frameLast != null) { Sprite cs = originalSprite != null ? originalSprite.sprite : null; if (cs != null && frameLast != null && cs.name.StartsWith(frameLast.name.Substring(0, 9))) frameLast = cs; rigAtk.SetShown(false); ShowFrame(frameLast); if (atkHoldT <= 0f) { atkRetT = 0f; lastAtkFrames = false; } }   // kare kare: son karede bekle, sonra direkt idle
                             atkHoldIdle = true;
                         }
