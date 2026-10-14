@@ -294,6 +294,9 @@ public class TrainingDummy : MonoBehaviour
         else
             PlaySfx(balanceHitSounds);
 
+        // Test için: dummy'de HER vuruşta klavye/ateş sesi çalar.
+        HitClickAudio.PlayEnemyHealthHit();
+
         if (brokeNow && balanceBreakSound != null)
             PlaySfx(balanceBreakSound);
 

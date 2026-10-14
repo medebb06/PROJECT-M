@@ -2574,7 +2574,7 @@ MonoBehaviour:
   hour: 23
   autoCycle: 1
   dayLengthMinutes: 25
-  transitionSpeed: 8
+  transitionSpeed: 9
   hotkeys: 1
   sunrise: 6
   sunset: 18
@@ -14297,7 +14297,7 @@ MonoBehaviour:
   playerSplashRate: 50
   waterRippleBoost: 3
   rainLoop: {fileID: 8300000, guid: 068c1dc7fe3aec746aba564d847eae08, type: 3}
-  rainVolume: 0.25
+  rainVolume: 0.1
   rainBoost: 1
   lightningInterval: {x: 7, y: 18}
   flashBoost: 2.2
@@ -15992,6 +15992,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 41923295}
     m_Modifications:
+    - target: {fileID: 2746308671449253534, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: dashClip
+      value: 
+      objectReference: {fileID: 8300000, guid: ceed4668c20807f48a577e4d52a86e6b, type: 3}
     - target: {fileID: 3574787788961204835, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Enabled
       value: 0

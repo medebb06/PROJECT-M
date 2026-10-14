@@ -1,4 +1,4 @@
-﻿
+
 using UnityEngine;
 
 public class PlayerAudio : MonoBehaviour
@@ -17,6 +17,10 @@ public class PlayerAudio : MonoBehaviour
     public AudioClip attack2WooshClip;
     public AudioClip attack3WooshClip;
     public AudioClip attack4WooshClip;
+
+    [Range(0f, 1f)]
+    [Tooltip("Kılıç savurma sesi seviyesi.")]
+    public float wooshVolume = 0.3f;
 
     void Awake()
     {
@@ -126,7 +130,8 @@ public class PlayerAudio : MonoBehaviour
         sfxSource.pitch = 1f;
 
         sfxSource.PlayOneShot(
-            clip
+            clip,
+            wooshVolume
         );
     }
 
