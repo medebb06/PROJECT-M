@@ -269,6 +269,13 @@ namespace RonniSkin
         float idleSince = -1f, waitAfter; bool waiting; RonniFirefly firefly;
         [Tooltip("Vertical speed that maps to full rise / full fall pose.")] public float airVelocityRange = 12f;
         int bMode, jumpCount; float airU;
+        [Header("Koşudan durma")]
+        [Tooltip("Koşu biterken kısa bir frenleme animasyonu (stop klibi) oynat.")] public bool stopAnimEnabled = true;
+        [Tooltip("Frenleme animasyonunun süresi (sn).")] public float stopDuration = 0.25f;
+        [Tooltip("Frenleme için koşudaki en düşük yatay hız.")] public float stopMinSpeed = 2f;
+        [Tooltip("Frenlemeden idle'a çapraz geçiş süresi (sn). 0 = ani.")] public float stopFade = 0.14f;
+        [Tooltip("Frenleme<->idle geçişindeki squash/stretch gücü (1 = normal, 0 = yok).")] [Range(0f, 1f)] public float stopPopAmount = 0.3f;
+        float stopT = -1f, stopLastSpeed, stopFadeT = -1f, popAmt = 1f;
         RonniDashDust dashDust; bool dustPrev; bool dashPrev; float dashEndT = -10f;
         [Tooltip("Dash bitince koşuya geçerken idle'a düşmesin diye tutulan süre (sn).")] public float dashRunGrace = 0.25f;
         [Tooltip("Dash başında toz patlaması + dash boyunca yer çizgileri.")] public bool dashDustEnabled = true;
@@ -619,7 +626,17 @@ namespace RonniSkin
                 bool afterDash = Time.time - dashEndT < dashRunGrace && anim.grounded && player.rb != null && Mathf.Abs(player.rb.linearVelocity.x) > 0.5f;
                 bool run = useProfileRun && (anim.running || afterDash) && anim.grounded && !anim.ActionActive;
                 bool dashP = player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
-                int mode = dashP ? 3 : air ? 2 : run ? 1 : 0;
+                // koşu bitince kısa frenleme (stop klibi): idle'a doğrudan düşmez
+                float stopSpd = player.rb != null ? Mathf.Abs(player.rb.linearVelocity.x) : 0f;
+                bool canStop = stopAnimEnabled && playerRun != null && playerRun.HasClip("stop") && rigRun != null && rigRun.IsBuilt;
+                if (run) { stopLastSpeed = Mathf.Max(stopSpd, stopLastSpeed * 0.9f); stopT = -1f; }
+                else if (canStop && stopT < 0f && bMode == 1 && !air && !dashP && anim.grounded && !anim.ActionActive && atkClip == null && stopLastSpeed >= stopMinSpeed) stopT = 0f;
+                if (stopT >= 0f)
+                {
+                    if (!canStop || air || dashP || anim.ActionActive || atkClip != null || Mathf.Abs(player.moveInput) > 0.1f) stopT = -1f;
+                    else { stopT += Time.deltaTime; if (stopT >= stopDuration) { stopT = -1f; stopLastSpeed = 0f; } }
+                }
+                int mode = dashP ? 3 : air ? 2 : run ? 1 : stopT >= 0f ? 4 : 0;
                 if (dashDustEnabled && rigRun != null && rigRun.IsBuilt)
                 {
                     if (dashDust == null) { dashDust = GetComponent<RonniDashDust>(); if (dashDust == null) dashDust = gameObject.AddComponent<RonniDashDust>(); }
@@ -634,7 +651,11 @@ namespace RonniSkin
                 }
                 if (mode != bMode || (mode != 0 && right != bRight))
                 {
-                    if (rigB != null) rigB.SetShown(false);
+                    bool toIdleFromStop = false;   // çapraz geçiş kapalı: iki çizim üst üste binip hayalet yapıyordu
+                    popAmt = (bMode == 4 || mode == 4) ? stopPopAmount : 1f;
+                    if (rigB != null && !toIdleFromStop) rigB.SetShown(false);
+                    if (toIdleFromStop) stopFadeT = 0f;
+                    else if (stopFadeT >= 0f) { stopFadeT = -1f; if (rigRun != null) { rigRun.SetShown(mode == 1 || mode == 3 || mode == 4 || (mode == 2 && !standJump)); } }
                     bool newJump = mode == 2 && bMode != 2;
                     if (newJump)
                     {
@@ -644,12 +665,12 @@ namespace RonniSkin
                     }
                     bMode = mode; bRight = right;
                     rigB = right ? rigBR : rigBL; playerB = right ? playerBR : playerBL;
-                    if ((mode == 1 || mode == 3 || (mode == 2 && playerRun != null && playerRun.HasClip("air_a"))) && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
+                    if ((mode == 1 || mode == 3 || mode == 4 || (mode == 2 && playerRun != null && playerRun.HasClip("air_a"))) && rigRun != null && rigRun.IsBuilt && playerRun != null) { rigB = rigRun; playerB = playerRun; }
                     if (mode == 2 && standJump) { rigB = rigJump; playerB = playerJump; }
                     if (mode != 0)
                     {
                         if (newJump) jumpCount++;
-                        playerB.clip = mode == 3 ? "dash" : mode == 2 ? (standJump ? "air" : ((jumpCount % 2 == 1) ? "air_a" : "air_b")) : "run";
+                        playerB.clip = mode == 3 ? "dash" : mode == 4 ? "stop" : mode == 2 ? (standJump ? "air" : ((jumpCount % 2 == 1) ? "air_a" : "air_b")) : "run";
                         playerB.manual01 = -1f;
                         playerB.Restart(0f); playerB.ForceUpdate(); rigB.SetShown(true);
                     }
@@ -669,6 +690,11 @@ namespace RonniSkin
                     {
                         airU = -1f;
                         playerB.manual01 = Mathf.Clamp01((Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale));
+                    }
+                    else if (mode == 4)
+                    {
+                        airU = -1f;
+                        playerB.manual01 = Mathf.Clamp01(stopT / Mathf.Max(0.0001f, stopDuration));
                     }
                     else airU = -1f;
                 }
@@ -759,6 +785,26 @@ namespace RonniSkin
                         }
                     }
                 }
+                // stop -> idle çapraz geçiş: eski (yan) çizim solar, idle belirir
+                if (stopFadeT >= 0f)
+                {
+                    stopFadeT += Time.deltaTime;
+                    float fu = Mathf.Clamp01(stopFadeT / Mathf.Max(0.001f, stopFade)); fu = fu * fu * (3f - 2f * fu);
+                    Color fc = originalSprite != null ? originalSprite.color : Color.white;
+                    if (fu >= 1f || mode != 0 || !idleNow)
+                    {
+                        stopFadeT = -1f;
+                        if (rigRun != null && rigRun.IsBuilt) { rigRun.SetColor(fc, true); if (mode != 1 && mode != 3 && mode != 4 && !(mode == 2 && !standJump)) rigRun.SetShown(false); }
+                        if (rigIdle != null && rigIdle.IsBuilt) rigIdle.SetColor(fc, true);
+                    }
+                    else
+                    {
+                        // Eski (yan) çizim opak kalır, idle üstüne yavaşça gelir: yarı saydam hayalet oluşmaz.
+                        Color fi = fc; fi.a *= fu;
+                        rigRun.SetShown(true); rigRun.SetColor(fc, true);
+                        rigIdle.SetColor(fi, true);
+                    }
+                }
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
@@ -828,7 +874,7 @@ namespace RonniSkin
             popT += switchPopTime > 0f ? dt / switchPopTime : 1f;
             landT += landTime > 0f ? dt / landTime : 1f;
             float sx = 1f, sy = 1f;
-            if (popT < 1f) { float e = Mathf.SmoothStep(0f, 1f, popT); sx *= Mathf.Lerp(0.72f, 1f, e); sy *= Mathf.Lerp(1.04f, 1f, e); }
+            if (popT < 1f) { float e = Mathf.SmoothStep(0f, 1f, popT); sx *= Mathf.Lerp(Mathf.Lerp(1f, 0.72f, popAmt), 1f, e); sy *= Mathf.Lerp(Mathf.Lerp(1f, 1.04f, popAmt), 1f, e); }
             if (landT < 1f) { float s = Mathf.Sin(Mathf.PI * landT) * (1f - 0.3f * landT); sy *= 1f - landSquash * s; sx *= 1f + landSquash * 0.65f * s; }
             var sc = new Vector3(sx, sy, 1f);
             if (partsA != null) partsA.localScale = visualId <= 0 ? sc : Vector3.one;

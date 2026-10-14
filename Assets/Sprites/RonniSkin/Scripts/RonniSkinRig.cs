@@ -53,7 +53,9 @@ namespace RonniSkin
                 mr.sortingOrder = sortingOrderOffset + (actLayers ? actOrderList[i] : runLayers ? runOrderList[i] : baseOrder[i]);
             }
         }
-        public void SetColor(Color c, bool visible) { foreach (var p in parts) if (p != null) p.SetColor(c, visible); }
+        /// Son verilen renk alfası (CharacterRim: solan çizimin kenar ışığını gizlemek için).
+        public float LastAlpha = 1f;
+        public void SetColor(Color c, bool visible) { LastAlpha = c.a; foreach (var p in parts) if (p != null) p.SetColor(c, visible); }
         public readonly Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
         public bool IsBuilt { get; private set; }
         float OX = 1500f, OY = 3640f;

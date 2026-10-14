@@ -8,6 +8,7 @@ using UnityEngine;
 /// karakterin arkasına çizilir (ProjectM/CharacterRim). Ronni gibi oyunda kurulan
 /// modellerde de çalışır. Sadece Play modunda.
 /// </summary>
+[DefaultExecutionOrder(10050)]   // Bridge çizim değişiminden SONRA çalışsın (eski çizimin hayalet kenar ışığı bir kare kalmasın)
 public class CharacterRim : MonoBehaviour
 {
     public Material rimMaterial;
@@ -40,6 +41,7 @@ public class CharacterRim : MonoBehaviour
         public MeshFilter srcFilter;
         public MeshFilter innerFilter;
         public MeshFilter outerFilter;
+        public RonniSkin.RonniSkinRig rig;
     }
 
     private readonly List<Pair> pairs = new List<Pair>();
@@ -123,7 +125,7 @@ public class CharacterRim : MonoBehaviour
         {
             Renderer s = pairs[i].src;
 
-            if (!Visible(s))
+            if (!Visible(s) || (pairs[i].rig != null && pairs[i].rig.LastAlpha <= 0.98f))
                 continue;
 
             if (!any) { b = s.bounds; any = true; }
@@ -173,7 +175,7 @@ public class CharacterRim : MonoBehaviour
                 continue;
             }
 
-            bool vis = Visible(pr.src);
+            bool vis = Visible(pr.src) && (pr.rig == null || pr.rig.LastAlpha > 0.98f);
             pr.inner.enabled = vis;
             pr.outer.enabled = vis;
             pr.moon.enabled = vis && moonRim;
@@ -283,6 +285,8 @@ public class CharacterRim : MonoBehaviour
 
             if (!sprite)
                 pr.srcFilter = r.GetComponent<MeshFilter>();
+
+            pr.rig = r.GetComponentInParent<RonniSkin.RonniSkinRig>();
 
             pairs.Add(pr);
         }
