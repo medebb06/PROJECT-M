@@ -47,6 +47,14 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float blockSlowTime = 0.12f;
     [SerializeField] private float blockSlowScale = 0.3f;
 
+    [Header("Hit-Stop Azaltma (takılma hissi)")]
+    [Tooltip("Açıkken sadece kombonun SON vuruşunda (Attack4) donma olur; diğer vuruşlarda donma yok.")]
+    [SerializeField] private bool hitStopOnlyOnFinalHit = true;
+    [Tooltip("Normal vuruşlarda (son vuruş dışı) donma süresi çarpanı. 0 = hiç donma.")]
+    [Range(0f, 1f)] [SerializeField] private float lightHitFreezeScale = 0f;
+    [Tooltip("Parry / blok / denge kırma donma ve ağır çekim şiddeti (1 = eskisi gibi, 0 = hiç).")]
+    [Range(0f, 1f)] [SerializeField] private float otherHitStopScale = 0.25f;
+
     // ---- Vuruş hissi v2 (kombo adımına göre artan, orantılı) ----
     // Dizi sırası: Attack1, Attack2, Attack3, Attack4.
     [Header("Vuruş Hissi v2 (adım başına: A1, A2, A3, A4)")]
@@ -130,9 +138,16 @@ public class CombatImpactFeedback : MonoBehaviour
         float freeze = Pick(hitFreezeSharp, step, attackHitStopDuration) * m;
         float slow = Pick(hitSlowSharp, step, 0f);
 
-        HitStop.Request(freeze, 0f, NormalPriority);
+        if (hitStopOnlyOnFinalHit && step < 4)
+        {
+            freeze *= lightHitFreezeScale;
+            slow *= lightHitFreezeScale;
+        }
 
-        if (slow > 0f)
+        if (freeze > 0.0005f)
+            HitStop.Request(freeze, 0f, NormalPriority);
+
+        if (slow > 0f && freeze > 0f)
             HitStop.RequestRamp(freeze + slow, hitSlowScaleSharp, 1f, 2f, NormalPriority);
 
         PlayDirectionalShake(Pick(hitShake, step, 0f) * m, dir);
@@ -158,8 +173,13 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayParryImpact()
     {
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
-        HitStop.Request(parryFreezeTime, 0f, ParryPriority);
-        HitStop.RequestRamp(parryFreezeTime + parrySlowTime, parrySlowScale, 1f, 2f, ParryPriority);
+        float pf = parryFreezeTime * otherHitStopScale, ps = parrySlowTime * otherHitStopScale;
+
+        if (pf > 0.0005f)
+        {
+            HitStop.Request(pf, 0f, ParryPriority);
+            HitStop.RequestRamp(pf + ps, Mathf.Lerp(1f, parrySlowScale, otherHitStopScale), 1f, 2f, ParryPriority);
+        }
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 
@@ -175,8 +195,13 @@ public class CombatImpactFeedback : MonoBehaviour
 
     public void PlayBlockImpact()
     {
-        HitStop.Request(blockFreezeTime, 0f, BlockPriority);
-        HitStop.RequestRamp(blockFreezeTime + blockSlowTime, blockSlowScale, 1f, 2f, BlockPriority);
+        float bf = blockFreezeTime * otherHitStopScale, bs = blockSlowTime * otherHitStopScale;
+
+        if (bf > 0.0005f)
+        {
+            HitStop.Request(bf, 0f, BlockPriority);
+            HitStop.RequestRamp(bf + bs, Mathf.Lerp(1f, blockSlowScale, otherHitStopScale), 1f, 2f, BlockPriority);
+        }
 
         PlayScreenShake(blockShakeForce);
 
@@ -193,8 +218,13 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayBalanceBreakImpact()
     {
         // En ağır his: tam donma + ağır çekimden dönüş + güçlü sarsıntı.
-        HitStop.Request(breakFreeze2, 0f, BalanceBreakPriority);
-        HitStop.RequestRamp(breakFreeze2 + breakSlowTime2, breakSlowScale2, 1f, 2f, BalanceBreakPriority);
+        float kf = breakFreeze2 * otherHitStopScale, ks = breakSlowTime2 * otherHitStopScale;
+
+        if (kf > 0.0005f)
+        {
+            HitStop.Request(kf, 0f, BalanceBreakPriority);
+            HitStop.RequestRamp(kf + ks, Mathf.Lerp(1f, breakSlowScale2, otherHitStopScale), 1f, 2f, BalanceBreakPriority);
+        }
 
         PlayScreenShake(breakShake2);
 

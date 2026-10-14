@@ -651,7 +651,7 @@ namespace RonniSkin
                         if (newJump) jumpCount++;
                         playerB.clip = mode == 3 ? "dash" : mode == 2 ? (standJump ? "air" : ((jumpCount % 2 == 1) ? "air_a" : "air_b")) : "run";
                         playerB.manual01 = -1f;
-                        playerB.Restart(0f); rigB.SetShown(true);
+                        playerB.Restart(0f); playerB.ForceUpdate(); rigB.SetShown(true);
                     }
                     rig.SetShown(mode == 0);
                 }
@@ -678,13 +678,23 @@ namespace RonniSkin
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
-                    bool atkOn = mode == 0 && playerAtk != null && ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip) || atkClip == "attack4" && FrameAtkActive());
+                    bool frameClip = (atkClip == "attack1" && frameAttack1) || (atkClip == "attack2" && frameAttack2) || (atkClip == "attack3" && frameAttack3) || (atkClip == "attack4" && frameAttack4);
+                    // Kare kare saldırıda Animator'ın ilk sprite'ı henüz gelmediyse eski (rig) saldırı pozunu bir an bile gösterme.
+                    bool atkOn = mode == 0 && playerAtk != null && (frameClip ? FrameAtkActive() : ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip)));
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
                     float dPh = defAtk != null ? defPhase : Mathf.Clamp01(chiburiT / Mathf.Max(0.1f, chiburiDur));
                     bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
+                    // Kombo geçişi: yeni saldırının ilk sprite'ı henüz gelmediyse (kare kare) eski rig/idle pozu yerine son kareyi tut.
+                    bool framePend = mode == 0 && frameClip && !atkOn && frameLast != null && frameSR != null && frameSR.enabled && !frameFading;
                     Color bcc = originalSprite != null ? originalSprite.color : Color.white;
                     if (bladeCut && !(dOn && dClip == "chiburi")) { rigAtk.SetPartWindow("atk_blade", 0f, 1f, bcc, bcc); bladeCut = false; }
-                    if (dOn)
+                    if (framePend)
+                    {
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
+                        atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; lastAtkFrames = true;
+                        ShowFrame(frameLast);
+                    }
+                    else if (dOn)
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); idleNow = false;
                         if (!defWasOn) rigAtk.SetColor(originalSprite != null ? originalSprite.color : Color.white, true);
@@ -737,10 +747,12 @@ namespace RonniSkin
                             if (dIdle)
                             {
                                 if (rigIdle != null) rigIdle.SetShown(false); rig.SetShown(false); idleNow = false;
-                                if (!idleDrawnOn) rigAtk.SetColor(bc, true);
+                                bool firstDrawn = !idleDrawnOn;
+                                if (firstDrawn) rigAtk.SetColor(bc, true);
                                 idleDrawnOn = true;
                                 rigAtk.SetShown(true); playerAtk.clip = "idle_drawn";
                                 playerAtk.manual01 = (Time.time % idleDrawnPeriod2) / idleDrawnPeriod2;
+                                if (firstDrawn) playerAtk.ForceUpdate();
                                 rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
                             }
                             else { idleDrawnOn = false; rigAtk.SetShown(false); (idleNow ? rigIdle : rig).SetColor(bc, true); }

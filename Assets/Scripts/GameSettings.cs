@@ -18,6 +18,8 @@ public static class GameSettings
     private const string KeyVolume = "projectm_volume";
     private const string KeyFullscreen = "projectm_fullscreen";
     private const string KeyCine = "projectm_cinematic_cam";
+    private const string KeyBars = "projectm_cinematic_bars";
+    public const float MaxBarHeight = 0.35f;
 
     public const float MinUiScale = 0.6f;
     public const float MaxUiScale = 1.6f;
@@ -101,6 +103,13 @@ public static class GameSettings
     {
         get { return PlayerPrefs.GetInt(KeyCine, 1) != 0; }
         set { PlayerPrefs.SetInt(KeyCine, value ? 1 : 0); }
+    }
+
+    /// <summary>Sinematik şerit yüksekliği (ekran yüksekliğine oran, her biri). 0..MaxBarHeight; varsayılan 0.16.</summary>
+    public static float BarHeight
+    {
+        get { return Mathf.Clamp(PlayerPrefs.GetFloat(KeyBars, 0.16f), 0f, MaxBarHeight); }
+        set { PlayerPrefs.SetFloat(KeyBars, Mathf.Clamp(Mathf.Round(value * 100f) / 100f, 0f, MaxBarHeight)); }
     }
 
     /// <summary>OnGUI ölçeği: ekran yüksekliği 720'ye göre × bileşen çarpanı × ayar.</summary>

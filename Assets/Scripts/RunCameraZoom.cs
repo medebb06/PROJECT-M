@@ -228,7 +228,7 @@ public class RunCameraZoom : MonoBehaviour
     {
         if (letterbox && bars > 0.002f && Event.current.type == EventType.Repaint)
         {
-            float h = Screen.height * barHeight * bars * (bars * (3f - 2f * bars) / Mathf.Max(bars, 0.0001f));
+            float h = Screen.height * GameSettings.BarHeight * bars * (bars * (3f - 2f * bars) / Mathf.Max(bars, 0.0001f));
             int d = GUI.depth;
             GUI.depth = -10000;   // en önde: HUD dahil her şeyin üstünde
             GUI.color = Color.black;

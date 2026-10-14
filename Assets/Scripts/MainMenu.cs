@@ -214,6 +214,7 @@ public class MainMenu : MonoBehaviour
         new Row { label = "KARARMA ALANI", kanji = "範囲", kind = 1 },
         new Row { label = "TAM EKRAN", kanji = "全画面", kind = 2 },
         new Row { label = "SİNEMATİK KAMERA", kanji = "映画", kind = 2 },
+        new Row { label = "ŞERİT BOYUTU", kanji = "帯", kind = 1 },
         new Row { label = "GERİ", kanji = "戻る", kind = 0 },
     };
 
@@ -432,7 +433,7 @@ public class MainMenu : MonoBehaviour
         knobRects = new RectTransform[n];
 
         float top = p == Page.Main ? 40f : 110f;
-        float step = p == Page.Main ? -84f : -66f;
+        float step = p == Page.Main ? -84f : (p == Page.Settings ? -58f : -66f);
         bool compact = IsTestPage(p);
 
         if (compact)
@@ -699,7 +700,14 @@ public class MainMenu : MonoBehaviour
                     GameSettings.CinematicCamera = !GameSettings.CinematicCamera;
                 break;
 
-            case 6: // geri
+            case 6: // sinematik şerit boyutu
+                if (dir != 0)
+                    GameSettings.BarHeight = GameSettings.BarHeight + dir * 0.01f;
+
+                DragSlider(6, v => GameSettings.BarHeight = v, 0f, GameSettings.MaxBarHeight);
+                break;
+
+            case 7: // geri
                 if (confirm || click)
                     Back();
                 break;
@@ -775,6 +783,12 @@ public class MainMenu : MonoBehaviour
 
         if (valueTexts.Length > 5 && valueTexts[5] != null)
             valueTexts[5].text = GameSettings.CinematicCamera ? "AÇIK" : "KAPALI";
+
+        if (valueTexts.Length > 6)
+        {
+            float bh = GameSettings.BarHeight;
+            SetSlider(6, bh / GameSettings.MaxBarHeight, Mathf.RoundToInt(bh * 100f) + "%");
+        }
     }
 
     private void SetSlider(int row, float t, string text)

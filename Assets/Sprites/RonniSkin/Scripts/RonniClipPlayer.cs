@@ -117,6 +117,15 @@ namespace RonniSkin
             if (clips.TryGetValue(clip, out var c)) t = phase01 * c.duration;
         }
 
+        /// Klibi hemen (aynı karede) örnekle ve önceki klipten çapraz geçiş yapma: yeniden gösterilen rig eski pozunu bir an bile göstermesin.
+        public void ForceUpdate()
+        {
+            lastClip = null;
+            float t0 = t;
+            Update();
+            t = t0;
+        }
+
         void Update()
         {
             if (rig == null || !rig.IsBuilt || !clips.TryGetValue(clip, out var c) || c.frames < 2) return;

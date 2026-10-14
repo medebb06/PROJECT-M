@@ -205,8 +205,14 @@ public class DashState : IPlayerState
         SpawnGhost();
     }
 
+    // Eski sprite'ın (Ronni'den önceki çizim) dash hayaletleri: Ronni'ye geçildi, eski çizim görünmesin diye kapalı.
+    public static bool oldSpriteAfterImages = false;
+
     void SpawnGhost()
     {
+        if (!oldSpriteAfterImages)
+            return;
+
         if (!player.afterImagePrefab || !player.playerSprite)
             return;
 
