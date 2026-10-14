@@ -29,16 +29,16 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Chance: 0.11
+    - _Chance: 0.075
     - _Density: 1.2
     - _FadeEnd: 9
     - _FadeStart: 1.5
-    - _Intensity: 2
+    - _Intensity: 0.75
     - _Parallax: 0.02
     - _Size: 1
-    - _TinyLayer: 0.45
-    - _Twinkle: 0.45
-    - _TwinkleSpeed: 1.2
+    - _TinyLayer: 0.35
+    - _Twinkle: 0.3
+    - _TwinkleSpeed: 0.7
     m_Colors:
     - _ColorCool: {r: 0.75, g: 0.85, b: 1, a: 1}
     - _ColorWarm: {r: 1, g: 0.92, b: 0.75, a: 1}

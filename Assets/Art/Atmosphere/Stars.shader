@@ -93,13 +93,19 @@ Shader "ProjectM/Stars"
             float3 h2 = Hash3(id * 1.7 + seed + 11.0);
             float2 c = 0.3 + 0.4 * h2.xy;                       // yıldızın hücre içindeki yeri
             float d = length((f - c)) / density;                // birim cinsinden uzaklık
-            float r = size * (0.02 + 0.035 * h2.z * h2.z);      // yarıçap (birim)
+            float r = size * (0.034 + 0.03 * h2.z * h2.z);      // yarıçap (birim); alt sınır: 1 pikselin altına inip titremesin
 
-            float core = exp(-(d * d) / (r * r));
-            float halo = exp(-d / (r * 3.5)) * 0.18 * h2.z;
+            // Hücre kenarında KESİLMESİN (kare görünümünün sebebi buydu): halo hücrenin güvenli yarıçapında sıfıra iner.
+            float safe = 0.3 / density;
+            float mask = saturate(1.0 - d / safe);
+            mask = mask * mask * (3.0 - 2.0 * mask);
 
-            float tw = 1.0 - _Twinkle * (0.5 + 0.5 * sin(t * _TwinkleSpeed * (0.4 + h2.x * 1.4) + h2.y * 6.2831));
-            float bright = (0.35 + 0.65 * h2.z) * tw;
+            float core = exp(-(d * d) / (r * r)) * mask;
+            float halo = exp(-d / (r * 2.5)) * 0.12 * h2.z * mask;
+
+            // yumuşak, yavaş pırıltı (kare kare sıçramasın)
+            float tw = 1.0 - _Twinkle * (0.5 + 0.5 * sin(t * _TwinkleSpeed * (0.4 + h2.x * 1.0) + h2.y * 6.2831));
+            float bright = (0.3 + 0.7 * h2.z) * tw;
 
             half3 col = lerp(_ColorCool.rgb, _ColorWarm.rgb, h.z);
             return col * (core + halo) * bright;
