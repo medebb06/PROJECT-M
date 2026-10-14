@@ -69,6 +69,11 @@ namespace RonniSkin
         [Header("Smear parlaması (Impact gibi)")]
         [Tooltip("Kare kare saldırılardaki smear'ın üstüne toplamalı HDR parlama (Resources/AtkGlow). Bloom ile parlar.")] public bool frameSmearGlow = true;
         [Tooltip("Smear karesi bitince smear sis gibi genişleyip soluklaşarak dağılsın (sonraki saldırıdan bağımsız).")] public bool smearDissolve = true;
+        [Header("Attack4 geçiş yumuşatma")]
+        [Tooltip("Attack4 karelerinin arasında önceki karenin soluk bir izi kalır: sert kare atlamaları (özellikle dönüş) akıcı görünür.")] public bool frameBlendAtk4 = true;
+        [Tooltip("Geçiş izinin kaybolma süresi (sn).")] [Range(0.02f, 0.2f)] public float frameBlendTime = 0.07f;
+        [Tooltip("Geçiş izinin başlangıç opaklığı.")] [Range(0f, 1f)] public float frameBlendAlpha = 0.55f;
+        Sprite blendPrev; Vector3 blendPos, blendScale; bool blendFlip; int blendOrder, blendLayer;
         [Tooltip("Dağılma süresi (sn).")] [Range(0.1f, 2f)] public float dissolveLife = 0.5f;
         [Tooltip("Dağılırken büyüme çarpanı (1 = hiç büyümez, 1.1 = %10).")] [Range(1f, 2f)] public float dissolveGrow = 1.1f;
         [Tooltip("Başlangıç opaklığı.")] [Range(0f, 1f)] public float dissolveAlpha = 0.7f;
@@ -161,6 +166,15 @@ namespace RonniSkin
                 if (rimC == null && player != null) rimC = player.GetComponentInChildren<CharacterRim>(true);
                 if (rimC != null) rimC.RequestScan();
             }
+            if (frameBlendAtk4 && blendPrev != null && blendPrev != s && s.name.StartsWith("Attack4HD") && blendPrev.name.StartsWith("Attack4HD") && frameSR.enabled)
+            {
+                var ai = new GameObject("~atk_afterimage");
+                ai.transform.position = blendPos; ai.transform.localScale = blendScale;
+                var air = ai.AddComponent<SpriteRenderer>();
+                air.sprite = blendPrev; air.flipX = blendFlip; air.sharedMaterial = frameSR.sharedMaterial;
+                air.sortingLayerID = blendLayer; air.sortingOrder = blendOrder - 1;
+                ai.AddComponent<FrameAfterImage>().Init(air, frameBlendAlpha, frameBlendTime);
+            }
             frameWant = true; frameFading = false;
             frameSR.enabled = true;
             frameSR.sprite = s;
@@ -178,6 +192,7 @@ namespace RonniSkin
             UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
             frameSR.transform.position = r.transform.position + new Vector3(frameAtkOffset.x * fx, frameAtkOffset.y, 0f);
+            blendPrev = s; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
         }
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;

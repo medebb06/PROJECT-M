@@ -67,3 +67,16 @@ public class SmearGhost : MonoBehaviour
         if (k >= 1f) Destroy(gameObject);
     }
 }
+
+// Attack4 kare geçişi: önceki karenin soluk izi hızla kaybolur (geçişi yumuşatır).
+public class FrameAfterImage : MonoBehaviour
+{
+    SpriteRenderer r; float a0, life, t;
+    public void Init(SpriteRenderer rr, float alpha, float lifeT) { r = rr; a0 = alpha; life = Mathf.Max(0.02f, lifeT); r.color = new Color(1f, 1f, 1f, a0); }
+    void Update()
+    {
+        t += Time.deltaTime; float k = Mathf.Clamp01(t / life);
+        r.color = new Color(1f, 1f, 1f, a0 * (1f - k));
+        if (k >= 1f) Destroy(gameObject);
+    }
+}
