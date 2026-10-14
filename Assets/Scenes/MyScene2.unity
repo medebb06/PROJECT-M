@@ -14266,7 +14266,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b93e8ee3ca6d0de42bf533ec344102cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RainSystem
-  raining: 0
+  raining: 1
   backLayer: 1
   midLayer: 1
   frontLayer: 1
@@ -14282,9 +14282,9 @@ MonoBehaviour:
   intensity: 0.8
   fadeTime: 3
   hotkeys: 1
-  backAmount: 0.6
-  midAmount: 0.5
-  frontAmount: 0.4
+  backAmount: 0.1
+  midAmount: 0.1
+  frontAmount: 0.1
   streakLength: 8
   wind: -25
   windGust: 1.2
@@ -14297,8 +14297,8 @@ MonoBehaviour:
   playerSplashRate: 50
   waterRippleBoost: 3
   rainLoop: {fileID: 8300000, guid: 068c1dc7fe3aec746aba564d847eae08, type: 3}
-  rainVolume: 0.1
-  rainBoost: 1
+  rainVolume: 0.15
+  rainBoost: 0
   lightningInterval: {x: 7, y: 18}
   flashBoost: 2.2
   whiteFlash: 0.14
