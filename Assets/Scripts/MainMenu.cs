@@ -169,7 +169,7 @@ public class MainMenu : MonoBehaviour
 {
     public static bool Active { get; private set; }
 
-    private enum Page { Main, Settings, Test, Time, Rain, Tools }
+    private enum Page { Main, Settings, Test, Time, Rain, Tools, Smoke }
 
     private struct Row
     {
@@ -195,7 +195,7 @@ public class MainMenu : MonoBehaviour
 
     private static bool IsTestPage(Page p)
     {
-        return p == Page.Test || p == Page.Time || p == Page.Rain || p == Page.Tools;
+        return p == Page.Test || p == Page.Time || p == Page.Rain || p == Page.Tools || p == Page.Smoke;
     }
 
     private Row[] CurRows()
@@ -859,6 +859,18 @@ public class MainMenu : MonoBehaviour
         }
     }
 
+    private static WaterSmoke Smoke
+    {
+        get
+        {
+            if (WaterSmoke.Instance != null)
+                return WaterSmoke.Instance;
+
+            WaterSmoke w = FindFirstObjectByType<WaterSmoke>();
+            return w != null ? w : new GameObject("WaterSmoke").AddComponent<WaterSmoke>();
+        }
+    }
+
     private static string Hm(float h)
     {
         int m = Mathf.RoundToInt(Mathf.Repeat(h, 24f) * 60f);
@@ -892,6 +904,7 @@ public class MainMenu : MonoBehaviour
             case Page.Test:
                 testRows.Add(Btn("SAAT  /  GÖKYÜZÜ", () => BuildPage(Page.Time)));
                 testRows.Add(Btn("YAĞMUR  /  ŞİMŞEK", () => BuildPage(Page.Rain)));
+                testRows.Add(Btn("SU DUMANI", () => BuildPage(Page.Smoke)));
                 testRows.Add(Btn("ARAÇLAR  (DUMMY ...)", () => BuildPage(Page.Tools)));
                 testRows.Add(Btn("GERİ", () => { BuildPage(Page.Main); index = 1; }));
                 break;
@@ -978,6 +991,18 @@ public class MainMenu : MonoBehaviour
                 testRows.Add(Toggle("YAĞMUR SESİ", () => Rain.rainSound, v => Rain.rainSound = v));
                 testRows.Add(Slider("SES SEVİYESİ", 0f, 1f, 0.05f, () => Rain.rainVolume, v => Rain.rainVolume = v, v => Mathf.RoundToInt(v * 100f) + "%"));
                 testRows.Add(Btn("ŞİMŞEK ÇAKTIR", () => Rain.StartBolt()));
+                testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
+                break;
+
+            case Page.Smoke:
+                testRows.Add(Toggle("SU DUMANI", () => Smoke.smoke, v => Smoke.smoke = v));
+                testRows.Add(Toggle("ARKA KATMAN", () => Smoke.backLayer, v => Smoke.backLayer = v));
+                testRows.Add(Toggle("ÖN KATMAN", () => Smoke.frontLayer, v => Smoke.frontLayer = v));
+                testRows.Add(Slider("MİKTAR", 0f, 3f, 0.1f, () => Smoke.amount, v => Smoke.amount = v, v => v.ToString("0.0") + "x"));
+                testRows.Add(Slider("SAYDAMLIK (görünürlük)", 0f, 0.6f, 0.02f, () => Smoke.opacity, v => Smoke.opacity = v, v => Mathf.RoundToInt(v * 100f) + "%"));
+                testRows.Add(Slider("BOYUT", 0.3f, 3f, 0.1f, () => Smoke.size, v => Smoke.size = v, v => v.ToString("0.0") + "x"));
+                testRows.Add(Slider("HIZ", 0f, 3f, 0.1f, () => Smoke.speed, v => Smoke.speed = v, v => v.ToString("0.0") + "x"));
+                testRows.Add(Slider("YATAY KAYMA", -2f, 2f, 0.1f, () => Smoke.drift, v => Smoke.drift = v, v => v.ToString("0.0")));
                 testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
                 break;
 
