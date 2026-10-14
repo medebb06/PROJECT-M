@@ -47,7 +47,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [Tooltip(
         "Hasar alınca TAM kontrol kaybı (sersemleme) süresi. " +
         "Hareket, zıplama, dash, saldırı ve savunma kapalı.")]
-    [SerializeField] private float hurtLockDuration = 0.22f;
+    [SerializeField] private float hurtLockDuration = 0.15f;
 
     [Tooltip(
         "Hasar alınınca TOPLAM dokunulmazlık süresi (sersemleme dahil). " +
@@ -72,17 +72,17 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     [Tooltip("Normal hasar.")]
     [SerializeField]
     private HitSlowMotion normalHitSlowMo =
-        new HitSlowMotion(0.35f, 0.12f, 2f);
+        new HitSlowMotion(0.12f, 0.35f, 2f);
 
     [Tooltip("Hasar sonrası son can (veya eşik) kaldığında: daha uzun ve ağır.")]
     [SerializeField]
     private HitSlowMotion lowHealthSlowMo =
-        new HitSlowMotion(0.6f, 0.08f, 2f);
+        new HitSlowMotion(0.25f, 0.2f, 2f);
 
     [Tooltip("Ölümcül vuruş: en uzun ve en ağır.")]
     [SerializeField]
     private HitSlowMotion lethalSlowMo =
-        new HitSlowMotion(1.2f, 0.05f, 2.5f);
+        new HitSlowMotion(0.8f, 0.1f, 2.5f);
 
     [Header("Default Knockback")]
     [SerializeField] private float defaultKnockbackForce = 8f;

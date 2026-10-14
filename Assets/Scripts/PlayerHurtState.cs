@@ -30,7 +30,7 @@ public class PlayerHurtState : IPlayerState
         float force = 8f,
         float verticalForce = -1f,
         float knockbackDuration = 0.1f,
-        float lockDuration = 0.22f,
+        float lockDuration = 0.15f,
         float invincibleDuration = 0.7f,
         float knockbackDeceleration = 40f)
     {
@@ -116,7 +116,9 @@ public class PlayerHurtState : IPlayerState
     {
         float dt = Time.deltaTime;
 
-        timer -= dt;
+        // Kontrol kaybı GERÇEK zamanda biter: hasar slow-mo'su (%8-12 hız)
+        // sersemlemeyi saniyelerce uzatmasın.
+        timer -= Time.unscaledDeltaTime;
 
         if (!knockbackEnded)
         {

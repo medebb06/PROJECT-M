@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Oyuncunun hasar tepkisinin GÖRSEL kısmı:
@@ -22,11 +23,14 @@ public class PlayerInvincibilityBlink : MonoBehaviour
     [SerializeField] private Color flashColor = Color.white;
 
     [Tooltip("Flaşın süresi (gerçek zaman, saniye).")]
-    [SerializeField] private float flashDuration = 0.1f;
+    [SerializeField] private float flashDuration = 0.14f;
 
     [Header("Blink (korumalı dönem)")]
     [Tooltip("Görünür/sönük geçiş süresi (saniye).")]
     [SerializeField] private float blinkInterval = 0.06f;
+
+    [Tooltip("Kapalı: dokunulmazlıkta karakter yanıp sönmez, sadece vuruş flaşı oynar.")]
+    [SerializeField] private bool enableBlink = false;
 
     [Tooltip("Sönük anındaki saydamlık (0 = tamamen kapanır, 1 = hiç sönmez).")]
     [Range(0f, 1f)]
@@ -45,6 +49,12 @@ public class PlayerInvincibilityBlink : MonoBehaviour
     private Material[] flashOriginalMaterials;
     private Color[] flashOriginalColors;
     private bool flashing;
+
+    // Ronni gövdesi MeshRenderer'lardan oluşuyor: onlara da tam beyaz flaş uygulanır.
+    private MeshRenderer[] flashMeshes;
+    private Material[] flashMeshOriginals;
+    private static readonly Dictionary<Material, Material> meshFlashCache =
+        new Dictionary<Material, Material>();
     private float flashTimer;
 
     private static Material sharedFlashMaterial;
@@ -71,6 +81,7 @@ public class PlayerInvincibilityBlink : MonoBehaviour
         // ---------------- BLINK ----------------
 
         bool shouldBlink =
+            enableBlink &&
             player != null &&
             player.hitInvincibilityTimer > 0f &&
             !IsDeathState();
@@ -149,6 +160,33 @@ public class PlayerInvincibilityBlink : MonoBehaviour
             sr.color = color;
         }
 
+        // Mesh parçalar (Ronni gövdesi): materyali beyaz-flaş shader'lı kopyayla değiştir.
+        flashMeshes = GetComponentsInChildren<MeshRenderer>(true);
+        flashMeshOriginals = new Material[flashMeshes.Length];
+
+        for (int i = 0; i < flashMeshes.Length; i++)
+        {
+            MeshRenderer mr = flashMeshes[i];
+
+            if (mr == null)
+                continue;
+
+            Material orig = mr.sharedMaterial;
+            flashMeshOriginals[i] = orig;
+
+            if (orig == null)
+                continue;
+
+            if (!meshFlashCache.TryGetValue(orig, out Material fm) || fm == null)
+            {
+                fm = new Material(material);
+                fm.mainTexture = orig.mainTexture;
+                meshFlashCache[orig] = fm;
+            }
+
+            mr.sharedMaterial = fm;
+        }
+
         flashTimer = flashDuration;
         flashing = true;
     }
@@ -156,6 +194,15 @@ public class PlayerInvincibilityBlink : MonoBehaviour
     private void EndFlash()
     {
         flashing = false;
+
+        if (flashMeshes != null)
+        {
+            for (int i = 0; i < flashMeshes.Length; i++)
+            {
+                if (flashMeshes[i] != null && flashMeshOriginals[i] != null)
+                    flashMeshes[i].sharedMaterial = flashMeshOriginals[i];
+            }
+        }
 
         if (flashRenderers == null)
             return;

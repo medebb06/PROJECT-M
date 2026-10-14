@@ -22,7 +22,7 @@ public static class PlayerDamage
     // Silah (PlayerWeapon koyar): sadece normal vuruşlar (kombo + havada).
     // Düz vuruşların CAN hasarı: posture barının tamamını vuruşlarla doldurmak,
     // düşmanın MAX canının bu oranını götürür (parry'den dolan posture can götürmez).
-    public static float PostureToHealthRatio = 0.375f;
+    public static float PostureToHealthRatio = 0f;
 
     // Düz vuruşların (kombo, havada, slam) denge hasarı çarpanı. Kesirli: 2 → ortalama vuruş başına 2.
     public static float NormalHitBalanceBoost = 2f;
@@ -33,7 +33,7 @@ public static class PlayerDamage
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        PostureToHealthRatio = 0.375f;
+        PostureToHealthRatio = 0f;
         NormalHitBalanceBoost = 2f;
         AttackBalanceMultiplier = 1f;
         WeaponBalanceMultiplier = 1f;

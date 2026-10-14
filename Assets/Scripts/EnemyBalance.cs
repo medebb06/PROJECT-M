@@ -27,6 +27,12 @@ public class EnemyBalance : MonoBehaviour
     [Tooltip("Canı bitmek üzereyken yenilenme çarpanı (yavaş toparlanır).")]
     [SerializeField] private float lowHealthRecoveryMultiplier = 0.4f;
 
+    [Header("Posture kırılınca can hasarı")]
+    [Tooltip("Posture her kırıldığında (vuruş, parry, ability - fark etmez) max canın bu oranı kadar can gider. " +
+             "Düşman en az 1 canla kalır; öldürmez.")]
+    [Range(0f, 0.5f)]
+    [SerializeField] private float breakHealthPercent = 0.15f;
+
     private Health healthRef;
 
     /// <summary>Düz vuruşların posture'a bağlı can hasarından artan kesir (PlayerDamage kullanır).</summary>
@@ -255,6 +261,35 @@ public class EnemyBalance : MonoBehaviour
 
         recoveryTimer = 0f;
         recoveryAccumulator = 0f;
+
+        // Her kırılışta sabit bir can dilimi gider (parry tek seçenek olmasın).
+        if (healthRef != null && !healthRef.IsDead && breakHealthPercent > 0f)
+        {
+            int chip = Mathf.RoundToInt(healthRef.MaxHealth * breakHealthPercent);
+            chip = Mathf.Min(chip, healthRef.CurrentHealth - 1);
+
+            if (chip > 0)
+            {
+                healthRef.TakeDamage(chip);
+
+                // GÖRÜNÜR olsun: kan efekti + büyük hasar sayısı.
+                Vector3 top = transform.position;
+                Collider2D col = GetComponent<Collider2D>();
+
+                if (col != null)
+                    top = new Vector3(col.bounds.center.x, col.bounds.center.y, transform.position.z);
+
+                if (CombatVFXManager.Instance != null)
+                    CombatVFXManager.Instance.PlayHealthHit(top, Vector2.up);
+
+                CombatCallout.Popup(
+                    top + new Vector3(0f, 0.8f, 0f),
+                    "-" + chip,
+                    new Color(1f, 0.35f, 0.25f),
+                    1.5f
+                );
+            }
+        }
 
         OnBalanceBroken?.Invoke();
 

@@ -880,24 +880,24 @@ MonoBehaviour:
   health: {fileID: 1757744087364460026}
   player: {fileID: 9045930727589892200}
   blink: {fileID: 0}
-  hurtLockDuration: 0.22
+  hurtLockDuration: 0.15
   invincibilityDuration: 0.7
   maxSingleHitPercent: 0.4
   lowHealthThreshold: 1
   normalHitSlowMo:
     enabled: 1
-    duration: 0.35
-    startTimeScale: 0.12
+    duration: 0.12
+    startTimeScale: 0.35
     rampPower: 2
   lowHealthSlowMo:
     enabled: 1
-    duration: 0.6
-    startTimeScale: 0.08
+    duration: 0.25
+    startTimeScale: 0.2
     rampPower: 2
   lethalSlowMo:
     enabled: 1
-    duration: 1.2
-    startTimeScale: 0.05
+    duration: 0.8
+    startTimeScale: 0.1
     rampPower: 2.5
   defaultKnockbackForce: 8
   defaultKnockbackVerticalForce: 4.8

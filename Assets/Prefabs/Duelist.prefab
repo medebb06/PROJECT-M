@@ -329,7 +329,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 8
   chaseStopDistance: 5
-  chaseSpeed: 7
+  chaseSpeed: 9.5
   alwaysHunt: 0
   useStandby: 1
   standbyDistance: 4.5
@@ -342,7 +342,7 @@ MonoBehaviour:
   useDepthSorting: 1
   depthMaxLevels: 4
   animator: {fileID: 2656089177797109659}
-  staggerDuration: 3
+  staggerDuration: 2
   attackWarningTime: 1
   attackRecoveryTime: 0.5
   attackCommitPoint: 0.1
@@ -442,7 +442,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7ca65978ec59c48a384579cde03103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 400
+  maxHealth: 600
   currentHealth: 0
   destroyOnDeath: 1
   enableRecovery: 0
@@ -508,13 +508,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83671b96497f18541a7582c9068c0553, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBalance
-  maxBalance: 35
+  maxBalance: 45
   currentBalance: 0
   canRecover: 1
   recoveryDelay: 2
   recoverySpeed: 15
   scaleByHealth: 1
-  fullHealthDamageMultiplier: 0.6
+  fullHealthDamageMultiplier: 0.85
   lowHealthDamageMultiplier: 1.6
   fullHealthRecoveryMultiplier: 1.6
   lowHealthRecoveryMultiplier: 0.4
