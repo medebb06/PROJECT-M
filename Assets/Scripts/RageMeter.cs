@@ -29,11 +29,15 @@ public class RageMeter : MonoBehaviour
     public static void CycleAbility() { Selected = Selected == RageAbility.Lunge ? RageAbility.Flame : RageAbility.Lunge; }
 
     [Header("Alev Kilici (yetenek)")]
-    public float flameDuration = 4f;                       // sn
+    public float flameDuration = 9f;                       // sn
+    [Tooltip("Yanik tam yigina (maxBurnStacks) ulasinca hizlar; her vurus 1 yigin ekler.")]
+    public int maxBurnStacks = 16;
+    [Tooltip("Bu kadar yiginda hiz = burnBalancePerSec/burnHealthPerSec. Daha cok yiginda daha da artar.")]
+    public int burnRefStacks = 6;
     public float burnBalancePerSec = 0.5f;               // max posturun orani / sn (0.5 = ~2 sn'de bir bar)
     public float burnHealthPerSec = 0.12f;                // max canin orani / sn
     public float burnTime = 2.5f;                          // her vurusta yenilenir
-    public Color flameColor = new Color(1f, 0.38f, 0.06f, 1f);   // kirmizi-turuncu
+    public Color flameColor = new Color(1f, 0.06f, 0.01f, 1f);   // parlak kirmizi
     public float FlameLeft { get; private set; }
     public bool FlameActive => FlameLeft > 0f;
 
@@ -130,10 +134,26 @@ public class RageMeter : MonoBehaviour
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnScene;
     }
 
+    struct BurnStack { public int count; public float last; }
+    readonly Dictionary<EnemyController, BurnStack> burnStacks = new Dictionary<EnemyController, BurnStack>();
+
     void OnEnemyHit(EnemyController e, DamageInfo info, HitResult r)
     {
         if (!FlameActive || e == null || !r.hit || e.IsDead) return;
-        EnemyStatus.Get(e).ApplyBurn(burnBalancePerSec, burnHealthPerSec, burnTime);
+        // Vurdukca yiginlanir: hiz = max hiz * yigin / maxBurnStacks. Yanik sonunda yigin sifirlanir.
+        burnStacks.TryGetValue(e, out BurnStack bs);
+        if (Time.time - bs.last > burnTime) bs.count = 0;
+        bs.count = Mathf.Min(Mathf.Max(1, maxBurnStacks), bs.count + 1);
+        bs.last = Time.time;
+        burnStacks[e] = bs;
+        float k = bs.count / (float)Mathf.Max(1, burnRefStacks);
+        EnemyStatus.Get(e).ApplyBurn(burnBalancePerSec * k, burnHealthPerSec * k, burnTime);
+        if (burnStacks.Count > 40)
+        {
+            var dead = new List<EnemyController>();
+            foreach (var kv in burnStacks) if (kv.Key == null || kv.Key.IsDead) dead.Add(kv.Key);
+            foreach (var d in dead) if (d != null) burnStacks.Remove(d);
+        }
     }
 
     void OnScene(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
@@ -211,9 +231,19 @@ public class RageMeter : MonoBehaviour
         if (Current == RageAbility.Flame)
         {
             if (FlameActive) return;
-            if (!Unlimited) Fill = Mathf.Max(0f, Fill - SegCost);
+            // Alev Kilici tum bari harcar (tek bar).
+            if (!Unlimited && Fill < 0.999f)
+            {
+                if (Time.unscaledTime > lastWarn + 0.9f)
+                {
+                    lastWarn = Time.unscaledTime;
+                    CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "BAR DOLU DEĞİL", new Color(0.7f, 0.75f, 0.85f), 0.8f);
+                }
+                return;
+            }
+            if (!Unlimited) Fill = 0f;
             FlameLeft = flameDuration;
-            CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "ALEV!", new Color(1f, 0.5f, 0.15f), 1.2f);
+            CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "ALEV!", new Color(1f, 0.2f, 0.08f), 1.2f);
             if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.3f);
             return;
         }
@@ -270,7 +300,7 @@ public class RageMeter : MonoBehaviour
         GUI.color = new Color(0.4f, 0.65f, 1f, 0.16f);
         GUI.DrawTexture(new Rect(x, y, w, h), t);
 
-        Color c = FlameActive ? Color.Lerp(new Color(1f, 0.3f, 0.05f), new Color(1f, 0.7f, 0.2f), 1f - pulse)
+        Color c = FlameActive ? Color.Lerp(new Color(1f, 0.1f, 0.02f), new Color(1f, 0.4f, 0.12f), 1f - pulse)
             : IsFull ? Color.Lerp(new Color(0.35f, 0.65f, 1f), new Color(0.8f, 0.95f, 1f), 1f - pulse) : new Color(0.3f, 0.6f, 1f, 0.95f);
         GUI.color = c;
         GUI.DrawTexture(new Rect(x, y, w * shown, h), t);
@@ -619,7 +649,7 @@ public class RageAura : MonoBehaviour
 
         float pulse = 1f + 0.2f * Mathf.Sin(Time.unscaledTime * 7f);
         Color c = rage.FlameActive ? rage.flameColor : rage.auraColor;
-        float k = rage.bladeIntensity * pulse;
+        float k = rage.bladeIntensity * pulse * (rage.FlameActive ? 1.5f : 1f);
         Color hdr = new Color(c.r * k, c.g * k, c.b * k, 1f);
 
         for (int i = list.Count - 1; i >= 0; i--)
@@ -649,7 +679,7 @@ public class RageAura : MonoBehaviour
             haloT.localScale = Vector3.one * (d * 0.5f);   // sprite capi 2 birim
             halo.sortingLayerID = layer;
             halo.sortingOrder = order - 1;
-            float hk = rage.haloIntensity * pulse;
+            float hk = rage.haloIntensity * pulse * (rage.FlameActive ? 1.6f : 1f);
             haloMat.SetColor(GlowId, new Color(c.r * hk, c.g * hk, c.b * hk, 1f));
             halo.color = new Color(1f, 1f, 1f, 0.55f);
         }
