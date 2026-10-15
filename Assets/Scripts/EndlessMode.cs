@@ -243,9 +243,9 @@ public class EndlessManager : MonoBehaviour
             small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperRight };
         }
 
-        big.fontSize = Mathf.RoundToInt(54 * s);
-        mid.fontSize = Mathf.RoundToInt(26 * s);
-        small.fontSize = Mathf.RoundToInt(20 * s);
+        big.fontSize = Mathf.RoundToInt(28 * s);
+        mid.fontSize = Mathf.RoundToInt(14 * s);
+        small.fontSize = Mathf.RoundToInt(11 * s);
 
         int sec = Mathf.FloorToInt(runTime);
         string time = (sec / 60).ToString("00") + ":" + (sec % 60).ToString("00");

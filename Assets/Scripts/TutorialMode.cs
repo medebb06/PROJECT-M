@@ -55,6 +55,8 @@ public class TutorialManager : MonoBehaviour
 
     string promptTitle = "", promptSub = "";
     GUIStyle big, small, top;
+    Font fontBold, fontRegular;
+    const int FontPt = 10;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void AutoCreate()
@@ -148,8 +150,13 @@ public class TutorialManager : MonoBehaviour
         }
 
         // Pasifken düşman saldırmasın.
-        if (enemy != null && (passive || Time.unscaledTime < passiveUntil))
-            enemy.StartAttackRecovery(5f);
+        bool nowPassive = passive || Time.unscaledTime < passiveUntil;
+        if (enemy != null)
+        {
+            if (nowPassive) enemy.StartAttackRecovery(5f);
+            else if (wasPassive) enemy.StartAttackRecovery(0.3f);   // pasiflikten cikinca beklemeden saldirsin
+        }
+        wasPassive = nowPassive;
 
         // Saldırı öğretisinde düşman ölmesin.
         if (enemy != null && eHealth != null && !eHealth.IsDead && step == Step.Attack)
@@ -220,6 +227,22 @@ public class TutorialManager : MonoBehaviour
         EnemyAttackState atk = enemy != null ? enemy.CurrentState as EnemyAttackState : null;
         bool normalAtk = atk != null && atk.CurrentHitType == MoveHitType.Normal && !atk.IsUnblockable;
         float freezeAt = parry ? parryFreezeWindup : blockFreezeWindup;
+
+        // Dusman oyuncuyu aktif ARASIN (menzil/standby yuzunden saldirmama sorunu).
+        if (enemy != null) enemy.alwaysHunt = true;
+
+        if (phase == Phase.WaitAttack)
+        {
+            waitTimer += Time.unscaledDeltaTime;
+            // Uzun sure saldirmazsa dusmani oyuncunun onune getir.
+            if (waitTimer > 3.5f && enemy != null && !passive && Time.unscaledTime >= passiveUntil)
+            {
+                waitTimer = 0f;
+                PlaceEnemyInFront();
+            }
+            if (atk != null) waitTimer = 0f;
+        }
+        else waitTimer = 0f;
 
         switch (phase)
         {
@@ -301,7 +324,8 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
-    bool retry;
+    bool retry, wasPassive;
+    float waitTimer;
 
     // ---- Adım 4: rage ----
     void EnterRage()
@@ -352,7 +376,7 @@ public class TutorialManager : MonoBehaviour
     {
         passive = true;
         doneTimer += Time.unscaledDeltaTime;
-        if (doneTimer > 2.4f && !leaving)
+        if (!leaving)
         {
             leaving = true;
             Cleanup();
@@ -445,9 +469,14 @@ public class TutorialManager : MonoBehaviour
 
         if (big == null)
         {
-            big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            // Ana menüyle aynı yazı tipi (Resources/UI/ProjectM_Serif_*).
+            fontBold = Resources.Load<Font>("UI/ProjectM_Serif_Bold");
+            fontRegular = Resources.Load<Font>("UI/ProjectM_Serif_Regular");
+            big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = fontBold != null ? FontStyle.Normal : FontStyle.Bold };
             small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
-            top = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
+            top = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontStyle = fontBold != null ? FontStyle.Normal : FontStyle.Bold };
+            if (fontBold != null) { big.font = fontBold; top.font = fontBold; }
+            if (fontRegular != null) small.font = fontRegular;
         }
 
         int oldDepth = GUI.depth;
@@ -459,27 +488,27 @@ public class TutorialManager : MonoBehaviour
             step == Step.Parry ? "3 / 4   PARRY" :
             step == Step.Rage ? "4 / 4   RAGE" : "COMPLETE";
 
-        top.fontSize = Mathf.RoundToInt(22 * s);
+        top.fontSize = Mathf.RoundToInt(FontPt * s);
         Shadow(new Rect(0f, 70f * s, Screen.width, 40f * s), "TUTORIAL  -  " + stepName, top, new Color(1f, 1f, 1f, 0.55f), s);
 
         if (step == Step.Attack && phase == Phase.Doing)
         {
-            small.fontSize = Mathf.RoundToInt(30 * s);
+            small.fontSize = Mathf.RoundToInt(FontPt * s);
             Shadow(new Rect(0f, Screen.height * 0.72f, Screen.width, 50f * s), "HIT THE DUMMY   " + Mathf.Min(hits, hitsToPass) + " / " + hitsToPass, small, Color.white, s);
         }
 
         if (promptTitle.Length > 0)
         {
             float pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 5f);
-            big.fontSize = Mathf.RoundToInt(64 * s);
-            small.fontSize = Mathf.RoundToInt(26 * s);
+            big.fontSize = Mathf.RoundToInt(FontPt * s);
+            small.fontSize = Mathf.RoundToInt(FontPt * s);
             Shadow(new Rect(0f, Screen.height * 0.64f, Screen.width, 90f * s), promptTitle, big, new Color(1f, 1f, 1f, pulse), s);
             Shadow(new Rect(0f, Screen.height * 0.64f + 84f * s, Screen.width, 40f * s), promptSub, small, new Color(0.7f, 0.85f, 1f, 0.9f), s);
         }
 
         if (toast != null && Time.unscaledTime < toastUntil)
         {
-            big.fontSize = Mathf.RoundToInt(54 * s);
+            big.fontSize = Mathf.RoundToInt(FontPt * s);
             Shadow(new Rect(0f, Screen.height * 0.30f, Screen.width, 90f * s), toast, big, new Color(0.6f, 0.85f, 1f, 1f), s);
         }
 
