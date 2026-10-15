@@ -8,7 +8,7 @@ public class MinimalHealthBar : MonoBehaviour
 {
     [Header("Yerleşim (1080p'ye göre piksel; ekranla ölçeklenir)")]
     public float marginX = 28f;
-    public float marginY = 24f;
+    public float marginY = 36f;   // ekranin altindan
     public float width = 280f;
     public float height = 4f;
 
@@ -69,7 +69,9 @@ public class MinimalHealthBar : MonoBehaviour
         if (Event.current.type != EventType.Repaint || health == null) return;
 
         float s = Screen.height / 1080f;
-        float x = marginX * s, y = marginY * s + RunCameraZoom.TopBarPixels, w = width * s, h = Mathf.Max(2f, height * s);
+        float w = width * s, h = Mathf.Max(2f, height * s);
+        // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
+        float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;
         Texture2D t = Texture2D.whiteTexture;
 
         GUI.color = backColor;  GUI.DrawTexture(new Rect(x, y, w, h), t);

@@ -51,7 +51,7 @@ public class RageMeter : MonoBehaviour
     public int minDamage = 150;
 
     [Header("Yerleşim (1080p)")]
-    public float marginX = 28f, marginY = 34f, width = 280f, height = 4f;
+    public float marginX = 28f, marginY = 26f, width = 280f, height = 4f;
 
     [Header("Hazir: kilic parlamasi")]
     public Color auraColor = new Color(1f, 1f, 1f, 1f);        // Impact materyalinin rengi: beyaz, HDR
@@ -184,7 +184,9 @@ public class RageMeter : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint) return;
         float s = Screen.height / 1080f;
-        float x = marginX * s, y = marginY * s + RunCameraZoom.TopBarPixels, w = width * s, h = Mathf.Max(2f, height * s);
+        float w = width * s, h = Mathf.Max(2f, height * s);
+        // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
+        float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;
         Texture2D t = Texture2D.whiteTexture;
         float pulse = IsFull ? 0.7f + 0.3f * Mathf.Sin(Time.unscaledTime * 9f) : 1f;
 

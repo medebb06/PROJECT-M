@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// SEKIRO TARZI "ACIK" ISARET: dogru parry yapilan dusman birkac saniye KIRMIZI yanip soner;
+/// SEKIRO TARZI "ACIK" ISARET: dogru parry yapilan dusman birkac saniye posture-kirik rengine (staggerFlashColor) boyanir;
 /// bu surede ona isabet eden ilk NORMAL vurus onu tek vurusta oldurur (infaz).
 /// Duz vurusla postur/can kirmak zor, parry ise oldurucu firsat verir.
 /// Boss'a uygulanmaz. Oyun baslayinca kendiliginden kurulur.
@@ -61,11 +61,11 @@ public class ParryMarkSystem : MonoBehaviour
 
 public class ParryMark : MonoBehaviour
 {
-    static Sprite glow;
-
     float until, lethalFrom;
-    SpriteRenderer sr;
-    Transform fx;
+    EnemyController enemy;
+    SpriteRenderer[] rends;
+    Color[] orig;
+    bool tinted;
 
     public bool Lethal => enabled && Time.time >= lethalFrom && Time.time < until;
 
@@ -81,56 +81,47 @@ public class ParryMark : MonoBehaviour
         until = Time.time + duration;
         lethalFrom = Time.time + grace;
         enabled = true;
-        EnsureFx();
+        if (enemy == null) enemy = GetComponent<EnemyController>();
     }
 
     public void Consume()
     {
         until = 0f;
-        if (fx != null) Destroy(fx.gameObject);
-        fx = null; sr = null;
+        Restore();
         enabled = false;
     }
 
-    void EnsureFx()
+    void Collect()
     {
-        if (fx != null) return;
-
-        if (glow == null)
-        {
-            const int S = 64;
-            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < S; y++)
-                for (int x = 0; x < S; x++)
-                {
-                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(S / 2f, S / 2f)) / (S / 2f);
-                    float a = Mathf.Clamp01(1f - d);
-                    a = a * a * (3f - 2f * a);
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
-                }
-            tex.Apply();
-            glow = Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S);
-        }
-
-        var go = new GameObject("~ParryMark");
-        fx = go.transform;
-        fx.SetParent(transform, false);
-
-        sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = glow;
-
-        string layer = "Default"; int order = 50;
-        foreach (var r in GetComponentsInChildren<Renderer>())
-        {
-            if (r.gameObject.name.StartsWith("~")) continue;
-            layer = r.sortingLayerName;
-            order = Mathf.Max(order, r.sortingOrder + 3);
-        }
-        sr.sortingLayerName = layer;
-        sr.sortingOrder = order;
+        if (rends != null) return;
+        var all = GetComponentsInChildren<SpriteRenderer>(true);
+        var list = new System.Collections.Generic.List<SpriteRenderer>();
+        foreach (var r in all)
+            if (r != null && !r.gameObject.name.StartsWith("~")) list.Add(r);
+        rends = list.ToArray();
+        orig = new Color[rends.Length];
     }
 
-    void Update()
+    void Restore()
+    {
+        if (!tinted || rends == null) { tinted = false; return; }
+
+        // Gercek posture kirikligi sirasinda stagger rengi zaten kendi geri alinir.
+        if (enemy != null && !enemy.IsStaggered)
+        {
+            for (int i = 0; i < rends.Length; i++)
+            {
+                if (rends[i] == null) continue;
+                Color c = rends[i].color;
+                c.r = orig[i].r; c.g = orig[i].g; c.b = orig[i].b;
+                rends[i].color = c;
+            }
+        }
+
+        tinted = false;
+    }
+
+    void LateUpdate()
     {
         if (Time.time >= until)
         {
@@ -138,23 +129,30 @@ public class ParryMark : MonoBehaviour
             return;
         }
 
-        if (fx == null) return;
+        if (enemy == null || enemy.IsDead) { Consume(); return; }
 
-        // Gövdenin ortasi, gövde boyutuna gore.
-        var col = GetComponentInChildren<Collider2D>();
-        Vector3 c = col != null ? col.bounds.center : transform.position;
-        float size = col != null ? Mathf.Max(col.bounds.size.x, col.bounds.size.y) : 2f;
-        fx.position = c;
+        Collect();
 
-        // Kirmizi, hizli yanip sonen isik. Sure bitmeye yaklasirken hizlanir.
-        float left = until - Time.time;
-        float speed = left < 1f ? 14f : 8f;
-        float p = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * speed);
-        var a = Mathf.Lerp(0.15f, 0.85f, p);
-        sr.color = new Color(1f, 0.08f, 0.05f, a);
+        // Posture kirildiginda kullanilan renk (EnemyController.staggerFlashColor) acik sure boyunca kalir.
+        Color tint = enemy.staggerFlashColor;
 
-        float s = size * Mathf.Lerp(1.5f, 2.1f, p);
-        float inv = transform.lossyScale.x != 0f ? 1f : 1f;
-        fx.localScale = Vector3.one * s / Mathf.Max(0.0001f, Mathf.Abs(transform.lossyScale.x)) * inv;
+        for (int i = 0; i < rends.Length; i++)
+        {
+            var r = rends[i];
+            if (r == null) continue;
+
+            if (!tinted) orig[i] = r.color;
+
+            Color c = r.color;
+            c.r = tint.r; c.g = tint.g; c.b = tint.b;
+            r.color = c;
+        }
+
+        tinted = true;
+    }
+
+    void OnDisable()
+    {
+        Restore();
     }
 }
