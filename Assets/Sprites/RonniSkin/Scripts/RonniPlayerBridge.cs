@@ -88,9 +88,9 @@ namespace RonniSkin
         {
             if (s == null) return null;
             string n = s.name;   // "Attack2HD_3" -> sayfa "Attack2_glow", sprite "Attack2G_3"
-            if (n.StartsWith("ParryHD_"))
+            if (n.StartsWith("ParryHD_") || n.StartsWith("ParryRev_"))
             {
-                string gk = "ParryG_" + n.Substring(8); Sprite pg;
+                string gk = n.StartsWith("ParryRev_") ? "ParryRevG_" + n.Substring(9) : "ParryG_" + n.Substring(8); Sprite pg;
                 if (!glowSprites.TryGetValue(gk, out pg)) { pg = Resources.Load<Sprite>("AtkGlow/" + gk); glowSprites[gk] = pg; }
                 return pg;
             }
@@ -155,9 +155,24 @@ namespace RonniSkin
         [Tooltip("2. kare (smear'li) suresi (sn).")] public float parryF2Time = 0.06f;
         [Tooltip("Parry karelerinin ek kaymasi (birim, sagabakarken). Pivot sol (arka) ayakta; ileri/geri ince ayar.")] public Vector2 parryOffset = Vector2.zero;
         [Tooltip("Basarili parry'den sonra son karede kalma suresi (sn).")] public float parryHoldAfterSuccess = 0.28f;
+        [Tooltip("Parry = Attack2 karelerinin TERSTEN oynatilmasi (Resources/ParryFrames/ParryRev_1..4). Kapali = eski 3 kareli parry.")] public bool parryAttack2Reverse = false;
+        [Tooltip("Ters Attack2 parry'sinde her karenin suresi (sn). Kucuk = cevik.")] public float parryRevFrameTime = 0.04f;
+        Sprite[] parryRevSprites; bool parryRevLoaded;
+        bool ParryRevOn() { if (!parryAttack2Reverse) return false; ParrySprite(0); return parryRevSprites != null; }
         float parryFrameT = -1f, parryFrameEnd; bool parrySuccPrev; Sprite[] parrySprites; bool parryLoaded;
         Sprite ParrySprite(int i)
         {
+            if (parryAttack2Reverse)
+            {
+                if (!parryRevLoaded)
+                {
+                    parryRevLoaded = true;
+                    var rs = new Sprite[4]; bool ok = true;
+                    for (int k = 0; k < 4; k++) { rs[k] = Resources.Load<Sprite>("ParryFrames/ParryRev_" + (k + 1)); if (rs[k] == null) ok = false; }
+                    if (ok) parryRevSprites = rs;
+                }
+                if (parryRevSprites != null) return parryRevSprites[Mathf.Clamp(i, 0, 3)];
+            }
             if (!parryLoaded)
             {
                 parryLoaded = true;
@@ -167,7 +182,7 @@ namespace RonniSkin
             }
             return parrySprites != null ? parrySprites[Mathf.Clamp(i, 0, 2)] : null;
         }
-        int ParryIndex(float t) { return t < parryF1Time ? 0 : t < parryF1Time + parryF2Time ? 1 : 2; }
+        int ParryIndex(float t) { if (ParryRevOn()) return Mathf.Min(3, (int)(t / Mathf.Max(0.005f, parryRevFrameTime))); return t < parryF1Time ? 0 : t < parryF1Time + parryF2Time ? 1 : 2; }
         bool FrameAtkActive()
         {
             string pfx = atkClip == "attack1" && frameAttack1 ? "Attack1HD" : atkClip == "attack2" && frameAttack2 ? "Attack2HD" : atkClip == "attack3" && frameAttack3 ? "Attack3HD" : atkClip == "attack4" && frameAttack4 ? "Attack4HD" : null;
@@ -217,7 +232,7 @@ namespace RonniSkin
             frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x, L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y, 1f);
             UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
-            Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_")) off += parryOffset;
+            Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_") || s.name.StartsWith("ParryRev_")) off += parryOffset;
             frameSR.transform.position = r.transform.position + new Vector3(off.x * fx, off.y, 0f);
             blendPrev = s; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
         }
@@ -557,7 +572,7 @@ namespace RonniSkin
             if (frameParry && ParrySprite(0) != null)
             {
                 // Sadece BASARILI parry'de oynar (tusa basmak tek basina animasyon baslatmaz).
-                if (pSucc) { parryFrameT = 0f; parryFrameEnd = parryF1Time + parryF2Time + parryHoldAfterSuccess; }
+                if (pSucc) { parryFrameT = 0f; parryFrameEnd = (ParryRevOn() ? parryRevFrameTime * 3f : parryF1Time + parryF2Time) + parryHoldAfterSuccess; }
             }
             if (playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
             {
