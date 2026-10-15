@@ -212,7 +212,7 @@ public class RageMeter : MonoBehaviour
         if (flash > 0f) flash -= Time.unscaledDeltaTime * 1.5f;
 
         if (player == null) player = FindFirstObjectByType<PlayerController>();
-        if (player == null || Busy || !Input.GetKeyDown(key)) return;
+        if (player == null || Busy || !MobileInput.GetKeyDown(key)) return;
         // Her seyi boler: saldiri, dash, hasar sersemlemesi, havada... Sadece menu aciksa / oluysen calismaz.
         if (MainMenu.Active) return;
         Health ph = player.GetComponent<Health>();
@@ -290,7 +290,7 @@ public class RageMeter : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        float s = Screen.height / 1080f;
+        float s = Screen.height / 1080f * MobileInput.HudMul;
         float w = width * s, h = Mathf.Max(2f, height * s);
         // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
         float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;
@@ -457,7 +457,7 @@ public class RageSlamState : IPlayerState
                     var bridge = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
                     if (bridge != null) bridge.BeginSheathe(rage.sheathDur);
                 }
-                if (timer > 0.05f && (player.dashBufferTimer > 0f || Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+                if (timer > 0.05f && (player.dashBufferTimer > 0f || MobileInput.GetKeyDown(KeyCode.LeftShift) || MobileInput.GetKeyDown(KeyCode.Space) || MobileInput.GetMouseButtonDown(0)))
                 {
                     var br = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
                     if (br != null) br.CancelSheathe();

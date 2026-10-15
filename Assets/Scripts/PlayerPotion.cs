@@ -131,7 +131,7 @@ public class PlayerPotion : MonoBehaviour
         if (Time.timeScale <= 0f)
             return;
 
-        bool held = Input.GetKey(KeyCode.F);
+        bool held = MobileInput.GetKey(KeyCode.F);
 
         if (!held)
         {
@@ -147,10 +147,10 @@ public class PlayerPotion : MonoBehaviour
 
         // İçmeyi bozan eylemler.
         if (
-            Input.GetKeyDown(KeyCode.Space) ||
-            Input.GetKeyDown(KeyCode.LeftShift) ||
-            Input.GetMouseButton(0) ||
-            Input.GetMouseButton(1)
+            MobileInput.GetKeyDown(KeyCode.Space) ||
+            MobileInput.GetKeyDown(KeyCode.LeftShift) ||
+            MobileInput.GetMouseButton(0) ||
+            MobileInput.GetMouseButton(1)
         )
         {
             Cancel();
@@ -160,7 +160,7 @@ public class PlayerPotion : MonoBehaviour
         // Başlangıç: boşsa / canı doluysa başlama (geri bildirim ver).
         if (!drinking)
         {
-            if (!Input.GetKeyDown(KeyCode.F))
+            if (!MobileInput.GetKeyDown(KeyCode.F))
                 return; // tuş zaten basılıyken başka bir şeyden dönmüş; yeni basış bekle
 
             if (Charges <= 0 || health.CurrentHealth >= health.MaxHealth)

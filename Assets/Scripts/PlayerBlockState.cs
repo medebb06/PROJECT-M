@@ -25,7 +25,7 @@ public class PlayerBlockState : IPlayerDefenseState
 
     public void Tick()
     {
-        if (!Input.GetMouseButton(1))
+        if (!MobileInput.GetMouseButton(1))
         {
             defense.ChangeState(null);
         }

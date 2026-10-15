@@ -54,7 +54,7 @@ public class PlayerParryState : IPlayerDefenseState
 
         // Basılıysa block (kombonun sonraki vuruşu için güvenli). Başarılı
         // parry'den sonra saldırı tuşu bu block'u keser (PlayerCombatController).
-        if (Input.GetMouseButton(1))
+        if (MobileInput.GetMouseButton(1))
         {
             defense.ChangeState(
                 new PlayerBlockState(

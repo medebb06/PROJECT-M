@@ -20,7 +20,7 @@ public class PlayerInputHandler : MonoBehaviour
         // TAMPONLAR (kilitliyken de)
         // =====================================================
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (MobileInput.GetKeyDown(KeyCode.Space))
         {
             player.Movement.jumpBufferCounter =
                 player.Movement.jumpBufferTime;
@@ -29,7 +29,7 @@ public class PlayerInputHandler : MonoBehaviour
                 player.Movement.wallJumpBufferTime;
         }
 
-        if (Input.GetKeyDown(KeyCode.LeftShift))
+        if (MobileInput.GetKeyDown(KeyCode.LeftShift))
         {
             player.dashBufferTimer = Mathf.Max(player.dashBufferTime, player.minInputBuffer);
         }
@@ -68,13 +68,13 @@ public class PlayerInputHandler : MonoBehaviour
         // =====================================================
 
         player.moveInput =
-            Input.GetAxisRaw("Horizontal");
+            MobileInput.GetAxisRaw("Horizontal");
 
         player.verticalInput =
-            Input.GetAxisRaw("Vertical");
+            MobileInput.GetAxisRaw("Vertical");
 
         player.jumpHeld =
-            Input.GetKey(KeyCode.Space);
+            MobileInput.GetKey(KeyCode.Space);
 
         // =====================================================
         // DASH (tamponlu): DashState.Enter tamponu tüketir.

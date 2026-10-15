@@ -68,7 +68,7 @@ public class MinimalHealthBar : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint || health == null) return;
 
-        float s = Screen.height / 1080f;
+        float s = Screen.height / 1080f * MobileInput.HudMul;
         float w = width * s, h = Mathf.Max(2f, height * s);
         // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
         float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;

@@ -115,7 +115,7 @@ public static class GameSettings
     /// <summary>OnGUI ölçeği: ekran yüksekliği 720'ye göre × bileşen çarpanı × ayar.</summary>
     public static float GuiScale(float componentScale)
     {
-        return Screen.height / 720f * componentScale * UiScale;
+        return Screen.height / 720f * componentScale * UiScale * MobileInput.HudMul;
     }
 
     /// <summary>Menüden çıkarken bir kez diske yaz.</summary>

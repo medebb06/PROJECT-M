@@ -41,7 +41,7 @@ public class AirState : IPlayerState
 
         if (
             player.verticalInput < -0.5f &&
-            Input.GetKeyDown(KeyCode.Space) &&
+            MobileInput.GetKeyDown(KeyCode.Space) &&
             player.CanGroundSlam
         )
         {

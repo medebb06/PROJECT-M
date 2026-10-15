@@ -103,7 +103,7 @@ public class PlayerDefenseController : MonoBehaviour
         {
             return IsParrying ||
                    IsBlocking ||
-                   (Input.GetMouseButton(1) && !suppressHeld);
+                   (MobileInput.GetMouseButton(1) && !suppressHeld);
         }
     }
 
@@ -188,7 +188,7 @@ public class PlayerDefenseController : MonoBehaviour
 
     private void HandleInput()
     {
-        if (Input.GetMouseButtonDown(1))
+        if (MobileInput.GetMouseButtonDown(1))
         {
             suppressHeld = false;
             float minBuffer = player != null ? player.minInputBuffer : 0f;
@@ -196,7 +196,7 @@ public class PlayerDefenseController : MonoBehaviour
             bufferTimer = Mathf.Max(inputBuffer, minBuffer, 0.0001f);
         }
 
-        if (Input.GetMouseButtonUp(1))
+        if (MobileInput.GetMouseButtonUp(1))
             suppressHeld = false;
 
         if (bufferTimer > 0f)
@@ -210,7 +210,7 @@ public class PlayerDefenseController : MonoBehaviour
         // Block bırakılınca savunma biter. (Parry penceresi bırakınca
         // KAPANMAZ; süresi dolunca kendisi karar verir.)
         if (
-            Input.GetMouseButtonUp(1) &&
+            MobileInput.GetMouseButtonUp(1) &&
             currentState is PlayerBlockState
         )
         {
@@ -317,7 +317,7 @@ public class PlayerDefenseController : MonoBehaviour
     {
         bufferTimer = 0f;
 
-        if (Input.GetMouseButton(1))
+        if (MobileInput.GetMouseButton(1))
             suppressHeld = true;
 
         if (currentState != null)

@@ -180,7 +180,7 @@ public class TutorialManager : MonoBehaviour
         ClearStrangers();
         SpawnEnemy();
         SetStep(Step.Attack);
-        Freeze("PRESS LMB TO ATTACK", "left mouse button");
+        Freeze(MobileInput.Txt("PRESS LMB TO ATTACK", "TAP VUR TO ATTACK"), MobileInput.Txt("left mouse button", "big button, bottom right"));
         phase = Phase.Prompt;
     }
 
@@ -198,7 +198,7 @@ public class TutorialManager : MonoBehaviour
         if (phase == Phase.Prompt)
         {
             FreezeTime();
-            if (Input.GetMouseButtonDown(0))
+            if (MobileInput.GetMouseButtonDown(0))
             {
                 phase = Phase.Doing;
                 promptTitle = ""; promptSub = "";
@@ -263,15 +263,15 @@ public class TutorialManager : MonoBehaviour
                 if (atk.RemainingWindup <= freezeAt)
                 {
                     phase = Phase.Frozen; phaseTimer = 0f;
-                    if (parry) Freeze("TAP RMB AT THE LAST MOMENT", "PARRY!");
-                    else Freeze("HOLD RMB TO BLOCK", "right mouse button");
+                    if (parry) Freeze(MobileInput.Txt("TAP RMB AT THE LAST MOMENT", "TAP PARRY AT THE LAST MOMENT"), "PARRY!");
+                    else Freeze(MobileInput.Txt("HOLD RMB TO BLOCK", "HOLD PARRY TO BLOCK"), MobileInput.Txt("right mouse button", "PARRY button"));
                 }
                 break;
 
             case Phase.Frozen:
                 RunCameraZoom.ForceCinematic = true;
                 FreezeTime();
-                if (Input.GetMouseButtonDown(1))
+                if (MobileInput.GetMouseButtonDown(1))
                 {
                     promptTitle = ""; promptSub = "";
                     phase = Phase.Resolving; phaseTimer = 0f;
@@ -336,7 +336,7 @@ public class TutorialManager : MonoBehaviour
         ResetEnemy();
         PlaceEnemyInFront();
         phase = Phase.Prompt;
-        Freeze("PRESS E TO LUNGE", "Dashes to the nearest enemy and strikes once");
+        Freeze(MobileInput.Txt("PRESS E TO LUNGE", "TAP E TO LUNGE"), "Dashes to the nearest enemy and strikes once");
         RunCameraZoom.ForceCinematic = true;
     }
 
@@ -348,7 +348,7 @@ public class TutorialManager : MonoBehaviour
         if (phase == Phase.Prompt)
         {
             FreezeTime();
-            if (Input.GetKeyDown(KeyCode.E))
+            if (MobileInput.GetKeyDown(KeyCode.E))
             {
                 promptTitle = ""; promptSub = "";
                 phase = Phase.Doing; phaseTimer = 0f;
@@ -368,7 +368,7 @@ public class TutorialManager : MonoBehaviour
         {
             // E'ye basmadı: tekrar hatırlat.
             phase = Phase.Prompt; phaseTimer = 0f;
-            Freeze("PRESS E TO LUNGE", "Dashes to the nearest enemy and strikes once");
+            Freeze(MobileInput.Txt("PRESS E TO LUNGE", "TAP E TO LUNGE"), "Dashes to the nearest enemy and strikes once");
         }
     }
 
@@ -465,7 +465,7 @@ public class TutorialManager : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint || !TutorialMode.Active || MainMenu.Active || !started) return;
 
-        float s = Screen.height / 1080f;
+        float s = Screen.height / 1080f * MobileInput.UiMul;
 
         if (big == null)
         {

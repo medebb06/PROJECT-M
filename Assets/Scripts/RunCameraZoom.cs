@@ -149,10 +149,10 @@ public class RunCameraZoom : MonoBehaviour
     // Herhangi bir oyuncu girdisi var mı? (klavye, fare, kol)
     private static bool AnyInput()
     {
-        if (Input.anyKey)
+        if (Input.anyKey || MobileInput.AnyTouch)
             return true;
 
-        if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f || Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.1f)
+        if (Mathf.Abs(MobileInput.GetAxisRaw("Horizontal")) > 0.1f || Mathf.Abs(MobileInput.GetAxisRaw("Vertical")) > 0.1f)
             return true;
 
         Vector3 m = Input.mousePosition;

@@ -206,7 +206,7 @@ public class PlayerFinisher : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(executeKey))
+        if (MobileInput.GetKeyDown(executeKey))
             bufferTimer = inputBuffer > 0f ? inputBuffer : 0.0001f;
 
         if (bufferTimer <= 0f)
@@ -226,7 +226,7 @@ public class PlayerFinisher : MonoBehaviour
         }
 
         // Odak için tuş BASILI olmalı (tamponlanmış kısa basış işe yaramaz).
-        if (!Input.GetKey(executeKey))
+        if (!MobileInput.GetKey(executeKey))
         {
             bufferTimer = 0f;
             return;
@@ -321,7 +321,7 @@ public class PlayerFinisher : MonoBehaviour
 
         ExecuteCinematic.SetFocusProgress(prog);
 
-        bool held = Input.GetKey(executeKey);
+        bool held = MobileInput.GetKey(executeKey);
 
         if (!held)
         {
@@ -495,7 +495,7 @@ public class PlayerFinisher : MonoBehaviour
             };
         }
 
-        float s = Mathf.Max(0.6f, Screen.height / 720f);
+        float s = Mathf.Max(0.6f, Screen.height / 720f) * MobileInput.UiMul;
 
         float w = 170f * s;
         float h = 10f * s;

@@ -265,7 +265,7 @@ public class PlayerAbility : MonoBehaviour
             }
         }
 
-        if (!Input.GetKeyDown(key))
+        if (!MobileInput.GetKeyDown(key))
             return;
 
         if (!CanAct())

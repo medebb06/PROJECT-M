@@ -170,7 +170,7 @@ public class PlayerHurtState : IPlayerState
         )
         {
             // Kilitliyken yön girişi sıfırlanıyor: dash yönü için tuşu oku.
-            player.moveInput = Input.GetAxisRaw("Horizontal");
+            player.moveInput = MobileInput.GetAxisRaw("Horizontal");
 
             sm.ChangeState(new DashState(player, sm));
             return;

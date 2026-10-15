@@ -498,7 +498,7 @@ public class CritFeedback : MonoBehaviour
 
         tm.text = label;
         tm.fontSize = 64;
-        tm.characterSize = textSize * GameSettings.WorldTextScale;
+        tm.characterSize = textSize * GameSettings.WorldTextScale * MobileInput.WorldMul;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.fontStyle = FontStyle.Bold;

@@ -45,9 +45,9 @@ public class GameFlow : MonoBehaviour
         if (restarting || MainMenu.Active)
             return;
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (MobileInput.GetKeyDown(KeyCode.R))
             StartCoroutine(Restart());
-        else if (Input.GetKeyDown(KeyCode.Escape))
+        else if (MobileInput.GetKeyDown(KeyCode.Escape))
             MainMenu.OpenPause();
     }
 
@@ -339,6 +339,8 @@ public class MainMenu : MonoBehaviour
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(3840f, 2160f); // büyütünce menü küçülür (1920x1080 = eski boyut)
         scaler.matchWidthOrHeight = 0.5f;
+        if (MobileInput.Active)
+            scaler.referenceResolution = new Vector2(3840f, 2160f) / MobileInput.MenuMul; // telefon: menü büyük
 
         // Koyu örtü + kenar karartması.
         Image bg = NewImage("Ink", transform, Ink, null);

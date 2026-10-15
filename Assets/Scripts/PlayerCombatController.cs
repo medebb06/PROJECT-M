@@ -219,7 +219,7 @@ public class PlayerCombatController : MonoBehaviour
 
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
-        if (Input.GetMouseButtonDown(0))
+        if (MobileInput.GetMouseButtonDown(0))
             bufferTimer = Mathf.Max(
                 Mathf.Max(inputBufferTime, player.minInputBuffer),
                 defenseController != null ? defenseController.postParryRecovery + 0.1f : 0f);

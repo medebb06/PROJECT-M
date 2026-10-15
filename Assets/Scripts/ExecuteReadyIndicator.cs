@@ -210,7 +210,7 @@ public class ExecuteReadyIndicator : MonoBehaviour
             };
         }
 
-        float s = Mathf.Max(0.6f, Screen.height / 720f);
+        float s = Mathf.Max(0.6f, Screen.height / 720f) * MobileInput.UiMul;
 
         float size = 22f * s;
         float bob = Mathf.Sin(Time.unscaledTime * 5f) * 3f * s;

@@ -243,7 +243,7 @@ public class EndlessManager : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint || !Running()) return;
 
-        float s = Screen.height / 1080f;
+        float s = Screen.height / 1080f * MobileInput.UiMul;
 
         if (big == null)
         {
@@ -278,7 +278,7 @@ public class EndlessManager : MonoBehaviour
             Rect c = new Rect(0, Screen.height * 0.5f - 120f * s, Screen.width, 90f * s);
             Shadowed(c, kills + " KESİM", big, new Color(1f, 0.93f, 0.9f, 1f), s);
             Shadowed(new Rect(0, c.y + 84f * s, Screen.width, 40f * s), time + "     EN İYİ  " + best, mid, new Color(1f, 1f, 1f, 0.7f), s);
-            Shadowed(new Rect(0, c.y + 140f * s, Screen.width, 40f * s), "R  TEKRAR DENE", mid, new Color(0.95f, 0.45f, 0.4f, 0.95f), s);
+            Shadowed(new Rect(0, c.y + 140f * s, Screen.width, 40f * s), MobileInput.Txt("R  TEKRAR DENE", "R TUŞUNU BASILI TUT  •  TEKRAR DENE"), mid, new Color(0.95f, 0.45f, 0.4f, 0.95f), s);
             big.alignment = TextAnchor.UpperRight; mid.alignment = TextAnchor.UpperRight;
         }
     }
