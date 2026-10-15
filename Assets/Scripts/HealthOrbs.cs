@@ -17,7 +17,7 @@ public class HealthOrbs : MonoBehaviour
 
     [Header("İyileştirme")]
     [Tooltip("Küre başına iyileştirme: oyuncunun maksimum canının yüzdesi.")]
-    [Range(0f, 0.2f)] public float healPercentPerOrb = 0.03f;
+    [Range(0f, 0.2f)] public float healPercentPerOrb = 0.05f;
     public int minHealPerOrb = 1;
 
     [Header("Mıknatıs")]

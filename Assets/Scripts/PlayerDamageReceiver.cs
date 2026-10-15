@@ -162,6 +162,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // Varsayılan knockback değerleriyle hasar al.
     // --------------------------------------------------
 
+    public static float FixedHitPercent = 0.3f;
+
     public void TakeDamage(int damage, Vector2 hitDirection)
     {
         TakeDamage(
@@ -237,6 +239,10 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
                 damage = Mathf.Min(damage, cap);
             }
+
+            // Her isabetli vurus oyuncunun MAX canının sabit yuzdesi kadar vurur.
+            if (FixedHitPercent > 0f && health.MaxHealth > 0)
+                damage = Mathf.Max(1, Mathf.CeilToInt(health.MaxHealth * FixedHitPercent));
         }
 
         int healthBefore = health.CurrentHealth;

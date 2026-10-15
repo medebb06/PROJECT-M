@@ -469,7 +469,18 @@ public class RageSlamState : IPlayerState
             ? Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * rage.bossPercent * power))
             : Mathf.Max(rage.minDamage, h.MaxHealth);
 
-        e.ApplyAttackHit(away.sqrMagnitude < 0.01f ? new Vector2(dir, 0f) : away, true, 3);
+        Vector2 hitDir = away.sqrMagnitude < 0.01f ? new Vector2(dir, 0f) : away;
+        EnemyBalance bal = e.GetComponent<EnemyBalance>();
+
+        // Posture kirik degilse: posture barini tamamen doldur (kir), cani kalsin.
+        if (boss == null && bal != null && !bal.IsBroken)
+        {
+            e.ApplyAttackHit(hitDir, true, 3);
+            bal.AddBalanceDamage(bal.MaxBalance, false);
+            return;
+        }
+
+        e.ApplyAttackHit(hitDir, true, 3);
         h.TakeDamage(dmg);
     }
 
