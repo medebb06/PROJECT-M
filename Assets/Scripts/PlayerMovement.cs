@@ -19,7 +19,9 @@ public class PlayerMovement : MonoBehaviour
     // =========================================================
 
     [Header("Jump")]
-    public float jumpForce = 12f;
+    public float jumpForce = 18f;
+    [Tooltip("Sahnedeki eski jumpForce degerini ezer. 0 = Inspector degerini kullan.")]
+    public float jumpForceOverride = 18f;
 
     [Header("Jump Feel")]
     public float jumpBufferTime = 0.15f;
@@ -27,6 +29,8 @@ public class PlayerMovement : MonoBehaviour
     public float jumpCutMultiplier = 2f;
     public float jumpCutVelocityMultiplier = 0.3f;
     public float fallMultiplier = 2.5f;
+    [Tooltip("Yukselirken ek yercekimi: yuksek = hizli cikar, tepeye cabuk ulasir (seri / responsive).")]
+    public float riseMultiplier = 2.2f;
     public float maxFallSpeed = 20f;
 
     // =========================================================
@@ -83,6 +87,9 @@ public class PlayerMovement : MonoBehaviour
     public void Initialize(PlayerController controller)
     {
         player = controller;
+
+        if (jumpForceOverride > 0f)
+            jumpForce = jumpForceOverride;
     }
 
     // =========================================================
@@ -227,6 +234,19 @@ public class PlayerMovement : MonoBehaviour
                 Vector2.up *
                 Physics2D.gravity.y *
                 (fallMultiplier - 1f) *
+                Time.fixedDeltaTime;
+        }
+        else if (
+            player.rb.linearVelocity.y > 0f &&
+            player.jumpHeld &&
+            riseMultiplier > 1f
+        )
+        {
+            // Yukselirken de ek yercekimi: ziplama sert baslar, tepeye hizli ulasir.
+            player.rb.linearVelocity +=
+                Vector2.up *
+                Physics2D.gravity.y *
+                (riseMultiplier - 1f) *
                 Time.fixedDeltaTime;
         }
         else if (

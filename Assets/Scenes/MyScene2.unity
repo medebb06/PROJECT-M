@@ -2086,6 +2086,7 @@ MonoBehaviour:
   letterbox: 1
   barHeight: 0.1
   barSmooth: 0.5
+  forceZoomIn: 0.2
   showDebug: 1
   status: 
 --- !u!1 &600068899
@@ -16017,6 +16018,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4312770384138214666, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_Pitch
+      value: -3
+      objectReference: {fileID: 0}
     - target: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.5
@@ -16105,6 +16110,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: jumpForce
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: airControl
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkHold5x
       value: 0
@@ -16184,6 +16197,10 @@ PrefabInstance:
     - target: {fileID: 7819838104998345150, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 9045930727589892200, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: dashDistance
+      value: 6.5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

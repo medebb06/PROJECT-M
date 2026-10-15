@@ -58,7 +58,11 @@ public class JumpState : IPlayerState
             );
         }
 
-        player.SpawnDust();
+        bool airJump = player.doingAirJump;
+        player.doingAirJump = false;
+
+        if (!airJump)
+            player.SpawnDust();
 
         // =====================================================
         // CLEAR DOWNWARD VELOCITY
@@ -78,7 +82,8 @@ public class JumpState : IPlayerState
 
         player.rb.AddForce(
             Vector2.up *
-            movement.jumpForce,
+            movement.jumpForce *
+            (airJump ? player.airJumpForceMul : 1f),
             ForceMode2D.Impulse
         );
     }

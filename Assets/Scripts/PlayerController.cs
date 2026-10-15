@@ -146,6 +146,12 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float dashBufferTimer;
     [HideInInspector] public bool jumpConsumed;
     [HideInInspector] public bool inputLocked;
+
+    [Header("Double Jump")]
+    [Tooltip("Havada kac kez daha zıplanabilir (0 = kapalı).")] public int maxAirJumps = 1;
+    [Tooltip("Havadaki zıplamanın kuvveti (yer zıplamasına oranla).")] [Range(0.5f, 1.2f)] public float airJumpForceMul = 0.92f;
+    [HideInInspector] public int airJumpsUsed;
+    [HideInInspector] public bool doingAirJump;
     [HideInInspector] public float inputLockTimer;
     [HideInInspector] public bool attackFacingLocked;
 
@@ -344,12 +350,37 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // DOUBLE JUMP: havada (zıplama / düşme durumunda) yeni bir Space basışıyla tekrar zıpla.
+    private void TryAirJump()
+    {
+        if (maxAirJumps <= 0 || airJumpsUsed >= maxAirJumps)
+            return;
+
+        if (isGrounded || isDashing || slamGroundLock)
+            return;
+
+        IPlayerState cur = stateMachine.CurrentState;
+
+        if (!(cur is JumpState) && !(cur is AirState))
+            return;
+
+        airJumpsUsed++;
+        movement.jumpBufferCounter = 0f;
+        doingAirJump = true;
+
+        stateMachine.ChangeState(new JumpState(this, stateMachine));
+    }
+
     // ZIPLAMA. Tampon (jumpBufferCounter) kilitliyken de dolar; burada
     // ilk uygun anda tüketilir. Block/parry'den zıplayarak çıkılabilir;
     // saldırının vuruş karesinden SONRA zıplama saldırıyı iptal eder
     // (öncesinde tampon bekler).
     private void HandleJump()
     {
+        // Yere ya da duvara tutununca havada zıplama hakkı yenilenir.
+        if (isGrounded || movement.isWallSliding)
+            airJumpsUsed = 0;
+
         if (!canControl)
             return;
 
@@ -368,7 +399,10 @@ public class PlayerController : MonoBehaviour
             return;
 
         if (movement.coyoteCounter <= 0f)
+        {
+            TryAirJump();
             return;
+        }
 
         if (jumpConsumed)
             return;
