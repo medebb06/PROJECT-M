@@ -20,6 +20,10 @@ public class DashState : IPlayerState
     // Dash mesafesi çarpanı (dashDistance * bu).
     public const float DistanceScale = 1.5f;
 
+    // Havada dash: dash'in son kisminda yere dogru suzulur (duz cizgi cizip havada kalmaz).
+    public static float AirFallStart = 0.45f;   // dash'in bu orani gectikten sonra dusmeye baslar
+    public static float AirFallSpeed = 13f;     // en sonda inis hizi (birim/sn)
+
     private int originalLayer;
     private GameObject colObject;
     private int colOriginalLayer;
@@ -184,7 +188,12 @@ public class DashState : IPlayerState
         float curve = norm * Mathf.Pow(p, n) * Mathf.Pow(1f - p, n);
 
         vel.x = dir * speed * curve;
-        vel.y = 0f;
+
+        // Havadaysa: ilk kisim duz, sonra yumusakca asagi suzul; hiz Exit'te korunur (dogal dusus).
+        float fall = 0f;
+        if (!player.isGrounded)
+            fall = -AirFallSpeed * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(AirFallStart, 1f, p));
+        vel.y = fall;
 
         player.SetVelocity(vel);
     }

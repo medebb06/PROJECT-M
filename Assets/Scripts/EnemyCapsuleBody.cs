@@ -29,6 +29,15 @@ public class EnemyCapsuleBody : MonoBehaviour
     public float leanForward = 7f;
     public float knockbackWobble = 0.22f;
 
+    [Header("Parry tepkisi (guclu)")]
+    [Tooltip("Parry'de ilk ezilme hizi. Buyuk = daha sert.")] public float parryPunchSpeed = 16f;
+    [Tooltip("Ezilirken yatay genisleme.")] public float parryScaleX = 0.38f;
+    [Tooltip("Ezilirken dikey kisalma.")] public float parryScaleY = 0.34f;
+    [Tooltip("Parry'de oyuncudan uzaga savrulma (yayli).")] public float parryKnock = 15f;
+    [Tooltip("Posture kiran parry'de ek carpan.")] public float parryBreakBoost = 1.35f;
+    [Tooltip("Parry'de beyaz-altin flas suresi (sn).")] public float parryFlashTime = 0.16f;
+    [Tooltip("Parry'de kamera sarsintisi.")] public float parryShake = 0.45f;
+
     public SpriteRenderer Renderer { get; private set; }
 
     private EnemyController enemy;
@@ -41,6 +50,7 @@ public class EnemyCapsuleBody : MonoBehaviour
     private float lean;
     private Vector2 wobbleOffset;
     private Vector2 wobbleVel;
+    private float parryS, parryV;     // parry yayi: + ezilme, - esneme
 
     private void Awake()
     {
@@ -137,6 +147,18 @@ public class EnemyCapsuleBody : MonoBehaviour
             return;
 
         impulse = Mathf.Min(1f, impulse + (broke ? breakSquash : parrySquash));
+
+        float boost = broke ? parryBreakBoost : 1f;
+        parryV += parryPunchSpeed * boost;
+
+        // Oyuncudan uzaga savrul.
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+        float away = 1f;
+        if (pc != null) away = enemy.transform.position.x >= pc.transform.position.x ? 1f : -1f;
+        wobbleVel += new Vector2(away * parryKnock * boost, 2.5f);
+
+        enemy.PlayTintFlash(new Color(1f, 0.93f, 0.6f, 1f), parryFlashTime);
+        if (CameraShake.Instance != null && parryShake > 0f) CameraShake.Instance.Shake(parryShake * boost);
     }
 
     private void OnBreak(EnemyController e)
@@ -160,6 +182,10 @@ public class EnemyCapsuleBody : MonoBehaviour
         wobbleOffset += wobbleVel * dt;
 
         impulse = Mathf.MoveTowards(impulse, 0f, dt * 5f);
+
+        // Parry yayi: sert ezilir, sonra esneyip salinarak oturur.
+        parryV += (-parryS * 340f - parryV * 13f) * dt;
+        parryS = Mathf.Clamp(parryS + parryV * dt, -1.2f, 1.2f);
 
         // Saldırı durumu: hazırlıkta çömel, kararlıyken esne.
         float target = 0f;
@@ -199,7 +225,7 @@ public class EnemyCapsuleBody : MonoBehaviour
         float sx = Mathf.Max(0.0001f, Mathf.Abs(ls.x));
         float sy = Mathf.Max(0.0001f, Mathf.Abs(ls.y));
 
-        body.localScale = new Vector3(1f + sq * 0.14f, 1f - sq * 0.12f, 1f);
+        body.localScale = new Vector3(1f + sq * 0.14f + parryS * parryScaleX, 1f - sq * 0.12f - parryS * parryScaleY, 1f);
 
         body.localPosition = basePos + new Vector3(
             wobbleOffset.x / sx,
