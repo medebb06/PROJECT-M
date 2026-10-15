@@ -20,7 +20,7 @@ namespace RonniSkin
         public bool mirrorSpriteColor = true;
         [Header("Sheathe")]
         [Tooltip("Key that sheathes / draws the katana while idle.")] public KeyCode sheatheKey = KeyCode.R;
-        [Tooltip("Start the level with the katana drawn (held in the back hand).")] public bool startDrawn = true;
+        [Tooltip("Start the level with the katana drawn (held in the back hand).")] public bool startDrawn = false;
         string shClip; float shStart;
         [Tooltip("Test: always play the run animation.")] public bool forceRun = false;
         [Tooltip("Use the side-profile drawing (Resources/RonniSkinB) while running.")] public bool useProfileRun = true;
@@ -340,7 +340,7 @@ namespace RonniSkin
                 if (player.modelPivot != null) oldAnim = player.modelPivot.GetComponent<Animator>();
                 if (oldAnim == null) oldAnim = player.GetComponentInChildren<Animator>(true);
             }
-            anim.swordReady = startDrawn;
+            anim.swordReady = false;   // oyun kilicsiz (kinda) idle ile baslar; sahnedeki eski startDrawn degerini ezer
             if (mainOld != null)
             {
                 rig.sortingLayerName = mainOld.sortingLayerName;

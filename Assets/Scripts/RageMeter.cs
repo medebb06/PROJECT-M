@@ -47,7 +47,7 @@ public class RageMeter : MonoBehaviour
     public static bool ReplacesExecute = true;
 
     /// <summary>Test: menuden acilinca bar hep dolu, sinirsiz rage.</summary>
-    public static bool Unlimited = true;   // test: acik baslar (menuden kapatilabilir)
+    public static bool Unlimited = false;   // kapali baslar (menu > TEST ile acilabilir)
 
     [Header("Dolma (1 = dolu)")]
     [Range(0f, 1f)] public float killFill = 0.34f;       // 1 segment
