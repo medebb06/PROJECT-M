@@ -220,7 +220,9 @@ public class PlayerCombatController : MonoBehaviour
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
         if (Input.GetMouseButtonDown(0))
-            bufferTimer = Mathf.Max(inputBufferTime, player.minInputBuffer);
+            bufferTimer = Mathf.Max(
+                Mathf.Max(inputBufferTime, player.minInputBuffer),
+                defenseController != null ? defenseController.postParryRecovery + 0.1f : 0f);
 
         if (
             defenseController != null &&
@@ -229,7 +231,11 @@ public class PlayerCombatController : MonoBehaviour
         {
             // PARRY → SALDIRI: başarılı parry'den hemen sonra saldırı
             // savunmayı keser ve ANINDA başlar (riposte akışı).
-            if (bufferTimer > 0f && defenseController.RecentlyParried)
+            if (
+                bufferTimer > 0f &&
+                defenseController.RecentlyParried &&
+                !defenseController.InParryRecovery
+            )
             {
                 defenseController.CancelDefense();
             }
@@ -308,9 +314,22 @@ public class PlayerCombatController : MonoBehaviour
         currentState?.Tick();
     }
 
+    // Parry sonrası ilk vuruşta ekstra posture hasarı.
+    [HideInInspector] public bool counterHit;
+
+    public int GetHitBalance(int comboStep)
+    {
+        return GetBalanceDamage(comboStep) +
+            (counterHit && defenseController != null ? defenseController.counterBonusBalance : 0);
+    }
+
+    private bool ParryRecovering =>
+        defenseController != null && defenseController.InParryRecovery;
+
     private bool CanStartAttack()
     {
         return
+            !ParryRecovering &&
             player.IsGrounded() &&
             player.canControl &&
             player.canAttack &&
@@ -325,6 +344,9 @@ public class PlayerCombatController : MonoBehaviour
             return false;
 
         if (!player.canControl || !player.canAttack || player.inputLocked)
+            return false;
+
+        if (ParryRecovering)
             return false;
 
         if (defenseController != null && defenseController.IsDefending)
@@ -475,6 +497,8 @@ public class PlayerCombatController : MonoBehaviour
             return;
 
         FaceInputDirection();
+
+        counterHit = defenseController != null && defenseController.ConsumeCounter();
 
         // =====================================================
         // COMBO STEP

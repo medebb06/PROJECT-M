@@ -396,7 +396,7 @@ public class AttackState : ICombatState
                     h,
                     DamageSource.Attack,
                     step,
-                    combat.GetBalanceDamage(step),
+                    combat.GetHitBalance(step),
                     combat.attackHealthDamage,
                     dir,
                     (Vector3)h.ClosestPoint(boxCenter),
@@ -468,7 +468,7 @@ public class AttackState : ICombatState
                 {
                     source = DamageSource.Attack,
                     comboStep = step,
-                    balanceDamage = combat.GetBalanceDamage(step),
+                    balanceDamage = combat.GetHitBalance(step),
                     healthDamage = combat.attackHealthDamage,
                     direction = dir,
                     hitPosition = hitPosition

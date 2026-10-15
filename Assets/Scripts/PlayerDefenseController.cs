@@ -121,6 +121,29 @@ public class PlayerDefenseController : MonoBehaviour
     public bool RecentlyParried =>
         Time.time - lastSuccessTime <= parryCancelTime;
 
+    [Header("Parry Sonrası Toparlanma")]
+    [Tooltip("Başarılı parry'den sonra saldırının başlayamadığı kısa süre (sn). " +
+             "Bu sırada saldırı tuşu tamponlanır, süre bitince otomatik çıkar. " +
+             "0 = beklemeden saldırı.")]
+    [Min(0f)] public float postParryRecovery = 0.12f;
+
+    [Tooltip("Toparlanmadan sonraki ilk vuruşa eklenen ekstra posture hasarı.")]
+    [Min(0)] public int counterBonusBalance = 1;
+
+    private bool counterConsumed = true;
+
+    // Parry sonrası toparlanma sürüyor mu? (saldırı başlatılamaz)
+    public bool InParryRecovery =>
+        Time.time - lastSuccessTime < postParryRecovery;
+
+    // Yeni bir saldırı başlarken çağrılır: parry sonrası ilk vuruş mu?
+    public bool ConsumeCounter()
+    {
+        if (counterConsumed) return false;
+        counterConsumed = true;
+        return Time.time - lastSuccessTime <= parryCancelTime + 0.35f;
+    }
+
     // Zincirde mi? (Arayüz / efekt için.)
     public bool InParryChain =>
         Time.time - lastSuccessTime <= chainDuration;
@@ -272,6 +295,7 @@ public class PlayerDefenseController : MonoBehaviour
     private void OnParrySucceeded(EnemyController enemy, bool brokeBalance)
     {
         lastSuccessTime = Time.time;
+        counterConsumed = false;
 
         // Parry işini yaptı: pencere kısa payla kapanır, oyuncu hemen
         // saldırabilir / hareket edebilir.
