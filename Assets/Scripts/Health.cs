@@ -57,12 +57,12 @@ public class Health : MonoBehaviour
         // TEST: oyuncu canı sabit 1000 (0 = kapalı).
         if (isPlayer && PlayerMaxHealthOverride > 0)
         {
-            maxHealth = Mathf.Max(maxHealth, PlayerMaxHealthOverride);
+            maxHealth = PlayerMaxHealthOverride;
             currentHealth = maxHealth;
         }
     }
 
-    private const int PlayerMaxHealthOverride = 1000;
+    private const int PlayerMaxHealthOverride = 100;
 
     private void Update()
     {
@@ -221,7 +221,7 @@ public class Health : MonoBehaviour
         maxHealth = Mathf.Max(1, newMax);
 
         if (isPlayer && PlayerMaxHealthOverride > 0)
-            maxHealth = Mathf.Max(maxHealth, PlayerMaxHealthOverride);
+            maxHealth = PlayerMaxHealthOverride;
 
         currentHealth =
             refill

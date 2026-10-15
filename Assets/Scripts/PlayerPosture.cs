@@ -26,6 +26,7 @@ public class PlayerPosture : MonoBehaviour
 
     void Awake()
     {
+        maxPosture = 200;
         currentPosture = maxPosture;
         recoveryTimer = 0f;
         recoveryAccumulator = 0f;

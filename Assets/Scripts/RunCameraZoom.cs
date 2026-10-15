@@ -69,6 +69,11 @@ public class RunCameraZoom : MonoBehaviour
     [Tooltip("Şerit yüksekliği (ekran yüksekliğine oran, her biri). 0.16 = %16.")] [Range(0f, 0.35f)] public float barHeight = 0.16f;
     [Tooltip("Şeritlerin açılıp kapanma süresi (sn).")] public float barSmooth = 0.5f;
     private float bars, barsVel;
+    /// <summary>Ust sinematik seridin o anki piksel yuksekligi (HUD barlari asagi kayar).</summary>
+    public static float TopBarPixels;
+    /// <summary>Tutorial: sinematik kamerayi (seritler + yakin odak) zorla ac.</summary>
+    public static bool ForceCinematic;
+    public float forceZoomIn = 0.2f;
 
     [Tooltip("Ekranın sol üstünde durum yazısı göster (sorun giderme).")]
     public bool showDebug = false;
@@ -287,7 +292,7 @@ public class RunCameraZoom : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.B))
             forceBreath = !forceBreath;
 
-        if (forceBreath)
+        if (forceBreath || ForceCinematic)
             busyWhy = "";
 
         bool busy = busyWhy != "";
@@ -303,11 +308,12 @@ public class RunCameraZoom : MonoBehaviour
         else
             idleTimer += Time.unscaledDeltaTime;
 
-        bool cinematic = idleBreathing && GameSettings.CinematicCamera;
+        bool cinematic = (idleBreathing && GameSettings.CinematicCamera) || ForceCinematic;
 
         // Şeritler: sinematik açıkken görünür, menü açıkken (duraklatma/ana menü) gizlenir.
         float barTarget = letterbox && cinematic && !MainMenu.Active ? 1f : 0f;
         bars = Mathf.SmoothDamp(bars, barTarget, ref barsVel, Mathf.Max(0.05f, barSmooth), Mathf.Infinity, Time.unscaledDeltaTime);
+        TopBarPixels = letterbox ? Screen.height * GameSettings.BarHeight * bars * (bars * (3f - 2f * bars) / Mathf.Max(bars, 0.0001f)) : 0f;
 
         // ---- Olay zoom'u: parry (yaklaş) + kalabalık (uzaklaş) ----
         if (eventZoom && player != null && Time.unscaledTime >= nextCrowdScan)
@@ -370,8 +376,8 @@ public class RunCameraZoom : MonoBehaviour
         if (pulseHold <= 0f && pulse < 0.0005f)
             pulsePeak = 0f;
 
-        float breathTarget = cinematic && (forceBreath || idleTimer >= idleDelay) ? 1f : 0f;
-        float bs = breathTarget > breath ? breathFadeIn : breathFadeOut;
+        float breathTarget = cinematic && (forceBreath || ForceCinematic || idleTimer >= idleDelay) ? 1f : 0f;
+        float bs = breathTarget > breath ? (ForceCinematic ? 0.5f : breathFadeIn) : breathFadeOut;
         breath = Mathf.SmoothDamp(breath, breathTarget, ref breathVel, bs, Mathf.Infinity, Time.unscaledDeltaTime);
 
         float bEase = breath * breath * (3f - 2f * breath);
@@ -383,6 +389,7 @@ public class RunCameraZoom : MonoBehaviour
             + crowdZoom * crowd * crowd * (3f - 2f * crowd)
             - pulse
             - idleZoomIn * bEase
+            - (ForceCinematic ? forceZoomIn * bEase : 0f)
             + breathZoomWobble * bEase * Mathf.Sin(phase);
 
         Set(zoomK);

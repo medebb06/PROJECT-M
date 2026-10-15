@@ -17,15 +17,17 @@ public class EndlessManager : MonoBehaviour
 {
     [Header("Doğma")]
     [Tooltip("Başlangıçta aynı anda en fazla düşman sayısı.")]
-    public int startMaxAlive = 2;
-    public int hardMaxAlive = 8;
+    public int startMaxAlive = 4;
+    public int hardMaxAlive = 12;
     [Tooltip("Kaç saniyede bir üst sınır +1 artsın.")]
-    public float maxAliveRampSeconds = 28f;
+    public float maxAliveRampSeconds = 12f;
     [Tooltip("Doğma aralığı: başta bu, zamanla en aza iner (sn).")]
-    public float startInterval = 4.5f;
-    public float minInterval = 1.6f;
+    public float startInterval = 2.0f;
+    public float minInterval = 0.6f;
     [Tooltip("Aralığın en aza inmesi için geçen süre (sn).")]
-    public float intervalRampSeconds = 150f;
+    public float intervalRampSeconds = 60f;
+    [Tooltip("Her kademenin süresi (sn).")] public float levelSeconds = 20f;
+    [Tooltip("Toplam kademe sayısı (sonuncuda en sık doğma).")] public int levelCount = 6;
     public float firstSpawnDelay = 1.2f;
     [Tooltip("Oyuncudan bu kadar uzakta (ekranın dışında) doğar; kamera genişliğine eklenir.")]
     public float spawnExtraDistance = 2.5f;
@@ -134,8 +136,10 @@ public class EndlessManager : MonoBehaviour
 
         if (spawnTimer > 0f) return;
 
-        int maxAlive = Mathf.Min(hardMaxAlive, startMaxAlive + Mathf.FloorToInt(runTime / Mathf.Max(1f, maxAliveRampSeconds)));
-        float k = Mathf.Clamp01(runTime / Mathf.Max(1f, intervalRampSeconds));
+        // KADEME KADEME: her 'levelSeconds' saniyede bir seviye atlar; sıklık ve üst sınır basamak basamak artar.
+        int level = Mathf.Min(levelCount, Mathf.FloorToInt(runTime / Mathf.Max(1f, levelSeconds)));
+        float k = levelCount > 0 ? (float)level / levelCount : 1f;
+        int maxAlive = Mathf.Min(hardMaxAlive, startMaxAlive + Mathf.RoundToInt((hardMaxAlive - startMaxAlive) * k));
         spawnTimer = Mathf.Lerp(startInterval, minInterval, k) * Random.Range(0.85f, 1.15f);
 
         if (AliveCount() >= maxAlive) return;

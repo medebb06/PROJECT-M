@@ -165,7 +165,7 @@ public class RageMeter : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint) return;
         float s = Screen.height / 1080f;
-        float x = marginX * s, y = marginY * s, w = width * s, h = Mathf.Max(2f, height * s);
+        float x = marginX * s, y = marginY * s + RunCameraZoom.TopBarPixels, w = width * s, h = Mathf.Max(2f, height * s);
         Texture2D t = Texture2D.whiteTexture;
         float pulse = IsFull ? 0.7f + 0.3f * Mathf.Sin(Time.unscaledTime * 9f) : 1f;
 

@@ -1320,7 +1320,7 @@ public class EnemyAttackState : IEnemyState
 
         int damage =
             harmless
-                ? 0
+                ? 1
                 : Mathf.Max(
                     1,
                     Mathf.RoundToInt(baseDamage * stepDamageMultiplier)

@@ -62,6 +62,7 @@ public class GameFlow : MonoBehaviour
     {
         restarting = true;
         EndlessMode.Active = false;
+        TutorialMode.Active = false;
 
         yield return ScreenFade.Instance.FadeTo(1f, 0.5f);
 
@@ -183,6 +184,7 @@ public class MainMenu : MonoBehaviour
     {
         new Row { label = "BAŞLA", kanji = "開始", kind = 0 },
         new Row { label = "SONSUZ MOD", kanji = "無限", kind = 0 },
+        new Row { label = "TUTORIAL", kanji = "稽古", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
@@ -619,20 +621,29 @@ public class MainMenu : MonoBehaviour
         {
             case 0:
                 EndlessMode.Active = false;
+                TutorialMode.Active = false;
                 StartCoroutine(StartGame());
                 break;
 
             case 1:
                 // SONSUZ MOD: sürekli düşman, can küreleri, ölmeden ne kadar kesebilirsin
                 EndlessMode.Active = true;
+                TutorialMode.Active = false;
                 StartCoroutine(StartGame());
                 break;
 
             case 2:
-                BuildPage(Page.Settings);
+                // TUTORIAL: sabit dusman, saldir / block / parry / rage ogretisi; bitince ana menu.
+                EndlessMode.Active = false;
+                TutorialMode.Active = true;
+                StartCoroutine(StartGame());
                 break;
 
             case 3:
+                BuildPage(Page.Settings);
+                break;
+
+            case 4:
                 GameSettings.Save();
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;

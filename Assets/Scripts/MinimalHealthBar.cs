@@ -69,7 +69,7 @@ public class MinimalHealthBar : MonoBehaviour
         if (Event.current.type != EventType.Repaint || health == null) return;
 
         float s = Screen.height / 1080f;
-        float x = marginX * s, y = marginY * s, w = width * s, h = Mathf.Max(2f, height * s);
+        float x = marginX * s, y = marginY * s + RunCameraZoom.TopBarPixels, w = width * s, h = Mathf.Max(2f, height * s);
         Texture2D t = Texture2D.whiteTexture;
 
         GUI.color = backColor;  GUI.DrawTexture(new Rect(x, y, w, h), t);
