@@ -473,6 +473,7 @@ namespace RonniSkin
             return t01 < a ? Mathf.Lerp(0f, ph, t01 / a) : Mathf.Lerp(ph, 1f, (t01 - a) / (1f - a));
         }
         /// <summary>Disaridan (Rage execute) kilic koyma animasyonunu verilen surede oynatir; hareket/zemin iptal etmez.</summary>
+        public void CancelSheathe() { chiburiT = -1f; chiForcedDur = -1f; }
         public void BeginSheathe(float dur) { chiForcedDur = Mathf.Max(0.1f, dur); chiburiT = 0f; anim.swordReady = true; }
         // chiburi: kılıç kına ucundan girerken bıçağın kınının ağzından ötesi görünmez (klip fazı 0.74 -> 0.93)
         static float ChiBladeU(float p) { const float t0 = 0.74f, t1 = 0.93f; if (p <= t0) return 1f; if (p >= t1) return 0f; float u = (p - t0) / (t1 - t0); return 1f - u * u * (3f - 2f * u); }

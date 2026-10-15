@@ -15,7 +15,7 @@ public class RageMeter : MonoBehaviour
     public static bool ReplacesExecute = true;
 
     /// <summary>Test: menuden acilinca bar hep dolu, sinirsiz rage.</summary>
-    public static bool Unlimited;
+    public static bool Unlimited = true;   // test: acik baslar (menuden kapatilabilir)
 
     [Header("Dolma (1 = dolu)")]
     [Range(0f, 1f)] public float killFill = 0.34f;       // 3 öldürme
@@ -137,7 +137,10 @@ public class RageMeter : MonoBehaviour
 
         if (player == null) player = FindFirstObjectByType<PlayerController>();
         if (player == null || Busy || !Input.GetKeyDown(key)) return;
-        if (!player.canControl || player.inputLocked || player.isDashing) return;
+        // Her seyi boler: saldiri, dash, hasar sersemlemesi, havada... Sadece menu aciksa / oluysen calismaz.
+        if (MainMenu.Active) return;
+        Health ph = player.GetComponent<Health>();
+        if (ph != null && ph.IsDead) return;
 
         if (!IsFull)
         {
@@ -258,6 +261,18 @@ public class RageSlamState : IPlayerState
             case Phase.Focus:
             {
                 float p = Mathf.Clamp01(timer / rage.focusTime);
+                // Odagin basinda yon degistirilebilir (ilk %70).
+                float ax = Input.GetAxisRaw("Horizontal");
+                if (p < 0.7f && ax != 0f)
+                {
+                    float nd = ax < 0f ? -1f : 1f;
+                    if (nd != dir)
+                    {
+                        dir = nd;
+                        player.facingDir = dir;
+                        if (player.playerSprite != null) player.playerSprite.flipX = dir < 0f;
+                    }
+                }
                 HitStop.Request(0.12f, rage.focusTimeScale, 8);
                 player.rb.linearVelocity = Vector2.zero;
                 if (ring != null)
@@ -309,7 +324,14 @@ public class RageSlamState : IPlayerState
             }
             case Phase.Recover:
                 player.rb.linearVelocity = Vector2.zero;
-                if (wavePending && timer >= rage.shockDelay) DoShock();
+                // Alan hasari bolunebilir: dash / ziplama / saldiri tusu hamleyi keser (hasar bolgesi yine vurur).
+                if (timer > 0.05f && (player.dashBufferTimer > 0f || Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+                {
+                    var br = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
+                    if (br != null) br.CancelSheathe();
+                    Finish();
+                    break;
+                }
                 // Smearsiz karede bekle; alan vurusundan 'sheathDur' once kilic koyma animasyonu baslar ve vurusla biter.
                 if (!sheathStarted && timer >= rage.shockDelay - rage.sheathDur)
                 {
@@ -319,7 +341,7 @@ public class RageSlamState : IPlayerState
                     if (bridge != null) bridge.BeginSheathe(rage.sheathDur);
                 }
                 if (view != null) view.Show(RageExecView.L, Vector2.zero, 1f, dir);
-                if (!wavePending && timer >= rage.shockDelay + 0.08f) Finish();
+                if (timer >= rage.shockDelay + 0.08f) Finish();
                 break;
         }
     }
@@ -391,30 +413,26 @@ public class RageSlamState : IPlayerState
             if (Mathf.Abs(d.x) < 2f && Mathf.Abs(d.y) < rage.shockHeight)
             {
                 hitOnPath.Add(e);
-                Smash(e, 0.6f);
+                Smash(e, 0.6f, pos);
             }
         }
     }
-
-    bool wavePending;
 
     // Duruş: alan isaretlenir (gecikmeli), hasar shockDelay sonra vurur.
     void Impact()
     {
         phase = Phase.Recover;
         timer = 0f;
-        wavePending = true;
         Vector2 p = player.rb.position;
         ShockVfx.Spawn(p, rage.shockRadius, rage.shockDelay, true);   // uyari alani
+        RageShockZone.Run(rage.shockDelay, () => ApplyShock(p));        // hamle kesilse bile hasar bolgesi vurur
         HitStop.Request(0.06f, 0.2f, 6);
         if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.4f);
     }
 
     // Gecikmeli alan hasari: yaricap icindeki (zeminde) herkes.
-    void DoShock()
+    void ApplyShock(Vector2 p)
     {
-        wavePending = false;
-        Vector2 p = player.rb.position;
 
         for (int i = 0; i < EnemyController.All.Count; i++)
         {
@@ -422,7 +440,7 @@ public class RageSlamState : IPlayerState
             if (e == null || e.IsDead) continue;
             Vector2 d = (Vector2)e.transform.position - p;
             if (Mathf.Abs(d.x) <= rage.shockRadius && Mathf.Abs(d.y) <= rage.shockHeight)
-                Smash(e, 1f);
+                Smash(e, 1f, p);
         }
 
         HitStop.Request(0.14f, 0.04f, 10);
@@ -431,12 +449,12 @@ public class RageSlamState : IPlayerState
         ShockVfx.Spawn(p, rage.shockRadius, 0.5f, false);
     }
 
-    void Smash(EnemyController e, float power)
+    void Smash(EnemyController e, float power, Vector2 from)
     {
         Health h = e.GetComponent<Health>();
         if (h == null) return;
 
-        Vector2 away = (Vector2)e.transform.position - player.rb.position;
+        Vector2 away = (Vector2)e.transform.position - from;
         BossController boss = e.GetComponent<BossController>();
 
         int dmg = boss != null
@@ -821,5 +839,28 @@ public class RageExecView : MonoBehaviour
     {
         foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
         hidden.Clear();
+    }
+}
+
+
+/// <summary>Belirli sure sonra bir islemi calistirir (gercek zaman). Rage alan hasari hamle kesilse bile vurur.</summary>
+public class RageShockZone : MonoBehaviour
+{
+    System.Action action; float left;
+
+    public static void Run(float delay, System.Action a)
+    {
+        var go = new GameObject("~RageZone");
+        var z = go.AddComponent<RageShockZone>();
+        z.action = a; z.left = Mathf.Max(0f, delay);
+    }
+
+    void Update()
+    {
+        left -= Time.unscaledDeltaTime;
+        if (left > 0f) return;
+        var a = action; action = null;
+        Destroy(gameObject);
+        if (a != null) a();
     }
 }
