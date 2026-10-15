@@ -29,6 +29,11 @@ public class EndlessManager : MonoBehaviour
     [Tooltip("Her kademenin süresi (sn).")] public float levelSeconds = 20f;
     [Tooltip("Toplam kademe sayısı (sonuncuda en sık doğma).")] public int levelCount = 6;
     public float firstSpawnDelay = 1.2f;
+    [Tooltip("Yoğunluk: aynı anda en fazla düşman sayısı bu çarpanla azalır.")]
+    [Range(0.2f, 1f)] public float maxAliveMul = 0.5f;
+    [Tooltip("Yoğunluk: doğma aralığı bu çarpanla uzar.")]
+    [Range(1f, 4f)] public float intervalMul = 1.8f;
+    private float nextSide;
     [Tooltip("Oyuncudan bu kadar uzakta (ekranın dışında) doğar; kamera genişliğine eklenir.")]
     public float spawnExtraDistance = 2.5f;
 
@@ -140,7 +145,8 @@ public class EndlessManager : MonoBehaviour
         int level = Mathf.Min(levelCount, Mathf.FloorToInt(runTime / Mathf.Max(1f, levelSeconds)));
         float k = levelCount > 0 ? (float)level / levelCount : 1f;
         int maxAlive = Mathf.Min(hardMaxAlive, startMaxAlive + Mathf.RoundToInt((hardMaxAlive - startMaxAlive) * k));
-        spawnTimer = Mathf.Lerp(startInterval, minInterval, k) * Random.Range(0.85f, 1.15f);
+        maxAlive = Mathf.Max(1, Mathf.RoundToInt(maxAlive * maxAliveMul));
+        spawnTimer = Mathf.Lerp(startInterval, minInterval, k) * intervalMul * Random.Range(0.9f, 1.1f);
 
         if (AliveCount() >= maxAlive) return;
 
@@ -187,7 +193,9 @@ public class EndlessManager : MonoBehaviour
         float half = cam != null ? cam.orthographicSize * cam.aspect : 11f;
         float dist = half + spawnExtraDistance;
 
-        float firstSide = Random.value < 0.5f ? -1f : 1f;
+        // Düzenli sağ-sol-sağ-sol: sıra her doğuşta değişir.
+        if (nextSide == 0f) nextSide = Random.value < 0.5f ? -1f : 1f;
+        float firstSide = nextSide;
 
         for (int attempt = 0; attempt < 8; attempt++)
         {
@@ -199,6 +207,7 @@ public class EndlessManager : MonoBehaviour
 
             GameObject go = Instantiate(p, new Vector3(pos.x, pos.y + 0.6f, 0f), Quaternion.identity);
             go.name = p.name + " (endless)";
+            nextSide = -side;
 
             var ec = go.GetComponent<EnemyController>();
             if (ec != null) ec.alwaysHunt = true;
