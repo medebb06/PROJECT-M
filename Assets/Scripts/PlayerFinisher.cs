@@ -195,6 +195,10 @@ public class PlayerFinisher : MonoBehaviour
 
     private void Update()
     {
+        // RAGE devraldi (eski infaz kapali).
+        if (RageMeter.ReplacesExecute)
+            return;
+
         // ODAK: E basılı tutulurken.
         if (charging)
         {
