@@ -111,8 +111,11 @@ public class PlayerDefenseController : MonoBehaviour
     public float ParryWindow =>
         Mathf.Max(
             0.02f,
-            PlayerStats.GetOr(StatType.ParryWindow, parryWindow)
+            PlayerStats.GetOr(StatType.ParryWindow, Mathf.Max(parryWindow, MinParryWindow))
         );
+
+    // Kalabalikta parry oynanabilsin: pencere en az bu kadar (prefab'taki eski deger ezilir).
+    public const float MinParryWindow = 0.17f;
 
     // Az önce başarılı parry yapıldı mı? (saldırı savunmayı kesebilir)
     public bool RecentlyParried =>

@@ -162,7 +162,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // Varsayılan knockback değerleriyle hasar al.
     // --------------------------------------------------
 
-    public static float FixedHitPercent = 0.3f;
+    public static float FixedHitPercent = 0.2f;
 
     public void TakeDamage(int damage, Vector2 hitDirection)
     {

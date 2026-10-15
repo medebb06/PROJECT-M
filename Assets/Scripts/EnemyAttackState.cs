@@ -114,7 +114,7 @@ public class EnemyAttackState : IEnemyState
             float commitPoint =
                 isUnblockable
                     ? enemy.unblockableCommitPoint
-                    : enemy.attackCommitPoint;
+                    : Mathf.Min(enemy.attackCommitPoint, 0.2f);   // saldiri spami bedava olmasin
 
             // 1 = kararlı aşama yok (eski davranış)
             if (commitPoint >= 1f)

@@ -91,12 +91,14 @@ public class RageMeter : MonoBehaviour
     void OnEnable()
     {
         CombatEvents.EnemyKilled += OnKilled;
+        CombatEvents.ParrySucceeded += OnParry;
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
     }
 
     void OnDisable()
     {
         CombatEvents.EnemyKilled -= OnKilled;
+        CombatEvents.ParrySucceeded -= OnParry;
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnScene;
     }
 
@@ -106,6 +108,23 @@ public class RageMeter : MonoBehaviour
         shown = Fill;
         Busy = false;
         player = null;
+    }
+
+    [Range(0f, 1f)] public float parryFill = 0.12f;        // her basarili parry
+    [Range(0f, 1f)] public float parryBreakFill = 0.2f;    // dengeyi kiran parry
+
+    void OnParry(EnemyController e, bool brokeBalance)
+    {
+        if (Busy) return;
+        bool was = IsFull;
+        Fill = Mathf.Clamp01(Fill + (brokeBalance ? parryBreakFill : parryFill));
+        if (!was && IsFull)
+        {
+            flash = 1f;
+            if (player == null) player = FindFirstObjectByType<PlayerController>();
+            if (player != null)
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "RAGE HAZIR  [E]", new Color(0.45f, 0.75f, 1f), 1f);
+        }
     }
 
     void OnKilled(EnemyController e)
@@ -477,6 +496,8 @@ public class RageSlamState : IPlayerState
         {
             e.ApplyAttackHit(hitDir, true, 3);
             bal.AddBalanceDamage(bal.MaxBalance, false);
+            // Postur kirilmasina ek olarak max canin %50'si.
+            if (!h.IsDead) h.TakeDamage(Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * 0.5f * power)));
             return;
         }
 

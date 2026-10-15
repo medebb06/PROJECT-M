@@ -199,6 +199,13 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// <summary>
     /// Oyuncu hasar aldığında çağrılır: ardışık vuruş yağmurunu keser.
     /// </summary>
+    /// <summary>Siradaki vurusu en az 'seconds' sonraya ertele (parry odulu).</summary>
+    public static void DelayNextHit(float seconds)
+    {
+        if (instance == null) return;
+        instance.nextAllowedHitTime = Mathf.Max(instance.nextAllowedHitTime, EnemyTime.Now + seconds);
+    }
+
     public static void NotifyPlayerHit()
     {
         if (instance == null)
@@ -263,9 +270,14 @@ public class EnemyAttackCoordinator : MonoBehaviour
         // 2) AYNI ANDA UYARI LİMİTİ
         // -----------------------------------------------------
 
+        // Kalabalikta ritim seyrelir: 4+ dusmanda ayni anda tek uyari, vuruslar arasi bosluk acilir.
+        int crowd = CountCrowd(enemy);
+        crowdScale = Mathf.Clamp(1f + 0.12f * (crowd - 2), 1f, 2f);
+        int limit = crowd >= 4 ? 1 : maxConcurrentAttackers;
+
         if (
             !activeAttackers.ContainsKey(enemy) &&
-            activeAttackers.Count >= maxConcurrentAttackers
+            activeAttackers.Count >= limit
         )
         {
             return false;
@@ -328,7 +340,23 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
         patternIndex++;
 
-        return beatInterval * multiplier;
+        return beatInterval * multiplier * crowdScale;
+    }
+
+    private float crowdScale = 1f;
+
+    private int CountCrowd(EnemyController enemy)
+    {
+        if (enemy == null || enemy.target == null) return 0;
+        Vector2 tp = enemy.target.position;
+        int n = 0;
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            var e = EnemyController.All[i];
+            if (e == null || e.IsDead) continue;
+            if (((Vector2)e.transform.position - tp).sqrMagnitude <= 16f * 16f) n++;
+        }
+        return n;
     }
 
     private void JoinInternal(EnemyController enemy)
