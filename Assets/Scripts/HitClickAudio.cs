@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public class HitClickAudio : MonoBehaviour
 {
-    public enum HitSet { Keyboard, Fire, Both }
+    public enum HitSet { Keyboard, Fire, Both, Ice }
 
     [Header("Düşmana vuruş")]
     [Tooltip("Cana vuruş sesi: klavye / ateş çıtırtısı / ikisi karışık.")]
@@ -16,6 +16,8 @@ public class HitClickAudio : MonoBehaviour
     public bool enableHit = true;
     [Range(0f, 1f)] public float hitVolume = 1f;
     public Vector2 hitPitch = new Vector2(0.78f, 0.9f);
+    [Tooltip("Buz catirtisi (ice_XX) icin pitch.")]
+    public Vector2 icePitch = new Vector2(0.92f, 1.06f);
 
     [Header("Posture (denge) vuruşu - tahta adım sesleri")]
     public bool enableStep = true;
@@ -28,7 +30,7 @@ public class HitClickAudio : MonoBehaviour
     public Vector2 breakPitch = new Vector2(0.97f, 1.03f);
 
     [Header("Hasar alma (oyuncu canı)")]
-    public bool enableHurt = true;
+    public bool enableHurt = false;   // simdilik sessiz
     [Range(0f, 1f)] public float hurtVolume = 1f;
     public Vector2 hurtPitch = new Vector2(0.8f, 0.92f);
 
@@ -38,9 +40,12 @@ public class HitClickAudio : MonoBehaviour
     [Tooltip("Aynı karede birden çok düşmana vurulursa sesler üst üste binmesin (sn).")]
     public float minInterval = 0.045f;
 
-    AudioClip[] hit, hurt, fire, both, step, brk;
+    // Ates varyasyonlarindan sadece TOK/KALIN olanlar (500 Hz alti enerjisi >%78); ince olanlar elendi.
+    static readonly string[] ThickFire = { "fire_05", "fire_10", "fire_08", "fire_07", "fire_11", "fire_02" };
+
+    AudioClip[] hit, hurt, fire, both, step, brk, ice;
     AudioSource src;
-    int lastBrk = -1, lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
+    int lastIce = -1, lastBrk = -1, lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
     float lastT = -10f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -64,16 +69,19 @@ public class HitClickAudio : MonoBehaviour
         var st = new System.Collections.Generic.List<AudioClip>();
         var bk = new System.Collections.Generic.List<AudioClip>();
         var u = new System.Collections.Generic.List<AudioClip>();
+        var ic = new System.Collections.Generic.List<AudioClip>();
 
         foreach (var c in all)
         {
             if (c.name.StartsWith("hit_")) h.Add(c);
             else if (c.name.StartsWith("break_")) bk.Add(c);
             else if (c.name.StartsWith("step_")) st.Add(c);
-            else if (c.name.StartsWith("fire_")) f.Add(c);
+            else if (c.name.StartsWith("fire_") && System.Array.IndexOf(ThickFire, c.name) >= 0) f.Add(c);
             else if (c.name.StartsWith("hurt_")) u.Add(c);
+            else if (c.name.StartsWith("ice_")) ic.Add(c);
         }
 
+        ice = ic.ToArray();
         brk = bk.ToArray();
         step = st.ToArray();
         fire = f.ToArray();
@@ -121,8 +129,15 @@ public class HitClickAudio : MonoBehaviour
     void PlayHealthHitSound()
     {
         if (!enableHit) return;
-        if (hitSet == HitSet.Fire) Play(fire, ref lastFire, hitVolume, hitPitch);
+        PlayHit();
+    }
+
+    void PlayHit()
+    {
+        if (hitSet == HitSet.Ice && ice != null && ice.Length > 0) Play(ice, ref lastIce, hitVolume, icePitch);
+        else if (hitSet == HitSet.Fire) Play(fire, ref lastFire, hitVolume, hitPitch);
         else if (hitSet == HitSet.Both) Play(both, ref lastBoth, hitVolume, hitPitch);
+        else if (hitSet == HitSet.Ice) Play(fire, ref lastFire, hitVolume, hitPitch);   // ice klipleri yoksa eski ses
         else Play(hit, ref lastHit, hitVolume, hitPitch);
     }
 
@@ -138,9 +153,7 @@ public class HitClickAudio : MonoBehaviour
         if (!enableHit) return;
         // Sadece CANA vurunca çalsın; posture (denge) vuruşunda çalmasın.
         if (!r.hit || r.onBalance || r.amount <= 0) return;
-        if (hitSet == HitSet.Fire) Play(fire, ref lastFire, hitVolume, hitPitch);
-        else if (hitSet == HitSet.Both) Play(both, ref lastBoth, hitVolume, hitPitch);
-        else Play(hit, ref lastHit, hitVolume, hitPitch);
+        PlayHit();
     }
 
     void OnPlayerDamaged(PlayerDamageReport rep)
