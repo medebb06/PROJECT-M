@@ -15,7 +15,7 @@ public class HitClickAudio : MonoBehaviour
     public HitSet hitSet = HitSet.Fire;
     public bool enableHit = true;
     [Range(0f, 1f)] public float hitVolume = 1f;
-    public Vector2 hitPitch = new Vector2(0.78f, 0.9f);
+    public Vector2 hitPitch = new Vector2(0.62f, 0.74f);
     [Tooltip("Buz catirtisi (ice_XX) icin pitch.")]
     public Vector2 icePitch = new Vector2(0.92f, 1.06f);
 
@@ -41,7 +41,7 @@ public class HitClickAudio : MonoBehaviour
     public float minInterval = 0.045f;
 
     // Ates varyasyonlarindan sadece TOK/KALIN olanlar (500 Hz alti enerjisi >%78); ince olanlar elendi.
-    static readonly string[] ThickFire = { "fire_05", "fire_10", "fire_08", "fire_07", "fire_11", "fire_02" };
+    static readonly string[] ThickFire = { "fire_05", "fire_10", "fire_08", "fire_07" };
 
     AudioClip[] hit, hurt, fire, both, step, brk, ice;
     AudioSource src;
