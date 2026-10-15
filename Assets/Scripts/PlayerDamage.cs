@@ -27,6 +27,10 @@ public static class PlayerDamage
     // Düz vuruşların (kombo, havada, slam) denge hasarı çarpanı. Kesirli: 2 → ortalama vuruş başına 2.
     public static float NormalHitBalanceBoost = 2f;
 
+    // Duz vurus ZOR: postur ve can hasari bu carpanlarla kisilir (dogru parry sonrasi infaz firsat verir).
+    public static float SpamBalanceMult = 0.5f;
+    public static float SpamHealthMult = 0.6f;
+
     public static float WeaponBalanceMultiplier = 1f;
     public static float WeaponHealthMultiplier = 1f;
 
@@ -117,9 +121,11 @@ public static class PlayerDamage
                 );
 
             // Düz vuruşlara ek denge hasarı (kesir birikir, yuvarlamada kaybolmaz).
-            if ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) && NormalHitBalanceBoost != 1f)
+            float boost = NormalHitBalanceBoost * SpamBalanceMult;
+
+            if ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) && boost != 1f)
             {
-                float scaled = amount * NormalHitBalanceBoost + balance.hitCarry;
+                float scaled = amount * boost + balance.hitCarry;
 
                 amount = Mathf.Max(1, Mathf.FloorToInt(scaled));
                 balance.hitCarry = Mathf.Max(0f, scaled - amount);
@@ -204,6 +210,9 @@ public static class PlayerDamage
                 critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f),
                 stats
             );
+
+        if (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
+            healthAmount = Mathf.Max(1, Mathf.RoundToInt(healthAmount * SpamHealthMult));
 
         // Sersemlemiş düşman daha çabuk ölür (infaz barı boşken de bitirilebilsin).
         if (enemy.IsStaggered)

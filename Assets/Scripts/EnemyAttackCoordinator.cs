@@ -30,13 +30,13 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     [Header("Rhythm")]
     [Tooltip("Bir 'vuruş' birimi (saniye). Küçük = hızlı tempo.")]
-    [SerializeField] private float beatInterval = 0.9f;
+    [SerializeField] private float beatInterval = 1.15f;
 
     [Tooltip(
         "Ardışık vuruşlar arasındaki boşluk, beatInterval ile çarpılır. " +
         "Döngüsel okunur. Örn: 1,1,1,2 = üç hızlı vuruş sonra bir nefes. " +
         "Hepsini 1 yaparsan sabit tempo olur.")]
-    [SerializeField] private float[] beatPattern = { 1f, 1f, 1f, 2f };
+    [SerializeField] private float[] beatPattern = { 1f, 1f, 1.5f };
 
     [Tooltip("Vuruş, planlanan ana bu kadar yakınsa tam ritme oturtulur.")]
     [SerializeField] private float onBeatTolerance = 0.08f;
@@ -273,7 +273,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
         // Kalabalikta ritim seyrelir: 4+ dusmanda ayni anda tek uyari, vuruslar arasi bosluk acilir.
         int crowd = CountCrowd(enemy);
         crowdScale = Mathf.Clamp(1f + 0.12f * (crowd - 2), 1f, 2f);
-        int limit = crowd >= 4 ? 1 : maxConcurrentAttackers;
+        int limit = crowd >= 2 ? 1 : maxConcurrentAttackers;   // kalabalikta ayni anda TEK saldiri: sirayla, okunabilir
 
         if (
             !activeAttackers.ContainsKey(enemy) &&
