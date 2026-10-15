@@ -62,6 +62,7 @@ public class RageMeter : MonoBehaviour
     public float Fill { get; private set; }
     public bool IsFull => Fill >= 0.999f;
     public bool Busy { get; set; }
+    public float ignoreKillsUntil;
 
     float shown, flash, lastWarn;
     RageAura aura;
@@ -109,7 +110,7 @@ public class RageMeter : MonoBehaviour
 
     void OnKilled(EnemyController e)
     {
-        if (Busy) return;   // rage hamlesinin öldürmeleri barı doldurmaz
+        if (Busy || Time.unscaledTime < ignoreKillsUntil) return;   // rage hamlesinin öldürmeleri barı doldurmaz
         Health h = e != null ? e.GetComponent<Health>() : null;
         bool big = h != null && h.MaxHealth >= 250;
         bool was = IsFull;
@@ -324,11 +325,15 @@ public class RageSlamState : IPlayerState
             }
             case Phase.Recover:
                 player.rb.linearVelocity = Vector2.zero;
-                // Alan hasari bolunebilir: dash / ziplama / saldiri tusu hamleyi keser (hasar bolgesi yine vurur).
+                // Alan hasari bolunebilir: dash / ziplama / saldiri tusu hamleyi keser (alan hasari iptal olur).
                 if (timer > 0.05f && (player.dashBufferTimer > 0f || Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
                 {
                     var br = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
                     if (br != null) br.CancelSheathe();
+                    // Bolunduyse alan hasari iptal: ne hasar ne yavaslama ne efekt.
+                    if (zone != null) zone.Cancel();
+                    if (warnVfx != null) Object.Destroy(warnVfx.gameObject);
+                    zone = null; warnVfx = null;
                     Finish();
                     break;
                 }
@@ -418,14 +423,16 @@ public class RageSlamState : IPlayerState
         }
     }
 
+    ShockVfx warnVfx; RageShockZone zone;
+
     // Duruş: alan isaretlenir (gecikmeli), hasar shockDelay sonra vurur.
     void Impact()
     {
         phase = Phase.Recover;
         timer = 0f;
         Vector2 p = player.rb.position;
-        ShockVfx.Spawn(p, rage.shockRadius, rage.shockDelay, true);   // uyari alani
-        RageShockZone.Run(rage.shockDelay, () => ApplyShock(p));        // hamle kesilse bile hasar bolgesi vurur
+        warnVfx = ShockVfx.Spawn(p, rage.shockRadius, rage.shockDelay, true);   // uyari alani
+        zone = RageShockZone.Run(rage.shockDelay, () => ApplyShock(p));
         HitStop.Request(0.06f, 0.2f, 6);
         if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.4f);
     }
@@ -433,6 +440,7 @@ public class RageSlamState : IPlayerState
     // Gecikmeli alan hasari: yaricap icindeki (zeminde) herkes.
     void ApplyShock(Vector2 p)
     {
+        rage.ignoreKillsUntil = Time.unscaledTime + 0.3f;
 
         for (int i = 0; i < EnemyController.All.Count; i++)
         {
@@ -539,7 +547,7 @@ public class ShockVfx : MonoBehaviour
     bool telegraph;
     Vector2 origin;
 
-    public static void Spawn(Vector2 at, float radius, float life = 0.5f, bool telegraph = false)
+    public static ShockVfx Spawn(Vector2 at, float radius, float life = 0.5f, bool telegraph = false)
     {
         var go = new GameObject(telegraph ? "RageShockWarn" : "RageShock");
         var s = go.AddComponent<ShockVfx>();
@@ -555,6 +563,7 @@ public class ShockVfx : MonoBehaviour
         Material m = sh != null ? new Material(sh) : null;
         s.a = Part(go.transform, m, 92);
         s.b = Part(go.transform, m, 93);
+        return s;
     }
 
     static SpriteRenderer Part(Transform p, Material m, int order)
@@ -848,11 +857,14 @@ public class RageShockZone : MonoBehaviour
 {
     System.Action action; float left;
 
-    public static void Run(float delay, System.Action a)
+    public void Cancel() { action = null; Destroy(gameObject); }
+
+    public static RageShockZone Run(float delay, System.Action a)
     {
         var go = new GameObject("~RageZone");
         var z = go.AddComponent<RageShockZone>();
         z.action = a; z.left = Mathf.Max(0f, delay);
+        return z;
     }
 
     void Update()
