@@ -14,6 +14,9 @@ public class RageMeter : MonoBehaviour
     /// <summary>true: eski infaz (E) kapalı, E rage'i tetikler.</summary>
     public static bool ReplacesExecute = true;
 
+    /// <summary>Test: menuden acilinca bar hep dolu, sinirsiz rage.</summary>
+    public static bool Unlimited;
+
     [Header("Dolma (1 = dolu)")]
     [Range(0f, 1f)] public float killFill = 0.34f;       // 3 öldürme
     [Range(0f, 1f)] public float bigKillFill = 0.6f;     // maxHP >= 250
@@ -31,7 +34,15 @@ public class RageMeter : MonoBehaviour
     public float rushTime = 0.8f;                        // gerçek sn
     [Range(0.01f, 0.4f)] public float accelPortion = 0.08f; // hizlanma suresi (toplamin orani)
     [Range(1f, 4f)] public float decelPower = 2.2f;         // yavaslama egrisinin keskinligi
-    public float recoverTime = 0.3f;
+    public float recoverTime = 0.6f;
+    [Tooltip("Durunca alan hasarinin gecikmesi (sn). Bu sure boyunca alan isaretlenir.")]
+    public float shockDelay = 0.7f;
+    [Tooltip("Kilic koyma animasyonu suresi (sn); alan vurusuyla biter. Kucuk = hizli.")]
+    public float sheathDur = 0.65f;
+
+    [Header("Execute animasyonu (Resources/RageExec kareleri)")]
+    [Tooltip("Karenin boyu = collider boyu x bu. Karakter buyuk/kucuk gelirse degistir.")]
+    public float execFrameScale = 1.1f;
 
     [Header("Hasar")]
     public float shockRadius = 7.5f;
@@ -44,7 +55,9 @@ public class RageMeter : MonoBehaviour
 
     [Header("Hazir: kilic parlamasi")]
     public Color auraColor = new Color(1f, 1f, 1f, 1f);        // Impact materyalinin rengi: beyaz, HDR
-    [Range(0.5f, 20f)] public float bladeIntensity = 8.57f;   // HDR (bloom ile parlar)
+    [Range(0.5f, 80f)] public float bladeIntensity = 30f;
+    [Range(0f, 3f)] public float haloSize = 1.4f;        // kilicin cevresindeki isik halesi
+    [Range(0f, 20f)] public float haloIntensity = 5f;   // HDR (bloom ile parlar)
 
     public float Fill { get; private set; }
     public bool IsFull => Fill >= 0.999f;
@@ -112,6 +125,7 @@ public class RageMeter : MonoBehaviour
 
     void Update()
     {
+        if (Unlimited) Fill = 1f;
         shown = Mathf.MoveTowards(shown, Fill, Time.unscaledDeltaTime * 1.5f);
         var pc = FindFirstObjectByType<PlayerController>();
         if (pc != lastPlayer) { lastPlayer = pc; if (pc != null) { Fill = 1f; shown = 1f; Busy = false; } }
@@ -138,7 +152,7 @@ public class RageMeter : MonoBehaviour
         PlayerCombatController combat = player.GetComponent<PlayerCombatController>();
         if (combat != null) combat.CancelAttack();
 
-        Fill = 0f;
+        if (!Unlimited) Fill = 0f;
         Busy = true;
         player.stateMachine.ChangeState(new RageSlamState(player, player.stateMachine, this));
     }
@@ -177,6 +191,7 @@ public class RageSlamState : IPlayerState
     enum Phase { Focus, Slam, Recover }
     Phase phase;
     float timer, ghostTimer, gravity, dir;
+    bool sheathStarted;
     Vector2 start;
     readonly HashSet<EnemyController> hitOnPath = new HashSet<EnemyController>();
 
@@ -210,6 +225,7 @@ public class RageSlamState : IPlayerState
     }
 
     Transform ring; SpriteRenderer ringSr; static Sprite dot;
+    RageExecView view;
 
     public RageSlamState(PlayerController p, PlayerStateMachine s, RageMeter r) { player = p; sm = s; rage = r; }
 
@@ -225,6 +241,7 @@ public class RageSlamState : IPlayerState
         phase = Phase.Focus;
         timer = 0f;
         MakeRing();
+        view = RageExecView.Create(player, rage.execFrameScale);
         IgnoreEnemies();
         prevType = player.rb.bodyType;
         player.rb.bodyType = RigidbodyType2D.Kinematic;
@@ -250,6 +267,12 @@ public class RageSlamState : IPlayerState
                     ring.localScale = Vector3.one * r;
                     ringSr.color = new Color(0.4f, 0.7f, 1f, 0.15f + 0.5f * p);
                 }
+                if (view != null)
+                {
+                    // Gerilme: kinda, hafif geri cekilip cokme
+                    float e = p * p * (3f - 2f * p);
+                    view.Show(RageExecView.A, new Vector2(-0.35f * dir * e, 0f), 1f - 0.06f * e, dir);
+                }
                 if (timer >= rage.focusTime) BeginSlam();
                 break;
             }
@@ -270,6 +293,12 @@ public class RageSlamState : IPlayerState
                 player.transform.position = new Vector3(pos.x, pos.y, player.transform.position.z);
                 player.rb.linearVelocity = Vector2.zero;
 
+                if (view != null)
+                {
+                    int f = t < 0.14f ? RageExecView.S : RageExecView.L;
+                    view.Show(f, Vector2.zero, 1f, dir);
+                }
+
                 HitPath(pos);
 
                 ghostTimer -= dt;
@@ -280,7 +309,17 @@ public class RageSlamState : IPlayerState
             }
             case Phase.Recover:
                 player.rb.linearVelocity = Vector2.zero;
-                if (timer >= rage.recoverTime) Finish();
+                if (wavePending && timer >= rage.shockDelay) DoShock();
+                // Smearsiz karede bekle; alan vurusundan 'sheathDur' once kilic koyma animasyonu baslar ve vurusla biter.
+                if (!sheathStarted && timer >= rage.shockDelay - rage.sheathDur)
+                {
+                    sheathStarted = true;
+                    if (view != null) { view.End(); view = null; }
+                    var bridge = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
+                    if (bridge != null) bridge.BeginSheathe(rage.sheathDur);
+                }
+                if (view != null) view.Show(RageExecView.L, Vector2.zero, 1f, dir);
+                if (!wavePending && timer >= rage.shockDelay + 0.08f) Finish();
                 break;
         }
     }
@@ -357,11 +396,24 @@ public class RageSlamState : IPlayerState
         }
     }
 
-    // Duruş: yere çarpan şok dalgası, yarıçap içindeki (zeminde) herkes.
+    bool wavePending;
+
+    // Duruş: alan isaretlenir (gecikmeli), hasar shockDelay sonra vurur.
     void Impact()
     {
         phase = Phase.Recover;
         timer = 0f;
+        wavePending = true;
+        Vector2 p = player.rb.position;
+        ShockVfx.Spawn(p, rage.shockRadius, rage.shockDelay, true);   // uyari alani
+        HitStop.Request(0.06f, 0.2f, 6);
+        if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.4f);
+    }
+
+    // Gecikmeli alan hasari: yaricap icindeki (zeminde) herkes.
+    void DoShock()
+    {
+        wavePending = false;
         Vector2 p = player.rb.position;
 
         for (int i = 0; i < EnemyController.All.Count; i++)
@@ -376,7 +428,7 @@ public class RageSlamState : IPlayerState
         HitStop.Request(0.14f, 0.04f, 10);
         if (CameraShake.Instance != null) CameraShake.Instance.Shake(1.2f);
         CombatCallout.Popup(p + Vector2.up * 2.6f, "RAGE!", new Color(0.55f, 0.8f, 1f), 1.4f);
-        ShockVfx.Spawn(p, rage.shockRadius);
+        ShockVfx.Spawn(p, rage.shockRadius, 0.5f, false);
     }
 
     void Smash(EnemyController e, float power)
@@ -436,6 +488,7 @@ public class RageSlamState : IPlayerState
 
     void Cleanup()
     {
+        if (view != null) { view.End(); view = null; }
         if (ring != null) Object.Destroy(ring.gameObject);
         ring = null;
     }
@@ -464,14 +517,15 @@ public class ShockVfx : MonoBehaviour
 {
     static Sprite px;
     SpriteRenderer a, b;
-    float t, radius;
+    float t, radius, life = 0.5f;
+    bool telegraph;
     Vector2 origin;
 
-    public static void Spawn(Vector2 at, float radius)
+    public static void Spawn(Vector2 at, float radius, float life = 0.5f, bool telegraph = false)
     {
-        var go = new GameObject("RageShock");
+        var go = new GameObject(telegraph ? "RageShockWarn" : "RageShock");
         var s = go.AddComponent<ShockVfx>();
-        s.origin = at; s.radius = radius;
+        s.origin = at; s.radius = radius; s.life = Mathf.Max(0.05f, life); s.telegraph = telegraph;
         go.transform.position = at;
         if (px == null)
         {
@@ -497,7 +551,21 @@ public class ShockVfx : MonoBehaviour
 
     void Update()
     {
-        t += Time.unscaledDeltaTime / 0.5f;
+        t += Time.unscaledDeltaTime / life;
+        if (telegraph)
+        {
+            float k = Mathf.Clamp01(t);
+            float w0 = radius * 2f;
+            a.transform.localScale = new Vector3(w0, 0.35f + 0.25f * k, 1f);
+            a.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            a.color = new Color(0.4f, 0.7f, 1f, 0.10f + 0.30f * k * k);
+            // kenar cizgileri: dolum
+            b.transform.localScale = new Vector3(w0 * k, 0.06f, 1f);
+            b.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+            b.color = new Color(0.9f, 0.98f, 1f, 0.35f + 0.5f * k);
+            if (t >= 1f) Destroy(gameObject);
+            return;
+        }
         float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f);
         float w = radius * 2f * e;
         float al = 1f - Mathf.Clamp01(t);
@@ -526,6 +594,33 @@ public class RageAura : MonoBehaviour
     readonly List<Entry> list = new List<Entry>();
     readonly HashSet<Renderer> known = new HashSet<Renderer>();
     float nextScan;
+    Transform haloT; SpriteRenderer halo; Material haloMat; static Sprite haloSprite;
+
+    void EnsureHalo()
+    {
+        if (halo != null) return;
+        if (haloSprite == null)
+        {
+            const int n = 128;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(n / 2f, n / 2f)) / (n / 2f);
+                    float a = d >= 1f ? 0f : Mathf.Pow(1f - d, 2.2f);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            tex.Apply();
+            haloSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n / 2f);   // 2 birim capli
+        }
+        var go = new GameObject("~RageHalo");
+        haloT = go.transform;
+        halo = go.AddComponent<SpriteRenderer>();
+        halo.sprite = haloSprite;
+        haloMat = new Material(shader);
+        haloMat.mainTexture = haloSprite.texture;
+        halo.sharedMaterial = haloMat;
+    }
 
     public static RageAura Create(RageMeter r, PlayerController p)
     {
@@ -588,6 +683,31 @@ public class RageAura : MonoBehaviour
             e.glow.SetColor(GlowId, hdr);
             if (e.src.sharedMaterial != e.glow) e.src.sharedMaterial = e.glow;
         }
+
+        // Kilicin cevresine yuvarlak yumusak isik hale (kare degil).
+        bool any = false; Bounds b = new Bounds(); int order = 0; int layer = 0;
+        foreach (var e in list)
+        {
+            Renderer r = e.src;
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (r.bounds.size.sqrMagnitude < 0.0001f || r.bounds.size.magnitude > 8f) continue;
+            if (!any) { b = r.bounds; any = true; order = r.sortingOrder; layer = r.sortingLayerID; }
+            else { b.Encapsulate(r.bounds); order = Mathf.Min(order, r.sortingOrder); }
+        }
+        if (any && rage.haloSize > 0f)
+        {
+            EnsureHalo();
+            halo.enabled = true;
+            float d = Mathf.Max(b.size.x, b.size.y) * rage.haloSize;
+            haloT.position = b.center;
+            haloT.localScale = Vector3.one * (d * 0.5f);   // sprite capi 2 birim
+            halo.sortingLayerID = layer;
+            halo.sortingOrder = order - 1;
+            float hk = rage.haloIntensity * pulse;
+            haloMat.SetColor(GlowId, new Color(c.r * hk, c.g * hk, c.b * hk, 1f));
+            halo.color = new Color(1f, 1f, 1f, 0.55f);
+        }
+        else if (halo != null) halo.enabled = false;
     }
 
     void OnDestroy()
@@ -599,5 +719,107 @@ public class RageAura : MonoBehaviour
             if (e.glow != null) Destroy(e.glow);
         }
         list.Clear();
+        if (haloT != null) Destroy(haloT.gameObject);
+        if (haloMat != null) Destroy(haloMat);
+    }
+}
+
+
+/// <summary>
+/// Execute animasyonu: karakterin tum cizimlerini gizler, yerine Resources/RageExec kareleri
+/// (A=kinda gerilmis, S=smearli saldiri, L=smearsiz saldiri, P=geri cekilmis durus) gosterir.
+/// </summary>
+[DefaultExecutionOrder(11000)]
+public class RageExecView : MonoBehaviour
+{
+    public const int A = 0, S = 1, L = 2, P = 3;
+    // Kirpilmis karelerde ayak ortasi (px) ve P karesinin yuksekligi.
+    static readonly float[] FeetX = { 341f, 481f, 254f, 290f };
+    const float PHeightPx = 757f;
+    static readonly string[] Names = { "RageExec/exec_a", "RageExec/exec_s", "RageExec/exec_l", "RageExec/exec_p" };
+
+    PlayerController player;
+    SpriteRenderer sr;
+    Sprite[] sprites = new Sprite[4];
+    readonly List<Renderer> hidden = new List<Renderer>();
+    int shown = -1;
+    float baseScale = 1f;
+    Vector2 offset; float scaleY = 1f, face = 1f;
+    int sortLayer, sortOrder;
+
+    public static RageExecView Create(PlayerController p, float scaleMul)
+    {
+        var go = new GameObject("~RageExecView");
+        var v = go.AddComponent<RageExecView>();
+        v.player = p;
+
+        // Sira / katman: oyuncunun en ustteki cizicisi
+        int top = int.MinValue; v.sortLayer = 0;
+        foreach (var r in p.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r == null || r is ParticleSystemRenderer || r.gameObject.name.StartsWith("~")) continue;
+            if (r.sortingOrder > top) { top = r.sortingOrder; v.sortLayer = r.sortingLayerID; }
+        }
+        v.sortOrder = (top == int.MinValue ? 0 : top) + 1;
+
+        float colH = p.col != null ? p.col.bounds.size.y : 1.8f;
+        float ppu = PHeightPx / Mathf.Max(0.2f, colH * scaleMul);
+
+        for (int i = 0; i < 4; i++)
+        {
+            Texture2D tex = Resources.Load<Texture2D>(Names[i]);
+            if (tex == null) { Debug.LogWarning("RageExec: " + Names[i] + " bulunamadi, eski gorunum kullanilacak"); Destroy(go); return null; }
+            v.sprites[i] = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(FeetX[i] / tex.width, 0f), ppu);
+        }
+
+        v.sr = go.AddComponent<SpriteRenderer>();
+        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
+        if (sh != null) v.sr.sharedMaterial = new Material(sh);
+        v.sr.enabled = false;
+        return v;
+    }
+
+    public void Show(int frame, Vector2 off, float sy, float dir)
+    {
+        shown = frame; offset = off; scaleY = sy; face = dir < 0f ? -1f : 1f;
+        Apply();
+    }
+
+    void Apply()
+    {
+        if (sr == null || player == null || shown < 0) return;
+        sr.sprite = sprites[shown];
+        sr.enabled = true;
+        sr.sortingLayerID = sortLayer;
+        sr.sortingOrder = sortOrder;
+        float feetY = player.col != null ? player.col.bounds.min.y : player.transform.position.y;
+        transform.position = new Vector3(player.transform.position.x + offset.x, feetY + offset.y, player.transform.position.z);
+        transform.localScale = new Vector3(face, scaleY, 1f);   // sprite saga bakiyor
+    }
+
+    void LateUpdate()
+    {
+        if (player == null) { Destroy(gameObject); return; }
+        // Karakterin kendi cizimlerini her kare gizle (Bridge her kare acabilir).
+        foreach (var r in player.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r == null || r == sr || r is ParticleSystemRenderer || r.gameObject.name.StartsWith("~")) continue;
+            if (!r.forceRenderingOff) { r.forceRenderingOff = true; hidden.Add(r); }
+        }
+        Apply();
+    }
+
+    public void End()
+    {
+        foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
+        hidden.Clear();
+        Destroy(gameObject);
+    }
+
+    void OnDestroy()
+    {
+        foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
+        hidden.Clear();
     }
 }

@@ -460,6 +460,20 @@ namespace RonniSkin
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
         [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.6f; float chiburiT = -1f; bool bladeCut;
+        float chiForcedDur = -1f;
+        float ChiDur => chiForcedDur > 0f ? chiForcedDur : chiburiDur;
+        [Tooltip("Rage kilic koyma: donme/silkeleme kismi sureyin bu orani kadar (hizli).")] public float chiSpinTime = 0.3f;
+        [Tooltip("Rage kilic koyma: donme kismi klibin bu fazinda biter; sonrasi kinina koyma (yavas).")] public float chiSpinPhase = 0.62f;
+        // Rage'de zaman -> klip fazi: ilk kisim hizli, kinina koyma yavas. Normal (tus) kilic koymada dogrusal.
+        float ChiPhase(float t01)
+        {
+            t01 = Mathf.Clamp01(t01);
+            if (chiForcedDur <= 0f) return t01;
+            float a = Mathf.Clamp(chiSpinTime, 0.05f, 0.9f), ph = Mathf.Clamp(chiSpinPhase, 0.1f, 0.95f);
+            return t01 < a ? Mathf.Lerp(0f, ph, t01 / a) : Mathf.Lerp(ph, 1f, (t01 - a) / (1f - a));
+        }
+        /// <summary>Disaridan (Rage execute) kilic koyma animasyonunu verilen surede oynatir; hareket/zemin iptal etmez.</summary>
+        public void BeginSheathe(float dur) { chiForcedDur = Mathf.Max(0.1f, dur); chiburiT = 0f; anim.swordReady = true; }
         // chiburi: kılıç kına ucundan girerken bıçağın kınının ağzından ötesi görünmez (klip fazı 0.74 -> 0.93)
         static float ChiBladeU(float p) { const float t0 = 0.74f, t1 = 0.93f; if (p <= t0) return 1f; if (p >= t1) return 0f; float u = (p - t0) / (t1 - t0); return 1f - u * u * (3f - 2f * u); }
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
@@ -554,14 +568,14 @@ namespace RonniSkin
 
             // ---- sheathe / draw on key (grounded, idle) ----
             // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
-            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && playerAtk != null && playerAtk.HasClip("chiburi")) chiburiT = 0f;
+            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && playerAtk != null && playerAtk.HasClip("chiburi")) { chiburiT = 0f; chiForcedDur = -1f; }
             if (chiburiT >= 0f)
             {
-                if (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded) chiburiT = -1f;
+                if (chiForcedDur < 0f && (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded)) chiburiT = -1f;
                 else
                 {
                     chiburiT += Time.deltaTime;
-                    if (chiburiT >= chiburiDur) { chiburiT = -1f; anim.swordReady = false; }
+                    if (chiburiT >= ChiDur) { chiburiT = -1f; chiForcedDur = -1f; anim.swordReady = false; }
                     else { anim.swordReady = true; shClip = null; return; }
                 }
             }
@@ -708,7 +722,7 @@ namespace RonniSkin
                     // Kare kare saldırıda Animator'ın ilk sprite'ı henüz gelmediyse eski (rig) saldırı pozunu bir an bile gösterme.
                     bool atkOn = mode == 0 && playerAtk != null && (frameClip ? FrameAtkActive() : ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip)));
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
-                    float dPh = defAtk != null ? defPhase : Mathf.Clamp01(chiburiT / Mathf.Max(0.1f, chiburiDur));
+                    float dPh = defAtk != null ? defPhase : ChiPhase(chiburiT / Mathf.Max(0.1f, ChiDur));
                     bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
                     // Kombo geçişi: yeni saldırının ilk sprite'ı henüz gelmediyse (kare kare) eski rig/idle pozu yerine son kareyi tut.
                     bool framePend = mode == 0 && frameClip && !atkOn && frameLast != null && frameSR != null && frameSR.enabled && !frameFading;

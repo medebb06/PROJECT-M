@@ -1049,6 +1049,7 @@ public class MainMenu : MonoBehaviour
                 testRows.Add(Toggle("KAMERA NEFESİ",
                     () => { RunCameraZoom z = FindFirstObjectByType<RunCameraZoom>(); return z != null && z.idleBreathing; },
                     v => { RunCameraZoom z = FindFirstObjectByType<RunCameraZoom>(); if (z != null) z.idleBreathing = v; }));
+                testRows.Add(Toggle("SINIRSIZ RAGE", () => RageMeter.Unlimited, v => RageMeter.Unlimited = v));
                 testRows.Add(Btn("GERİ", () => BuildPage(Page.Test)));
                 break;
         }
