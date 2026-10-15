@@ -180,11 +180,12 @@ public class MainMenu : MonoBehaviour
         public int kind; // 0 = düğme, 1 = kaydırıcı, 2 = aç/kapa
     }
 
-    private static readonly Row[] MainRows =
+    private static Row[] MainRows => new[]
     {
         new Row { label = "BAŞLA", kanji = "開始", kind = 0 },
         new Row { label = "SONSUZ MOD", kanji = "無限", kind = 0 },
         new Row { label = "TUTORIAL", kanji = "稽古", kind = 0 },
+        new Row { label = "YETENEK: " + RageMeter.AbilityLabel(RageMeter.Selected), kanji = "技", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
@@ -640,10 +641,17 @@ public class MainMenu : MonoBehaviour
                 break;
 
             case 3:
-                BuildPage(Page.Settings);
+                // YETENEK: E yetenegini degistir (Atilma <-> Alev Kilici)
+                RageMeter.CycleAbility();
+                BuildPage(Page.Main);
+                index = 3;
                 break;
 
             case 4:
+                BuildPage(Page.Settings);
+                break;
+
+            case 5:
                 GameSettings.Save();
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
@@ -766,7 +774,7 @@ public class MainMenu : MonoBehaviour
     {
         GameSettings.Save();
         BuildPage(Page.Main);
-        index = 2;
+        index = pauseMode ? 2 : 4;
     }
 
     private void RefreshValues()

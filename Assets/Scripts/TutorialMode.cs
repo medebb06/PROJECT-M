@@ -336,7 +336,7 @@ public class TutorialManager : MonoBehaviour
         ResetEnemy();
         PlaceEnemyInFront();
         phase = Phase.Prompt;
-        Freeze("PRESS E TO RAGE", "A / D to aim  -  breaks posture on contact");
+        Freeze("PRESS E TO LUNGE", "Dashes to the nearest enemy and strikes once");
         RunCameraZoom.ForceCinematic = true;
     }
 
@@ -368,7 +368,7 @@ public class TutorialManager : MonoBehaviour
         {
             // E'ye basmadı: tekrar hatırlat.
             phase = Phase.Prompt; phaseTimer = 0f;
-            Freeze("PRESS E TO RAGE", "A / D to aim  -  breaks posture on contact");
+            Freeze("PRESS E TO LUNGE", "Dashes to the nearest enemy and strikes once");
         }
     }
 

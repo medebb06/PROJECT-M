@@ -156,3 +156,92 @@ public class ParryMark : MonoBehaviour
         Restore();
     }
 }
+
+/// <summary>
+/// SOFT TARGET: parry ile isaretlenen dusman menzildeyse, yon tusuna basmiyorken oyuncu ona doner.
+/// Yon tusu = oyuncunun secimi (ezmez). Blok / saldiri kilidi / rage sirasinda calismaz.
+/// </summary>
+public class ParrySoftTarget : MonoBehaviour
+{
+    public float range = 12f;
+    public float maxHeightDiff = 4f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void AutoCreate()
+    {
+        if (FindAnyObjectByType<ParrySoftTarget>() != null) return;
+        var go = new GameObject("ParrySoftTarget");
+        DontDestroyOnLoad(go);
+        go.AddComponent<ParrySoftTarget>();
+    }
+
+    /// <summary>Menzildeki en yakin isaretli dusman (yoksa null).</summary>
+    public static EnemyController Find(Vector2 from, float range, float maxDy)
+    {
+        EnemyController best = null; float bd = float.MaxValue;
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            EnemyController e = EnemyController.All[i];
+            if (e == null || e.IsDead || !ParryMark.IsMarked(e)) continue;
+            Vector2 d = (Vector2)e.transform.position - from;
+            if (Mathf.Abs(d.x) > range || Mathf.Abs(d.y) > maxDy) continue;
+            if (Mathf.Abs(d.x) < bd) { bd = Mathf.Abs(d.x); best = e; }
+        }
+        return best;
+    }
+
+    /// <summary>Oyuncuyu yon tusu basili degilse isaretli hedefe cevirir.</summary>
+    public static bool FaceTarget(PlayerController p, float range = 12f, float maxDy = 4f)
+    {
+        if (p == null || Mathf.Abs(p.moveInput) > 0.1f) return false;
+        EnemyController t = Find(p.transform.position, range, maxDy);
+        if (t == null) return false;
+        float dx = t.transform.position.x - p.transform.position.x;
+        if (Mathf.Abs(dx) < 0.3f) return false;
+        p.facingDir = dx < 0f ? -1f : 1f;
+        if (p.playerSprite != null) p.playerSprite.flipX = p.facingDir < 0f;
+        return true;
+    }
+
+    PlayerController pc;
+    EnemyController parried; float parriedUntil;
+
+    void OnEnable() { CombatEvents.ParrySucceeded += OnParry; }
+    void OnDisable() { CombatEvents.ParrySucceeded -= OnParry; }
+
+    // Basarili parry: oyuncu (blok durusundayken bile) parry'lenen dusmana doner.
+    void OnParry(EnemyController e, bool brokeBalance)
+    {
+        if (e == null) return;
+        parried = e; parriedUntil = Time.time + 0.4f;
+        if (pc == null) pc = FindFirstObjectByType<PlayerController>();
+        FaceEnemy(pc, e);
+    }
+
+    static void FaceEnemy(PlayerController p, EnemyController e)
+    {
+        if (p == null || e == null) return;
+        float dx = e.transform.position.x - p.transform.position.x;
+        if (Mathf.Abs(dx) < 0.2f) return;
+        p.facingDir = dx < 0f ? -1f : 1f;
+        if (p.playerSprite != null) p.playerSprite.flipX = p.facingDir < 0f;
+    }
+
+    void LateUpdate()
+    {
+        if (MainMenu.Active) return;
+        if (pc == null) pc = FindFirstObjectByType<PlayerController>();
+        if (pc != null && parried != null && Time.time < parriedUntil && !parried.IsDead)
+        {
+            FaceEnemy(pc, parried);
+            return;
+        }
+        if (pc == null || pc.attackFacingLocked || !pc.canControl) return;
+        var def = pc.GetComponent<PlayerDefenseController>();
+        if (def != null && def.IsDefending) return;
+        if (RageMeter.Instance != null && RageMeter.Instance.Busy) return;
+        Health h = pc.GetComponent<Health>();
+        if (h != null && h.IsDead) return;
+        FaceTarget(pc, range, maxHeightDiff);
+    }
+}

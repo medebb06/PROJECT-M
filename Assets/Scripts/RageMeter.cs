@@ -4,11 +4,39 @@ using UnityEngine;
 /// <summary>
 /// RAGE BARI (eski infazın yerine). Sağlık barının hemen altında ince MAVİ çubuk.
 /// Düşman öldürdükçe dolar. Dolunca E: kısa odaklanma (ağır çekim) → düz zeminde
-/// çok hızlı başlayıp yavaşlayarak duran ezici bir hamle + büyük alan şoku.
+/// en uygun hedefe atılıp tek vuruş (3 segment, E başına 1 segment).
 /// Oyun başlayınca kendiliğinden kurulur.
 /// </summary>
+public enum RageAbility { Lunge = 0, Flame = 1 }
+
 public class RageMeter : MonoBehaviour
 {
+    // ---- Yetenek secimi (ana menuden) ----
+    const string PrefKey = "RageAbility";
+    static int abilityCache = -1;
+    public static RageAbility Selected
+    {
+        get
+        {
+            if (abilityCache < 0) abilityCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, 0), 0, 1);
+            return (RageAbility)abilityCache;
+        }
+        set { abilityCache = (int)value; PlayerPrefs.SetInt(PrefKey, abilityCache); PlayerPrefs.Save(); }
+    }
+    /// <summary>Gecerli yetenek (tutorial her zaman atilma ogretir).</summary>
+    public static RageAbility Current => TutorialMode.Active ? RageAbility.Lunge : Selected;
+    public static string AbilityLabel(RageAbility a) => a == RageAbility.Flame ? "ALEV KILICI" : "ATILMA";
+    public static void CycleAbility() { Selected = Selected == RageAbility.Lunge ? RageAbility.Flame : RageAbility.Lunge; }
+
+    [Header("Alev Kilici (yetenek)")]
+    public float flameDuration = 4f;                       // sn
+    public float burnBalancePerSec = 0.5f;               // max posturun orani / sn (0.5 = ~2 sn'de bir bar)
+    public float burnHealthPerSec = 0.12f;                // max canin orani / sn
+    public float burnTime = 2.5f;                          // her vurusta yenilenir
+    public Color flameColor = new Color(1f, 0.38f, 0.06f, 1f);   // kirmizi-turuncu
+    public float FlameLeft { get; private set; }
+    public bool FlameActive => FlameLeft > 0f;
+
     public static RageMeter Instance { get; private set; }
 
     /// <summary>true: eski infaz (E) kapalı, E rage'i tetikler.</summary>
@@ -18,36 +46,32 @@ public class RageMeter : MonoBehaviour
     public static bool Unlimited = true;   // test: acik baslar (menuden kapatilabilir)
 
     [Header("Dolma (1 = dolu)")]
-    [Range(0f, 1f)] public float killFill = 0.34f;       // 3 öldürme
-    [Range(0f, 1f)] public float bigKillFill = 0.6f;     // maxHP >= 250
+    [Range(0f, 1f)] public float killFill = 0.34f;       // 1 segment
+    [Range(0f, 1f)] public float bigKillFill = 0.67f;     // maxHP >= 250
     public const bool StartFull = true;   // koddan sabit: sahnede eski serialize deger ezmesin
 
     [Header("Tuş")]
     public KeyCode key = KeyCode.E;
 
-    [Header("Odak")]
-    public float focusTime = 0.55f;                       // gerçek sn
-    [Range(0.02f, 1f)] public float focusTimeScale = 0.07f;
-
-    [Header("Hamle (hızlı başlar, yavaşlayarak durur)")]
-    public float rushDistance = 18f;
-    public float rushTime = 0.8f;                        // gerçek sn
-    [Range(0.01f, 0.4f)] public float accelPortion = 0.08f; // hizlanma suresi (toplamin orani)
-    [Range(1f, 4f)] public float decelPower = 2.2f;         // yavaslama egrisinin keskinligi
-    public float recoverTime = 0.6f;
-    [Tooltip("Durunca alan hasarinin gecikmesi (sn). Bu sure boyunca alan isaretlenir.")]
-    public float shockDelay = 0.7f;
-    [Tooltip("Kilic koyma animasyonu suresi (sn); alan vurusuyla biter. Kucuk = hizli.")]
-    public float sheathDur = 0.65f;
+    [Header("Atilis (tek hedefe)")]
+    public float windupTime = 0.14f;                      // gercek sn, kisa gerilme
+    public float lungeSpeed = 70f;                        // birim/sn
+    public float maxLungeTime = 0.45f;
+    public float strikeGap = 1.3f;                        // hedefe bu kadar yaklasinca vurur
+    public float maxRange = 14f;                          // hedef arama mesafesi
+    public float maxHeightDiff = 3.5f;
+    public float recoverTime = 0.3f;
+    [Tooltip("Kilic koyma animasyonu suresi (sn).")]
+    public float sheathDur = 0.3f;
 
     [Header("Execute animasyonu (Resources/RageExec kareleri)")]
     [Tooltip("Karenin boyu = collider boyu x bu. Karakter buyuk/kucuk gelirse degistir.")]
     public float execFrameScale = 1.1f;
 
     [Header("Hasar")]
-    public float shockRadius = 7.5f;
-    public float shockHeight = 3f;                        // zeminde kalanlar
-    [Range(0f, 1f)] public float bossPercent = 0.25f;
+    [Range(0f, 1f)] public float postureFrac = 0.5f;      // isaretsiz hedef: max posturun bu kadari
+    [Range(0f, 1f)] public float healthFrac = 0.25f;      // isaretsiz hedef: max canin bu kadari
+    [Range(0f, 1f)] public float bossPercent = 0.2f;
     public int minDamage = 150;
 
     [Header("Yerleşim (1080p)")]
@@ -60,7 +84,9 @@ public class RageMeter : MonoBehaviour
     [Range(0f, 20f)] public float haloIntensity = 5f;   // HDR (bloom ile parlar)
 
     public float Fill { get; private set; }
-    public bool IsFull => Fill >= 0.999f;
+    public const int Segments = 3;
+    public const float SegCost = 1f / Segments;
+    public bool IsFull => Fill >= SegCost - 0.001f;    // en az 1 segment = E kullanilabilir
     public bool Busy { get; set; }
     public float ignoreKillsUntil;
 
@@ -92,6 +118,7 @@ public class RageMeter : MonoBehaviour
     {
         CombatEvents.EnemyKilled += OnKilled;
         CombatEvents.ParrySucceeded += OnParry;
+        CombatEvents.EnemyHit += OnEnemyHit;
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnScene;
     }
 
@@ -99,11 +126,19 @@ public class RageMeter : MonoBehaviour
     {
         CombatEvents.EnemyKilled -= OnKilled;
         CombatEvents.ParrySucceeded -= OnParry;
+        CombatEvents.EnemyHit -= OnEnemyHit;
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnScene;
+    }
+
+    void OnEnemyHit(EnemyController e, DamageInfo info, HitResult r)
+    {
+        if (!FlameActive || e == null || !r.hit || e.IsDead) return;
+        EnemyStatus.Get(e).ApplyBurn(burnBalancePerSec, burnHealthPerSec, burnTime);
     }
 
     void OnScene(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m)
     {
+        FlameLeft = 0f;
         Fill = StartFull ? 1f : 0f;
         shown = Fill;
         Busy = false;
@@ -123,7 +158,7 @@ public class RageMeter : MonoBehaviour
             flash = 1f;
             if (player == null) player = FindFirstObjectByType<PlayerController>();
             if (player != null)
-                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "RAGE HAZIR  [E]", new Color(0.45f, 0.75f, 1f), 1f);
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "HAZIR  [E]", new Color(0.45f, 0.75f, 1f), 1f);
         }
     }
 
@@ -139,7 +174,7 @@ public class RageMeter : MonoBehaviour
             flash = 1f;
             if (player == null) player = FindFirstObjectByType<PlayerController>();
             if (player != null)
-                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "RAGE HAZIR  [E]", new Color(0.45f, 0.75f, 1f), 1f);
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "HAZIR  [E]", new Color(0.45f, 0.75f, 1f), 1f);
         }
     }
 
@@ -150,7 +185,8 @@ public class RageMeter : MonoBehaviour
         var pc = FindFirstObjectByType<PlayerController>();
         if (pc != lastPlayer) { lastPlayer = pc; if (pc != null) { Fill = 1f; shown = 1f; Busy = false; } }
         if (player == null) player = pc;
-        bool wantAura = IsFull && !Busy && player != null;
+        if (FlameLeft > 0f) FlameLeft = Mathf.Max(0f, FlameLeft - Time.unscaledDeltaTime);
+        bool wantAura = (IsFull || FlameActive) && !Busy && player != null;
         if (wantAura && aura == null) aura = RageAura.Create(this, player);
         else if (!wantAura && aura != null) { Destroy(aura.gameObject); aura = null; }
         if (flash > 0f) flash -= Time.unscaledDeltaTime * 1.5f;
@@ -172,12 +208,53 @@ public class RageMeter : MonoBehaviour
             return;
         }
 
+        if (Current == RageAbility.Flame)
+        {
+            if (FlameActive) return;
+            if (!Unlimited) Fill = Mathf.Max(0f, Fill - SegCost);
+            FlameLeft = flameDuration;
+            CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "ALEV!", new Color(1f, 0.5f, 0.15f), 1.2f);
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.3f);
+            return;
+        }
+
+        EnemyController tgt = PickTarget();
+        if (tgt == null)
+        {
+            // Hedef yok: bir sey olmaz, bar harcanmaz.
+            if (Time.unscaledTime > lastWarn + 0.9f)
+            {
+                lastWarn = Time.unscaledTime;
+                CombatCallout.Popup(player.transform.position + Vector3.up * 2.6f, "HEDEF YOK", new Color(0.7f, 0.75f, 0.85f), 0.8f);
+            }
+            return;
+        }
+
         PlayerCombatController combat = player.GetComponent<PlayerCombatController>();
         if (combat != null) combat.CancelAttack();
 
-        if (!Unlimited) Fill = 0f;
+        if (!Unlimited) Fill = Mathf.Max(0f, Fill - SegCost);
         Busy = true;
-        player.stateMachine.ChangeState(new RageSlamState(player, player.stateMachine, this));
+        player.stateMachine.ChangeState(new RageSlamState(player, player.stateMachine, this, tgt));
+    }
+
+    /// <summary>Oncelik: parry isaretli > posture kirik > en yakin (menzil icinde).</summary>
+    EnemyController PickTarget()
+    {
+        Vector2 pp = player.transform.position;
+        EnemyController best = null; int bestRank = -1; float bestD = float.MaxValue;
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            EnemyController e = EnemyController.All[i];
+            if (e == null || e.IsDead || !e.isActiveAndEnabled) continue;
+            Vector2 d = (Vector2)e.transform.position - pp;
+            if (Mathf.Abs(d.x) > maxRange || Mathf.Abs(d.y) > maxHeightDiff) continue;
+            EnemyBalance bal = e.GetComponent<EnemyBalance>();
+            int rank = ParryMark.IsMarked(e) ? 2 : (bal != null && bal.IsBroken ? 1 : 0);
+            float dist = Mathf.Abs(d.x);
+            if (rank > bestRank || (rank == bestRank && dist < bestD)) { best = e; bestRank = rank; bestD = dist; }
+        }
+        return best;
     }
 
     void OnGUI()
@@ -193,9 +270,14 @@ public class RageMeter : MonoBehaviour
         GUI.color = new Color(0.4f, 0.65f, 1f, 0.16f);
         GUI.DrawTexture(new Rect(x, y, w, h), t);
 
-        Color c = IsFull ? Color.Lerp(new Color(0.35f, 0.65f, 1f), new Color(0.8f, 0.95f, 1f), 1f - pulse) : new Color(0.3f, 0.6f, 1f, 0.95f);
+        Color c = FlameActive ? Color.Lerp(new Color(1f, 0.3f, 0.05f), new Color(1f, 0.7f, 0.2f), 1f - pulse)
+            : IsFull ? Color.Lerp(new Color(0.35f, 0.65f, 1f), new Color(0.8f, 0.95f, 1f), 1f - pulse) : new Color(0.3f, 0.6f, 1f, 0.95f);
         GUI.color = c;
         GUI.DrawTexture(new Rect(x, y, w * shown, h), t);
+
+        GUI.color = new Color(0.02f, 0.04f, 0.08f, 0.95f);
+        for (int i = 1; i < Segments; i++)
+            GUI.DrawTexture(new Rect(x + w * i / Segments - 1f * s, y, 2f * s, h), t);
 
         if (flash > 0f)
         {
@@ -206,19 +288,20 @@ public class RageMeter : MonoBehaviour
     }
 }
 
-/// <summary>Rage hamlesi: odak (ağır çekim) → ease-out ezici atılış + şok dalgası → toparlanma.</summary>
+/// <summary>E: en uygun hedefe atılıp TEK vuruş. Çizgisel/alansal hasar yok.</summary>
 public class RageSlamState : IPlayerState
 {
     readonly PlayerController player;
     readonly PlayerStateMachine sm;
     readonly RageMeter rage;
+    readonly EnemyController target;
 
-    enum Phase { Focus, Slam, Recover }
+    enum Phase { Windup, Lunge, Strike, Recover }
     Phase phase;
     float timer, ghostTimer, gravity, dir;
-    bool sheathStarted;
-    Vector2 start;
-    readonly HashSet<EnemyController> hitOnPath = new HashSet<EnemyController>();
+    RigidbodyType2D prevType;
+    RageExecView view;
+    bool sheathed;
 
     readonly List<Collider2D> mine = new List<Collider2D>();
     readonly List<Collider2D> ignored = new List<Collider2D>();
@@ -249,10 +332,14 @@ public class RageSlamState : IPlayerState
         ignored.Clear();
     }
 
-    Transform ring; SpriteRenderer ringSr; static Sprite dot;
-    RageExecView view;
+    public RageSlamState(PlayerController p, PlayerStateMachine s, RageMeter r, EnemyController t) { player = p; sm = s; rage = r; target = t; }
 
-    public RageSlamState(PlayerController p, PlayerStateMachine s, RageMeter r) { player = p; sm = s; rage = r; }
+    void Face(float d)
+    {
+        dir = d < 0f ? -1f : 1f;
+        player.facingDir = dir;
+        if (player.playerSprite != null) player.playerSprite.flipX = dir < 0f;
+    }
 
     public void Enter()
     {
@@ -261,145 +348,99 @@ public class RageSlamState : IPlayerState
         player.rb.linearVelocity = Vector2.zero;
         player.canControl = false;
         player.isInvincible = true;
-        dir = player.facingDir < 0f ? -1f : 1f;
-        start = player.rb.position;
-        phase = Phase.Focus;
+        Face(target.transform.position.x - player.transform.position.x);
+        phase = Phase.Windup;
         timer = 0f;
-        MakeRing();
         view = RageExecView.Create(player, rage.execFrameScale);
         IgnoreEnemies();
         prevType = player.rb.bodyType;
         player.rb.bodyType = RigidbodyType2D.Kinematic;
     }
-    RigidbodyType2D prevType;
 
     public void Update()
     {
         float dt = Time.unscaledDeltaTime;
         timer += dt;
+        if (target == null || target.IsDead)
+        {
+            if (phase == Phase.Windup || phase == Phase.Lunge) { Finish(); return; }
+        }
 
         switch (phase)
         {
-            case Phase.Focus:
+            case Phase.Windup:
             {
-                float p = Mathf.Clamp01(timer / rage.focusTime);
-                // Odagin basinda yon degistirilebilir (ilk %70).
-                float ax = Input.GetAxisRaw("Horizontal");
-                if (p < 0.7f && ax != 0f)
-                {
-                    float nd = ax < 0f ? -1f : 1f;
-                    if (nd != dir)
-                    {
-                        dir = nd;
-                        player.facingDir = dir;
-                        if (player.playerSprite != null) player.playerSprite.flipX = dir < 0f;
-                    }
-                }
-                HitStop.Request(0.12f, rage.focusTimeScale, 8);
+                float p = Mathf.Clamp01(timer / rage.windupTime);
+                HitStop.Request(0.08f, 0.15f, 8);
                 player.rb.linearVelocity = Vector2.zero;
-                if (ring != null)
-                {
-                    float r = Mathf.Lerp(5f, 0.6f, p * p);          // içeri toplanan halka
-                    ring.position = player.transform.position + Vector3.up * 0.9f;
-                    ring.localScale = Vector3.one * r;
-                    ringSr.color = new Color(0.4f, 0.7f, 1f, 0.15f + 0.5f * p);
-                }
+                if (target != null) Face(target.transform.position.x - player.transform.position.x);
                 if (view != null)
                 {
-                    // Gerilme: kinda, hafif geri cekilip cokme
                     float e = p * p * (3f - 2f * p);
-                    view.Show(RageExecView.A, new Vector2(-0.35f * dir * e, 0f), 1f - 0.06f * e, dir);
+                    view.Show(RageExecView.A, new Vector2(-0.3f * dir * e, 0f), 1f - 0.05f * e, dir);
                 }
-                if (timer >= rage.focusTime) BeginSlam();
+                if (timer >= rage.windupTime) { phase = Phase.Lunge; timer = 0f; if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.2f); }
                 break;
             }
-            case Phase.Slam:
+            case Phase.Lunge:
             {
-                float t = Mathf.Clamp01(timer / rage.rushTime);
-                Vector2 want = start + new Vector2(dir * rage.rushDistance * Profile(t), 0f);
                 Vector2 cur = player.rb.position;
-                float step = Mathf.Abs(want.x - cur.x);
+                float dx = target.transform.position.x - cur.x;
+                Face(dx);
+                float gap = Mathf.Abs(dx) - rage.strikeGap;
+                float step = Mathf.Min(rage.lungeSpeed * dt, Mathf.Max(0f, gap));
                 bool blocked = false;
                 if (step > 0.0001f)
                 {
                     float allowed = ClearDistance(new Vector2(dir, 0f), step);
                     if (allowed < step) { step = allowed; blocked = true; }
                 }
-                Vector2 pos = new Vector2(cur.x + dir * step, start.y);
+                Vector2 pos = new Vector2(cur.x + dir * step, cur.y);
                 player.rb.position = pos;
                 player.transform.position = new Vector3(pos.x, pos.y, player.transform.position.z);
                 player.rb.linearVelocity = Vector2.zero;
-
-                if (view != null)
-                {
-                    int f = t < 0.14f ? RageExecView.S : RageExecView.L;
-                    view.Show(f, Vector2.zero, 1f, dir);
-                }
-
-                HitPath(pos);
+                if (view != null) view.Show(timer < 0.05f ? RageExecView.S : RageExecView.L, Vector2.zero, 1f, dir);
 
                 ghostTimer -= dt;
                 if (ghostTimer <= 0f) { ghostTimer = 0.016f; SpawnGhost(); }
 
-                if (t >= 1f || blocked) Impact();
+                bool arrived = gap <= 0.02f;
+                if (arrived || blocked || timer >= rage.maxLungeTime)
+                {
+                    if (Mathf.Abs(target.transform.position.x - pos.x) <= rage.strikeGap + 1.6f) Strike();
+                    else Finish();
+                }
                 break;
             }
-            case Phase.Recover:
+            case Phase.Strike:
                 player.rb.linearVelocity = Vector2.zero;
-                // Alan hasari bolunebilir: dash / ziplama / saldiri tusu hamleyi keser (alan hasari iptal olur).
-                if (timer > 0.05f && (player.dashBufferTimer > 0f || Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+                if (view != null) view.Show(RageExecView.S, Vector2.zero, 1f, dir);
+                if (timer >= 0.1f) { phase = Phase.Recover; timer = 0f; }
+                break;
+            case Phase.Recover:
+            {
+                player.rb.linearVelocity = Vector2.zero;
+                if (!sheathed)
                 {
-                    var br = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
-                    if (br != null) br.CancelSheathe();
-                    // Bolunduyse alan hasari iptal: ne hasar ne yavaslama ne efekt.
-                    if (zone != null) zone.Cancel();
-                    if (warnVfx != null) Object.Destroy(warnVfx.gameObject);
-                    zone = null; warnVfx = null;
-                    Finish();
-                    break;
-                }
-                // Smearsiz karede bekle; alan vurusundan 'sheathDur' once kilic koyma animasyonu baslar ve vurusla biter.
-                if (!sheathStarted && timer >= rage.shockDelay - rage.sheathDur)
-                {
-                    sheathStarted = true;
+                    sheathed = true;
                     if (view != null) { view.End(); view = null; }
                     var bridge = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
                     if (bridge != null) bridge.BeginSheathe(rage.sheathDur);
                 }
-                if (view != null) view.Show(RageExecView.L, Vector2.zero, 1f, dir);
-                if (timer >= rage.shockDelay + 0.08f) Finish();
+                if (timer > 0.05f && (player.dashBufferTimer > 0f || Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+                {
+                    var br = player.GetComponentInChildren<RonniSkin.RonniPlayerBridge>(true);
+                    if (br != null) br.CancelSheathe();
+                    Finish();
+                    break;
+                }
+                if (timer >= rage.recoverTime) Finish();
                 break;
+            }
         }
     }
 
     public void FixedUpdate() { player.rb.linearVelocity = Vector2.zero; }
-
-    // Hiz profili: hizli ivmelenme, sonra yumusak yavaslama. Normalize edilmis 0..1 konum.
-    float norm = -1f;
-    float Vel(float t)
-    {
-        float a = Mathf.Max(0.001f, rage.accelPortion);
-        float ramp = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / a));
-        return ramp * Mathf.Pow(1f - t, rage.decelPower);
-    }
-    float Profile(float t)
-    {
-        const int N = 200;
-        if (norm < 0f)
-        {
-            norm = 0f;
-            for (int i = 0; i < N; i++) norm += Vel((i + 0.5f) / N);
-        }
-        int n = Mathf.Max(1, Mathf.CeilToInt(t * N));
-        float sum = 0f;
-        for (int i = 0; i < n; i++)
-        {
-            float a = (float)i / N;
-            float b = Mathf.Min(t, (float)(i + 1) / N);
-            if (b > a) sum += Vel((a + b) * 0.5f) * (b - a) * N;
-        }
-        return Mathf.Clamp01(sum / norm);
-    }
 
     readonly List<RaycastHit2D> castHits = new List<RaycastHit2D>();
     float ClearDistance(Vector2 d, float dist)
@@ -419,92 +460,37 @@ public class RageSlamState : IPlayerState
         return best;
     }
 
-    void BeginSlam()
+    void Strike()
     {
-        phase = Phase.Slam;
+        phase = Phase.Strike;
         timer = 0f;
-        start = player.rb.position;
-        if (ring != null) ring.localScale = Vector3.zero;
-        if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.25f);
-    }
-
-    // Atılış yolundaki düşmanlar ezilir.
-    void HitPath(Vector2 pos)
-    {
-        for (int i = 0; i < EnemyController.All.Count; i++)
-        {
-            EnemyController e = EnemyController.All[i];
-            if (e == null || e.IsDead || hitOnPath.Contains(e)) continue;
-            Vector2 d = (Vector2)e.transform.position - pos;
-            if (Mathf.Abs(d.x) < 2f && Mathf.Abs(d.y) < rage.shockHeight)
-            {
-                hitOnPath.Add(e);
-                Smash(e, 0.6f, pos);
-            }
-        }
-    }
-
-    ShockVfx warnVfx; RageShockZone zone;
-
-    // Duruş: alan isaretlenir (gecikmeli), hasar shockDelay sonra vurur.
-    void Impact()
-    {
-        phase = Phase.Recover;
-        timer = 0f;
+        rage.ignoreKillsUntil = Time.unscaledTime + 0.4f;
         Vector2 p = player.rb.position;
-        warnVfx = ShockVfx.Spawn(p, rage.shockRadius, rage.shockDelay, true);   // uyari alani
-        zone = RageShockZone.Run(rage.shockDelay, () => ApplyShock(p));
-        HitStop.Request(0.06f, 0.2f, 6);
-        if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.4f);
+        if (target != null && !target.IsDead) Smash(target, p);
+        HitStop.Request(0.12f, 0.05f, 10);
+        if (CameraShake.Instance != null) CameraShake.Instance.Shake(0.8f);
     }
 
-    // Gecikmeli alan hasari: yaricap icindeki (zeminde) herkes.
-    void ApplyShock(Vector2 p)
-    {
-        rage.ignoreKillsUntil = Time.unscaledTime + 0.3f;
-
-        for (int i = 0; i < EnemyController.All.Count; i++)
-        {
-            EnemyController e = EnemyController.All[i];
-            if (e == null || e.IsDead) continue;
-            Vector2 d = (Vector2)e.transform.position - p;
-            if (Mathf.Abs(d.x) <= rage.shockRadius && Mathf.Abs(d.y) <= rage.shockHeight)
-                Smash(e, 1f, p);
-        }
-
-        HitStop.Request(0.14f, 0.04f, 10);
-        if (CameraShake.Instance != null) CameraShake.Instance.Shake(1.2f);
-        CombatCallout.Popup(p + Vector2.up * 2.6f, "RAGE!", new Color(0.55f, 0.8f, 1f), 1.4f);
-        ShockVfx.Spawn(p, rage.shockRadius, 0.5f, false);
-    }
-
-    void Smash(EnemyController e, float power, Vector2 from)
+    void Smash(EnemyController e, Vector2 from)
     {
         Health h = e.GetComponent<Health>();
         if (h == null) return;
-
-        Vector2 away = (Vector2)e.transform.position - from;
+        Vector2 hitDir = new Vector2(dir, 0f);
         BossController boss = e.GetComponent<BossController>();
-
-        int dmg = boss != null
-            ? Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * rage.bossPercent * power))
-            : Mathf.Max(rage.minDamage, h.MaxHealth);
-
-        Vector2 hitDir = away.sqrMagnitude < 0.01f ? new Vector2(dir, 0f) : away;
         EnemyBalance bal = e.GetComponent<EnemyBalance>();
-
-        // Posture kirik degilse: posture barini tamamen doldur (kir), cani kalsin.
-        if (boss == null && bal != null && !bal.IsBroken)
-        {
-            e.ApplyAttackHit(hitDir, true, 3);
-            bal.AddBalanceDamage(bal.MaxBalance, false);
-            // Postur kirilmasina ek olarak max canin %50'si.
-            if (!h.IsDead) h.TakeDamage(Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * 0.5f * power)));
-            return;
-        }
+        bool lethal = boss == null && (ParryMark.IsMarked(e) || (bal != null && bal.IsBroken));
 
         e.ApplyAttackHit(hitDir, true, 3);
-        h.TakeDamage(dmg);
+        if (lethal)
+        {
+            h.TakeDamage(Mathf.Max(rage.minDamage, h.MaxHealth));
+            CombatCallout.PopupAbove(e.transform, "INFAZ!", new Color(1f, 0.35f, 0.3f), 1.2f);
+            return;
+        }
+        // Isaretsiz / kirik olmayan: posturun yarisi + olculu can hasari.
+        if (bal != null) bal.AddBalanceDamage(Mathf.RoundToInt(bal.MaxBalance * rage.postureFrac), false);
+        float frac = boss != null ? rage.bossPercent : rage.healthFrac;
+        if (!h.IsDead) h.TakeDamage(Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * frac)));
     }
 
     void SpawnGhost()
@@ -519,40 +505,6 @@ public class RageSlamState : IPlayerState
         g.fadeSpeed = 2.2f;
     }
 
-    void MakeRing()
-    {
-        if (dot == null)
-        {
-            const int n = 64;
-            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float r = Vector2.Distance(new Vector2(x, y), new Vector2(n / 2f, n / 2f)) / (n / 2f);
-                    float a = Mathf.Clamp01((1f - r) * 4f) * Mathf.Clamp01(r * 3f - 1.6f + 1f);
-                    a = r > 1f ? 0f : Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(r - 0.85f) * 6f), 1.5f) + (1f - r) * 0.15f;
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
-                }
-            tex.Apply();
-            dot = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n / 2f);
-        }
-        var go = new GameObject("RageRing");
-        ring = go.transform;
-        ringSr = go.AddComponent<SpriteRenderer>();
-        ringSr.sprite = dot;
-        ringSr.sortingOrder = 95;
-        Shader sh = Shader.Find("Sprites/Default");
-        if (sh != null) ringSr.sharedMaterial = new Material(sh);
-        ringSr.color = new Color(0.4f, 0.7f, 1f, 0f);
-    }
-
-    void Cleanup()
-    {
-        if (view != null) { view.End(); view = null; }
-        if (ring != null) Object.Destroy(ring.gameObject);
-        ring = null;
-    }
-
     void Finish()
     {
         Exit();
@@ -562,81 +514,14 @@ public class RageSlamState : IPlayerState
 
     public void Exit()
     {
-        Cleanup();
+        if (view != null) { view.End(); view = null; }
         RestoreEnemies();
         player.rb.bodyType = prevType;
         player.rb.gravityScale = gravity;
         player.isInvincible = false;
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.35f);
         player.canControl = true;
         rage.Busy = false;
-    }
-}
-
-/// <summary>Zeminde yayılan mavi şok dalgası.</summary>
-public class ShockVfx : MonoBehaviour
-{
-    static Sprite px;
-    SpriteRenderer a, b;
-    float t, radius, life = 0.5f;
-    bool telegraph;
-    Vector2 origin;
-
-    public static ShockVfx Spawn(Vector2 at, float radius, float life = 0.5f, bool telegraph = false)
-    {
-        var go = new GameObject(telegraph ? "RageShockWarn" : "RageShock");
-        var s = go.AddComponent<ShockVfx>();
-        s.origin = at; s.radius = radius; s.life = Mathf.Max(0.05f, life); s.telegraph = telegraph;
-        go.transform.position = at;
-        if (px == null)
-        {
-            var tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white); tex.Apply();
-            px = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
-        }
-        Shader sh = Shader.Find("Sprites/Default");
-        Material m = sh != null ? new Material(sh) : null;
-        s.a = Part(go.transform, m, 92);
-        s.b = Part(go.transform, m, 93);
-        return s;
-    }
-
-    static SpriteRenderer Part(Transform p, Material m, int order)
-    {
-        var g = new GameObject("p");
-        g.transform.SetParent(p, false);
-        var sr = g.AddComponent<SpriteRenderer>();
-        sr.sprite = px; sr.sortingOrder = order;
-        if (m != null) sr.sharedMaterial = m;
-        return sr;
-    }
-
-    void Update()
-    {
-        t += Time.unscaledDeltaTime / life;
-        if (telegraph)
-        {
-            float k = Mathf.Clamp01(t);
-            float w0 = radius * 2f;
-            a.transform.localScale = new Vector3(w0, 0.35f + 0.25f * k, 1f);
-            a.transform.localPosition = new Vector3(0f, 0.2f, 0f);
-            a.color = new Color(0.4f, 0.7f, 1f, 0.10f + 0.30f * k * k);
-            // kenar cizgileri: dolum
-            b.transform.localScale = new Vector3(w0 * k, 0.06f, 1f);
-            b.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-            b.color = new Color(0.9f, 0.98f, 1f, 0.35f + 0.5f * k);
-            if (t >= 1f) Destroy(gameObject);
-            return;
-        }
-        float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f);
-        float w = radius * 2f * e;
-        float al = 1f - Mathf.Clamp01(t);
-        a.transform.localScale = new Vector3(w, 0.5f + 1.2f * (1f - e), 1f);
-        a.transform.localPosition = new Vector3(0f, 0.3f, 0f);
-        a.color = new Color(0.4f, 0.7f, 1f, 0.45f * al);
-        b.transform.localScale = new Vector3(w * 0.9f, 0.09f, 1f);
-        b.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-        b.color = new Color(0.9f, 0.98f, 1f, 0.95f * al);
-        if (t >= 1f) Destroy(gameObject);
     }
 }
 
@@ -733,7 +618,7 @@ public class RageAura : MonoBehaviour
         if (Time.unscaledTime >= nextScan) { nextScan = Time.unscaledTime + 0.25f; Scan(); }
 
         float pulse = 1f + 0.2f * Mathf.Sin(Time.unscaledTime * 7f);
-        Color c = rage.auraColor;
+        Color c = rage.FlameActive ? rage.flameColor : rage.auraColor;
         float k = rage.bladeIntensity * pulse;
         Color hdr = new Color(c.r * k, c.g * k, c.b * k, 1f);
 
@@ -882,31 +767,5 @@ public class RageExecView : MonoBehaviour
     {
         foreach (var r in hidden) if (r != null) r.forceRenderingOff = false;
         hidden.Clear();
-    }
-}
-
-
-/// <summary>Belirli sure sonra bir islemi calistirir (gercek zaman). Rage alan hasari hamle kesilse bile vurur.</summary>
-public class RageShockZone : MonoBehaviour
-{
-    System.Action action; float left;
-
-    public void Cancel() { action = null; Destroy(gameObject); }
-
-    public static RageShockZone Run(float delay, System.Action a)
-    {
-        var go = new GameObject("~RageZone");
-        var z = go.AddComponent<RageShockZone>();
-        z.action = a; z.left = Mathf.Max(0f, delay);
-        return z;
-    }
-
-    void Update()
-    {
-        left -= Time.unscaledDeltaTime;
-        if (left > 0f) return;
-        var a = action; action = null;
-        Destroy(gameObject);
-        if (a != null) a();
     }
 }

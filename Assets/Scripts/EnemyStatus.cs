@@ -48,6 +48,7 @@ public class EnemyStatus : MonoBehaviour
     private float burnHealthFraction;
     private float burnTimeLeft;
     private float burnAccumulator;
+    private float burnHealthAcc;
 
     public bool IsPoisoned => poisonTimeLeft > 0f;
     public bool IsBurning => burnTimeLeft > 0f;
@@ -211,21 +212,25 @@ public class EnemyStatus : MonoBehaviour
 
         burnTimeLeft -= dt;
 
-        bool onBalance = balance != null && !balance.IsBroken;
+        // Yanik ayni anda hem postura hem cana islet (boss'ta yarisi).
+        float mul = enemy.GetComponent<BossController>() != null ? 0.5f : 1f;
+        bool ticked = false;
 
-        float perSecond =
-            onBalance
-                ? balance.MaxBalance * burnBalanceFraction
-                : (health != null && !health.IsDead ? health.MaxHealth * burnHealthFraction : 0f);
-
-        burnAccumulator += perSecond * dt;
-
-        while (burnAccumulator >= 1f)
+        if (balance != null && !balance.IsBroken)
         {
-            burnAccumulator -= 1f;
-
-            Tick(1, BurnTint);
+            burnAccumulator += balance.MaxBalance * burnBalanceFraction * mul * dt;
+            int n = Mathf.FloorToInt(burnAccumulator);
+            if (n > 0) { burnAccumulator -= n; balance.AddBalanceDamage(n); ticked = true; }
         }
+
+        if (health != null && !health.IsDead)
+        {
+            burnHealthAcc += health.MaxHealth * burnHealthFraction * mul * dt;
+            int n = Mathf.FloorToInt(burnHealthAcc);
+            if (n > 0) { burnHealthAcc -= n; health.TakeDamage(n); ticked = true; }
+        }
+
+        if (ticked && enemy != null && !enemy.IsDead) enemy.PlayTintFlash(BurnTint, 0.15f);
 
         if (burnTimeLeft <= 0f)
         {
