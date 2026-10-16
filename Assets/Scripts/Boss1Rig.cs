@@ -4,9 +4,17 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Boss 1: PSD katmanlarindan kurulan kemik hiyerarsisi + nefes (idle) animasyonu.
-/// Resources/Boss1/boss1_rig.json + katman PNG'lerini okur. TrainingDummy ile birlikte calisir
-/// (oyuncu vurabilir); vurus aninda hafif sarsilir.
+/// Boss 1: PSD katmanlarindan kurulan kemik hiyerarsisi + nefes (idle) + AGIR YURUYUS + kilic darbesi (saldiri).
+///
+/// Saldiri: PlayAttack() ile tetiklenir.
+///   Gerilme (kilic yukari/arkaya, govde yaylanir, titreme = parry uyarisi)
+///   -> ani Darbe (kilicin keskin yuzu yere vurur) -> Bekleme -> Toparlanma.
+///
+/// Yuruyus: Rigidbody2D hizindan surulur (hiz yoksa yurumez). 3 bacak sirayla adim atar,
+/// ayaklar yere SABIT basar (IK), her adimda govde coker + kamera sarsilir.
+///
+/// Gercek dusman: 'makeEnemy' aciksa Boss1Enemy otomatik eklenir (EnemyController, Health, EnemyBalance...).
+/// Resources/Boss1/boss1_rig.json + katman PNG'lerini okur.
 /// </summary>
 [DefaultExecutionOrder(-50)]
 [DisallowMultipleComponent]
@@ -19,11 +27,17 @@ public class Boss1Rig : MonoBehaviour
     [Header("Gorunum")]
     [Tooltip("1 = PSD boyutu. Boss'u buyutup kucultur.")]
     public float scale = 1f;
+    [Tooltip("Sadece Boss1Enemy YOKKEN kullanilir: isaretliyse saga bakar. (Dusman olarak oynarken yon oyuncuya gore otomatik.)")]
     public bool flipX = false;
     public Color tint = Color.white;
     public Material material;
     public string sortingLayerName = "";
     public int sortingOrder = 4;
+
+    [Header("Gercek dusman")]
+    [Tooltip("Acik: oyun basinca Boss1Enemy otomatik eklenir -> boss oyuncuyu kovalar, vurur, parry edilir, hasar alir. " +
+             "Kapali: eski 'sadece animasyon' hali.")]
+    public bool makeEnemy = true;
 
     [Header("Nefes")]
     [Range(0.05f, 1.2f)] public float breathsPerSecond = 0.22f;
@@ -35,33 +49,184 @@ public class Boss1Rig : MonoBehaviour
     [Range(0f, 8f)] public float armSwayDeg = 2.2f;
     [Range(0f, 8f)] public float swordSwayDeg = 1.4f;
     [Range(0f, 0.1f)] public float rootSquash = 0.012f;
+    [Tooltip("Sol (arka) kolun nefesle hafif sallanmasi.")]
+    [Range(0f, 6f)] public float armLSwayDeg = 1.6f;
 
     [Header("Vurus tepkisi")]
     [Range(0f, 20f)] public float flinchDeg = 7f;
     [Range(0f, 0.6f)] public float flinchShove = 0.18f;
     [Range(4f, 30f)] public float flinchStiffness = 16f;
 
+    [Header("Pivot / sabit ayak")]
+    [Tooltip("Cokme/uzama bu noktadan olur: ARKA AYAGIN ZEMIN NOKTASI (rig uzayi, birim). Ayaklar kaymaz.")]
+    public Vector2 pivotBackFoot = new Vector2(2.27f, -0.05f);
+    [Tooltip("Sol (arka) kol katmaninin omuz eklemi (govde/chest uzayi, birim).")]
+    public Vector2 armLPivot = new Vector2(-0.1f, 2.0f);
+
+    [Header("Agir yuruyus")]
+    public bool walkEnabled = true;
+    [Tooltip("Bir adimda ayagin yerde kat ettigi mesafe (rig birimi). Buyuk = uzun, yavas adim. Rig'in menzil siniri ~1.6.")]
+    [Range(0.6f, 1.6f)] public float walkStride = 1.4f;
+    [Tooltip("Adim fazinin ne kadari ayak havada (0.3 = ayak 1/3 sure havada, 2/3 sure yerde). Kucuk = daha agir, daha 'basarak' yuruyus.")]
+    [Range(0.2f, 0.33f)] public float walkSwing = 0.3f;
+    [Tooltip("Ayagin yerden kalkma yuksekligi (rig birimi).")]
+    [Range(0f, 1f)] public float walkLift = 0.5f;
+    [Tooltip("Yururken govdenin one egilmesi (derece).")]
+    [Range(0f, 15f)] public float walkLeanDeg = 6f;
+    [Tooltip("Her ayak basisinda govdenin cokmesi (0.045 = %4.5). Agirlik hissi.")]
+    [Range(0f, 0.12f)] public float walkDip = 0.045f;
+    [Range(0f, 10f)] public float walkSwordSwing = 3.5f;
+    [Range(0f, 20f)] public float walkArmLSwing = 9f;
+    [Tooltip("Her ayak basisinda kamera sarsintisi (CameraShake.Shake). 0 = kapali.")]
+    [Range(0f, 1f)] public float stepShake = 0.12f;
+
+    [Header("Saldiri sureleri (sn)")]
+    [Tooltip("Kilici arkaya/yukari kaldirip gerilme. Oyuncunun 'parry hazirla' uyarisi.")]
+    [Range(0.2f, 1.5f)] public float windupTime = 0.7f;
+    [Tooltip("Tam gerili halde titreyerek bekleme: darbe hemen gelir. Parry penceresine hazirlik.")]
+    [Range(0f, 0.8f)] public float tensionTime = 0.3f;
+    [Tooltip("ANI darbe suresi. Kisa = sert/hizli.")]
+    [Range(0.04f, 0.3f)] public float strikeTime = 0.09f;
+    [Tooltip("Kilic ucu yere saplanmis bekleme.")]
+    [Range(0f, 0.8f)] public float holdTime = 0.25f;
+    [Tooltip("Kilici kaldirip dinlenme pozuna donus.")]
+    [Range(0.1f, 2f)] public float recoverTime = 0.8f;
+
+    [Header("Saldiri pozu: GERILME (derece, bone'a gore, boss sola bakarken)")]
+    [Range(-40f, 5f)] public float windupChestDeg = -14f;
+    [Range(-30f, 5f)] public float windupBellyDeg = -7f;
+    [Range(-20f, 20f)] public float windupHeadDeg = -4f;
+    [Tooltip("Omuz: kol yukari kalkar.")]
+    [Range(-180f, 0f)] public float windupArmDeg = -69.5f;
+    [Tooltip("Bilek: kilic govdenin arkasina dogru yatar.")]
+    [Range(0f, 260f)] public float windupSwordDeg = 105.6f;
+    [Tooltip("Sol kol (geriye).")]
+    [Range(-40f, 40f)] public float windupArmLDeg = -14f;
+    [Range(0f, 0.12f)] public float windupCrouch = 0.04f;
+
+    [Header("Saldiri pozu: DARBE (kilicin keskin yuzu zemine yatik vurur)")]
+    [Tooltip("Govde one yatar: eli zemine yaklastirir (kilic daha yatay olur).")]
+    [Range(0f, 40f)] public float strikeChestDeg = 18f;
+    [Range(0f, 30f)] public float strikeBellyDeg = 10f;
+    [Range(-20f, 20f)] public float strikeHeadDeg = 5f;
+    [Range(-90f, 40f)] public float strikeArmDeg = 10f;
+    [Tooltip("Kilicin yatiklik acisi. Kucuk deger = daha yatay (zemine daha paralel). Zemin korumasi altina inmesini engeller.")]
+    [Range(100f, 260f)] public float strikeSwordDeg = 130.2f;
+    [Range(-40f, 40f)] public float strikeArmLDeg = 16f;
+    [Tooltip("Cokme: eli yere indirir.")]
+    [Range(0f, 0.15f)] public float strikeCrouch = 0.07f;
+
+    [Header("Zemin korumasi")]
+    [Tooltip("Acik: kilic hicbir karede zemin cizgisinin altina inmez (gerekirse bilek yukari kalkar).")]
+    public bool keepBladeAboveGround = true;
+    [Tooltip("Zemin cizgisi (rig uzayi). Ayaklarin altiyla ayni olmali.")]
+    public float groundY = -0.06f;
+
+    [Header("Saldiri hissi")]
+    [Tooltip("Gerilme sonunda kol/govde titremesi (derece).")]
+    [Range(0f, 4f)] public float windupTremble = 1.2f;
+    [Tooltip("Gerilme bekleme suresince fazladan ne kadar daha gerilsin (0.06 = %6).")]
+    [Range(0f, 0.2f)] public float tensionOvershoot = 0.06f;
+    [Tooltip("Kilic ucu yere vurunca kisa sarsinti (derece).")]
+    [Range(0f, 6f)] public float impactShakeDeg = 2.5f;
+    [Tooltip("0 = kapali. >0 ise Play Mode'da bu kadar saniyede bir saldiri oynatir (sadece onizleme).")]
+    [Range(0f, 8f)] public float autoAttackEvery = 0f;
+
+    /// <summary>Ani darbe basladi (gerilme bitti). Ses/uyari kapatma buraya baglanabilir.</summary>
+    public event Action AttackStrikeStarted;
+    /// <summary>Kilic yere vurdu. Hasar/hitbox/kamera sarsintisi buraya baglanabilir.</summary>
+    public event Action AttackHit;
+    /// <summary>Saldiri animasyonu tamamen bitti (dinlenme pozuna donuldu).</summary>
+    public event Action AttackFinished;
+    /// <summary>Bir ayak yere bastirdi (0 = on, 1 = arka, 2 = orta bacak). Adim sesi buraya baglanabilir.</summary>
+    public event Action<int> FootStep;
+
+    public bool IsAttacking { get { return atkState != AtkState.None; } }
+    /// <summary>Saldiri baslayinca darbeye kadar gecen sure (oyuncunun parry icin goruntu uyarisi).</summary>
+    public float TelegraphTime { get { return windupTime + tensionTime; } }
+    /// <summary>Saldiri baslayinca kilicin yere VURDUGU ana kadar gecen sure. Dusmanin 'attackWarningTime'i bu olmali.</summary>
+    public float ContactTime { get { return windupTime + tensionTime + strikeTime; } }
+    public float AttackDuration { get { return windupTime + tensionTime + strikeTime + holdTime + recoverTime; } }
+
+    // ---- Disaridan (Boss1Enemy) verilen durum ----
+    /// <summary>Yon kaynagi: SpriteRenderer.flipX == true -> SOLA bakar (rig dogal olarak sola bakar). Bos = 'flipX' alani.</summary>
+    [NonSerialized] public SpriteRenderer facingSource;
+    /// <summary>false ise yurume animasyonu oynamaz (saldiri/sersem/vurulma sirasinda).</summary>
+    [NonSerialized] public bool MoveAllowed = true;
+    /// <summary>Sersemlemis (denge kirik) poz.</summary>
+    [NonSerialized] public bool Staggered;
+    /// <summary>Oldu: yikilma pozu.</summary>
+    [NonSerialized] public bool Dead;
+
+    // Kilic bicaginin dis cizgisi (sword kemigi uzayi, birim). boss1_sword.png'den turetildi.
+    static readonly Vector2[] BladeHull =
+    {
+        new Vector2(0.95f, 1.26f), new Vector2(5.89f, 4.86f), new Vector2(6.52f, 4.95f),
+        new Vector2(7.12f, 4.80f), new Vector2(7.12f, 4.69f), new Vector2(1.49f, 0.53f)
+    };
+
+    // Bacaklar (rig uzayi, birim). Kalca/diz/bilek rest pozundan olculdu; kalca govdenin altinda gizli.
+    // 3 bacak sirayla adim atar (phaseOff). 'center': ayagin adim araligi merkezi (rest'e gore x kaymasi).
+    // rigid = tek parca bacak (legBack) + ayak (legBack_knee).
+    struct LegDef
+    {
+        public string up, lo, ft;
+        public Vector2 hip, knee, ankle;
+        public float center, phaseOff;
+        public bool rigid;
+    }
+
+    static readonly LegDef[] Legs =
+    {
+        new LegDef { up = "legR_upper", lo = "legR_lower", ft = "footR",
+            hip = new Vector2(0.9f, 3.1f), knee = new Vector2(-0.55f, 2.2f), ankle = new Vector2(-0.35f, 0.8f),
+            center = -0.05f, phaseOff = 0f, rigid = false },
+        new LegDef { up = "legL_upper", lo = "legL_lower", ft = "footL",
+            hip = new Vector2(1.6f, 3.3f), knee = new Vector2(2.2f, 1.9f), ankle = new Vector2(2.3f, 0.8f),
+            center = -0.6f, phaseOff = 0.667f, rigid = false },
+        new LegDef { up = "legBack", lo = null, ft = "legBack_knee",
+            hip = new Vector2(1.3f, 3.4f), knee = Vector2.zero, ankle = new Vector2(0.9f, 1.0f),
+            center = 0f, phaseOff = 0.333f, rigid = true },
+    };
+
+    enum AtkState { None, Windup, Tension, Strike, Hold, Recover, Cancel }
+    AtkState atkState = AtkState.None;
+    float atkTimer, atkEndedAt = -999f, sinceHit = 999f;
+    float lastK, lastS, cancelK, cancelS;
+    const float CancelTime = 0.35f;
+
     readonly Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
     readonly Dictionary<string, Vector3> restPos = new Dictionary<string, Vector3>();
     readonly Dictionary<string, Quaternion> restRot = new Dictionary<string, Quaternion>();
-    TrainingDummy dummy;
-    int lastTotal;
-    float flinch, flinchVel, phase;
+    float flinch, flinchVel, phase, animClock;
+    float walkPhase, walkW, plantKick, staggerW, deadW;
+    readonly float[] legU = { -1f, -1f, -1f };
     Transform visual;
+    Rigidbody2D body;
+    bool built;
 
     void Awake()
     {
-        dummy = GetComponent<TrainingDummy>();
+        EnsureBuilt();
+        if (makeEnemy && Application.isPlaying && GetComponent<Boss1Enemy>() == null)
+            gameObject.AddComponent<Boss1Enemy>();
+    }
+
+    /// <summary>Gorseli (kemikler + katmanlar) hazirlar. Birden fazla cagrilabilir.</summary>
+    public void EnsureBuilt()
+    {
+        if (built) return;
+        built = true;
         if (visual == null) visual = transform.Find("~boss");
         if (visual == null || visual.childCount == 0) Rebuild();
         else Cache();
         phase = UnityEngine.Random.value * 6.28f;
-        if (dummy != null) lastTotal = dummy.TotalDamage;
     }
 
     [ContextMenu("Yeniden Kur")]
     public void Rebuild()
     {
+        built = true;
         Transform old = transform.Find("~boss");
         if (old != null)
         {
@@ -76,7 +241,6 @@ public class Boss1Rig : MonoBehaviour
         GameObject v = new GameObject("~boss");
         v.transform.SetParent(transform, false);
         visual = v.transform;
-        float s = scale / rig.ppu;
         visual.localScale = new Vector3(flipX ? -scale : scale, scale, 1f);
 
         SortingGroup sg = v.AddComponent<SortingGroup>();
@@ -139,6 +303,8 @@ public class Boss1Rig : MonoBehaviour
         foreach (Transform t in visual.GetComponentsInChildren<Transform>(true))
         {
             if (t == visual) continue;
+            // "head" ve "sword" hem kemik hem sprite katmani adi. Ilk (ust) olan KEMIK; katmanla ezme.
+            if (bones.ContainsKey(t.name)) continue;
             bones[t.name] = t;
             restPos[t.name] = t.localPosition;
             restRot[t.name] = t.localRotation;
@@ -154,36 +320,329 @@ public class Boss1Rig : MonoBehaviour
         t.localScale = scl ?? Vector3.one;
     }
 
+    // Katmani, ebeveyn uzayindaki 'pivot' noktasi etrafinda dondurur (kemigi olmayan katmanlar icin).
+    void SetAround(string n, Vector2 pivot, float dRot)
+    {
+        Transform t;
+        if (!bones.TryGetValue(n, out t)) return;
+        Quaternion r = Quaternion.Euler(0f, 0f, dRot);
+        Vector3 p = new Vector3(pivot.x, pivot.y, restPos[n].z);
+        t.localPosition = p + r * (restPos[n] - p);
+        t.localRotation = r * restRot[n];
+    }
+
+    // Bir katmani (kok uzayinda) 'pos' konumuna ve 'deg' dereceye koyar; w ile rest'e karistirir (0 = rest).
+    void PoseLayer(string n, Vector2 pos, float deg, float w)
+    {
+        Transform t;
+        if (n == null || !bones.TryGetValue(n, out t)) return;
+        Vector3 rp = restPos[n];
+        t.localPosition = Vector3.Lerp(rp, new Vector3(pos.x, pos.y, rp.z), w);
+        t.localRotation = restRot[n] * Quaternion.Euler(0f, 0f, deg * w);
+    }
+
+    /// <summary>Kilic darbesi animasyonunu baslatir. Zaten saldiriyorsa false doner.</summary>
+    [ContextMenu("Test: Saldiri Oynat")]
+    public bool PlayAttack()
+    {
+        if (atkState != AtkState.None) return false;
+        atkState = AtkState.Windup;
+        atkTimer = 0f;
+        return true;
+    }
+
+    /// <summary>Gerilme/bekleme asamasindaki saldiriyi yumusakca iptal eder (dusman sersemleyince / vurulunca). Darbe sonrasi iptal edilmez.</summary>
+    public bool CancelAttack()
+    {
+        if (atkState != AtkState.Windup && atkState != AtkState.Tension) return false;
+        cancelK = lastK; cancelS = lastS;
+        atkState = AtkState.Cancel;
+        atkTimer = 0f;
+        return true;
+    }
+
+    /// <summary>Oyuncu vurdu: govde sarsilir.</summary>
+    public void Flinch(float strength)
+    {
+        flinchVel += Mathf.Max(0f, strength) * flinchStiffness * 1.4f;
+    }
+
+    /// <summary>Parry edildi: sert geri tepme.</summary>
+    public void OnParried(bool brokeBalance)
+    {
+        Flinch(brokeBalance ? 2.4f : 1.6f);
+        sinceHit = 0f;
+    }
+
+    static float EaseIn(float x) { x = Mathf.Clamp01(x); return x * x; }
+    static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+    // Saldiri fazini ilerletir. k = gerilme pozu miktari, s = darbe pozu miktari (0..1, k tension'da >1 olabilir).
+    void TickAttack(float dt, out float k, out float s)
+    {
+        k = 0f; s = 0f;
+        sinceHit += dt;
+        if (atkState == AtkState.None)
+        {
+            if (autoAttackEvery > 0f && animClock - atkEndedAt >= autoAttackEvery) PlayAttack();
+            if (atkState == AtkState.None) { lastK = 0f; lastS = 0f; return; }
+        }
+
+        atkTimer += dt;
+        switch (atkState)
+        {
+            case AtkState.Windup:
+                k = Smooth(atkTimer / windupTime);          // yavas basla, yavas otur: agir gerilme
+                if (atkTimer >= windupTime) { atkState = AtkState.Tension; atkTimer = 0f; k = 1f; }
+                break;
+            case AtkState.Tension:
+                k = 1f + tensionOvershoot * Smooth(atkTimer / Mathf.Max(0.01f, tensionTime));
+                if (atkTimer >= tensionTime)
+                {
+                    atkState = AtkState.Strike; atkTimer = 0f;
+                    if (AttackStrikeStarted != null) AttackStrikeStarted();
+                }
+                break;
+            case AtkState.Strike:
+            {
+                float e = EaseIn(atkTimer / strikeTime);    // ani hizlanma
+                float k0 = 1f + tensionOvershoot;
+                k = k0 * (1f - e); s = e;
+                if (atkTimer >= strikeTime)
+                {
+                    atkState = AtkState.Hold; atkTimer = 0f;
+                    k = 0f; s = 1f;
+                    sinceHit = 0f;
+                    if (AttackHit != null) AttackHit();
+                }
+                break;
+            }
+            case AtkState.Hold:
+                s = 1f;
+                if (atkTimer >= holdTime) { atkState = AtkState.Recover; atkTimer = 0f; }
+                break;
+            case AtkState.Recover:
+                s = 1f - Smooth(atkTimer / recoverTime);
+                if (atkTimer >= recoverTime)
+                {
+                    atkState = AtkState.None; atkTimer = 0f; atkEndedAt = animClock;
+                    s = 0f;
+                    if (AttackFinished != null) AttackFinished();
+                }
+                break;
+            case AtkState.Cancel:
+            {
+                float p = Smooth(atkTimer / CancelTime);
+                k = cancelK * (1f - p); s = cancelS * (1f - p);
+                if (atkTimer >= CancelTime)
+                {
+                    atkState = AtkState.None; atkTimer = 0f; atkEndedAt = animClock;
+                    k = 0f; s = 0f;
+                    if (AttackFinished != null) AttackFinished();
+                }
+                break;
+            }
+        }
+        lastK = k; lastS = s;
+    }
+
+    static Vector2 Rot2(Vector2 v, float deg)
+    {
+        float r = deg * Mathf.Deg2Rad, c = Mathf.Cos(r), s = Mathf.Sin(r);
+        return new Vector2(c * v.x - s * v.y, s * v.x + c * v.y);
+    }
+
+    static float Ang2(Vector2 v) { return Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg; }
+
+    // Bacaklari yuruyus fazina gore yerlestirir. w = yuruyus agirligi (0 = rest). Ayak basinca plantKick'i tetikler.
+    void UpdateLegs(float w)
+    {
+        for (int i = 0; i < Legs.Length; i++)
+        {
+            LegDef lg = Legs[i];
+            float u = Mathf.Repeat(walkPhase + lg.phaseOff, 1f);
+
+            // Ayak basma olayi: havadan yere gecis.
+            if (legU[i] >= 0f && legU[i] < walkSwing && u >= walkSwing && w > 0.3f)
+            {
+                plantKick = 1f;
+                if (stepShake > 0f && CameraShake.Instance != null) CameraShake.Instance.Shake(stepShake);
+                if (FootStep != null) FootStep(i);
+            }
+            legU[i] = u;
+
+            // Ayak hedefi (rig uzayi): havada arkadan one yay, yerde govdeyle birlikte geri kayar (sabit basar).
+            float off, lift, toe;
+            if (u < walkSwing)
+            {
+                float sw = u / walkSwing;
+                off = walkStride * 0.5f - walkStride * Smooth(sw);
+                lift = walkLift * Mathf.Sin(Mathf.PI * sw);
+                toe = 12f * Mathf.Sin(2f * Mathf.PI * sw);      // topuk kalkar -> topuk basar
+            }
+            else
+            {
+                float q = (u - walkSwing) / (1f - walkSwing);
+                off = -walkStride * 0.5f + walkStride * q;
+                lift = 0f; toe = 0f;
+            }
+            Vector2 T = new Vector2(lg.ankle.x + lg.center + off, lg.ankle.y + lift);
+
+            Vector2 H = lg.hip, A0 = lg.ankle;
+            Vector2 restUp = restPos.ContainsKey(lg.up) ? (Vector2)restPos[lg.up] : Vector2.zero;
+            Vector2 restFt = restPos.ContainsKey(lg.ft) ? (Vector2)restPos[lg.ft] : Vector2.zero;
+
+            if (lg.rigid)
+            {
+                // Tek parca bacak: kalca etrafinda doner, sonra ayak zemine oturacak sekilde dikey kayar.
+                float a = Ang2(T - H) - Ang2(A0 - H);
+                Vector2 end = H + Rot2(A0 - H, a);
+                Vector2 sh = new Vector2(0f, T.y - end.y);
+                PoseLayer(lg.up, H + Rot2(restUp - H, a) + sh, a, w);
+                PoseLayer(lg.ft, end + sh + Rot2(restFt - A0, toe), toe, w);
+            }
+            else
+            {
+                // Iki kemikli IK: kalca-diz-bilek. Diz, rest'teki tarafa bukulur.
+                Vector2 K0 = lg.knee;
+                Vector2 restLo = restPos.ContainsKey(lg.lo) ? (Vector2)restPos[lg.lo] : Vector2.zero;
+                float L1 = (K0 - H).magnitude, L2 = (A0 - K0).magnitude;
+                Vector2 d = T - H;
+                float dist = Mathf.Clamp(d.magnitude, Mathf.Abs(L1 - L2) + 0.01f, L1 + L2 - 0.01f);
+                float baseAng = Ang2(d);
+                float cosA = (L1 * L1 + dist * dist - L2 * L2) / (2f * L1 * dist);
+                float aHip = Mathf.Acos(Mathf.Clamp(cosA, -1f, 1f)) * Mathf.Rad2Deg;
+                Vector2 ha = A0 - H, hk = K0 - H;
+                float side = (ha.x * hk.y - ha.y * hk.x) >= 0f ? 1f : -1f;
+                float thighAng = baseAng + side * aHip;
+                Vector2 K1 = H + L1 * new Vector2(Mathf.Cos(thighAng * Mathf.Deg2Rad), Mathf.Sin(thighAng * Mathf.Deg2Rad));
+                float a1 = thighAng - Ang2(K0 - H);
+                float a2 = Ang2(T - K1) - Ang2(A0 - K0);
+                PoseLayer(lg.up, H + Rot2(restUp - H, a1), a1, w);
+                PoseLayer(lg.lo, K1 + Rot2(restLo - K0, a2), a2, w);
+                PoseLayer(lg.ft, T + Rot2(restFt - A0, toe), toe, w);
+            }
+        }
+    }
+
     void LateUpdate()
     {
         if (visual == null || bones.Count == 0) return;
-        float dt = Time.deltaTime;
+        float dtR = Time.deltaTime;
+        float dt = EnemyTime.DeltaTime;      // dusman zamani: parry yavaslatmasinda animasyon da yavaslar
+        animClock += dt;
 
-        // Vurus tespiti
-        if (dummy != null && dummy.TotalDamage != lastTotal)
-        {
-            lastTotal = dummy.TotalDamage;
-            flinchVel += 1f * flinchStiffness * 1.4f;
-        }
+        // ---- Yon: dogal olarak SOLA bakar. facingSource.flipX true = sola; false = saga ----
+        bool faceRight = facingSource != null ? !facingSource.flipX : flipX;
+        float sgn = faceRight ? -1f : 1f;
+        float sc = Mathf.Abs(scale);
+        if (!Mathf.Approximately(visual.localScale.x, sgn * sc) || !Mathf.Approximately(visual.localScale.y, sc))
+            visual.localScale = new Vector3(sgn * sc, sc, 1f);
+        const float dir = 1f;   // ayna visual'in x olceginde; aci/konum islemleri yerelde, tek yon
+
+        // ---- Vurus (spring) ----
         flinchVel += (-flinch * flinchStiffness * flinchStiffness - flinchVel * flinchStiffness * 0.5f) * dt;
         flinch += flinchVel * dt;
         float f = Mathf.Clamp(flinch, -1.5f, 1.5f);
-        float dir = flipX ? -1f : 1f;
 
-        float t = Time.time * breathsPerSecond * 6.2832f + phase;
+        float t = animClock * breathsPerSecond * 6.2832f + phase;
         float b = Mathf.Sin(t);               // nefes: -1..1
         float b2 = Mathf.Sin(t - 0.7f);       // gecikmeli (bas)
         float b3 = Mathf.Sin(t - 1.3f);       // daha gecikmeli (kol/kilic)
         float inhale = b * 0.5f + 0.5f;
 
-        // Boss sola bakiyor (kilic solda): geriye = +x
-        Set("root", new Vector3(f * flinchShove * 0.6f * dir, -inhale * 0.0f, 0f), 0f,
-            new Vector3(1f + rootSquash * 0.5f * b, 1f - rootSquash * b, 1f));
-        Set("belly", new Vector3(0f, bellyLift * inhale, 0f), -f * flinchDeg * 0.3f * dir);
-        Set("chest", new Vector3(0f, chestLift * inhale, 0f), (-chestTiltDeg * inhale + f * flinchDeg) * dir,
+        // ---- Saldiri pozu (Boss sola bakiyor: geri = saat yonu = negatif z) ----
+        float k, s;
+        TickAttack(dt, out k, out s);
+        float atkAmt = Mathf.Clamp01(Mathf.Max(k, s));
+
+        // ---- Yuruyus ----
+        if (body == null) body = GetComponent<Rigidbody2D>();
+        float speed = body != null ? Mathf.Abs(body.linearVelocity.x) : 0f;
+        bool canWalk = walkEnabled && MoveAllowed && !Staggered && !Dead && atkState == AtkState.None && speed > 0.3f;
+        walkW = Mathf.MoveTowards(walkW, canWalk ? 1f : 0f, dtR * (canWalk ? 4f : 6f));
+        if (canWalk)
+        {
+            float strideWorld = Mathf.Max(0.1f, walkStride * Mathf.Abs(visual.lossyScale.y));
+            // Yerdeki ayak (1 - walkSwing) faz kadar surede walkStride kadar geri kayar -> kayma yok.
+            walkPhase = Mathf.Repeat(walkPhase + (1f - walkSwing) * speed / strideWorld * dtR, 1f);
+        }
+        plantKick *= Mathf.Exp(-dtR * 9f);
+        if (walkW > 0.001f) UpdateLegs(walkW); else { for (int i = 0; i < legU.Length; i++) legU[i] = -1f; UpdateLegs(0f); }
+
+        float w = walkW;
+        float sway = Mathf.Sin(walkPhase * 6.2832f);
+        float stepWave = Mathf.Sin(walkPhase * 6.2832f * 3f - 1.2f);   // 3 adim / dongu
+        float kick = plantKick * w;
+
+        staggerW = Mathf.MoveTowards(staggerW, Staggered && !Dead ? 1f : 0f, dtR * 5f);
+        deadW = Mathf.MoveTowards(deadW, Dead ? 1f : 0f, dtR * 2.5f);
+
+        float idleW = (1f - atkAmt) * (1f - w) * (1f - staggerW) * (1f - deadW);   // nefes sallanmasini kis
+        float tremble = 0f;
+        if (atkState == AtkState.Windup || atkState == AtkState.Tension)
+            tremble = Mathf.Sin(animClock * 55f) * windupTremble * Mathf.Clamp01(k) * Mathf.Clamp01(k);
+        float shake = (sinceHit < 0.6f) ? Mathf.Exp(-sinceHit * 14f) * Mathf.Sin(sinceHit * 60f) * impactShakeDeg : 0f;
+
+        float lean = walkLeanDeg * w;
+        float atkChest = windupChestDeg * k + strikeChestDeg * s + tremble * 0.5f + shake * 0.6f
+                         + lean + kick * 2.5f + staggerW * 10f + deadW * 28f;
+        float atkBelly = windupBellyDeg * k + strikeBellyDeg * s + lean * 0.5f + staggerW * 6f + deadW * 14f;
+        float atkHead = windupHeadDeg * k + strikeHeadDeg * s - lean * 0.6f + kick * 3f + staggerW * 12f + deadW * 20f;
+        float atkArm = windupArmDeg * k + strikeArmDeg * s + tremble + kick * 2f + w * stepWave * 1.5f + staggerW * 8f + deadW * 25f;
+        float atkSword = windupSwordDeg * k + strikeSwordDeg * s + tremble * 0.6f + shake
+                         + w * walkSwordSwing * stepWave + kick * walkSwordSwing;
+        float atkArmL = windupArmLDeg * k + strikeArmLDeg * s - tremble * 0.8f
+                        + w * walkArmLSwing * Mathf.Sin(walkPhase * 6.2832f + 1.57f) + staggerW * 10f + deadW * 15f;
+        float atkCrouch = windupCrouch * k + strikeCrouch * s + walkDip * kick * kick + staggerW * 0.05f + deadW * 0.12f;
+
+        // Root: cokme/nefes arka ayagin zemin noktasi etrafinda olceklenir (ayak kaymaz).
+        float sx = 1f + rootSquash * 0.5f * b + atkCrouch * 0.35f;
+        float sy = 1f - rootSquash * b - atkCrouch;
+        Vector3 rootPivotShift = new Vector3(pivotBackFoot.x * (1f - sx), pivotBackFoot.y * (1f - sy), 0f);
+
+        Set("root", new Vector3(f * flinchShove * 0.6f * dir, 0f, 0f) + rootPivotShift, 0f,
+            new Vector3(sx, sy, 1f));
+        Set("belly", new Vector3(0f, bellyLift * inhale, 0f), (-f * flinchDeg * 0.3f + atkBelly) * dir);
+        Set("chest", new Vector3(sway * 0.07f * w, chestLift * inhale, 0f), (-chestTiltDeg * inhale * idleW + f * flinchDeg + atkChest) * dir,
             new Vector3(1f + chestScale * inhale, 1f + chestScale * 1.4f * inhale, 1f));
-        Set("head", new Vector3(0f, 0.02f * b2, 0f), (headNodDeg * b2 - f * flinchDeg * 0.7f) * dir);
-        Set("shoulderR", Vector3.zero, (armSwayDeg * b3 + f * flinchDeg * 0.5f) * dir);
-        Set("sword", Vector3.zero, (swordSwayDeg * -b3) * dir);
+        Set("head", new Vector3(0f, 0.02f * b2, 0f), (headNodDeg * b2 * idleW - f * flinchDeg * 0.7f + atkHead) * dir);
+        Set("shoulderR", Vector3.zero, (armSwayDeg * b3 * idleW + f * flinchDeg * 0.5f + atkArm) * dir);
+        float swordAngle = swordSwayDeg * -b3 * idleW + atkSword;
+        Set("sword", Vector3.zero, swordAngle * dir);
+        SetAround("armL_upper", armLPivot, (armLSwayDeg * -b3 * idleW - f * flinchDeg * 0.4f + atkArmL) * dir);
+
+        if (keepBladeAboveGround) ClampBladeAboveGround(swordAngle, dir);
+    }
+
+    // Bicagin en alcak noktasi (visual/rig uzayinda y).
+    float LowestBladeY(Transform sw)
+    {
+        float low = float.MaxValue;
+        for (int i = 0; i < BladeHull.Length; i++)
+        {
+            Vector3 w = sw.TransformPoint(new Vector3(BladeHull[i].x, BladeHull[i].y, 0f));
+            float y = visual.InverseTransformPoint(w).y;
+            if (y < low) low = y;
+        }
+        return low;
+    }
+
+    // Kilic zemin cizgisinin altina inerse bilegi (saat yonunde) yukari kaldirip tam cizgiye oturtur.
+    void ClampBladeAboveGround(float swordAngle, float dir)
+    {
+        Transform sw;
+        if (!bones.TryGetValue("sword", out sw)) return;
+        if (LowestBladeY(sw) >= groundY) return;
+
+        Quaternion rest = restRot["sword"];
+        float lo = 0f, hi = 70f;
+        for (int i = 0; i < 12; i++)
+        {
+            float mid = (lo + hi) * 0.5f;
+            sw.localRotation = rest * Quaternion.Euler(0f, 0f, (swordAngle - mid) * dir);
+            if (LowestBladeY(sw) < groundY) lo = mid; else hi = mid;
+        }
+        sw.localRotation = rest * Quaternion.Euler(0f, 0f, (swordAngle - hi) * dir);
     }
 }

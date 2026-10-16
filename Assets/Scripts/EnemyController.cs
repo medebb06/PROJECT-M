@@ -457,8 +457,19 @@ public class EnemyController : MonoBehaviour
     public IEnemyState CurrentState =>
         currentState;
 
+    // Saldırı animasyonu istendiğinde (Animator olmasa da) haber verir. Kodla çizilen boss'lar (Boss1) buna bağlanır.
+    public event System.Action AttackAnimationRequested;
+
+    // Yön okunan/yazılan SpriteRenderer'ı dışarıdan verir (çizilmeyen yardımcı renderer da olabilir).
+    public void SetFacingRenderer(SpriteRenderer renderer)
+    {
+        enemySprite = renderer;
+    }
+
     public void PlayAttackAnimation()
     {
+        AttackAnimationRequested?.Invoke();
+
         if (animator == null)
             return;
 
