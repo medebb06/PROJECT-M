@@ -175,12 +175,10 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayParryImpact()
     {
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
-        // Daha uzun ve ZAMANLA HIZLANAN hit-stop: kisa tam donma, sonra cok yavas baslayip
-        // (power 2.6) giderek normale hizlanan agir cekim.
-        float pf = Mathf.Max(parryFreezeTime, 0.16f), ps = Mathf.Max(parrySlowTime, 0.55f);
-
-        HitStop.Request(pf, 0f, ParryPriority);
-        HitStop.RequestRamp(pf + ps, 0.08f, 1f, 2.6f, ParryPriority);
+        // Parry'de zaman sadece DUSMANLAR icin yavaslar (oyuncu normal hizda): cok yavas baslayip
+        // (power 2.6) giderek normale hizlanan ramp. Global Time.timeScale degismez.
+        float slowDur = Mathf.Max(parryFreezeTime + parrySlowTime, 0.75f);
+        EnemyTime.RequestRamp(slowDur, 0.05f, 2.6f);
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 
