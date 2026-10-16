@@ -66,7 +66,9 @@ public class Boss1Rig : MonoBehaviour
     [Header("Agir yuruyus")]
     public bool walkEnabled = true;
     [Tooltip("Bir adimda ayagin yerde kat ettigi mesafe (rig birimi). Buyuk = uzun, yavas adim. Rig'in menzil siniri ~1.6.")]
-    [Range(0.6f, 1.6f)] public float walkStride = 1.4f;
+    [Range(0.6f, 1.6f)] public float walkStride = 1.6f;
+    [Tooltip("Yuruyus animasyonunun hizi (1 = eski). Dusuk = daha yavas, dev adimlar. Hareket hizi/mesafe DEGISMEZ; sadece adimlar yavaslar (ayaklar biraz kayabilir).")]
+    [Range(0.15f, 1f)] public float walkAnimSpeed = 0.28f;
     [Tooltip("Adim fazinin ne kadari ayak havada (0.4 = ayak %40 havada, %60 yerde; 2 bacakli yurume icin en cok 0.5). Kucuk = daha agir, daha 'basarak' yuruyus.")]
     [Range(0.2f, 0.5f)] public float walkSwing = 0.4f;
     [Tooltip("Ayagin yerden kalkma yuksekligi (rig birimi).")]
@@ -203,6 +205,14 @@ public class Boss1Rig : MonoBehaviour
     };
 
     enum AtkState { None, Windup, Tension, Strike, Hold, Recover, Cancel }
+
+    float atkScale = 1f;          // >1: gerilme/darbe hizlanir (hizli vurus)
+    float extraTension;           // gergin pozda ek bekleme (gecikmeli vurus)
+    readonly List<SpriteRenderer> swordSrs = new List<SpriteRenderer>();
+    Color swordTintColor = new Color(0.4f, 0.02f, 0.03f, 1f);
+    float swordTintTarget, swordTintCur = -1f, swordTintSpeed = 7f;
+    SpriteRenderer metalSr, coreSr, haloSr;
+    bool metalBuilt;
     AtkState atkState = AtkState.None;
     float atkTimer, atkEndedAt = -999f, sinceHit = 999f;
     float lastK, lastS, cancelK, cancelS, startK, startS;
@@ -215,11 +225,17 @@ public class Boss1Rig : MonoBehaviour
 
     [Header("Vurus hissi (squash/stretch + flas)")]
     [Tooltip("Vurulunca govde ne kadar ezilip esner (0 = kapali).")]
-    [Range(0f, 0.4f)] public float squashAmount = 0.16f;
+    [Range(0f, 0.4f)] public float squashAmount = 0.2f;
     [Range(6f, 40f)] public float squashStiffness = 20f;
     [Tooltip("Hasar alinca butun govdenin beyaz yanma suresi (sn, gercek zaman).")]
     [Range(0f, 0.3f)] public float flashTime = 0.09f;
     float sq, sqVel, flashTimer;
+
+    [Header("Ziplama saldirisi (Boss1Enemy yonetir)")]
+    [Tooltip("Cokme/uzama (SetBaseSquash) siddeti: 1 = govde %35 ezilir/uzar.")]
+    [Range(0f, 0.7f)] public float leapSquashAmount = 0.12f;
+    float sqBase, sqBaseTarget, sqBaseSpeed = 5f;
+    bool holdTension;
     bool flashBuilt, flashOn;
     SpriteRenderer[] flashSrs;
     Sprite[] origSprites, whiteSprites;
@@ -291,6 +307,7 @@ public class Boss1Rig : MonoBehaviour
 
         Material mat = material != null ? material : DefaultMaterial();
 
+        swordSrs.Clear();
         foreach (LayerDef l in rig.layers)
         {
             Sprite sp = Resources.Load<Sprite>("Boss1/" + l.file);
@@ -308,6 +325,7 @@ public class Boss1Rig : MonoBehaviour
             sr.sortingLayerName = string.IsNullOrEmpty(sortingLayerName) ? "Default" : sortingLayerName;
             sr.sortingOrder = l.order;
             go.layer = gameObject.layer;
+            if (l.bone == "sword" || l.name == "sword") swordSrs.Add(sr);
         }
         v.layer = gameObject.layer;
         foreach (Transform t in bones.Values) t.gameObject.layer = gameObject.layer;
@@ -373,6 +391,8 @@ public class Boss1Rig : MonoBehaviour
     [ContextMenu("Test: Saldiri Oynat")]
     public bool PlayAttack()
     {
+        atkScale = 1f; extraTension = 0f;
+        holdTension = false;
         startK = lastK; startS = lastS;
         atkState = AtkState.Windup;
         atkTimer = 0f;
@@ -382,10 +402,192 @@ public class Boss1Rig : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Darbe 'contactSeconds' sonra insin: normalden KISAysa animasyon hizlanir (hizli vurus),
+    /// UZUNsa gergin pozda ek sure bekler (gecikmeli vurus).
+    /// </summary>
+    public bool PlayAttack(float contactSeconds, bool slowRaise = false)
+    {
+        bool ok = PlayAttack();
+        float baseT = ContactTime;
+        if (contactSeconds > 0.05f)
+        {
+            if (contactSeconds < baseT) atkScale = Mathf.Clamp(baseT / contactSeconds, 1f, 4f);
+            else if (slowRaise) atkScale = Mathf.Clamp(baseT / contactSeconds, 0.35f, 1f);   // yavas yavas kaldir
+            else extraTension = contactSeconds - baseT;
+        }
+        return ok;
+    }
+
+    /// <summary>Kilic kemigi (efekt baglamak icin). Yoksa null.</summary>
+    public Transform SwordBone { get { Transform t; return bones.TryGetValue("sword", out t) ? t : null; } }
+
+    /// <summary>Kilic bicaginin ortasi (sword kemigi uzayi).</summary>
+    public Vector3 SwordBladeCenter { get { return new Vector3(4.0f, 3.0f, 0f); } }
+
+    /// <summary>Kilic katmanini koyu tona boyar (0 = normal, 1 = tam). Yumusakca gecer.</summary>
+    public void SetSwordTint(Color c, float amount, float speed = 7f)
+    {
+        swordTintColor = c;
+        swordTintTarget = Mathf.Clamp01(amount);
+        swordTintSpeed = Mathf.Max(0.05f, speed);
+        if (swordTintTarget > 0f) EnsureMetalOverlay();
+    }
+
+    // Kilic bicaginin METAL bolgesi (BladeHull; sap haric): parlak kirmizi-beyaz cekirdek + additive isima + yumusak hale.
+    // (Oyuncunun kilicindaki "execute hazir" parlamasinin kirmizi karsiligi; duz/koyu boya degil.)
+    void EnsureMetalOverlay()
+    {
+        if (metalBuilt || swordSrs.Count == 0 || swordSrs[0] == null || swordSrs[0].sprite == null) return;
+        metalBuilt = true;
+
+        SpriteRenderer baseSr = swordSrs[0];
+        Sprite sp = baseSr.sprite;
+        Texture2D src = sp.texture;
+        Rect r = sp.textureRect;
+        int rw = Mathf.Max(1, Mathf.RoundToInt(r.width)), rh = Mathf.Max(1, Mathf.RoundToInt(r.height));
+        RenderTexture rt = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        Graphics.Blit(src, rt);
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+        Texture2D t = new Texture2D(rw, rh, TextureFormat.RGBA32, false);
+        t.ReadPixels(new Rect(r.x, r.y, rw, rh), 0, 0);
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+
+        Color32[] px = t.GetPixels32();
+        float[] mask = new float[px.Length];
+        Vector2 lp = baseSr.transform.localPosition;
+        float ppu = sp.pixelsPerUnit > 0f ? sp.pixelsPerUnit : 100f;
+        Color dark = new Color(0.62f, 0f, 0.01f), hotC = new Color(1f, 0.06f, 0.04f);
+        for (int y = 0; y < rh; y++)
+        {
+            for (int x = 0; x < rw; x++)
+            {
+                int i = y * rw + x;
+                Color32 c = px[i];
+                Vector2 bp = new Vector2((x + 0.5f - sp.pivot.x) / ppu + lp.x, (y + 0.5f - sp.pivot.y) / ppu + lp.y);
+                if (c.a < 8 || !InBlade(bp)) { px[i] = new Color32(0, 0, 0, 0); continue; }
+                float lum = Mathf.Max(c.r, Mathf.Max(c.g, c.b)) / 255f;
+                Color o = Color.Lerp(dark, hotC, lum);
+                px[i] = new Color32((byte)(o.r * 255f), (byte)(o.g * 255f), (byte)(o.b * 255f), c.a);
+                mask[i] = c.a / 255f;
+            }
+        }
+        t.SetPixels32(px);
+        t.Apply();
+        t.filterMode = src.filterMode;
+        Vector2 pivot = new Vector2(sp.pivot.x / r.width, sp.pivot.y / r.height);
+        Sprite core = Sprite.Create(t, new Rect(0, 0, rw, rh), pivot, sp.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+
+        // Hale: maskenin bulaniklastirilmis, kenarlara tasan kopyasi.
+        int pad = Mathf.Max(12, Mathf.RoundToInt(Mathf.Max(rw, rh) * 0.06f));
+        int hw = rw + pad * 2, hh = rh + pad * 2;
+        float[] m = new float[hw * hh];
+        for (int y = 0; y < rh; y++) for (int x = 0; x < rw; x++) m[(y + pad) * hw + x + pad] = mask[y * rw + x];
+        int rad = Mathf.Max(2, pad / 2);
+        for (int pass = 0; pass < 2; pass++) { m = BoxBlur(m, hw, hh, rad, true); m = BoxBlur(m, hw, hh, rad, false); }
+        Color32[] hp = new Color32[hw * hh];
+        for (int i = 0; i < hp.Length; i++)
+        {
+            float a = Mathf.Clamp01(m[i] * 2.6f);
+            hp[i] = new Color32(255, 0, 0, (byte)(a * 255f));
+        }
+        Texture2D ht = new Texture2D(hw, hh, TextureFormat.RGBA32, false);
+        ht.SetPixels32(hp); ht.Apply(); ht.filterMode = FilterMode.Bilinear;
+        Vector2 hpv = new Vector2((sp.pivot.x + pad) / hw, (sp.pivot.y + pad) / hh);
+        Sprite halo = Sprite.Create(ht, new Rect(0, 0, hw, hh), hpv, sp.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+
+        Shader add = Shader.Find("ProjectM/Boss1SpriteAdditive");
+        Material addMat = null;
+        if (add != null)
+        {
+            addMat = new Material(add) { name = "Boss1_SwordGlow" };
+            addMat.SetFloat("_Intensity", 7f);   // Impact materyalinin HDR parlakligina (~8.6) yakin: bloom verir
+        }
+
+        haloSr = MakeOverlay("SwordHalo", baseSr, halo, baseSr.sortingOrder + 1, 1f, addMat);
+        metalSr = MakeOverlay("SwordMetalRed", baseSr, core, baseSr.sortingOrder + 2, 1f, null);
+        coreSr = MakeOverlay("SwordCoreGlow", baseSr, core, baseSr.sortingOrder + 3, 1f, addMat);
+        haloSr.enabled = false; metalSr.enabled = false; coreSr.enabled = false;
+    }
+
+    static float[] BoxBlur(float[] a, int w, int h, int rad, bool horiz)
+    {
+        float[] o = new float[a.Length];
+        int len = horiz ? w : h, lines = horiz ? h : w;
+        float inv = 1f / (rad * 2 + 1);
+        for (int l = 0; l < lines; l++)
+        {
+            float sum = 0f;
+            for (int k = -rad; k <= rad; k++) sum += Get(a, w, h, horiz, l, k);
+            for (int k = 0; k < len; k++)
+            {
+                int idx = horiz ? l * w + k : k * w + l;
+                o[idx] = sum * inv;
+                sum += Get(a, w, h, horiz, l, k + rad + 1) - Get(a, w, h, horiz, l, k - rad);
+            }
+        }
+        return o;
+    }
+
+    static float Get(float[] a, int w, int h, bool horiz, int line, int k)
+    {
+        if (k < 0 || k >= (horiz ? w : h)) return 0f;
+        return horiz ? a[line * w + k] : a[k * w + line];
+    }
+
+    SpriteRenderer MakeOverlay(string n, SpriteRenderer baseSr, Sprite sp, int order, float scl, Material mat)
+    {
+        GameObject go = new GameObject(n);
+        go.transform.SetParent(baseSr.transform, false);
+        go.transform.localScale = new Vector3(scl, scl, 1f);
+        go.layer = baseSr.gameObject.layer;
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sp;
+        sr.sharedMaterial = mat != null ? mat : baseSr.sharedMaterial;
+        sr.sortingLayerID = baseSr.sortingLayerID;
+        sr.sortingOrder = order;
+        return sr;
+    }
+
+    static bool InBlade(Vector2 p)
+    {
+        bool inside = false;
+        for (int i = 0, j = BladeHull.Length - 1; i < BladeHull.Length; j = i++)
+        {
+            Vector2 a = BladeHull[i], b = BladeHull[j];
+            if ((a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x)
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    /// <summary>Ziplama saldirisi: kilici kaldirip gerilir ve ReleaseStrike() cagrilana kadar o pozda bekler.</summary>
+    public void PlayLeapTense()
+    {
+        PlayAttack();
+        holdTension = true;
+    }
+
+    /// <summary>Beklemeyi birakir: darbe (Strike) hemen baslar.</summary>
+    public void ReleaseStrike()
+    {
+        holdTension = false;
+    }
+
+    /// <summary>Govdeyi surekli ezik (+) ya da uzamis (-) tutar; hedefe 'speed' birim/sn ile gider.</summary>
+    public void SetBaseSquash(float target, float speed)
+    {
+        sqBaseTarget = target;
+        sqBaseSpeed = Mathf.Max(0.01f, speed);
+    }
+
     /// <summary>Gerilme/bekleme asamasindaki saldiriyi yumusakca iptal eder (dusman sersemleyince / vurulunca). Darbe sonrasi iptal edilmez.</summary>
     public bool CancelAttack()
     {
         if (atkState != AtkState.Windup && atkState != AtkState.Tension) return false;
+        holdTension = false;
         cancelK = lastK; cancelS = lastS;
         atkState = AtkState.Cancel;
         atkTimer = 0f;
@@ -458,7 +660,6 @@ public class Boss1Rig : MonoBehaviour
     public void OnParried(bool brokeBalance)
     {
         Flinch(brokeBalance ? 2.4f : 1.6f);
-        Squash(brokeBalance ? 1.6f : 1.1f);
         sinceHit = 0f;
     }
 
@@ -478,7 +679,7 @@ public class Boss1Rig : MonoBehaviour
 
         if (skipDt) { skipDt = false; return; }
 
-        atkTimer += dt;
+        atkTimer += dt * ((atkState == AtkState.Windup || atkState == AtkState.Tension || atkState == AtkState.Strike) ? atkScale : 1f);
         switch (atkState)
         {
             case AtkState.Windup:
@@ -491,8 +692,13 @@ public class Boss1Rig : MonoBehaviour
                 break;
             case AtkState.Tension:
                 k = 1f + tensionOvershoot * Smooth(atkTimer / Mathf.Max(0.01f, tensionTime));
-                if (atkTimer >= tensionTime)
+                if (atkTimer >= tensionTime + extraTension)
                 {
+                    if (holdTension)
+                    {
+                        atkTimer = tensionTime + extraTension;   // ziplama: gergin pozda bekle
+                        break;
+                    }
                     atkState = AtkState.Strike; atkTimer = 0f;
                     if (AttackStrikeStarted != null) AttackStrikeStarted();
                 }
@@ -623,6 +829,20 @@ public class Boss1Rig : MonoBehaviour
     {
         if (visual == null || bones.Count == 0) return;
         float dtR = Time.deltaTime;
+        if (swordTintCur < 0f) swordTintCur = 0f;
+        swordTintCur = Mathf.MoveTowards(swordTintCur, swordTintTarget, dtR * swordTintSpeed);
+        if (metalSr != null)
+        {
+            bool on = swordTintCur > 0.003f;
+            metalSr.enabled = on; coreSr.enabled = on; haloSr.enabled = on;
+            if (on)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 8f);
+                metalSr.color = new Color(1f, 1f, 1f, swordTintCur);
+                coreSr.color = new Color(1f, 0.02f, 0.02f, swordTintCur * (0.45f + 0.45f * pulse));
+                haloSr.color = new Color(1f, 0f, 0f, swordTintCur * (0.4f + 0.4f * pulse));
+            }
+        }
         float dt = EnemyTime.DeltaTime;      // dusman zamani: parry yavaslatmasinda animasyon da yavaslar
         animClock += dt;
 
@@ -647,7 +867,8 @@ public class Boss1Rig : MonoBehaviour
         // Squash/stretch yayi: pozitif = ezilir (yassilir, genisler), negatif = esner.
         sqVel += (-sq * squashStiffness * squashStiffness - sqVel * squashStiffness * 0.5f) * Time.unscaledDeltaTime;
         sq = Mathf.Clamp(sq + sqVel * Time.unscaledDeltaTime, -1.2f, 1.2f);
-        float sqx = 1f + sq * squashAmount, sqy = 1f - sq * squashAmount;
+        sqBase = Mathf.MoveTowards(sqBase, sqBaseTarget, sqBaseSpeed * Time.unscaledDeltaTime);
+        float sqx = 1f + sq * squashAmount + sqBase * leapSquashAmount, sqy = 1f - sq * squashAmount - sqBase * leapSquashAmount;
         visual.localScale = new Vector3(sgn * sc * sqx, sc * sqy, 1f);
         const float dir = 1f;   // ayna visual'in x olceginde; aci/konum islemleri yerelde, tek yon
 
@@ -676,7 +897,7 @@ public class Boss1Rig : MonoBehaviour
         {
             float strideWorld = Mathf.Max(0.1f, walkStride * Mathf.Abs(visual.lossyScale.y));
             // Yerdeki ayak (1 - walkSwing) faz kadar surede walkStride kadar geri kayar -> kayma yok.
-            walkPhase = Mathf.Repeat(walkPhase + (1f - walkSwing) * speed / strideWorld * dtR, 1f);
+            walkPhase = Mathf.Repeat(walkPhase + (1f - walkSwing) * speed / strideWorld * walkAnimSpeed * dtR, 1f);
         }
         plantKick *= Mathf.Exp(-dtR * 9f);
         if (walkW > 0.001f) UpdateLegs(walkW); else { for (int i = 0; i < legU.Length; i++) legU[i] = -1f; UpdateLegs(0f); }

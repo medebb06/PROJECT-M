@@ -429,8 +429,12 @@ public class EnemyController : MonoBehaviour
 
     // Saldırının kararlı aşamasında mı?
     public bool IsAttackCommitted =>
-        currentState is EnemyAttackState attack &&
-        attack.IsCommitted;
+        superArmorOverride ||
+        (currentState is EnemyAttackState attack &&
+        attack.IsCommitted);
+
+    // Ozel saldiri state'leri (Boss1 ziplama) icin: true iken vurulmak savurmaz / state'i bozmaz.
+    public bool superArmorOverride;
 
     // Hedef (oyuncu) öldü mü?
     public bool IsTargetDead

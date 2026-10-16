@@ -101,6 +101,20 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 - Saldırı sarsıntısı: `attackShake` 2.5 + yeni `RunCameraZoom.AddShake(dünya birimi)` (doğrudan konum titremesi, ~0.14 sn üstel sönüm; `attackShakeWorld` çarpanı 0.5). Sebep: Cinemachine impulse (CameraShake) görünmüyordu; Instance/impulse atanmış mı doğrulanmadı.
 - `parryEffectScale` 20 -> 10.
 
+### Boss1 baş üstü bar + yavaş adım (2026-10-16, 16) — DERLENMEDİ / OYNANMADI
+- `Enemyoverheadbars.cs`: Boss1 için baş üstü can/denge çubuğu çizilmez (ekran üstü bar kalır).
+- `Boss1Rig.walkAnimSpeed` (0.4): yürüyüş fazı bu çarpanla ilerler -> adımlar çok daha yavaş, hareket hızı/mesafe aynı. `walkStride` 1.6 (IK menzil sınırı). Bilinen: yer ayağı gövdeyle tam eşit hızda geri kaymadığı için ayaklar bir miktar kayabilir (adım boyu IK ile sınırlı).
+
+### Boss1 ZIPLAMA SALDIRISI (2026-10-16, 17) — DERLENMEDİ / OYNANMADI
+- `Boss1Enemy.Boss1LeapState` (IEnemyState, iç sınıf): Crouch (kılıç kalkık + gövde ezik, `Boss1Rig.PlayLeapTense` gerilmede bekler) -> Rise (dik zıplayıp ekran dışına, oyuncunun/kameranın `leapApexAbove` üstü; colliderlar kapalı, rb Kinematic) -> Air (yerde kırmızı daire isareti oyuncuyu `leapTrackTime` sn izler, sonra KİLİTLENİR ve hızlı yanıp söner; boss x'i isaretin x'i) -> Fall (`leapFallTime` 0.1 sn, `ReleaseStrike` ile kılıç inişte iner) -> Land (hasar: yatay `leapRadius` 16 içinde ve ayak `leapHitHeight` altında; dash i-frame kaçırır; parry/blok YOK -> `PlayerHitKind.Unblockable`; `CameraShake` + `RunCameraZoom.AddShake`, squash). Sonra Chase'e döner.
+- Tetik: `Boss1Enemy.Update`'te Chase iken oyuncu yatay `leapMinDistance`(12)..`leapMaxDistance`(90) arasında ve süre dolduysa saniyede `leapChancePerSecond` (0.35) olasılıkla; ilk ziplama `leapFirstDelay` 6 sn, sonra `leapCooldown` 9 sn. `leapEnabled=false` kapatır.
+- Kayma önleme: `EnemyController.superArmorOverride` (yeni; `IsAttackCommitted` buna da bakar) true iken vuruş state'i bozmaz. Havadayken colliderlar kapalı = vurulamaz.
+- `Boss1Rig`: `PlayLeapTense()`, `ReleaseStrike()`, `SetBaseSquash(target, speed)` + `leapSquashAmount`. `PlayAttack()` hold'u sıfırlar.
+- Doğrulanmadı: ekran dışı yükseklik yeterli mi, yer yüksekliği (`groundY` = başlangıç y), isaret sorting'i (Default/40) zeminin üstünde mi, kameranın uçan boss'u takip edip etmediği, Kinematic<->Dynamic geçişi.
+
+### Boss1 yakın mesafe ziplama (2026-10-16, 18) — DERLENMEDİ / OYNANMADI
+- `leapMinDistance` 0. Yakında: normal vuruş başlarken (`OnAttackAnimationRequested`) ziplama hazırsa `leapCloseChance` (0.4) olasılıkla `pendingLeap`; ertesi karede `Update` AttackState'ten Boss1LeapState'e geçer (normal animasyon başlatılmaz). Not: AttackState'in ilk karesi (uyarı sesi) çalmış olabilir; istatistikte "saldırı kesildi" sayılabilir.
+
 ## Last completed work
 - AI_CONTEXT.md, AI_RULES.md, AI_HANDOFF.md proje köküne kopyalandı (`D:\Oyun\PROJECT-M`). Eski `.md.txt` kopyaları `ProjectSettings/` içinde DURUYOR (silme aracı yoktu); elle silinmeli.
 - Assets/Scripts, Player/Duelist/Boss1/Archer prefab'ları ve MyScene2.unity incelendi (scriptlerin yaklaşık yarısı satır satır, kalanı yalnızca dosya adı/boyut düzeyinde).
@@ -129,3 +143,27 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 
 ## Git status
 - Dal: main. Son commit ve uncommitted değişiklikler: GitHub Desktop'tan kontrol edilip buraya yazılmalı.
+
+## Boss1 ziplama duzeltmesi (2026-10-16, 19) — DERLENMEDİ / OYNANMADI
+- Zıplama squash'ı azaltıldı: `Boss1Rig.leapSquashAmount` 0.35 -> 0.12, iniş `Squash` 1.3 -> 0.5.
+- Uyarı alanı: zemine paralel düz kırmızı şerit (`leapStripHeight`), izometrik elips kalktı.
+- Matematik (`Boss1LeapState.ComputeWindow`, `leapAutoRadius`): yarıçap = `dashDistance*DashState.DistanceScale*leapEdgeMargin(0.95)`; kilit penceresi = `leapReaction(0.3) + dashDur - leapFallTime`. Kilitlenince hemen dash atan oyuncu şeridin dışına ucu ucuna çıkar. Kapatılırsa `leapRadius`/`leapReaction` kullanılır.
+- Odaklandıktan sonra `leapSlamCount`=3 ardışık iniş (2. ve 3.'de izleme `leapChainTrackTime` 0.3 sn, aralarda `leapChainGap`).
+- Not: device'a commit bazen eski içeriği yazdı (önbellek); farklı stagedPath ile yazıp geri okuyarak doğrulandı.
+## Boss1 agresiflik + uclu kombo (2026-10-16, 20) — DERLENMEDİ / OYNANMADI
+- Agresiflik: `walkSpeed` 8.5->15, `chaseRange` 1000->5000, `extraCooldown` 2.0->1.2, `leapFirstDelay` 6->4, `leapCooldown` 9->6; `Boss1Rig.walkAnimSpeed` 0.4->0.28 (hizlanan hizla adim frekansi cok artmasin). Boss1Enemy sahnede serialize edilmisse bu varsayilanlar uygulanmaz, Inspector'dan elle ayarla.
+- Blok = posture kirma: `blocksToBreakPosture`=2; `enemy.blockPostureDamage = ceil(player.MaxPosture / 2) + 1` (`RefreshBlockPosture`). Kombo blok posture carpani 1'e cekildi. Parry zorunlu.
+- Yeni yetenek "Boss1 Uclu Kombo": runtime'da `EnemyMoveset` eklenir (tek hamle, `comboCooldown` 6 sn; hazir degilken klasik tek vurus). Vuruslar: 0.55 sn, 0.36 sn (hizli), 1.45 + rastgele 0..0.45 sn (GECIKMELI, hasar x1.3, parry odulu x1.5). Hasar/parry/blok mantigi mevcut EnemyAttackState kombo altyapisi.
+- Rig: `Boss1Rig.PlayAttack(float contactSeconds)` — kisaysa gerilme/darbe hizlanir (`atkScale`), uzunsa gergin pozda bekler (`extraTension`). `SwordBone`, `SetSwordTint` eklendi.
+- VFX: `Assets/Free Slash VFX/Prefabs/Impact.prefab` KOPYASI `Assets/Sprites/Boss1/Resources/Boss1/Vfx/Boss1SwordImpact.prefab` (Resources'tan yuklenebilsin diye). Kombo boyunca kilic kemigine baglanir, parcacik/materyal renkleri koyu kirmizi (`comboColor`) yapilir (TintVfx), kilic sprite'i de koyu tonlanir. Boyut: `comboVfxScale`.
+- Dikkat: prefab kopyasinin .meta'si Unity tarafindan yeni GUID ile olusur. Efekt hic gorunmezse Console'da "kombo VFX'i yok" uyarisina bak.
+
+## Boss1 kombo okunurlugu (2026-10-16, 21) — DERLENMEDİ / OYNANMADI
+- Kilic METAL bolgesi (`BladeHull` poligonu, sap haric) runtime'da kirmiziya boyanan kaplama sprite'i + yumusak hale (`Boss1Rig.EnsureMetalOverlay`); kombo boyunca nabiz atar (oyuncudaki execute parlamasi mantigi, kirmizi). Oyuncudaki parlama sprite sanatindan geliyor, kodda yok.
+- Kombo girisi: 1. vurus hazirligi `comboFirstWindup` 0.55 -> 1.8 sn; kilic YAVASCA kalkar (`PlayAttack(contact, slowRaise:true)` -> atkScale ~0.6) ve parlama 0.9/sn ile kademeli artar. Sonraki vuruslar hizli / gecikmeli kalir.
+- `Boss1Rig.SetSwordTint(color, amount, speed)`: artik tum sword sprite'ini degil, yalniz kaplamayi surer.
+
+## Boss1 kilic parlamasi duzeltmesi (2026-10-16, 22) — DERLENMEDİ / OYNANMADI
+- Onceki koyu kirmizi kaplama "kan" gibi gorundu. Yerine: bicak metali parlak saf kirmizi (koyu 0.62 -> sicak 1.0 kirmizi, pembe yok) + additive cekirdek + bulanik hale. Additive shader: `Assets/Shaders/Boss1SpriteAdditive.shader` (`ProjectM/Boss1SpriteAdditive`, `_Intensity`=7, Impact materyali `_Color` ~8.6 HDR'ye yakin -> bloom). Shader bulunamazsa additive katmanlar normal materyalle (soluk) cizilir.
+- Impact VFX prefab rengi `comboColor` = saf kirmizi (1,0,0.01); `TintVfx` materyal Color ozelliklerini yogunluk (HDR) korunarak kirmiziya cevirir.
+- Impact shadergraph'i dogrudan kilic sprite'ina uygulanmadi (kendi _Main dokusunu cizer, bicak sekline oturmaz); bunun yerine ayni parlaklik/renk elle taklit edildi.

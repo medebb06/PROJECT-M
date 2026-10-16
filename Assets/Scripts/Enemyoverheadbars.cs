@@ -276,6 +276,10 @@ public class EnemyOverheadBars : MonoBehaviour
             if (boss != null && boss.gameObject == enemy.gameObject)
                 continue;
 
+            // Boss1'in kendi (ekranin ustundeki) cubugu var: bas ustu cubuk cizilmez.
+            if (enemy.GetComponent<Boss1Enemy>() != null)
+                continue;
+
             if (!entries.TryGetValue(enemy, out Entry e))
                 continue;
 
