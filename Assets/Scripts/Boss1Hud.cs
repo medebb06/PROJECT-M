@@ -1,128 +1,101 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// Boss1 arayuzu: ekranin ust ortasinda ince KIRMIZI can cizgisi, hemen altinda SARI posture (denge) cizgisi.
-/// Boss1Enemy runtime'da olusturur; hicbir sahne/prefab kurulumu gerekmez.
-/// Can azalinca koyu kirmizi "gecikmeli" parca yavasca erir. Denge kirilinca posture cizgisi beyaza doner.
+/// Boss1 arayuzu: oyuncunun sol alttaki sade cizgisiyle (MinimalHealthBar) ayni stil, ekranin UST ORTASINDA.
+/// Ust cizgi = can (dusunce soluk iz kalir), altindaki ince cizgi = posture (denge). Denge kirilinca posture cizgisi tam parlar.
+/// Boss1Enemy runtime'da olusturur; sahne/prefab kurulumu gerekmez.
 /// </summary>
 public class Boss1Hud : MonoBehaviour
 {
-    const float BarWidth = 760f;
-    const float HealthHeight = 8f;
-    const float PostureHeight = 6f;
+    [Header("Yerlesim (1080p'ye gore piksel; ekranla olceklenir)")]
+    public float width = 640f;
+    public float marginTop = 36f;
+    public float healthHeight = 2f;
+    public float postureHeight = 1.5f;
+    public float gap = 6f;
+    [Tooltip("Giris sahnesi bitene kadar false: bar gorunmez.")] public bool show;
+
+    [Header("Renk (oyuncu cubuguyla ayni)")]
+    public Color fillColor = new Color(1f, 1f, 1f, 0.95f);
+    public Color backColor = new Color(1f, 1f, 1f, 0.16f);
+    public Color trailColor = new Color(1f, 1f, 1f, 0.38f);
+    public Color postureColor = new Color(1f, 1f, 1f, 0.7f);
 
     Health health;
     EnemyBalance balance;
-    RectTransform hpFill, hpGhost, postFill;
-    Image postImage;
-    CanvasGroup group;
-    float hpShown = 1f, hpGhostShown = 1f, postShown;
-    float deadTimer;
-
-    static readonly Color PostureColor = new Color(1f, 0.82f, 0.12f, 1f);
+    float shown = 1f, trail = 1f, trailHold;
+    float post;
+    float alpha = 1f;
 
     public static Boss1Hud Create(Health h, EnemyBalance b)
     {
         GameObject go = new GameObject("Boss1HUD");
         Boss1Hud hud = go.AddComponent<Boss1Hud>();
-        hud.Build(h, b);
+        hud.health = h;
+        hud.balance = b;
         return hud;
     }
 
-    void Build(Health h, EnemyBalance b)
+    float HealthPercent()
     {
-        health = h;
-        balance = b;
-
-        Canvas canvas = gameObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 100;
-
-        CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        group = gameObject.AddComponent<CanvasGroup>();
-        group.interactable = false;
-        group.blocksRaycasts = false;
-
-        hpGhost = MakeBar("Can", -28f, HealthHeight, new Color(0f, 0f, 0f, 0.65f), new Color(0.45f, 0.05f, 0.05f, 1f), out RectTransform back, out Image dummyA);
-        // Ayni arka plan uzerine asil kirmizi dolgu.
-        hpFill = MakeFill(back, new Color(0.9f, 0.08f, 0.08f, 1f), out Image dummyB);
-
-        MakeBar("Posture", -40f, PostureHeight, new Color(0f, 0f, 0f, 0.65f), PostureColor, out RectTransform pback, out postImage);
-        postFill = (RectTransform)postImage.transform;
-    }
-
-    // Arka plan + ilk dolgu olusturur; ilk dolgunun RectTransform'unu dondurur.
-    RectTransform MakeBar(string name, float y, float height, Color bg, Color fill, out RectTransform back, out Image fillImage)
-    {
-        GameObject bgGo = new GameObject(name + "_bg", typeof(RectTransform), typeof(Image));
-        bgGo.transform.SetParent(transform, false);
-        Image bgImg = bgGo.GetComponent<Image>();
-        bgImg.color = bg;
-        bgImg.raycastTarget = false;
-        back = (RectTransform)bgGo.transform;
-        back.anchorMin = back.anchorMax = new Vector2(0.5f, 1f);
-        back.pivot = new Vector2(0.5f, 1f);
-        back.anchoredPosition = new Vector2(0f, y);
-        back.sizeDelta = new Vector2(BarWidth, height);
-
-        return MakeFill(back, fill, out fillImage);
-    }
-
-    RectTransform MakeFill(RectTransform parent, Color color, out Image img)
-    {
-        GameObject go = new GameObject("fill", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        img = go.GetComponent<Image>();
-        img.color = color;
-        img.raycastTarget = false;
-        RectTransform rt = (RectTransform)go.transform;
-        rt.pivot = new Vector2(0f, 0.5f);
-        rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-        return rt;
-    }
-
-    static void SetFill(RectTransform rt, float pct)
-    {
-        rt.anchorMax = new Vector2(Mathf.Clamp01(pct), 1f);
-        rt.offsetMax = Vector2.zero;
+        if (health == null || health.MaxHealth <= 0) return 0f;
+        return Mathf.Clamp01((float)health.CurrentHealth / health.MaxHealth);
     }
 
     void Update()
     {
-        if (health == null)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (health == null) return;
 
         float dt = Time.unscaledDeltaTime;
+        float target = HealthPercent();
 
-        float hp = health.MaxHealth > 0 ? (float)health.CurrentHealth / health.MaxHealth : 0f;
-        hpShown = Mathf.MoveTowards(hpShown, hp, dt * 2.5f);
-        hpGhostShown = hpGhostShown > hp ? Mathf.MoveTowards(hpGhostShown, hp, dt * 0.15f) : hp;
-
-        SetFill(hpFill, hpShown);
-        SetFill(hpGhost, hpGhostShown);
-
-        if (balance != null)
+        if (target < shown - 0.0005f)
         {
-            postShown = Mathf.MoveTowards(postShown, balance.BalancePercent, dt * 3f);
-            SetFill(postFill, postShown);
-            postImage.color = balance.IsBroken ? Color.white : PostureColor;
+            shown = target;
+            trailHold = Time.unscaledTime + 0.4f;
+        }
+        else
+        {
+            shown = Mathf.MoveTowards(shown, target, dt * 1.2f);
         }
 
-        if (health.IsDead)
+        if (trail < shown) trail = shown;
+        else if (Time.unscaledTime >= trailHold) trail = Mathf.MoveTowards(trail, shown, dt * 0.7f);
+
+        if (balance != null && balance.MaxBalance > 0)
         {
-            deadTimer += dt;
-            group.alpha = Mathf.Clamp01(1f - deadTimer / 1.2f);
+            float p = balance.IsBroken ? 1f : Mathf.Clamp01((float)balance.CurrentBalance / balance.MaxBalance);
+            post = Mathf.MoveTowards(post, p, dt * 4f);
         }
+
+        float a = health.IsDead || !show ? 0f : 1f;
+        if (MainMenu.Active) a = 0f;
+        alpha = Mathf.MoveTowards(alpha, a, dt * 1.5f);
+    }
+
+    void OnGUI()
+    {
+        if (Event.current.type != EventType.Repaint || health == null || alpha <= 0.01f) return;
+
+        float s = Screen.height / 1080f * MobileInput.HudMul;
+        float w = width * s;
+        float hh = Mathf.Max(1f, healthHeight * s);
+        float ph = Mathf.Max(1f, postureHeight * s);
+        float x = (Screen.width - w) * 0.5f;
+        float y = marginTop * s + RunCameraZoom.TopBarPixels;
+        Texture2D t = Texture2D.whiteTexture;
+
+        Color a(Color c) { c.a *= alpha; return c; }
+
+        GUI.color = a(backColor);  GUI.DrawTexture(new Rect(x, y, w, hh), t);
+        GUI.color = a(trailColor); GUI.DrawTexture(new Rect(x, y, w * trail, hh), t);
+        GUI.color = a(fillColor);  GUI.DrawTexture(new Rect(x, y, w * shown, hh), t);
+
+        float y2 = y + hh + gap * s;
+        bool broken = balance != null && balance.IsBroken;
+        GUI.color = a(backColor); GUI.DrawTexture(new Rect(x, y2, w, ph), t);
+        GUI.color = a(broken ? fillColor : postureColor); GUI.DrawTexture(new Rect(x, y2, w * post, ph), t);
+
+        GUI.color = Color.white;
     }
 }

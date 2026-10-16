@@ -73,6 +73,15 @@ public class RunCameraZoom : MonoBehaviour
     public static float TopBarPixels;
     /// <summary>Tutorial: sinematik kamerayi (seritler + yakin odak) zorla ac.</summary>
     public static bool ForceCinematic;
+    /// <summary>Giris sahnesi: kamera bu dunya noktasina kayar (null = oyuncuyu takip).</summary>
+    public static Transform FocusTarget;
+    /// <summary>Odak sirasinda ek yaklasma (0.1 = %10 daha yakin).</summary>
+    public static float FocusZoomIn = 0.12f;
+    private float focusBlend, focusBlendVel;
+
+    // Dis kaynakli kamera sarsintisi (dunya birimi): CameraShake/Impulse yeterince gorunmediginde dogrudan konum titretir.
+    private static float kick;
+    public static void AddShake(float worldUnits) { kick = Mathf.Max(kick, worldUnits); }
     public float forceZoomIn = 0.2f;
 
     [Tooltip("Ekranın sol üstünde durum yazısı göster (sorun giderme).")]
@@ -376,6 +385,9 @@ public class RunCameraZoom : MonoBehaviour
         if (pulseHold <= 0f && pulse < 0.0005f)
             pulsePeak = 0f;
 
+        focusBlend = Mathf.SmoothDamp(focusBlend, FocusTarget != null ? 1f : 0f, ref focusBlendVel, 0.9f, Mathf.Infinity, Time.unscaledDeltaTime);
+        if (FocusTarget == null && focusBlend < 0.001f) focusBlend = 0f;
+
         float breathTarget = cinematic && (forceBreath || ForceCinematic || idleTimer >= idleDelay) ? 1f : 0f;
         float bs = breathTarget > breath ? (ForceCinematic ? 0.5f : breathFadeIn) : breathFadeOut;
         breath = Mathf.SmoothDamp(breath, breathTarget, ref breathVel, bs, Mathf.Infinity, Time.unscaledDeltaTime);
@@ -390,6 +402,7 @@ public class RunCameraZoom : MonoBehaviour
             - pulse
             - idleZoomIn * bEase
             - (ForceCinematic ? forceZoomIn * bEase : 0f)
+            - FocusZoomIn * focusBlend * focusBlend * (3f - 2f * focusBlend)
             + breathZoomWobble * bEase * Mathf.Sin(phase);
 
         Set(zoomK);
@@ -415,10 +428,21 @@ public class RunCameraZoom : MonoBehaviour
             0f
         );
 
+        if (kick > 0.001f)
+        {
+            kick *= Mathf.Exp(-Time.unscaledDeltaTime * 7f);
+            Vector2 kv = Random.insideUnitCircle * kick;
+            shakeOff += new Vector3(kv.x, kv.y, 0f);
+        }
+        else
+            kick = 0f;
+
         // Ekrana çizilen kamera vcam üstündeki Camera ise: Cinemachine yazdıktan SONRA doğrudan konuma ekle (kesin çalışır).
         if (rollHelper != null)
         {
             rollHelper.posOffset = shakeOff;
+            if (FocusTarget != null) rollHelper.focusWorld = FocusTarget.position;
+            rollHelper.focusBlend = focusBlend * focusBlend * (3f - 2f * focusBlend);
             camOffset.Offset = Vector3.zero;
         }
         else
@@ -453,9 +477,17 @@ public class RunCameraRoll : MonoBehaviour
 {
     public float roll;
     public Vector3 posOffset;
+    public Vector3 focusWorld;
+    public float focusBlend;
 
     private void LateUpdate()
     {
+        if (focusBlend > 0.0005f)
+        {
+            Vector3 p = transform.position;
+            transform.position = Vector3.Lerp(p, new Vector3(focusWorld.x, focusWorld.y, p.z), focusBlend);
+        }
+
         if (posOffset.sqrMagnitude > 1e-10f)
             transform.position += posOffset;
 

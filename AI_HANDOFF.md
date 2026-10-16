@@ -75,6 +75,32 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 ### Boss1 kamera sarsıntısı / duruş / menzil (2026-10-16, 9) — DERLENMEDİ / OYNANMADI
 - `attackShake` (0.9): kılıç yere indiği anda (`Boss1Rig.AttackHit`) `CameraShake`. `LateUpdate`: rig saldırı animasyonundayken (sersemlemediyse) yatay hız sıfırlanır -> animasyon bitene kadar yürümez. `chaseRange` 120 -> 1000.
 
+### Boss1 kükreme ayarı (2026-10-16, 10)
+- Kükreme artık darbeden ÖNCE (saldırı gerilmesi başlarken, `OnAttackAnimationRequested`) çalar; ses 0.45, olasılık `roarChance` 0.35, en az `roarMinInterval` 8 sn arayla. DERLENMEDİ.
+
+### Boss1 parry efekti/sesi (2026-10-16, 11) — DERLENMEDİ / OYNANMADI
+- Parry efekti `CombatVFXManager` (sahnede tek) + `EnemyHitFeedback.PlayParry` ile çalışır; ses `EnemyHitFeedback.parrySound`. `Resources/Endless/Duelist.prefab` aslında `Assets/Prefabs/Duelist.prefab`'ın varyantı (425 B). Kaynak bulunamazsa yüklü başka bir `EnemyHitFeedback` aranır.
+- Boss1Enemy oyun başında konsola `[Boss1] Ses kopyasi: ...` satırı yazar (kaynak, hitFeedback, parrySound, attackAudio, vfxManager). Kopya başarısızsa `PlayParryFallback()` aynı sesi + `CombatVFXManager.PlayParry` efektini kendisi oynatır.
+
+### Boss1 parry güçlendirme (2026-10-16, 12) — DERLENMEDİ / OYNANMADI
+- `parryBalanceDamage` 60 -> 110 (Boss1Enemy). Parry'de squash `parrySquash` (3, denge kırınca x1.4) Boss1Enemy.OnParry'den; Boss1Rig.OnParried içindeki eski Squash kaldırıldı; `squashAmount` 0.2.
+- Parry efekti: `ParryVFX` kökü `parryEffectScale` (4) ile büyütülür (çarpışma noktası yakınındaki, ölçeği 1 olan yeni örnekler). ParryVFX.cs DEĞİŞMEDİ.
+
+### Boss1 kükreme tetikleri / parry (2026-10-16, 13) — DERLENMEDİ / OYNANMADI
+- Kükreme artık yalnızca: (1) boss ilk kez kamera görüş alanına girince (`CheckRoarTriggers`, menü kapalıyken), (2) ölünce. Saldırı kükremesi, `roarChance`/`roarMinInterval` kaldırıldı. Ses bağımsız 2D AudioSource ile çalar (boss yok edilse de biter). `roarVolume` 0.5.
+- `parryBalanceDamage` 110 -> 170; `parryEffectScale` 4 -> 20.
+
+### Boss1 giriş sahnesi + posture toparlanma (2026-10-16, 14) — DERLENMEDİ / OYNANMADI
+- Giriş sahnesi (`Boss1Enemy.IntroRoutine`): boss ilk kez ekrana girince ya da oyuncu `introDistance` (45) içine gelince bir kez: oyuncu `canControl=false` + hız sıfır, `RunCameraZoom.ForceCinematic=true` (şeritler), `RunCameraZoom.FocusTarget` = boss gövdesi (kamera kayar + `FocusZoomIn` yakınlaşır), `introSettle` sn sonra kükreme + rig sarsıntısı/squash + kamera sarsıntısı, ardından `introHold` sn sonra oyun başlar (kilit/kamera eski haline). Giriş sürerken boss'un EnemyController'ı kapalı. `introCutscene=false` ise yalnız kükreme.
+- DEĞİŞTİ `RunCameraZoom.cs` (additive): statik `FocusTarget`, `FocusZoomIn`; `RunCameraRoll` odak noktasına Lerp eder (Cinemachine'den sonra). DEĞİŞTİ `EnemyBalance.cs`: `SetRecovery(delay, speed)` eklendi.
+- Posture toparlanma: `postureRecoveryDelay` 5 sn, `postureRecoverySpeed` 2 (oyun normali 1.5 sn / 20; cana göre çarpan 0.4-1.6 hâlâ geçerli).
+- Doğrulanmadı: kameranın gerçekten boss'a kayması (rollHelper yolu), canControl=false'ın oyuncuyu tam durdurması.
+
+### Boss1 HUD/sarsıntı/efekt ayarı (2026-10-16, 15) — DERLENMEDİ / OYNANMADI
+- Boss barları giriş sahnesi bitene kadar gizli (`Boss1Hud.show`), çizgiler 2 px / 1.5 px (oyuncununki 4 px).
+- Saldırı sarsıntısı: `attackShake` 2.5 + yeni `RunCameraZoom.AddShake(dünya birimi)` (doğrudan konum titremesi, ~0.14 sn üstel sönüm; `attackShakeWorld` çarpanı 0.5). Sebep: Cinemachine impulse (CameraShake) görünmüyordu; Instance/impulse atanmış mı doğrulanmadı.
+- `parryEffectScale` 20 -> 10.
+
 ## Last completed work
 - AI_CONTEXT.md, AI_RULES.md, AI_HANDOFF.md proje köküne kopyalandı (`D:\Oyun\PROJECT-M`). Eski `.md.txt` kopyaları `ProjectSettings/` içinde DURUYOR (silme aracı yoktu); elle silinmeli.
 - Assets/Scripts, Player/Duelist/Boss1/Archer prefab'ları ve MyScene2.unity incelendi (scriptlerin yaklaşık yarısı satır satır, kalanı yalnızca dosya adı/boyut düzeyinde).

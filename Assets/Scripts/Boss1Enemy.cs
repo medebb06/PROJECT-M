@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -24,7 +25,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Denge (posture) cubugu. Parry denge doldurur; dolunca boss sersemler (infaz firsati).")]
     [Min(1)] public int maxBalance = 240;
     [Tooltip("Parry'nin boss dengesine hasari (oyun bunu x0.5 ve cana gore x0.6-1.6 ile olcekler: ~18 = denge ~13 parry, can azaldikca daha az).")]
-    [Min(1)] public int parryBalanceDamage = 60;
+    [Min(1)] public int parryBalanceDamage = 170;
     [Tooltip("Denge kirilinca boss'un sersemleme suresi (sn).")]
     [Min(0.5f)] public float staggerDuration = 3.5f;
 
@@ -112,6 +113,7 @@ public class Boss1Enemy : MonoBehaviour
         if (balance == null)
             balance = gameObject.AddComponent<EnemyBalance>();
         balance.SetMaxBalance(maxBalance);
+        balance.SetRecovery(postureRecoveryDelay, postureRecoverySpeed);
 
         // 4) Yon gostergesi: EnemyController yonu bir SpriteRenderer.flipX'ten okur/yazar.
         //    Gorunmez bir yardimci SpriteRenderer kullaniyoruz; Boss1Rig bunu okuyup aynalar.
@@ -130,6 +132,13 @@ public class Boss1Enemy : MonoBehaviour
             enemy = gameObject.AddComponent<EnemyController>();
 
         CloneEnemyClips();
+
+        EnemyHitFeedback fb = GetComponent<EnemyHitFeedback>();
+        parryFallback = fb == null || fb.ParrySound == null;
+        Debug.Log("[Boss1] Ses kopyasi: kaynak=" + (GetSoundTemplate() != null ? GetSoundTemplate().name : "YOK") +
+                  " hitFeedback=" + (fb != null) + " parrySound=" + (fb != null && fb.ParrySound != null) +
+                  " attackAudio=" + (GetComponent<EnemyAttackAudio>() != null) +
+                  " vfxManager=" + (CombatVFXManager.Instance != null));
 
         enemy.SetFacingRenderer(facingProxy);
         Configure();
@@ -156,23 +165,23 @@ public class Boss1Enemy : MonoBehaviour
     [Header("Kukreme sesleri")]
     [Tooltip("Bos ise Resources/Boss1/Sfx altindaki tum klipler kullanilir. Her darbede rastgele biri calinir.")]
     public AudioClip[] roarClips;
-    [Range(0f, 1f)] public float roarVolume = 0.45f;
-    [Tooltip("Her saldiri baslangicinda kukreme olasiligi.")]
-    [Range(0f, 1f)] public float roarChance = 0.35f;
-    [Tooltip("Iki kukreme arasi en az sure (sn).")]
-    [Min(0f)] public float roarMinInterval = 8f;
-    float nextRoarTime;
-    [Tooltip("Kilic yere indigi anda kamera sarsintisi (0 = kapali).")]
-    [Range(0f, 3f)] public float attackShake = 0.9f;
+    [Range(0f, 1f)] public float roarVolume = 0.5f;
     [Range(0f, 0.15f)] public float roarPitchVariance = 0.04f;
+    [Header("Saldiri sarsintisi")]
+    [Tooltip("Kilic yere indigi anda kamera sarsintisi (0 = kapali).")]
+    [Range(0f, 6f)] public float attackShake = 2.5f;
+    [Tooltip("Dogrudan kamera titretme carpani (dunya birimi / attackShake). 0 = yalniz Cinemachine impulse.")]
+    [Range(0f, 2f)] public float attackShakeWorld = 0.5f;
 
     AudioSource roarSource;
     int lastRoar = -1;
 
     void OnStrikeLanded()
     {
-        if (attackShake > 0f && CameraShake.Instance != null)
+        if (attackShake <= 0f) return;
+        if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(attackShake);
+        RunCameraZoom.AddShake(attackShake * attackShakeWorld);
     }
 
     // Saldiri animasyonu bitene kadar yerinde dur (sersemlemis/vurulmus degilse).
@@ -182,35 +191,225 @@ public class Boss1Enemy : MonoBehaviour
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
     }
 
-    void TryRoar()
+    float PlayRoar()
     {
-        if (Time.time < nextRoarTime || Random.value > roarChance) return;
-        nextRoarTime = Time.time + roarMinInterval;
-        PlayRoar();
-    }
-
-    void PlayRoar()
-    {
-        if (roarClips == null || roarClips.Length == 0) return;
-        if (roarSource == null)
-        {
-            roarSource = gameObject.AddComponent<AudioSource>();
-            roarSource.playOnAwake = false;
-            roarSource.spatialBlend = 0f;
-        }
+        if (roarClips == null || roarClips.Length == 0) return 0f;
         int i = Random.Range(0, roarClips.Length);
         if (roarClips.Length > 1 && i == lastRoar) i = (i + 1 + Random.Range(0, roarClips.Length - 1)) % roarClips.Length;
         lastRoar = i;
-        roarSource.pitch = 1f + Random.Range(-roarPitchVariance, roarPitchVariance);
-        roarSource.PlayOneShot(roarClips[i], roarVolume);
+
+        // Bagimsiz 2D kaynak: boss yok edilse bile ses sonuna kadar calar.
+        GameObject go = new GameObject("Boss1Roar");
+        AudioSource src = go.AddComponent<AudioSource>();
+        src.spatialBlend = 0f;
+        src.playOnAwake = false;
+        src.pitch = 1f + Random.Range(-roarPitchVariance, roarPitchVariance);
+        src.volume = roarVolume;
+        src.clip = roarClips[i];
+        src.Play();
+        Destroy(go, roarClips[i].length + 0.5f);
+        return roarClips[i].length;
+    }
+
+    // ---------------------------------------------------------------------
+    // GIRIS SAHNESI (Dead Cells tarzi): oyuncu kilitlenir, sinematik seritler + kamera boss'a kayar/yaklasir,
+    // boss kukrer, sonra oyun baslar.
+    // ---------------------------------------------------------------------
+    [Header("Giris sahnesi")]
+    public bool introCutscene = true;
+    [Tooltip("Oyuncu bu kadar yaklasinca (ya da boss ekrana girince) giris sahnesi baslar.")]
+    [Min(1f)] public float introDistance = 45f;
+    [Tooltip("Kamera boss'a yerlesirken kukremeden once bekleme (sn).")]
+    [Min(0f)] public float introSettle = 1.4f;
+    [Tooltip("Kukreme bitince sahnenin devam suresi (sn).")]
+    [Min(0f)] public float introHold = 0.9f;
+    [Tooltip("Kukremeyi beklerken en fazla sure (sn).")]
+    [Min(0.5f)] public float introMaxRoar = 3.5f;
+    [Tooltip("Kameranin odaklandigi nokta boss'un ayagindan bu kadar yukarida.")]
+    public float introFocusHeight = 7f;
+
+    bool introActive;
+    Transform introFocus;
+    bool introPrevForce, introPrevCan;
+    PlayerController introPlayer;
+
+    IEnumerator IntroRoutine(PlayerController pl)
+    {
+        introActive = true;
+        introPlayer = pl;
+        introPrevForce = RunCameraZoom.ForceCinematic;
+        introPrevCan = pl.canControl;
+
+        if (introFocus == null)
+        {
+            GameObject f = new GameObject("IntroFocus");
+            f.transform.SetParent(transform, false);
+            introFocus = f.transform;
+        }
+        introFocus.position = transform.position + Vector3.up * introFocusHeight;
+
+        RunCameraZoom.ForceCinematic = true;
+        RunCameraZoom.FocusTarget = introFocus;
+
+        yield return IntroWait(introSettle);
+
+        float len = PlayRoar();
+        rig.Flinch(1.8f);
+        rig.Squash(2.2f);
+        if (CameraShake.Instance != null) CameraShake.Instance.Shake(1.4f);
+        RunCameraZoom.AddShake(1.2f);
+
+        yield return IntroWait(Mathf.Min(len, introMaxRoar) + introHold);
+
+        EndIntro();
+    }
+
+    IEnumerator IntroWait(float seconds)
+    {
+        float end = Time.unscaledTime + seconds;
+        while (Time.unscaledTime < end)
+        {
+            HoldPlayer();
+            yield return null;
+        }
+    }
+
+    void HoldPlayer()
+    {
+        if (introPlayer == null) return;
+        introPlayer.canControl = false;
+        introPlayer.moveInput = 0f;
+        if (introPlayer.rb != null) introPlayer.rb.linearVelocity = new Vector2(0f, introPlayer.rb.linearVelocity.y);
+    }
+
+    void EndIntro()
+    {
+        if (!introActive) return;
+        introActive = false;
+
+        RunCameraZoom.FocusTarget = null;
+        RunCameraZoom.ForceCinematic = introPrevForce;
+
+        if (introPlayer != null && !MainMenu.Active)
+            introPlayer.canControl = introPrevCan;
+
+        if (introFocus != null)
+            Destroy(introFocus.gameObject);
+    }
+
+    // Kukreme yalniz iki anda: oyuncunun gorusune ilk girdigi an + oldugu an.
+    bool seenRoared, deathRoared;
+    float nextSeenCheck;
+
+    void CheckRoarTriggers()
+    {
+        if (!deathRoared && health != null && health.IsDead)
+        {
+            deathRoared = true;
+            seenRoared = true;
+            PlayRoar();
+            return;
+        }
+
+        if (seenRoared || Time.time < nextSeenCheck) return;
+        nextSeenCheck = Time.time + 0.2f;
+
+        if (health != null && health.IsDead) return;
+
+        PlayerController pl = FindFirstObjectByType<PlayerController>();
+        if (pl == null) return;
+
+        bool seen = Vector2.Distance(pl.transform.position, transform.position) <= introDistance;
+
+        if (!seen)
+        {
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                SpriteRenderer[] rs = GetComponentsInChildren<SpriteRenderer>();
+                Bounds b = new Bounds(transform.position, Vector3.zero);
+                bool any = false;
+                foreach (SpriteRenderer r in rs)
+                {
+                    if (r == null || !r.enabled || r.sprite == null) continue;
+                    if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+                }
+                seen = any && GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(cam), b);
+            }
+        }
+
+        if (!seen) return;
+
+        seenRoared = true;
+
+        if (introCutscene)
+            StartCoroutine(IntroRoutine(pl));
+        else
+            PlayRoar();
     }
 
     GameObject soundTemplate;
 
+    [Header("Posture toparlanma (Sekiro gibi cok yavas)")]
+    [Tooltip("Son posture hasarindan sonra toparlanma baslamadan bekleme (sn).")]
+    [Min(0f)] public float postureRecoveryDelay = 5f;
+    [Tooltip("Toparlanma hizi (puan/sn). Oyunun normal degeri 20.")]
+    [Min(0f)] public float postureRecoverySpeed = 2f;
+
+    [Header("Parry")]
+    [Tooltip("Parry carpisma efektinin buyuklugu (1 = normal dusman).")]
+    [Range(1f, 40f)] public float parryEffectScale = 10f;
+    [Tooltip("Parry'de govde ezilme siddeti (squash/stretch).")]
+    [Range(0f, 6f)] public float parrySquash = 3f;
+
+    bool parryFallback;
+    AudioSource parrySrc;
+
+    // Bilesen kopyalanamadiysa parry sesi + carpisma efekti buradan (EnemyHitFeedback.PlayParry ile ayni cagrilar).
+    void PlayParryFallback(bool sound, bool vfx)
+    {
+        GameObject t = GetSoundTemplate();
+        EnemyHitFeedback tf = t != null ? t.GetComponent<EnemyHitFeedback>() : null;
+
+        if (sound && tf != null && tf.ParrySound != null)
+        {
+            if (parrySrc == null)
+            {
+                parrySrc = gameObject.AddComponent<AudioSource>();
+                parrySrc.playOnAwake = false;
+                parrySrc.spatialBlend = 0f;
+            }
+            parrySrc.PlayOneShot(tf.ParrySound);
+        }
+
+        if (!vfx) return;
+
+        Vector3 pos = ParryVFX.ContactPoint(transform);
+        Vector2 dir = enemy != null && enemy.target != null
+            ? ((Vector2)(enemy.target.position - transform.position)).normalized
+            : Vector2.right;
+
+        if (CombatVFXManager.Instance != null)
+            CombatVFXManager.Instance.PlayParry(pos, dir);
+        else
+            ParryVFX.Play(pos, dir, "Default", 100);
+    }
+
     GameObject GetSoundTemplate()
     {
+        if (soundTemplate != null) return soundTemplate;
+
+        soundTemplate = soundSource != null ? soundSource : Resources.Load<GameObject>("Endless/Duelist");
+
+        // Yedek: yuklu herhangi bir dusman prefab'i / nesnesi (kendimiz haric).
         if (soundTemplate == null)
-            soundTemplate = soundSource != null ? soundSource : Resources.Load<GameObject>("Endless/Duelist");
+        {
+            foreach (EnemyHitFeedback f in Resources.FindObjectsOfTypeAll<EnemyHitFeedback>())
+            {
+                if (f != null && f.transform.root != transform.root) { soundTemplate = f.gameObject; break; }
+            }
+        }
+
         return soundTemplate;
     }
 
@@ -357,12 +556,14 @@ public class Boss1Enemy : MonoBehaviour
 
     void OnDisable()
     {
+        EndIntro();
         CombatEvents.EnemyHit -= OnEnemyHit;
         CombatEvents.ParrySucceeded -= OnParry;
     }
 
     void OnDestroy()
     {
+        EndIntro();
         if (enemy != null)
             enemy.AttackAnimationRequested -= OnAttackAnimationRequested;
         if (rig != null)
@@ -376,7 +577,6 @@ public class Boss1Enemy : MonoBehaviour
     void OnAttackAnimationRequested()
     {
         rig.PlayAttack();
-        TryRoar();               // darbeden ONCE (gerilme baslarken)
     }
 
     void OnEnemyHit(EnemyController e, DamageInfo info, HitResult result)
@@ -407,6 +607,25 @@ public class Boss1Enemy : MonoBehaviour
             return;
 
         rig.OnParried(brokeBalance);
+
+        // EnemyHitFeedback.PlayParry bu olaydan hemen ONCE cagrildi; efekt olustuysa tekrar uretme.
+        bool vfxMade = FindObjectsByType<ParryVFX>(FindObjectsSortMode.None).Length > 0;
+        Debug.Log("[Boss1] Parry olayi: sesYedegi=" + parryFallback + " efektVar=" + vfxMade +
+                  " vfxManager=" + (CombatVFXManager.Instance != null));
+
+        if (parryFallback || !vfxMade)
+            PlayParryFallback(parryFallback, !vfxMade);
+
+        // Efekti buyut: yeni olusan ParryVFX'ler (olcegi hala 1) carpisma noktasinin yakininda.
+        Vector3 contact = ParryVFX.ContactPoint(transform);
+        foreach (ParryVFX v in FindObjectsByType<ParryVFX>(FindObjectsSortMode.None))
+        {
+            if (v.transform.localScale != Vector3.one) continue;
+            if ((v.transform.position - contact).sqrMagnitude > 4f) continue;
+            v.transform.localScale = Vector3.one * parryEffectScale;
+        }
+
+        rig.Squash(brokeBalance ? parrySquash * 1.4f : parrySquash);
     }
 
     void Update()
@@ -414,8 +633,14 @@ public class Boss1Enemy : MonoBehaviour
         if (enemy == null)
             return;
 
+        if (!MainMenu.Active)
+            CheckRoarTriggers();
+
+        if (hud != null)
+            hud.show = seenRoared && !introActive;
+
         // Ana menu aciksa (oyuncu kilitli) boss beklesin: yoksa menu arkasinda oyuncuya vurur.
-        if (MainMenu.Active)
+        if (MainMenu.Active || introActive)
         {
             if (enemy.enabled)
             {

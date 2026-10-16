@@ -145,6 +145,13 @@ public class EnemyBalance : MonoBehaviour
 
     // Çalışma anında azami dengeyi ayarlar (ör. düşman tipi: Ağır dengesi
     // geç kırılır, Çevik erken). Mevcut denge yeni sınıra kırpılır.
+    // Calisma anında denge toparlanmasını ayarlar (boss: cok yavas, Sekiro gibi).
+    public void SetRecovery(float delay, float speed)
+    {
+        recoveryDelay = Mathf.Max(0f, delay);
+        recoverySpeed = Mathf.Max(0f, speed);
+    }
+
     public void SetMaxBalance(int value)
     {
         maxBalance = Mathf.Max(1, value);
