@@ -47,6 +47,34 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 - YENİ `Boss1Hud.cs`: ekran üst ortasında ince kırmızı can çizgisi (gecikmeli koyu kırmızı parça) + altında sarı posture çizgisi (denge kırılınca beyaz). Boss1Enemy.showHud.
 - Zorluk: can 2000, denge 240, parry denge hasarı 60 (oyun x0.5 ve cana göre x0.6-1.6 ile ölçekler -> ~13 parry), infaz can %12 (`executeHealthPercent`). Düz vuruş cana ~1 vurur; asıl hasar denge kırılınca (%15 can) + infaz.
 
+### Boss1 hata düzeltmeleri (2026-10-16, 3) — DERLENMEDİ / OYNANMADI
+- Menü: `MainMenu.Active` iken Boss1Enemy EnemyController'ı kapatır. `Boss1Rig.PlayAttack()` artık her zaman başlar (yumuşak geçişle).
+- Kılıç kalkarken hasar: YENİ `EnemyController.AttackHitGate` (Func<bool>, opsiyonel) + `EnemyAttackState.Tick`'te `warningTimer<=0` sonrası kapı kontrolü. Boss1 kapıyı `Boss1Rig.ReadyToHit()`'e bağlar: darbe inmeden (Hold/Recover öncesi) hasar çözülmez; animasyon yoksa/iptal edilmişse yeniden başlatılır ve bekletilir. Diğer düşmanlarda kapı null -> davranış değişmez.
+- Sesler: Boss1Enemy, `Resources/Endless/Duelist` prefab'ından (veya `soundSource` alanından) `EnemyHitFeedback` + `EnemyAttackAudio` bileşenlerini JsonUtility ile kopyalar, AudioSource referanslarını kendi kaynaklarına çevirir, EnemyController'ın AudioClip alanlarını kopyalar. Kaynak yoksa konsola uyarı yazar. Doğrulanmadı: kopyalanan VFX alanları, HitClickAudio'nun sahnede olması.
+- Değişen: Boss1Rig.cs, Boss1Enemy.cs, EnemyController.cs (ek), EnemyAttackState.cs (ek, 3 satır).
+
+### Boss1 ayar (2026-10-16, 4) — DERLENMEDİ / OYNANMADI
+- `extraCooldown` 0.7 -> 2.0 (vuruşlar arası bekleme). Boss1Enemy.
+- Sersemlemiş boss'a düz vuruş: `staggerHitPercent` (0.03 = max canın %3'ü/vuruş), `staggerHitFloorPercent` (0.12: düz vuruşlar canı bu seviyenin altına indiremez, infaz bitirir). `CombatEvents.EnemyHit` içinde ek `Health.TakeDamage`. "Tek vuruşta ölme"nin gerçek sebebi kodda bulunamadı (stagger çarpanı sadece x2); doğrulanmadı.
+
+### Boss1 "parry sonrası tek vuruşta ölüyor" (2026-10-16, 5) — DERLENMEDİ / OYNANMADI
+- Sebep: `ParryMark.cs` (ParryMarkSystem) parry yenen düşmanı 3.5 sn "açık" işaretleyip ilk düz vuruşta `TakeDamage(MaxHealth)` ile öldürüyor; yalnızca `BossController`'ı hariç tutuyordu. Boss1 hariç tutuldu (2 satır). Önceki stagger yüzdesi (4) ayarı geçerli.
+
+### Boss1 HUD + stagger görünümü (2026-10-16, 6) — DERLENMEDİ / OYNANMADI
+- `Boss1Hud.cs` yeniden yazıldı: uGUI yerine `OnGUI`, oyuncunun `MinimalHealthBar` stili (beyaz sade çizgi, soluk iz), ekran ÜST ORTA; üstte can, altında ince posture çizgisi (denge kırılınca tam parlak). Menüdeyken/ölünce solar. `RunCameraZoom.TopBarPixels` ve `MobileInput.HudMul` kullanır.
+- Stagger "outline" şüphelisi: `EnemyController.solidWhiteFlash` (denge kıran vuruşta her katmanı düz beyaz silüete çevirir; katmanlı rig'de garip kenar çıkarır) Boss1 için kapatıldı (`Configure`). Kesin sebep doğrulanmadı; önceki ParryMark tint'i de zaten hariç tutuldu.
+
+### Boss1 flaş (2026-10-16, 7) — DERLENMEDİ / OYNANMADI
+- Kullanıcı: "beyaz parça parça yanıyor". `EnemyController.suppressFlash` (yeni, varsayılan false) true iken `PlayFlash` hiçbir şey yapmaz; Boss1Enemy true yapar. Kesin sebep (katman bazlı renk/materyal değişimi) doğrulanmadı. Vuruş geri bildirimi artık yalnızca rig sarsıntısı (Flinch).
+
+### Boss1 ses + squash/stretch + hasar flaşı (2026-10-16, 8) — DERLENMEDİ / OYNANMADI
+- Kullanıcının mp3'ünden (36 sn, 10 kükreme) 10 klip kesildi (fade-in 15 ms, fade-out ~0.3 sn, limiter): `Assets/Sprites/Boss1/Resources/Boss1/Sfx/boss1_roar_01..10.ogg`. Boss1Enemy her darbe başında (`Boss1Rig.AttackStrikeStarted`) rastgele birini çalar (art arda aynı olmaz, hafif pitch farkı). `roarClips` boşsa `Resources.LoadAll("Boss1/Sfx")`. Unity klasör/meta oluşturup içe aktarmalı.
+- `Boss1Rig`: `Squash(strength)` (yay; visual ölçeği x genişler y kısalır; `squashAmount`, `squashStiffness`), `Flash()` (tüm katmanlar aynı karede düz beyaz sprite'a geçer; beyaz sprite'lar RenderTexture ile ilk kullanımda üretilir; `flashTime` 0.09). Boss1Enemy her `EnemyHit`'te ikisini çağırır; parry'de squash.
+- Doğrulanmadı: beyaz sprite üretimi (sprite atlas/okunamayan doku), ölçek değişiminin yürüyüş adımına etkisi.
+
+### Boss1 kamera sarsıntısı / duruş / menzil (2026-10-16, 9) — DERLENMEDİ / OYNANMADI
+- `attackShake` (0.9): kılıç yere indiği anda (`Boss1Rig.AttackHit`) `CameraShake`. `LateUpdate`: rig saldırı animasyonundayken (sersemlemediyse) yatay hız sıfırlanır -> animasyon bitene kadar yürümez. `chaseRange` 120 -> 1000.
+
 ## Last completed work
 - AI_CONTEXT.md, AI_RULES.md, AI_HANDOFF.md proje köküne kopyalandı (`D:\Oyun\PROJECT-M`). Eski `.md.txt` kopyaları `ProjectSettings/` içinde DURUYOR (silme aracı yoktu); elle silinmeli.
 - Assets/Scripts, Player/Duelist/Boss1/Archer prefab'ları ve MyScene2.unity incelendi (scriptlerin yaklaşık yarısı satır satır, kalanı yalnızca dosya adı/boyut düzeyinde).

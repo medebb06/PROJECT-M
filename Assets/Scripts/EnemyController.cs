@@ -460,6 +460,12 @@ public class EnemyController : MonoBehaviour
     // Saldırı animasyonu istendiğinde (Animator olmasa da) haber verir. Kodla çizilen boss'lar (Boss1) buna bağlanır.
     public event System.Action AttackAnimationRequested;
 
+    // Opsiyonel: false dondukce vurus hasari cozulmez (animasyonu kendi cizen boss'lar icin).
+    public System.Func<bool> AttackHitGate;
+
+    // Katmanli/kodla cizilen boss'lar icin: renk/materyal flaslarini tamamen kapatir.
+    public bool suppressFlash;
+
     // Yön okunan/yazılan SpriteRenderer'ı dışarıdan verir (çizilmeyen yardımcı renderer da olabilir).
     public void SetFacingRenderer(SpriteRenderer renderer)
     {
@@ -1450,6 +1456,9 @@ public class EnemyController : MonoBehaviour
         bool solid = false
     )
     {
+        if (suppressFlash)
+            return;
+
         if (spriteRenderers == null ||
             spriteRenderers.Length == 0)
             return;

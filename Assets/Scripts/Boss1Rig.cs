@@ -10,7 +10,7 @@ using UnityEngine.Rendering;
 ///   Gerilme (kilic yukari/arkaya, govde yaylanir, titreme = parry uyarisi)
 ///   -> ani Darbe (kilicin keskin yuzu yere vurur) -> Bekleme -> Toparlanma.
 ///
-/// Yuruyus: Rigidbody2D hizindan surulur (hiz yoksa yurumez). 3 bacak sirayla adim atar,
+/// Yuruyus: Rigidbody2D hizindan surulur (hiz yoksa yurumez). 2 bacak sirayla adim atar, sol kol/el (legBack + legBack_knee) bastona gibi yere dayanip karsi fazda sallanir,
 /// ayaklar yere SABIT basar (IK), her adimda govde coker + kamera sarsilir.
 ///
 /// Gercek dusman: 'makeEnemy' aciksa Boss1Enemy otomatik eklenir (EnemyController, Health, EnemyBalance...).
@@ -67,8 +67,8 @@ public class Boss1Rig : MonoBehaviour
     public bool walkEnabled = true;
     [Tooltip("Bir adimda ayagin yerde kat ettigi mesafe (rig birimi). Buyuk = uzun, yavas adim. Rig'in menzil siniri ~1.6.")]
     [Range(0.6f, 1.6f)] public float walkStride = 1.4f;
-    [Tooltip("Adim fazinin ne kadari ayak havada (0.3 = ayak 1/3 sure havada, 2/3 sure yerde). Kucuk = daha agir, daha 'basarak' yuruyus.")]
-    [Range(0.2f, 0.33f)] public float walkSwing = 0.3f;
+    [Tooltip("Adim fazinin ne kadari ayak havada (0.4 = ayak %40 havada, %60 yerde; 2 bacakli yurume icin en cok 0.5). Kucuk = daha agir, daha 'basarak' yuruyus.")]
+    [Range(0.2f, 0.5f)] public float walkSwing = 0.4f;
     [Tooltip("Ayagin yerden kalkma yuksekligi (rig birimi).")]
     [Range(0f, 1f)] public float walkLift = 0.5f;
     [Tooltip("Yururken govdenin one egilmesi (derece).")]
@@ -138,10 +138,23 @@ public class Boss1Rig : MonoBehaviour
     public event Action AttackHit;
     /// <summary>Saldiri animasyonu tamamen bitti (dinlenme pozuna donuldu).</summary>
     public event Action AttackFinished;
-    /// <summary>Bir ayak yere bastirdi (0 = on, 1 = arka, 2 = orta bacak). Adim sesi buraya baglanabilir.</summary>
+    /// <summary>Bir ayak yere basti (0 = on bacak, 1 = arka bacak). Adim sesi buraya baglanabilir.</summary>
     public event Action<int> FootStep;
 
     public bool IsAttacking { get { return atkState != AtkState.None; } }
+
+    /// <summary>Kilic yere indi mi (darbe ani gecti)? Hasar ancak bundan sonra verilir.</summary>
+    public bool StrikeLanded { get { return atkState == AtkState.Hold || atkState == AtkState.Recover; } }
+
+    /// <summary>
+    /// Hasar kapisi: darbe animasyonu inmeden hasar cozulmesin. Animasyon yoksa (None/iptal) yeniden baslatir ve bekletir.
+    /// </summary>
+    public bool ReadyToHit()
+    {
+        if (StrikeLanded) return true;
+        if (atkState == AtkState.None || atkState == AtkState.Cancel) PlayAttack();
+        return false;
+    }
     /// <summary>Saldiri baslayinca darbeye kadar gecen sure (oyuncunun parry icin goruntu uyarisi).</summary>
     public float TelegraphTime { get { return windupTime + tensionTime; } }
     /// <summary>Saldiri baslayinca kilicin yere VURDUGU ana kadar gecen sure. Dusmanin 'attackWarningTime'i bu olmali.</summary>
@@ -165,42 +178,54 @@ public class Boss1Rig : MonoBehaviour
         new Vector2(7.12f, 4.80f), new Vector2(7.12f, 4.69f), new Vector2(1.49f, 0.53f)
     };
 
-    // Bacaklar (rig uzayi, birim). Kalca/diz/bilek rest pozundan olculdu; kalca govdenin altinda gizli.
-    // 3 bacak sirayla adim atar (phaseOff). 'center': ayagin adim araligi merkezi (rest'e gore x kaymasi).
-    // rigid = tek parca bacak (legBack) + ayak (legBack_knee).
+    // Uzuvlar (rig uzayi, birim). Kalca/diz/bilek rest pozundan olculdu; kalca govdenin altinda gizli.
+    // 2 bacak (legR on, legL arka) + sol kol (legBack = on kol, legBack_knee = el; adlari bacak gibi ama KOL).
+    // 'center': adim araligi merkezi (rest'e gore x kaymasi). rigid = tek parca (kol). isArm = adim sesi/cokme tetiklemez.
     struct LegDef
     {
         public string up, lo, ft;
         public Vector2 hip, knee, ankle;
         public float center, phaseOff;
-        public bool rigid;
+        public bool rigid, isArm;
     }
 
     static readonly LegDef[] Legs =
     {
         new LegDef { up = "legR_upper", lo = "legR_lower", ft = "footR",
             hip = new Vector2(0.9f, 3.1f), knee = new Vector2(-0.55f, 2.2f), ankle = new Vector2(-0.35f, 0.8f),
-            center = -0.05f, phaseOff = 0f, rigid = false },
+            center = -0.05f, phaseOff = 0f, rigid = false, isArm = false },
         new LegDef { up = "legL_upper", lo = "legL_lower", ft = "footL",
             hip = new Vector2(1.6f, 3.3f), knee = new Vector2(2.2f, 1.9f), ankle = new Vector2(2.3f, 0.8f),
-            center = -0.6f, phaseOff = 0.667f, rigid = false },
+            center = -0.6f, phaseOff = 0.5f, rigid = false, isArm = false },
         new LegDef { up = "legBack", lo = null, ft = "legBack_knee",
             hip = new Vector2(1.3f, 3.4f), knee = Vector2.zero, ankle = new Vector2(0.9f, 1.0f),
-            center = 0f, phaseOff = 0.333f, rigid = true },
+            center = 0f, phaseOff = 0.75f, rigid = true, isArm = true },
     };
 
     enum AtkState { None, Windup, Tension, Strike, Hold, Recover, Cancel }
     AtkState atkState = AtkState.None;
     float atkTimer, atkEndedAt = -999f, sinceHit = 999f;
-    float lastK, lastS, cancelK, cancelS;
+    float lastK, lastS, cancelK, cancelS, startK, startS;
     const float CancelTime = 0.35f;
 
     readonly Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
     readonly Dictionary<string, Vector3> restPos = new Dictionary<string, Vector3>();
     readonly Dictionary<string, Quaternion> restRot = new Dictionary<string, Quaternion>();
     float flinch, flinchVel, phase, animClock;
+
+    [Header("Vurus hissi (squash/stretch + flas)")]
+    [Tooltip("Vurulunca govde ne kadar ezilip esner (0 = kapali).")]
+    [Range(0f, 0.4f)] public float squashAmount = 0.16f;
+    [Range(6f, 40f)] public float squashStiffness = 20f;
+    [Tooltip("Hasar alinca butun govdenin beyaz yanma suresi (sn, gercek zaman).")]
+    [Range(0f, 0.3f)] public float flashTime = 0.09f;
+    float sq, sqVel, flashTimer;
+    bool flashBuilt, flashOn;
+    SpriteRenderer[] flashSrs;
+    Sprite[] origSprites, whiteSprites;
     float walkPhase, walkW, plantKick, staggerW, deadW;
     readonly float[] legU = { -1f, -1f, -1f };
+    bool skipDt;
     Transform visual;
     Rigidbody2D body;
     bool built;
@@ -341,13 +366,19 @@ public class Boss1Rig : MonoBehaviour
         t.localRotation = restRot[n] * Quaternion.Euler(0f, 0f, deg * w);
     }
 
-    /// <summary>Kilic darbesi animasyonunu baslatir. Zaten saldiriyorsa false doner.</summary>
+    /// <summary>
+    /// Kilic darbesi animasyonunu baslatir. HER ZAMAN baslar: onceki saldiri/iptal bitmemisse mevcut pozdan
+    /// yumusakca yeni gerilmeye gecer (eskiden 'false' donup animasyonsuz hasar atiliyordu).
+    /// </summary>
     [ContextMenu("Test: Saldiri Oynat")]
     public bool PlayAttack()
     {
-        if (atkState != AtkState.None) return false;
+        startK = lastK; startS = lastS;
         atkState = AtkState.Windup;
         atkTimer = 0f;
+        // Dusman durumu ayni karede Enter() ile baslatiyor ama sayaci bir sonraki karede dusurmeye basliyor:
+        // animasyon bir kare onde gitmesin, darbe ani ile hasar ani ayni olsun.
+        skipDt = true;
         return true;
     }
 
@@ -361,6 +392,62 @@ public class Boss1Rig : MonoBehaviour
         return true;
     }
 
+    /// <summary>Govdeyi ezip esnetir (yay).</summary>
+    public void Squash(float strength)
+    {
+        sqVel += Mathf.Max(0f, strength) * squashStiffness * 0.75f;
+    }
+
+    /// <summary>Butun govde kisa sure beyaza doner (hasar flasi).</summary>
+    public void Flash()
+    {
+        if (flashTime <= 0f) return;
+        if (!flashBuilt) BuildWhiteSprites();
+        flashTimer = flashTime;
+    }
+
+    // Her katmanin duz beyaz silueti (okunabilir olmayan doku icin RenderTexture uzerinden okunur).
+    void BuildWhiteSprites()
+    {
+        flashBuilt = true;
+        if (visual == null) return;
+        flashSrs = visual.GetComponentsInChildren<SpriteRenderer>(true);
+        origSprites = new Sprite[flashSrs.Length];
+        whiteSprites = new Sprite[flashSrs.Length];
+        var cache = new Dictionary<Sprite, Sprite>();
+        for (int i = 0; i < flashSrs.Length; i++)
+        {
+            Sprite sp = flashSrs[i] != null ? flashSrs[i].sprite : null;
+            origSprites[i] = sp;
+            if (sp == null) continue;
+            Sprite w;
+            if (!cache.TryGetValue(sp, out w)) { w = MakeWhite(sp); cache[sp] = w; }
+            whiteSprites[i] = w;
+        }
+    }
+
+    static Sprite MakeWhite(Sprite sp)
+    {
+        Texture2D src = sp.texture;
+        Rect r = sp.textureRect;
+        int rw = Mathf.Max(1, Mathf.RoundToInt(r.width)), rh = Mathf.Max(1, Mathf.RoundToInt(r.height));
+        RenderTexture rt = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        Graphics.Blit(src, rt);
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+        Texture2D t = new Texture2D(rw, rh, TextureFormat.RGBA32, false);
+        t.ReadPixels(new Rect(r.x, r.y, rw, rh), 0, 0);
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+        Color32[] px = t.GetPixels32();
+        for (int i = 0; i < px.Length; i++) { px[i].r = 255; px[i].g = 255; px[i].b = 255; }
+        t.SetPixels32(px);
+        t.Apply();
+        t.filterMode = src.filterMode;
+        Vector2 pivot = new Vector2(sp.pivot.x / r.width, sp.pivot.y / r.height);
+        return Sprite.Create(t, new Rect(0, 0, rw, rh), pivot, sp.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+    }
+
     /// <summary>Oyuncu vurdu: govde sarsilir.</summary>
     public void Flinch(float strength)
     {
@@ -371,6 +458,7 @@ public class Boss1Rig : MonoBehaviour
     public void OnParried(bool brokeBalance)
     {
         Flinch(brokeBalance ? 2.4f : 1.6f);
+        Squash(brokeBalance ? 1.6f : 1.1f);
         sinceHit = 0f;
     }
 
@@ -388,11 +476,17 @@ public class Boss1Rig : MonoBehaviour
             if (atkState == AtkState.None) { lastK = 0f; lastS = 0f; return; }
         }
 
+        if (skipDt) { skipDt = false; return; }
+
         atkTimer += dt;
         switch (atkState)
         {
             case AtkState.Windup:
-                k = Smooth(atkTimer / windupTime);          // yavas basla, yavas otur: agir gerilme
+                {
+                    float wp = Smooth(atkTimer / windupTime);   // yavas basla, yavas otur: agir gerilme
+                    k = Mathf.Lerp(startK, 1f, wp);
+                    s = startS * (1f - wp);                     // onceki saldirinin darbe pozundan cikis
+                }
                 if (atkTimer >= windupTime) { atkState = AtkState.Tension; atkTimer = 0f; k = 1f; }
                 break;
             case AtkState.Tension:
@@ -463,7 +557,7 @@ public class Boss1Rig : MonoBehaviour
             float u = Mathf.Repeat(walkPhase + lg.phaseOff, 1f);
 
             // Ayak basma olayi: havadan yere gecis.
-            if (legU[i] >= 0f && legU[i] < walkSwing && u >= walkSwing && w > 0.3f)
+            if (!lg.isArm && legU[i] >= 0f && legU[i] < walkSwing && u >= walkSwing && w > 0.3f)
             {
                 plantKick = 1f;
                 if (stepShake > 0f && CameraShake.Instance != null) CameraShake.Instance.Shake(stepShake);
@@ -477,7 +571,7 @@ public class Boss1Rig : MonoBehaviour
             {
                 float sw = u / walkSwing;
                 off = walkStride * 0.5f - walkStride * Smooth(sw);
-                lift = walkLift * Mathf.Sin(Mathf.PI * sw);
+                lift = walkLift * (lg.isArm ? 0.8f : 1f) * Mathf.Sin(Mathf.PI * sw);
                 toe = 12f * Mathf.Sin(2f * Mathf.PI * sw);      // topuk kalkar -> topuk basar
             }
             else
@@ -532,12 +626,29 @@ public class Boss1Rig : MonoBehaviour
         float dt = EnemyTime.DeltaTime;      // dusman zamani: parry yavaslatmasinda animasyon da yavaslar
         animClock += dt;
 
+        // ---- Hasar flasi: butun govde ayni karede beyaz silüete doner ----
+        if (flashTimer > 0f) flashTimer -= Time.unscaledDeltaTime;
+        bool wantFlash = flashTimer > 0f && flashBuilt && flashSrs != null;
+        if (wantFlash != flashOn && flashSrs != null)
+        {
+            flashOn = wantFlash;
+            for (int i = 0; i < flashSrs.Length; i++)
+            {
+                if (flashSrs[i] == null || origSprites[i] == null) continue;
+                flashSrs[i].sprite = (flashOn && whiteSprites[i] != null) ? whiteSprites[i] : origSprites[i];
+            }
+        }
+
         // ---- Yon: dogal olarak SOLA bakar. facingSource.flipX true = sola; false = saga ----
         bool faceRight = facingSource != null ? !facingSource.flipX : flipX;
         float sgn = faceRight ? -1f : 1f;
         float sc = Mathf.Abs(scale);
-        if (!Mathf.Approximately(visual.localScale.x, sgn * sc) || !Mathf.Approximately(visual.localScale.y, sc))
-            visual.localScale = new Vector3(sgn * sc, sc, 1f);
+
+        // Squash/stretch yayi: pozitif = ezilir (yassilir, genisler), negatif = esner.
+        sqVel += (-sq * squashStiffness * squashStiffness - sqVel * squashStiffness * 0.5f) * Time.unscaledDeltaTime;
+        sq = Mathf.Clamp(sq + sqVel * Time.unscaledDeltaTime, -1.2f, 1.2f);
+        float sqx = 1f + sq * squashAmount, sqy = 1f - sq * squashAmount;
+        visual.localScale = new Vector3(sgn * sc * sqx, sc * sqy, 1f);
         const float dir = 1f;   // ayna visual'in x olceginde; aci/konum islemleri yerelde, tek yon
 
         // ---- Vurus (spring) ----
@@ -572,7 +683,7 @@ public class Boss1Rig : MonoBehaviour
 
         float w = walkW;
         float sway = Mathf.Sin(walkPhase * 6.2832f);
-        float stepWave = Mathf.Sin(walkPhase * 6.2832f * 3f - 1.2f);   // 3 adim / dongu
+        float stepWave = Mathf.Sin(walkPhase * 6.2832f * 2f - 1.2f);   // 2 adim / dongu
         float kick = plantKick * w;
 
         staggerW = Mathf.MoveTowards(staggerW, Staggered && !Dead ? 1f : 0f, dtR * 5f);

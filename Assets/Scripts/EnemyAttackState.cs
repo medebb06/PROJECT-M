@@ -679,6 +679,10 @@ public class EnemyAttackState : IEnemyState
             if (warningTimer > 0f)
                 return;
 
+            // Animasyonu kendi cizen boss'lar: darbe inmeden hasar cozulmez.
+            if (enemy.AttackHitGate != null && !enemy.AttackHitGate())
+                return;
+
             HideIndicator();
 
             if (telegraph != null)
