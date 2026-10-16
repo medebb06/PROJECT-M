@@ -709,8 +709,27 @@ public class EnemyAttackState : IEnemyState
                 resolvingHit = false;
 
                 // Son vuruş parry/block/isabet fark etmez oyuncuyu kaydırarak iter.
-                if (currentHit != null && currentHit.parryKnockback > 0f)
-                    PushPlayerBack(currentHit.parryKnockback);
+                if (currentHit != null)
+                {
+                    float pushKb = currentHit.parryKnockback;
+                    float pushDur = 0.35f;
+
+                    // Hizli seri (4+ vurus) SON vurusu: block / parry / hasar fark etmez oyuncuyu
+                    // yavasca, uzun kaydirir ("cok guclu darbe" hissi). Boss1 kendi itmesini yapar.
+                    bool finalOfSeries =
+                        move != null && move.hits != null && move.hits.Count >= 4 &&
+                        stepIndex == move.hits.Count - 1 &&
+                        enemy.GetComponent<Boss1Enemy>() == null;
+
+                    if (finalOfSeries && !enemyStaggered)
+                    {
+                        pushKb = Mathf.Max(pushKb, 32f);
+                        pushDur = 0.75f;
+                    }
+
+                    if (pushKb > 0f)
+                        PushPlayerBack(pushKb, pushDur);
+                }
             }
 
             // Vuruş sırasında state değiştiyse (parry dengeyi kırdı, block
@@ -885,7 +904,7 @@ public class EnemyAttackState : IEnemyState
             );
     }
 
-    private void PushPlayerBack(float force)
+    private void PushPlayerBack(float force, float duration = 0.35f)
     {
         if (enemy.target == null)
             return;
@@ -917,14 +936,14 @@ public class EnemyAttackState : IEnemyState
         if (dir == 0f)
             dir = -enemy.FacingDirection;
 
-        enemy.StartCoroutine(PushRoutine(p, dir, force));
+        enemy.StartCoroutine(PushRoutine(p, dir, force, duration));
     }
 
-    private System.Collections.IEnumerator PushRoutine(PlayerController p, float dir, float force)
+    private System.Collections.IEnumerator PushRoutine(PlayerController p, float dir, float force, float duration)
     {
         // force -> toplam kayma mesafesi (24 ≈ 3.6 birim ≈ 4 adım).
         float distance = force * 0.15f;
-        const float Duration = 0.35f;
+        float Duration = duration;
 
         float t = 0f;
 
@@ -1132,7 +1151,15 @@ public class EnemyAttackState : IEnemyState
                 enemy.target.position
             );
 
-        if (!IsInReach(player, distance))
+        // Oyuncunun blogu/posture'u kirildiysa (savrulup menzilden ciksa bile) vurus YINE inmeli:
+        // kombo yarida kesilmesin.
+        PlayerPosture guardPosture = player.GetComponent<PlayerPosture>();
+        bool guardBroken = guardPosture != null && guardPosture.IsBroken;
+        bool reachable =
+            IsInReach(player, distance) ||
+            (guardBroken && !IsSweep && distance <= Mathf.Max(enemy.attackRange * stepReachMultiplier * 2.5f, 9f));
+
+        if (!reachable)
         {
             Debug.Log(
                 IsSweep

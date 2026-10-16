@@ -164,6 +164,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
     public static float FixedHitPercent = 0.2f;
 
+    /// <summary>Boss1'in isabetleri: max canin bu orani (0 = FixedHitPercent kullan).</summary>
+    public static float BossHitPercent = 0f;
+
     public void TakeDamage(int damage, Vector2 hitDirection)
     {
         TakeDamage(
@@ -241,8 +244,13 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             }
 
             // Her isabetli vurus oyuncunun MAX canının sabit yuzdesi kadar vurur.
-            if (FixedHitPercent > 0f && health.MaxHealth > 0)
-                damage = Mathf.Max(1, Mathf.CeilToInt(health.MaxHealth * FixedHitPercent));
+            float hitPct = FixedHitPercent;
+
+            if (BossHitPercent > 0f && source != null && source.GetComponent<Boss1Enemy>() != null)
+                hitPct = Mathf.Max(hitPct, BossHitPercent);
+
+            if (hitPct > 0f && health.MaxHealth > 0)
+                damage = Mathf.Max(1, Mathf.CeilToInt(health.MaxHealth * hitPct));
         }
 
         int healthBefore = health.CurrentHealth;

@@ -175,13 +175,12 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayParryImpact()
     {
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
-        float pf = parryFreezeTime * parryHitStopScale, ps = parrySlowTime * parryHitStopScale;
+        // Daha uzun ve ZAMANLA HIZLANAN hit-stop: kisa tam donma, sonra cok yavas baslayip
+        // (power 2.6) giderek normale hizlanan agir cekim.
+        float pf = Mathf.Max(parryFreezeTime, 0.16f), ps = Mathf.Max(parrySlowTime, 0.55f);
 
-        if (pf > 0.0005f)
-        {
-            HitStop.Request(pf, 0f, ParryPriority);
-            HitStop.RequestRamp(pf + ps, Mathf.Lerp(1f, parrySlowScale, parryHitStopScale), 1f, 2f, ParryPriority);
-        }
+        HitStop.Request(pf, 0f, ParryPriority);
+        HitStop.RequestRamp(pf + ps, 0.08f, 1f, 2.6f, ParryPriority);
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 
@@ -220,17 +219,16 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayBalanceBreakImpact()
     {
         // En ağır his: tam donma + ağır çekimden dönüş + güçlü sarsıntı.
-        float kf = breakFreeze2 * otherHitStopScale, ks = breakSlowTime2 * otherHitStopScale;
+        // Posture kirilma: uzun tam donma + belirgin SLOW MOTION (yavas baslar, hizlanarak doner).
+        float kf = Mathf.Max(breakFreeze2, 0.22f), ks = Mathf.Max(breakSlowTime2, 1.0f);
 
-        if (kf > 0.0005f)
-        {
-            HitStop.Request(kf, 0f, BalanceBreakPriority);
-            HitStop.RequestRamp(kf + ks, Mathf.Lerp(1f, breakSlowScale2, otherHitStopScale), 1f, 2f, BalanceBreakPriority);
-        }
+        HitStop.Request(kf, 0f, BalanceBreakPriority);
+        HitStop.RequestRamp(kf + ks, 0.06f, 1f, 2.2f, BalanceBreakPriority);
 
-        PlayScreenShake(breakShake2);
+        PlayScreenShake(Mathf.Max(breakShake2, 1.6f));
+        PlayPunch(0.3f, 0.18f);
 
-        AttackImpact?.Invoke(0, breakKick2);
+        AttackImpact?.Invoke(0, Mathf.Max(breakKick2, 0.2f));
     }
 
     // =========================================================

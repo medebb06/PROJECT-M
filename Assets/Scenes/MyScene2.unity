@@ -16127,6 +16127,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Boss1
       objectReference: {fileID: 0}
+    - target: {fileID: 4880328015783240516, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: chestScale
+      value: 0.0265
+      objectReference: {fileID: 0}
     - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
       propertyPath: m_LocalPosition.x
       value: 96
@@ -16285,8 +16289,20 @@ PrefabInstance:
       value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: moveSpeed
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: airControl
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: acceleration
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 7134908297858792061, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: jumpForceOverride
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 7756061466116606015, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: atkHold5x

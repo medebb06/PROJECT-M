@@ -166,6 +166,8 @@ public class EnemyHitFeedback : MonoBehaviour
 
         HitClickAudio.PlayPostureBreak();
 
+        BalanceBreakFx.Play(transform.position + Vector3.up * 1.2f);
+
         if (CombatVFXManager.Instance != null)
         {
             CombatVFXManager.Instance.PlayBalanceBreak(

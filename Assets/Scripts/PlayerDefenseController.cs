@@ -99,6 +99,7 @@ public class PlayerDefenseController : MonoBehaviour
     // 'basılı tutuluyor' savunma sayılmaz (hareket kilitlenmesin).
     private bool suppressHeld;
 
+    private PlayerPosture lockPosture;
     private float lastSuccessTime = -99f;
     private float lastFailTime = -99f;
 
@@ -243,6 +244,13 @@ public class PlayerDefenseController : MonoBehaviour
             return false;
 
         if (!allowAirDefense && !player.IsGrounded())
+            return false;
+
+        // Posture kirildi: bar tamamen dolana kadar blok / parry yok.
+        if (lockPosture == null)
+            lockPosture = GetComponent<PlayerPosture>();
+
+        if (lockPosture != null && lockPosture.BlockLocked)
             return false;
 
         return true;

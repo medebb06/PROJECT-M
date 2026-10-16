@@ -389,18 +389,18 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Giristen sonra ilk dalgaya kadar en az sure (sn).")]
     [Min(0f)] public float waveFirstDelay = 2.5f;
     [Tooltip("Dalga saldirisi sonrasi tekrar secilmeden onceki sure (sn).")]
-    [Min(1f)] public float waveCooldown = 3f;
+    [Min(1f)] public float waveCooldown = 2.2f;
     [Tooltip("Dalga icin oyuncunun en az uzakligi (yakindaysa normal vurus/kombo kullanir).")]
-    [Min(1f)] public float waveMinDistance = 32f;
+    [Min(1f)] public float waveMinDistance = 65f;
     [Min(1f)] public float waveMaxDistance = 140f;
     [Range(0f, 1f)] public float waveChancePerSecond = 1.0f;
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
     [Min(0.4f)] public float waveFocusTime = 1.4f;
     [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
-    [Min(0.4f)] public float waveInterval = 0.95f;
+    [Min(0.4f)] public float waveInterval = 0.8f;
     [Range(1, 5)] public int waveCount = 3;
     [Tooltip("Dalga hizi (birim/sn).")]
-    [Min(4f)] public float waveSpeed = 75f;
+    [Min(4f)] public float waveSpeed = 145f;
     [Tooltip("Dalga yuksekligi (ziplayarak gecmek icin ustune cikmak gerekir).")]
     [Min(1f)] public float waveHeight = 9f;
     [Tooltip("Dalganin oyuncuya degme yaricapi (yatay).")]
@@ -428,22 +428,60 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Acik: oyuncu yakindaysa boss once geriye ziplayip mesafe acar, sonra dalgalari atar.")]
     public bool waveBackHop = true;
     [Tooltip("Oyuncu yakindayken (waveMinDistance'tan az) saniyede geri ziplama baslatma olasiligi.")]
-    [Range(0f, 2f)] public float waveCloseChancePerSecond = 1.5f;
+    [Range(0f, 2f)] public float waveCloseChancePerSecond = 2f;
     [Tooltip("Ziplama sonrasi hedeflenen mesafe (oyuncuyla boss arasi).")]
-    [Min(10f)] public float waveHopTargetDistance = 48f;
+    [Min(10f)] public float waveHopTargetDistance = 82f;
     [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
-    [Min(5f)] public float waveHopMaxDistance = 40f;
+    [Min(5f)] public float waveHopMaxDistance = 58f;
     [Min(0.2f)] public float waveHopTime = 0.6f;
     [Min(0f)] public float waveHopHeight = 8f;
     [Tooltip("Ziplamadan once cokme (sn).")]
     [Min(0f)] public float waveHopCrouch = 0.3f;
 
     [Header("Posture kirilma merhameti")]
-    [Tooltip("Oyuncunun posture'u kirilinca boss bu sure (sn) saldirmaz: kombo/dalga/ziplama iptal olur, oyuncu kirik halde olmesin.")]
-    [Min(0f)] public float postureBreakMercy = 1.8f;
+    [Tooltip("0 = kapali (boss her halukarda saldirisini bitirir). >0: oyuncunun posture'u kirilinca boss bu sure (sn) saldirmaz.")]
+    [Min(0f)] public float postureBreakMercy = 0f;
     float mercyUntil;
     bool mercyPending, postureWasBroken;
     internal bool InMercy { get { return Time.time < mercyUntil; } }
+
+    // ---------------------------------------------------------------------
+    // YETENEK DONGUSU: ayni yetenek ust uste spamlanmaz; dalga (uzaktan) one cikar.
+    // ---------------------------------------------------------------------
+    [Header("Yetenek dongusu / hasar")]
+    [Tooltip("Acik: ayni yetenek (kombo / ziplama / dalga) arka arkaya iki kez secilmez.")]
+    public bool skillRotation = true;
+    [Tooltip("Dalga, son kullanimindan beri gecen her yetenek icin bu kadar daha sik secilir.")]
+    [Range(0f, 2f)] public float waveStaleBoost = 0.6f;
+    [Tooltip("Boss'un her isabeti oyuncunun MAX canindan bu kadar alir (0.34 = 3 hata olum).")]
+    [Range(0.05f, 1f)] public float bossHitPercent = 0.34f;
+
+    enum Skill { None, Melee, Combo, Leap, Wave }
+    Skill lastSkill = Skill.None;
+    int skillsSinceWave = 3;
+    IEnemyState trackedState;
+    AttackMove comboMove;
+
+    bool SkillBlocked(Skill s) { return skillRotation && s == lastSkill; }
+
+    void NoteSkill(Skill s)
+    {
+        skillsSinceWave = s == Skill.Wave ? 0 : skillsSinceWave + 1;
+        lastSkill = s;
+        if (comboMove != null)
+            comboMove.cooldown = (skillRotation && s == Skill.Combo) ? 9999f : comboCooldown;   // kombodan sonra kombo secilmez
+    }
+
+    void TrackSkill(IEnemyState st)
+    {
+        if (st is Boss1WaveState) NoteSkill(Skill.Wave);
+        else if (st is Boss1LeapState) NoteSkill(Skill.Leap);
+        else
+        {
+            EnemyAttackState a = st as EnemyAttackState;
+            if (a != null) NoteSkill(a.MoveName == ComboName ? Skill.Combo : Skill.Melee);
+        }
+    }
 
     float nextWaveTime;
     int comboLastIndex = 3;
@@ -738,6 +776,16 @@ public class Boss1Enemy : MonoBehaviour
 
     void Configure()
     {
+        // Sahnede kayitli eski (yavas/kolay) degerleri guvenli sekilde yeni dengeye cek.
+        waveSpeed = Mathf.Max(waveSpeed, 140f);
+        waveMinDistance = Mathf.Max(waveMinDistance, 60f);
+        waveHopTargetDistance = Mathf.Max(waveHopTargetDistance, 78f);
+        waveHopMaxDistance = Mathf.Max(waveHopMaxDistance, 55f);
+        waveInterval = Mathf.Min(waveInterval, 0.85f);
+        waveCooldown = Mathf.Min(waveCooldown, 2.5f);
+        postureBreakMercy = 0f;                 // oyuncunun blogu kirilsa da boss son vuruslari ATAR
+        PlayerDamageReceiver.BossHitPercent = bossHitPercent;
+
         if (agile && rig != null)
         {
             rig.windupTime = agileWindupTime;
@@ -822,7 +870,7 @@ public class Boss1Enemy : MonoBehaviour
 
     void OnPlayerBlocked(EnemyController e, bool postureBroken)
     {
-        if (e == enemy && postureBroken) mercyPending = true;
+        if (e == enemy && postureBroken && postureBreakMercy > 0f) mercyPending = true;
         if (!blockKnockback || e != enemy || enemy == null || enemy.target == null) return;
         PlayerController p = enemy.target.GetComponent<PlayerController>();
         if (p == null || p.rb == null || p.isDashing) return;
@@ -908,6 +956,7 @@ public class Boss1Enemy : MonoBehaviour
         comboLastIndex = beats;   // son (gecikmeli) vurusun adim indeksi
         m.hits.Add(new MoveHit(MoveHitType.Normal, comboDelayedWindup, comboDelayedRandom, comboLastDamage).Retarget().ParryReward(comboFinalParryReward));
 
+        comboMove = m;
         moveset.moves = new List<AttackMove> { m };
         moveset.comboFirstWindupBonus = 0f;       // ilk vurus da hizli baslasin
         moveset.comboBlockPostureMultiplier = 1f; // kombo vuruslari blokta tam posture yer
@@ -1055,7 +1104,7 @@ public class Boss1Enemy : MonoBehaviour
         }
 
         // Yakin mesafede de ziplama: normal vurus baslarken bazen onun yerine ziplama sec (Update'te state degisir).
-        if (leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime && Random.value < leapCloseChance)
+        if (leapEnabled && !leapActive && !pendingLeap && !SkillBlocked(Skill.Leap) && Time.time >= nextLeapTime && Random.value < leapCloseChance)
         {
             pendingLeap = true;
             return;
@@ -1214,7 +1263,7 @@ public class Boss1Enemy : MonoBehaviour
         // Oyuncunun posture'u kirildi: boss bir sure saldirmaz (kirik oyuncu tek seferde olmesin).
         if (playerPosture == null) playerPosture = FindFirstObjectByType<PlayerPosture>();
         bool pBroken = playerPosture != null && playerPosture.IsBroken;
-        if (pBroken && !postureWasBroken) mercyPending = true;
+        if (pBroken && !postureWasBroken && postureBreakMercy > 0f) mercyPending = true;
         postureWasBroken = pBroken;
         if (mercyPending)
         {
@@ -1239,8 +1288,15 @@ public class Boss1Enemy : MonoBehaviour
                 rig.PlayAttack();
         }
 
+        // Yetenek dongusu: durum degisince hangi yetenege girildigini kaydet.
+        if (!ReferenceEquals(enemy.CurrentState, trackedState))
+        {
+            trackedState = enemy.CurrentState;
+            TrackSkill(trackedState);
+        }
+
         // Uzaktan kombo: oyuncu vurus menzili disindaysa kosarak baslat.
-        if (comboEnabled && comboRunEnabled && !leapActive && enemy.CurrentState is EnemyChaseState
+        if (comboEnabled && comboRunEnabled && !SkillBlocked(Skill.Combo) && !leapActive && enemy.CurrentState is EnemyChaseState
             && Time.time >= comboLastStart + comboCooldown + 0.4f
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead && enemy.CanAttack)
         {
@@ -1282,13 +1338,15 @@ public class Boss1Enemy : MonoBehaviour
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead)
         {
             float wx = Mathf.Abs(enemy.target.position.x - transform.position.x);
-            if (wx >= waveMinDistance && wx <= waveMaxDistance && Random.value < waveChancePerSecond * Time.deltaTime)
+            float wBoost = 1f + Mathf.Min(4, skillsSinceWave) * waveStaleBoost;   // uzun suredir dalga yok: daha sik
+            if (SkillBlocked(Skill.Wave)) { }
+            else if (wx >= waveMinDistance && wx <= waveMaxDistance && Random.value < waveChancePerSecond * wBoost * Time.deltaTime)
                 enemy.ChangeState(new Boss1WaveState(this, enemy));
-            else if (waveBackHop && wx < waveMinDistance && !InMercy && Random.value < waveCloseChancePerSecond * Time.deltaTime)
+            else if (waveBackHop && wx < waveMinDistance && !InMercy && Random.value < waveCloseChancePerSecond * wBoost * Time.deltaTime)
                 enemy.ChangeState(new Boss1WaveState(this, enemy));   // yakin: once geri zipla
         }
 
-        if (leapEnabled && !leapActive && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState
+        if (leapEnabled && !leapActive && !SkillBlocked(Skill.Leap) && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead)
         {
             float lx = Mathf.Abs(enemy.target.position.x - transform.position.x);
@@ -1696,6 +1754,7 @@ public class Boss1Enemy : MonoBehaviour
             o.rig.SetBaseSquash(0f, 6f);
             o.rig.PlayAttack(o.waveFocusTime, true);            // yavas kalkis: odaklandigi anlasilsin
             o.rig.SetSwordTint(o.waveColor, 1f, 0.9f);
+            CombatCallout.Popup(o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f), "DALGA!", o.waveColor, 2.4f);
         }
 
         void BeginHop()
@@ -1736,7 +1795,13 @@ public class Boss1Enemy : MonoBehaviour
             float dir = e.FacingDirection;
             Vector3 bp = o.transform.position;
             float fwd = o.waveSpawnForward;
-            if (e.target != null && Mathf.Abs(e.target.position.x - bp.x) < fwd + 4f) fwd = Mathf.Min(fwd, 4f);   // oyuncu yakin: dalga hemen onde dogsun
+            if (e.target != null)
+            {
+                // Tepki payi: dalga oyuncuya en az ~0.3 sn'de ulassin (cok yakinsa bossun hemen onunde dogar).
+                float gap = Mathf.Abs(e.target.position.x - bp.x);
+                fwd = Mathf.Clamp(gap - o.waveSpeed * 0.3f, 0f, fwd);
+            }
+            RunCameraZoom.AddShake(2.2f);
             Boss1Wave.Spawn(o, e, new Vector2(bp.x + dir * fwd, bp.y), dir);
             fired++;
             if (fired < o.waveCount) needNext = true;
@@ -1941,16 +2006,9 @@ public class Boss1Wave : MonoBehaviour
             return;
         }
 
-        if (def != null && def.CanBlock())
-        {
-            CombatImpactFeedback cf = pl.GetComponent<CombatImpactFeedback>();
-            if (cf != null) cf.PlayBlockImpact();
-            def.HandleBlockHit(hitDir, Mathf.Max(1, Mathf.RoundToInt(e.blockPostureDamage * o.waveBlockPostureMultiplier)));
-            PlayerPosture ps = pl.GetComponent<PlayerPosture>();
-            CombatEvents.RaisePlayerBlocked(e, ps != null && ps.IsBroken);
-            Destroy(gameObject);
-            return;
-        }
+        // Dalga BLOKLANAMAZ: sadece parry. Blok / pozisyon fark etmez, parry degilse hasar.
+        if (def != null && def.IsBlocking)
+            def.CancelDefense();
 
         PlayerDamageReceiver rcv = pl.GetComponent<PlayerDamageReceiver>();
         if (rcv != null)
@@ -1963,7 +2021,7 @@ public class Boss1Wave : MonoBehaviour
                 e.attackKnockbackDuration,
                 e.attackKnockbackDeceleration,
                 e,
-                PlayerHitKind.Normal,
+                PlayerHitKind.Unblockable,
                 false
             );
             EnemyAttackCoordinator.NotifyPlayerHit();

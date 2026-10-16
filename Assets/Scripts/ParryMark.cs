@@ -205,7 +205,7 @@ public class ParrySoftTarget : MonoBehaviour
     }
 
     PlayerController pc;
-    EnemyController parried; float parriedUntil;
+    EnemyController parried; float parriedUntil; float noFaceUntil;
 
     void OnEnable() { CombatEvents.ParrySucceeded += OnParry; }
     void OnDisable() { CombatEvents.ParrySucceeded -= OnParry; }
@@ -213,10 +213,8 @@ public class ParrySoftTarget : MonoBehaviour
     // Basarili parry: oyuncu (blok durusundayken bile) parry'lenen dusmana doner.
     void OnParry(EnemyController e, bool brokeBalance)
     {
-        if (e == null) return;
-        parried = e; parriedUntil = Time.time + 0.4f;
-        if (pc == null) pc = FindFirstObjectByType<PlayerController>();
-        FaceEnemy(pc, e);
+        // Parry'de oyuncu artik dusmana DONMEZ (yon degismez); kisa sure oto-yuz cevirme de durur.
+        noFaceUntil = Time.time + 0.7f;
     }
 
     static void FaceEnemy(PlayerController p, EnemyController e)
@@ -237,6 +235,7 @@ public class ParrySoftTarget : MonoBehaviour
             FaceEnemy(pc, parried);
             return;
         }
+        if (Time.time < noFaceUntil) return;
         if (pc == null || pc.attackFacingLocked || !pc.canControl) return;
         var def = pc.GetComponent<PlayerDefenseController>();
         if (def != null && def.IsDefending) return;
