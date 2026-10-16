@@ -28,7 +28,7 @@ public class BlockBreakDamage : MonoBehaviour
         Health h = e.GetComponent<Health>();
         if (h == null || h.IsDead || h.MaxHealth <= 0) return;
 
-        bool boss = e.GetComponent<BossController>() != null || e.GetComponent<Boss1Enemy>() != null;
+        bool boss = e.GetComponent<Boss1Enemy>() != null;
         float p = boss ? bossPercent : Random.Range(minPercent, maxPercent);
         int dmg = Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * p));
         h.TakeDamage(dmg);

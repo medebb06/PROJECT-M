@@ -502,7 +502,7 @@ public class RageSlamState : IPlayerState
         Health h = e.GetComponent<Health>();
         if (h == null) return;
         Vector2 hitDir = new Vector2(dir, 0f);
-        BossController boss = e.GetComponent<BossController>();
+        Boss1Enemy boss = e.GetComponent<Boss1Enemy>();
         EnemyBalance bal = e.GetComponent<EnemyBalance>();
         bool lethal = boss == null && (ParryMark.IsMarked(e) || (bal != null && bal.IsBroken));
 

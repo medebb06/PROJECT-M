@@ -263,17 +263,11 @@ public class EnemyOverheadBars : MonoBehaviour
 
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
-        BossController boss = BossController.Current;
-
         for (int i = 0; i < EnemyController.All.Count; i++)
         {
             EnemyController enemy = EnemyController.All[i];
 
             if (enemy == null || enemy.IsDead || !enemy.isActiveAndEnabled)
-                continue;
-
-            // Boss'un çubuğu ekranın üstünde.
-            if (boss != null && boss.gameObject == enemy.gameObject)
                 continue;
 
             // Boss1'in kendi (ekranin ustundeki) cubugu var: bas ustu cubuk cizilmez.

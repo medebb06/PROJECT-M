@@ -42,9 +42,7 @@ public class EnemyExecuteState : IEnemyState
         // Düşman açık anda / sersemlemişse tam hasar; değilse (kör vuruş) ×0.75.
         openOnly = enemy != null && !enemy.IsOpen;
 
-        BossController bc = enemy != null ? enemy.GetComponent<BossController>() : null;
-
-        finalBlow = bc != null && bc.FinalBlowOpen;
+        finalBlow = false;
     }
 
     public void Enter()
@@ -254,23 +252,10 @@ public class EnemyExecuteState : IEnemyState
 
         if (segs > 0 && health != null)
         {
-            BossController boss = enemy.GetComponent<BossController>();
-
-            if (boss != null)
-            {
-                // Boss: infaz tek atmaz, canın bir yüzdesini alır (faz atlatmaz).
-                // Cana doğrudan hasar + denge itmesi; canı azsa bitirici vuruş.
-                damage = finalBlow
-                    ? boss.CompleteFinalBlow()
-                    : boss.ExecuteHealthDamage(segs, openOnly ? OpenOnlyDamageMultiplier : 1f);
-            }
-            else
-            {
-                // 1 parça ≈ canın yarısı, 2+ parça öldürür.
-                damage = segs >= 2
-                    ? Mathf.Max(1, health.CurrentHealth)
-                    : Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * 0.5f));
-            }
+            // 1 parça ≈ canın yarısı, 2+ parça öldürür.
+            damage = segs >= 2
+                ? Mathf.Max(1, health.CurrentHealth)
+                : Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * 0.5f));
 
             CombatCallout.Popup(
                 enemy.transform.position + Vector3.up * 2.4f,
@@ -356,16 +341,9 @@ public class EnemyExecuteState : IEnemyState
         if (h == null)
             return;
 
-        BossController boss = other.GetComponent<BossController>();
-
-        int dmg;
-
-        if (boss != null)
-            dmg = boss.ExecuteHealthDamage(segs, 1f);
-        else
-            dmg = segs >= 2
-                ? Mathf.Max(1, h.CurrentHealth)
-                : Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * 0.5f));
+        int dmg = segs >= 2
+            ? Mathf.Max(1, h.CurrentHealth)
+            : Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * 0.5f));
 
         CombatCallout.Popup(
             other.transform.position + Vector3.up * 2.4f,

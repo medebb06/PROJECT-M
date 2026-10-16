@@ -177,7 +177,6 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Dogrudan kamera titretme carpani (dunya birimi / attackShake). 0 = yalniz Cinemachine impulse.")]
     [Range(0f, 2f)] public float attackShakeWorld = 0.5f;
 
-    AudioSource roarSource;
     int lastRoar = -1;
 
     void OnStrikeLanded()
@@ -192,13 +191,8 @@ public class Boss1Enemy : MonoBehaviour
                 Boss1Shock.Spawn(transform.position + new Vector3(dirX * 4f, 0f, 0f), dirX, attackReach * sweepReachMultiplier, sweepColor);
                 rig.SetSwordTint(sweepColor, 0f, 3f);
             }
-            else if (sht == MoveHitType.Grab && sst.MoveName == GrabName)
-            {
-                BalanceBreakFx.Play(transform.position + new Vector3(dirX * attackReach * 0.6f, 2f, 0f), null);
-                rig.SetSwordTint(grabColor, 0f, 3f);
-            }
             else if (sst.MoveName == FakeName)
-                rig.SetSwordTint(grabColor, 0f, 3f);
+                rig.SetSwordTint(fakeColor, 0f, 3f);
         }
 
         if (comboTinted && comboStepNow >= comboLastIndex) comboEndAt = Time.time + 0.45f;
@@ -300,6 +294,7 @@ public class Boss1Enemy : MonoBehaviour
 
         if (hud != null) hud.ShowName(bossName);
         float len = PlayRoar();
+        if (rig != null) rig.BeatChest(Mathf.Max(1.2f, Mathf.Min(len, introMaxRoar)));   // goril gogus vurusu
         rig.Flinch(1.8f);
         rig.Squash(2.2f);
         if (CameraShake.Instance != null) CameraShake.Instance.Shake(1.4f);
@@ -364,8 +359,6 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Gerilme/cokme suresi (kilic yukari, govde ezik). Rig gerilmesinden (1.0 sn) kisa olmasin.")]
     [Min(0.3f)] public float leapCrouchTime = 0.85f;
     [Min(0.05f)] public float leapRiseTime = 0.22f;
-    [Tooltip("KULLANILMIYOR: ekran disi sure artik izleme + kilit penceresinden (oyuncunun dash degerlerinden) hesaplanir.")]
-    [Min(0.3f)] public float leapAirTime = 1.0f;
     [Tooltip("Ilk inis: isaret bu sure oyuncuyu izler, sonra SABITLENIR.")]
     [Min(0.1f)] public float leapTrackTime = 0.55f;
     [Tooltip("Ziplama bir kez odaklandiktan sonra art arda kac kez inis yapsin.")]
@@ -432,8 +425,6 @@ public class Boss1Enemy : MonoBehaviour
     [Min(0f)] public float waveDamageMultiplier = 1f;
     [Tooltip("Parry'de boss dengesine verilen hasar (normal parry hasarina carpan).")]
     [Min(0f)] public float waveParryBalanceMultiplier = 0.8f;
-    [Tooltip("Blokta oyuncunun posture hasari (normal blok hasarina carpan).")]
-    [Min(0f)] public float waveBlockPostureMultiplier = 0.5f;
     public Color waveColor = new Color(1f, 0.1f, 0.02f, 1f);
     [Tooltip("Parry'lenen dalganin rengi (geri seker).")]
     public Color waveReflectColor = new Color(0.25f, 0.85f, 1f, 1f);
@@ -475,18 +466,18 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Boss'un her isabeti oyuncunun MAX canindan bu kadar alir (0.34 = 3 hata olum).")]
     [Range(0.05f, 1f)] public float bossHitPercent = 0.34f;
 
-    enum Skill { None, Melee, Combo, Sweep, Grab, Leap, Wave }
+    enum Skill { None, Melee, Combo, Sweep, Leap, Wave }
     Skill lastSkill = Skill.None;
     int skillsSinceWave = 3;
     IEnemyState trackedState;
-    AttackMove comboMove, sweepMove, grabMove, fakeMove;
+    AttackMove comboMove, sweepMove, fakeMove;
 
     [Header("Yetenek sirasi (ogrenilebilir dongu)")]
     [Tooltip("Dongudeki siradaki yetenek 'beklenir'; baska ozel yetenek secilmez. Beklenen yetenek bu kadar sn gerceklesmezse atlanir.")]
     [Min(2f)] public float patternPatience = 9f;
     // Faz 1 dongusu (Melee = duz vurus).
-    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Grab, Skill.Leap };
-    static readonly Skill[] Pattern2 = { Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Grab, Skill.Combo, Skill.Leap, Skill.Wave };
+    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Melee, Skill.Leap };
+    static readonly Skill[] Pattern2 = { Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Combo, Skill.Leap, Skill.Wave };
     bool phase2;
     int patIdx;
     float expectedSince;
@@ -522,7 +513,7 @@ public class Boss1Enemy : MonoBehaviour
             EnemyAttackState a = st as EnemyAttackState;
             if (a == null) return;
             string n = a.MoveName;
-            NoteSkill(n == ComboName ? Skill.Combo : n == SweepName ? Skill.Sweep : n == GrabName ? Skill.Grab : Skill.Melee);
+            NoteSkill(n == ComboName ? Skill.Combo : n == SweepName ? Skill.Sweep : Skill.Melee);
         }
     }
 
@@ -533,7 +524,6 @@ public class Boss1Enemy : MonoBehaviour
         Skill ex = Expected;
         if (m == comboMove) return ex == Skill.Combo ? 1000f : 0f;
         if (m == sweepMove) return ex == Skill.Sweep ? 1000f : 0f;
-        if (m == grabMove) return ex == Skill.Grab ? 1000f : 0f;
         if (m == fakeMove) return (ex == Skill.Melee && fakeFlag) ? 1000f : 0f;
         return 0f;
     }
@@ -550,12 +540,13 @@ public class Boss1Enemy : MonoBehaviour
     [Min(0.5f)] public float sweepHitHeight = 2f;
     public Color sweepColor = new Color(0.3f, 0.8f, 1f, 1f);
 
-    [Header("Yakalama (dash ile kac)")]
-    [Tooltip("Uyari suresi (sn). Parry / blok islemez; sadece DASH (kusursuz dash karsi vurus acar).")]
-    [Min(0.5f)] public float grabWindup = 1.35f;
-    [Tooltip("Yakalama hazirlanirken oyuncuya dogru ilerleme hizi.")]
-    [Min(0f)] public float grabAdvance = 26f;
-    public Color grabColor = new Color(1f, 0.1f, 0.35f, 1f);
+    [Header("Uzaktan baslatma (Supurme menzile girmeden de baslar)")]
+    [Tooltip("Siradaki yetenek Supurme ise boss oyuncu normal vurus menzilinin disindayken de bu mesafeye (birim) kadar uzaktan baslatir.")]
+    [Min(5f)] public float farSkillMaxDistance = 28f;
+    [Tooltip("Uzaktan baslatma sansi (saniyede). Buyuk = hemen baslar.")]
+    [Min(0.5f)] public float farSkillChancePerSecond = 3f;
+    float farSkillRetry;
+    public Color fakeColor = new Color(1f, 0.1f, 0.35f, 1f);
 
     [Header("Aldatmaca (gecikmeli vurus)")]
     [Min(0.3f)] public float fakeWindup = 0.55f;
@@ -565,7 +556,6 @@ public class Boss1Enemy : MonoBehaviour
     [Range(0f, 1f)] public float fakeChance = 0.45f;
 
     const string SweepName = "Boss1 Supurme";
-    const string GrabName = "Boss1 Yakalama";
     const string FakeName = "Boss1 Aldatmaca";
 
     [Header("Faz 2 (ofke)")]
@@ -1070,9 +1060,6 @@ public class Boss1Enemy : MonoBehaviour
         sweepMove.hits.Add(new MoveHit(MoveHitType.Sweep, sweepWindup * pf, 0f, 1f, 1f));
         list.Add(sweepMove);
 
-        grabMove = new AttackMove { name = GrabName, weight = 1f, cooldown = 0f, maxDistance = reach, recoveryMultiplier = 1.4f };
-        grabMove.hits.Add(new MoveHit(MoveHitType.Grab, grabWindup * pf, 0f, 1f, 1f).Advance(grabAdvance));
-        list.Add(grabMove);
 
         fakeMove = new AttackMove { name = FakeName, weight = 1f, cooldown = 0f, maxDistance = reach, recoveryMultiplier = 1.1f };
         fakeMove.hits.Add(new MoveHit(MoveHitType.Normal, fakeWindup * pf, fakeWindupRandom, 1f, 1f).ParryReward(1.6f));
@@ -1251,12 +1238,11 @@ public class Boss1Enemy : MonoBehaviour
         }
 
         // Supurme / Yakalama / Aldatmaca: uyari boyunca kilic yavasca kalkar, renkle ne olduguna dair ipucu.
-        if (st != null && (st.MoveName == SweepName || st.MoveName == GrabName || st.MoveName == FakeName))
+        if (st != null && (st.MoveName == SweepName || st.MoveName == FakeName))
         {
             MoveHitType ht = st.CurrentHitType;
             Boss1Rig.AttackStyle sty = Boss1Rig.AttackStyle.Fake;
             if (ht == MoveHitType.Sweep) { rig.SetSwordTint(sweepColor, 1f, 0.9f); sty = Boss1Rig.AttackStyle.Sweep; }
-            else if (ht == MoveHitType.Grab) { rig.SetSwordTint(grabColor, 1f, 0.9f); sty = Boss1Rig.AttackStyle.Grab; }
             rig.PlayAttack(Mathf.Max(0.3f, st.RemainingWindup), true, sty);
             return;
         }
@@ -1460,10 +1446,73 @@ public class Boss1Enemy : MonoBehaviour
         rig.Squash(brokeBalance ? parrySquash * 1.4f : parrySquash);
     }
 
+    // ---------------------------------------------------------------------
+    // TEST TUSLARI (sadece Editor / Development build): yetenekleri gormek icin.
+    //   Y = Yakalama, U = Supurme, I = Aldatmaca, H = Kombo, J = Dalga, K = Ziplama, N = Duz vurus
+    //   L = SECILEN yetenegi SURESIZ tekrarla (kilit) ac/kapat, G = OLUMSUZ mod ac/kapat
+    // ---------------------------------------------------------------------
+    Skill testLock = Skill.None;
+    bool testGod;
+
+    void ForceSkill(Skill s, bool fake)
+    {
+        Skill[] p = CurPattern;
+        for (int i = 0; i < p.Length; i++)
+        {
+            if (p[i] == s)
+            {
+                patIdx = i;
+                expectedSince = Time.time;
+                fakeFlag = fake;
+                if (s == Skill.Wave) nextWaveTime = Time.time;
+                if (s == Skill.Leap) nextLeapTime = Time.time;
+                Debug.Log("[Boss1 TEST] siradaki yetenek: " + s + (fake ? " (aldatmaca)" : ""));
+                return;
+            }
+        }
+    }
+
+    void TestKeys()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (kb == null) return;
+        if (kb.uKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Sweep, false); }
+        if (kb.iKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Melee, true); }
+        if (kb.hKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Combo, false); }
+        if (kb.jKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Wave, false); }
+        if (kb.kKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Leap, false); }
+        if (kb.nKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Melee, false); }
+
+        // L: son istenen yetenegi kilitle (her seferinde ayni yetenek) / kilidi ac.
+        if (kb.lKey.wasPressedThisFrame)
+        {
+            if (testLock != Skill.None) { testLock = Skill.None; Debug.Log("[Boss1 TEST] kilit KAPALI"); }
+            else { testLock = Expected; Debug.Log("[Boss1 TEST] kilit ACIK: hep " + testLock); }
+        }
+        if (testLock != Skill.None && Expected != testLock)
+            ForceSkill(testLock, false);
+
+        if (kb.gKey.wasPressedThisFrame)
+        {
+            testGod = !testGod;
+            Debug.Log("[Boss1 TEST] olumsuz mod " + (testGod ? "ACIK" : "KAPALI"));
+        }
+        if (testGod && playerCtl != null)
+        {
+            Health ph = playerCtl.GetComponent<Health>();
+            if (ph != null && !ph.IsDead && ph.CurrentHealth < ph.MaxHealth)
+                ph.Heal(ph.MaxHealth);
+        }
+#endif
+    }
+
     void Update()
     {
         if (enemy == null)
             return;
+
+        TestKeys();
 
         if (!MainMenu.Active)
             CheckRoarTriggers();
@@ -1559,6 +1608,25 @@ public class Boss1Enemy : MonoBehaviour
                 {
                     enemy.ChangeState(new EnemyChaseState(enemy));   // kombo secilemedi: geri don
                     comboLastStart = Time.time - comboCooldown;       // kisa sure tekrar denemesin
+                }
+            }
+        }
+
+        // Uzaktan Supurme: normal vurus menziline girmesini bekleme; siradaki yetenek buysa uzaktan basla.
+        if (skillRotation && Expected == Skill.Sweep && !leapActive && !waveActive
+            && enemy.CurrentState is EnemyChaseState && Time.time >= farSkillRetry
+            && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead && enemy.CanAttack)
+        {
+            float fx = Mathf.Abs(enemy.target.position.x - transform.position.x);
+            if (fx > enemy.attackRange && fx <= farSkillMaxDistance && Random.value < farSkillChancePerSecond * Time.deltaTime
+                && EnemyAttackCoordinator.TryRequestAttack(enemy, enemy.PlannedWindup))
+            {
+                enemy.ChangeState(new EnemyAttackState(enemy));
+                EnemyAttackState fs = enemy.CurrentState as EnemyAttackState;
+                if (fs == null || fs.MoveName != SweepName)
+                {
+                    enemy.ChangeState(new EnemyChaseState(enemy));   // secilemedi: geri don, kisa sure tekrar denemesin
+                    farSkillRetry = Time.time + 0.6f;
                 }
             }
         }
@@ -1782,6 +1850,7 @@ public class Boss1Enemy : MonoBehaviour
 
             o.rig.SetBaseSquash(0.5f, 25f);
             o.rig.Squash(0.5f);
+            o.rig.PoundGround();
             o.rig.SetBaseSquash(0f, 3f);
             float sh = last ? o.leapShake : o.leapShake * 0.7f;
             if (CameraShake.Instance != null) CameraShake.Instance.Shake(sh);
@@ -2200,6 +2269,7 @@ public class Boss1Enemy : MonoBehaviour
             o.rig.Flash();
             float len = o.RoarForPhase2();
             dur = Mathf.Max(dur, Mathf.Min(len, 2.5f));
+            o.rig.BeatChest(dur);
             Vector3 top = o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f);
             CombatCallout.Popup(top, "OFKE!", new Color(1f, 0.2f, 0.1f), 3f);
             BalanceBreakFx.Play(o.transform.position + new Vector3(0f, 6f, 0f), null);

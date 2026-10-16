@@ -144,7 +144,7 @@ public class EnemyAttackState : IEnemyState
         return Mathf.Min(w, MaxCapsuleWindup);
     }
 
-    private bool IsBossEnemy => enemy != null && enemy.GetComponent<BossController>() != null;
+    private bool IsBossEnemy => false;
 
 
     public bool IsUnblockable => isUnblockable;
@@ -696,7 +696,7 @@ public class EnemyAttackState : IEnemyState
             {
                 // OK: vuruş anında mermi çıkar; sonucu mermi çözer
                 // (parry / block / dash / isabet).
-                FireShot();
+                // Mermi sistemi (EnemyArcher/EnemyProjectile) kaldirildi: Shot vurusu bos gecer.
                 enemyStaggered = false;
             }
             else
@@ -1290,22 +1290,6 @@ public class EnemyAttackState : IEnemyState
 
     // Ok bırak: baktığı yöne (yön kilitli). Oyuncu arkasındaysa düz ileri
     // atar (ıska): dash ile arkasına geçmek oku da boşa çıkarır.
-    private void FireShot()
-    {
-        EnemyArcher archer = enemy.GetComponent<EnemyArcher>();
-
-        if (archer == null)
-            archer = enemy.gameObject.AddComponent<EnemyArcher>();
-
-        int damage =
-            Mathf.Max(
-                1,
-                Mathf.RoundToInt(enemy.attackDamage * stepDamageMultiplier)
-            );
-
-        archer.Fire(damage);
-    }
-
     private bool SweepIgnoresDash =>
         moveset == null || moveset.sweepIgnoresDash;
 

@@ -314,26 +314,11 @@ public class EnemyArchetype : MonoBehaviour
             // (saldırı ritmi koordinatörü yine geçerli). Geri çekilmeyi
             // EnemyArcher yapar.
             enemy.useStandby = false;
-
-            if (GetComponent<EnemyArcher>() == null)
-                gameObject.AddComponent<EnemyArcher>();
         }
 
         // ---------------- ÖZEL TİPLER ----------------
 
-        if (type == EnemyArchetypeType.Shielded && GetComponent<EnemyShield>() == null)
-            gameObject.AddComponent<EnemyShield>();
-
-        if (type == EnemyArchetypeType.Flyer && GetComponent<EnemyFlyer>() == null)
-        {
-            gameObject.AddComponent<EnemyFlyer>();
-
-            // Havada sıra beklemez; standby halkası yere göre.
-            enemy.useStandby = false;
-        }
-
-        if (type == EnemyArchetypeType.Bomber && GetComponent<EnemyBomber>() == null)
-            gameObject.AddComponent<EnemyBomber>();
+        // Kalkanli / ucan / bombaci tipler kaldirildi (EnemyShield/Flyer/Bomber silindi).
 
         // ---------------- SAVRULMA (ağır az savrulur) ----------------
 
@@ -352,12 +337,6 @@ public class EnemyArchetype : MonoBehaviour
 
         // ---------------- BASİT GÖVDE (sprite'ı olmayan tipler) ----------------
         // Kendi prefab'ı yoksa (renklendirilmiş kopya) kapsül / daire çizilir.
-
-        if (applyScale && type == EnemyArchetypeType.Flyer)
-            EnemyShape.Apply(enemy, EnemyShape.Kind.Capsule, new Color(0.6f, 0.95f, 1f), false);
-
-        if (applyScale && type == EnemyArchetypeType.Bomber)
-            EnemyShape.Apply(enemy, EnemyShape.Kind.Circle, new Color(1f, 0.55f, 0.4f), true);
 
         // ---------------- HAMLE SETİ ----------------
 

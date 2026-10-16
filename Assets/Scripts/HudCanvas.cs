@@ -19,6 +19,7 @@ public class HudCanvas : MonoBehaviour
     readonly List<Image> pool = new List<Image>(48);
     readonly List<int> stamp = new List<int>(48);
     int used, usedFrame = -1;
+    bool loggedDraw;
 
     static HudCanvas Get()
     {
@@ -33,6 +34,7 @@ public class HudCanvas : MonoBehaviour
         inst.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         inst.canvas.sortingOrder = SortingOrder;
         inst.canvas.pixelPerfect = false;
+        Debug.Log("[HudCanvas] kuruldu: ekran " + Screen.width + "x" + Screen.height + ", safeArea " + Screen.safeArea + ", sortingOrder " + SortingOrder);
 
         var rootGo = new GameObject("Root", typeof(RectTransform));
         rootGo.transform.SetParent(go.transform, false);
@@ -103,6 +105,7 @@ public class HudCanvas : MonoBehaviour
             stamp.Add(-1);
         }
 
+        if (!loggedDraw) { loggedDraw = true; Debug.Log("[HudCanvas] ilk cizim: rect " + r + ", renk " + c + ", TopBarPixels " + RunCameraZoom.TopBarPixels + ", MainMenu.Active " + MainMenu.Active); }
         stamp[used] = f;
         img.enabled = c.a > 0.003f && r.width > 0.01f && r.height > 0.01f;
         img.color = c;

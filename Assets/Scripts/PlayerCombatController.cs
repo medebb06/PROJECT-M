@@ -42,20 +42,10 @@ public class PlayerCombatController : MonoBehaviour
     private int airStep;
     private PlayerAnimationController animationController;
 
-    // Silah (PlayerWeapon) çarpanlı vuruş kutusu.
+    // Vuruş kutusu (silah çarpanı kaldırıldı).
     public Vector2 EffectiveHitBox
     {
-        get
-        {
-            PlayerWeapon w = PlayerWeapon.Instance;
-
-            if (w == null)
-                return hitBoxSize;
-
-            Vector2 m = w.HitBoxMultiplier;
-
-            return new Vector2(hitBoxSize.x * m.x, hitBoxSize.y * m.y);
-        }
+        get { return hitBoxSize; }
     }
 
     // Aktif saldırının zamanlaması (iptal / zıplama kuralları için).
@@ -553,16 +543,7 @@ public class PlayerCombatController : MonoBehaviour
                 break;
         }
 
-        // Silah: hız ve ileri hareket.
-        PlayerWeapon weapon = PlayerWeapon.Instance;
-
         float lunge = 1f;
-
-        if (weapon != null)
-        {
-            attackDuration *= weapon.DurationMultiplier;
-            lunge = weapon.LungeMultiplier(comboStep);
-        }
 
         attackStartTime = Time.time;
         attackDurationNow = attackDuration;

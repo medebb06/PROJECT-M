@@ -35,7 +35,7 @@ public class ParryMarkSystem : MonoBehaviour
     void OnParry(EnemyController e, bool brokeBalance)
     {
         if (e == null || e.IsDead) return;
-        if (e.GetComponent<BossController>() != null || e.GetComponent<Boss1Enemy>() != null) return;
+        if (e.GetComponent<Boss1Enemy>() != null) return;
 
         var m = e.GetComponent<ParryMark>();
         if (m == null) m = e.gameObject.AddComponent<ParryMark>();

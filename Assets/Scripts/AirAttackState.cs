@@ -216,16 +216,9 @@ public class AirAttackState : ICombatState
             );
         }
 
-        // Vazo / sandık da kırılır (aşağı vuruşta da zıplatır).
-        if (LevelProps.HitArea(center, size))
-            hitSomething = true;
-
         // Pogo: düşmana, mermiye ya da DİKENE değen aşağı vuruş.
         if (down && !hitSomething)
-            hitSomething = HitProjectileBelow(center, size) || LevelProps.SpikeIn(center, size);
-
-        if (PlayerWeapon.Instance != null)
-            PlayerWeapon.Instance.OnSwing(down ? 0 : step, center, size, dir, hitSomething);
+            hitSomething = HitProjectileBelow(center, size);
 
         if (!hitSomething)
             return;
@@ -243,21 +236,7 @@ public class AirAttackState : ICombatState
     // Mermilerin collider'ı yok: konumla bakılır.
     private bool HitProjectileBelow(Vector2 center, Vector2 size)
     {
-        EnemyProjectile[] all =
-            UnityEngine.Object.FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None);
-
-        Rect box = new Rect(center - size * 0.5f, size);
-
-        for (int i = 0; i < all.Length; i++)
-        {
-            EnemyProjectile p = all[i];
-
-            if (p == null || !box.Contains((Vector2)p.transform.position))
-                continue;
-
-            UnityEngine.Object.Destroy(p.gameObject);
-            return true;
-        }
+        // Mermi sistemi (EnemyProjectile) kaldirildi.
 
         return false;
     }

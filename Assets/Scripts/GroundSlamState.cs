@@ -6,6 +6,26 @@ public class GroundSlamState : IPlayerState
     private PlayerController player;
     private PlayerStateMachine sm;
 
+    // Yaricap icindeki canli dusmanlar (eski CharmUtil.EnemiesInRadius).
+    private static List<EnemyController> EnemiesInRadius(Vector2 center, float radius)
+    {
+        List<EnemyController> result = new List<EnemyController>();
+        float sqr = radius * radius;
+
+        for (int i = 0; i < EnemyController.All.Count; i++)
+        {
+            EnemyController e = EnemyController.All[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            if (((Vector2)e.transform.position - center).sqrMagnitude <= sqr)
+                result.Add(e);
+        }
+
+        return result;
+    }
+
     private bool impactTriggered;
     private float startY;
 
@@ -171,15 +191,12 @@ public class GroundSlamState : IPlayerState
             ? new Vector2(player.transform.position.x, player.col.bounds.min.y)
             : (Vector2)player.transform.position;
 
-        if (PlayerAbility.Instance != null)
-            PlayerAbility.Instance.SpawnRingFx(feet + Vector2.up * 0.3f, radius, new Color(1f, 0.9f, 0.7f, 0.8f));
-
         // =====================================================
         // DÜŞMANLAR (yarıçap içi, katmandan bağımsız)
         // =====================================================
 
         List<EnemyController> enemies =
-            CharmUtil.EnemiesInRadius(feet + Vector2.up * 0.5f, radius);
+            EnemiesInRadius(feet + Vector2.up * 0.5f, radius);
 
         for (int i = 0; i < enemies.Count; i++)
             DamageEnemy(enemies[i], power, radius);
@@ -216,9 +233,6 @@ public class GroundSlamState : IPlayerState
                 );
             }
         }
-
-        // Vazo / sandık.
-        LevelProps.HitArea(feet + Vector2.up * 0.6f, new Vector2(radius * 2f, 1.6f));
 
         bool hitEnemy = enemies.Count > 0;
 
@@ -262,7 +276,7 @@ public class GroundSlamState : IPlayerState
         int balanceDamage = enemy.slamBalanceDamage;
 
         // Boss: bar zaten büyük; yüzde tabanlı hasar çok vurmasın, sabit hasar.
-        bool isBoss = enemy.GetComponent<BossController>() != null;
+        bool isBoss = enemy.GetComponent<Boss1Enemy>() != null;
 
         if (balance != null && !isBoss)
         {
@@ -288,7 +302,7 @@ public class GroundSlamState : IPlayerState
         if (enemy == null || enemy.IsDead)
             return;
 
-        bool boss = enemy.GetComponent<BossController>() != null;
+        bool boss = enemy.GetComponent<Boss1Enemy>() != null;
 
         // Slam zırhı deler: kararlı saldırıyı keser (boss hariç).
         if (!boss && enemy.IsAttackCommitted)

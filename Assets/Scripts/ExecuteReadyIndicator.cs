@@ -103,9 +103,6 @@ public class ExecuteReadyIndicator : MonoBehaviour
 
     private bool Ready()
     {
-        if (RunUI.MenuVisible)
-            return false;
-
         if (player == null || !player.canControl && !(player.stateMachine != null && player.stateMachine.CurrentState is PlayerExecuteChargeState))
             return false;
 

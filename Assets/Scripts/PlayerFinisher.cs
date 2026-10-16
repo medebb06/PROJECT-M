@@ -421,16 +421,12 @@ public class PlayerFinisher : MonoBehaviour
 
     private static bool IsFinalBlow(EnemyController e)
     {
-        BossController b = e != null ? e.GetComponent<BossController>() : null;
-
-        return b != null && b.FinalBlowOpen;
+        return false;
     }
 
     private static bool IsShielded(EnemyController e)
     {
-        BossAura a = e != null ? e.GetComponent<BossAura>() : null;
-
-        return a != null && a.Active;
+        return false;
     }
 
     private void CancelCharge()
@@ -569,12 +565,6 @@ public class PlayerFinisher : MonoBehaviour
 
             // Sadece sersemlemiş (denge kırılmış) düşmana infaz.
             if (staggerOnly && !enemy.IsStaggered)
-                continue;
-
-            // Aura açıkken (korumalı) infaz hedeflenemez.
-            BossAura shield = enemy.GetComponent<BossAura>();
-
-            if (shield != null && shield.Active)
                 continue;
 
             Vector2 enemyPosition =

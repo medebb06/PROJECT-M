@@ -200,7 +200,7 @@ public class ExecuteMeter : MonoBehaviour
 
     private static bool IsBoss(EnemyController enemy)
     {
-        return enemy != null && enemy.GetComponent<BossController>() != null;
+        return enemy != null && enemy.GetComponent<Boss1Enemy>() != null;
     }
 
     public void Add(float amount)
@@ -214,7 +214,7 @@ public class ExecuteMeter : MonoBehaviour
         int segsBefore = FullSegments;
 
         // Kalıcı gelişim: Cellat (dolum hızı). Charm: İnfazcı.
-        amount *= MetaProgress.ExecuteFillMultiplier * CharmFillMultiplier;
+        amount *= CharmFillMultiplier;
 
         Fill = Mathf.Clamp01(Fill + amount);
 
@@ -244,7 +244,7 @@ public class ExecuteMeter : MonoBehaviour
 
     /// <summary>En az bir parça dolu mu? (infaz denenebilir)</summary>
     public static bool CanExecute =>
-        !Enabled || Instance == null || Instance.FullSegments >= 1 || BossController.FinalBlowAvailable;
+        !Enabled || Instance == null || Instance.FullSegments >= 1;
 
     public static float StaggeredHealthMultiplier =>
         Instance != null ? Instance.staggeredHealthMultiplier : 1f;

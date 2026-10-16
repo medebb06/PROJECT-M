@@ -106,12 +106,6 @@ public class AttackState : ICombatState
 
         player.PlayAttackAnimation(step);
 
-        // Silahın hızına göre animasyon hızı (ayrı sprite gerekmez).
-        PlayerWeapon weapon = PlayerWeapon.Instance;
-
-        if (weapon != null)
-            player.SetAttackAnimationSpeed(1f / Mathf.Max(0.2f, weapon.DurationMultiplier));
-
         // =====================================================
         // ATTACK DIRECTION VECTOR
         // =====================================================
@@ -381,10 +375,6 @@ public class AttackState : ICombatState
         bool hitSomething = false;
         int hitCount = 0;
 
-        // Vazo / sandık.
-        if (LevelProps.HitArea(boxCenter, box))
-            hitSomething = true;
-
         foreach (var h in hits)
         {
             if (h == null)
@@ -479,10 +469,6 @@ public class AttackState : ICombatState
         // =====================================================
         // ATTACK FEEDBACK
         // =====================================================
-
-        // Silah kesik izi + silaha özel vuruş etkisi.
-        if (PlayerWeapon.Instance != null)
-            PlayerWeapon.Instance.OnSwing(step, boxCenter, box, dir, hitSomething);
 
         if (hitSomething)
         {

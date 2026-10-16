@@ -922,12 +922,6 @@ public class EnemyController : MonoBehaviour
         if (IsStaggered)
             return;
 
-        // Gölge Hilali: can ölümcül değilse hiçbir kaynak sersemletemez.
-        BossController trialBoss = GetComponent<BossController>();
-
-        if (trialBoss != null && trialBoss.BlocksStagger())
-            return;
-
         PlayFlash(
             staggerFlashColor,
             staggerFlashDuration
@@ -1684,7 +1678,7 @@ public class EnemyController : MonoBehaviour
             if (!bossChecked)
             {
                 bossChecked = true;
-                isBossEnemy = GetComponent<BossController>() != null;
+                isBossEnemy = false;
             }
 
             return isBossEnemy;
@@ -1816,15 +1810,6 @@ public class EnemyController : MonoBehaviour
 
     private void HandleBalanceBroken()
     {
-        // Boss (Gölge Hilali): sersemleme yerine denge sıfırlanır + can hasarı.
-        BossController trialBoss = GetComponent<BossController>();
-
-        if (trialBoss != null && trialBoss.TryPostureBreak())
-        {
-            CombatEvents.RaiseBalanceBroken(this);
-            return;
-        }
-
         ForceStagger();
 
         CombatEvents.RaiseBalanceBroken(this);

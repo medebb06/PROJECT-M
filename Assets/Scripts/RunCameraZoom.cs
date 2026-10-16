@@ -63,6 +63,10 @@ public class RunCameraZoom : MonoBehaviour
     [Tooltip("Sinematik kamera açıkken oynarken (girdi varken) de sallanma oranı. 0 = sadece beklerken, 1 = beklerkenki kadar.")]
     [Range(0f, 1f)] public float activeShake = 0.45f;
     public bool idleBreathing = true;
+    [Tooltip("Kameranin taban gorus yuksekligi (ortho). Cozunurluk / Game view boyutundan BAGIMSIZ sabit. 18 = 888 piksellik pencerede eski gorunum, 21.6 = 1080p'de PixelPerfect gorunumu. 0 = eski davranis (ekran yuksekligine bagli).")]
+    public float referenceOrtho = 18f;
+    [Tooltip("Kamera en fazla ne kadar yaklasabilir (1 = hic yaklasmaz, 0.82 = en fazla %18). Nefes + giris sinematigi + odak + parry toplamini sinirlar.")]
+    [Range(0.5f, 1f)] public float minZoomScale = 0.82f;
 
     [Header("Sinematik şeritler (letterbox)")]
     [Tooltip("Sinematik kamera açıkken ekranın üstüne ve altına siyah şerit çıkar.")] public bool letterbox = true;
@@ -202,7 +206,9 @@ public class RunCameraZoom : MonoBehaviour
                 if (pp != null)
                     pp.enabled = false;
 
-                ownBase = c.orthographicSize;
+                // PixelPerfectCamera ortho'yu Game view yuksekligine gore verir (yukseklik/50): pencere kuculunce kamera YAKINLASIRDI.
+                // Cozunurluge bagli kalmasin: sabit referans kullan (0 = eski davranis).
+                ownBase = referenceOrtho > 0.5f ? referenceOrtho : c.orthographicSize;
 
                 if (ownBase < 0.5f)
                     ownBase = 21.6f;
@@ -404,6 +410,9 @@ public class RunCameraZoom : MonoBehaviour
             - (ForceCinematic ? forceZoomIn * bEase : 0f)
             - FocusZoomIn * focusBlend * focusBlend * (3f - 2f * focusBlend)
             + breathZoomWobble * bEase * Mathf.Sin(phase);
+
+        // Cok yakinlasmasin: tum "yaklasma" etkilerinin (nefes, giris sinematigi, odak, parry) toplami sinirlanir.
+        zoomK = Mathf.Max(zoomK, minZoomScale);
 
         Set(zoomK);
 

@@ -59,19 +59,6 @@ public static class PlayerDamage
         if (health != null && health.IsDead)
             return result;
 
-        // Koruyucu aura açıkken boss hasar almaz.
-        BossAura aura = enemy.GetComponent<BossAura>();
-
-        if (aura != null && aura.Active)
-        {
-            aura.OnBlockedHit();
-            return result;
-        }
-
-        // Kalkanlı düşman önden gelen normal vuruşu engeller.
-        if (EnemyShield.TryBlock(enemy, info))
-            return result;
-
         EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
         EnemyHitFeedback feedback = enemy.GetComponent<EnemyHitFeedback>();
 

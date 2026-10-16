@@ -145,8 +145,8 @@ public class Boss1Rig : MonoBehaviour
 
     public bool IsAttacking { get { return atkState != AtkState.None; } }
 
-    /// <summary>Saldiri stili: Slam = klasik ust darbe; Sweep = alcak supurme; Grab = yakalama; Fake = titreyen gecikmeli darbe.</summary>
-    public enum AttackStyle { Slam, Sweep, Grab, Fake }
+    /// <summary>Saldiri stili: Slam = klasik ust darbe; Sweep = alcak supurme; Fake = titreyen gecikmeli darbe.</summary>
+    public enum AttackStyle { Slam, Sweep, Fake }
 
     [Serializable]
     public struct Pose
@@ -164,16 +164,40 @@ public class Boss1Rig : MonoBehaviour
     public Pose sweepWindupPose = new Pose(-24f, -12f, -8f, -30f, 95f, -10f, 0.10f);
     [Tooltip("SUPURME darbe: govde one atilir, kilic yere yakin genis savrulur.")]
     public Pose sweepStrikePose = new Pose(34f, 16f, 7f, 28f, 102f, 24f, 0.14f);
-    [Tooltip("YAKALAMA hazirlik: bos SOL EL yerden yukari kalkar (armL ~ -140), kilic asagida/pasif, bakis yukari.")]
-    public Pose grabWindupPose = new Pose(-22f, -10f, -14f, -8f, 100f, -140f, 0.08f);
-    [Tooltip("YAKALAMA darbe: govde one firlar, bos kol tam uzanir.")]
-    public Pose grabStrikePose = new Pose(30f, 14f, 8f, 12f, 100f, -70f, 0.04f);
-    [Tooltip("YAKALAMA: kalkan sol elin kizarma rengi (okunurluk).")]
-    public Color grabArmGlow = new Color(1f, 0.12f, 0.3f, 1f);
     [Tooltip("ALDATMACA: hazirlikta titreme carpani.")]
     [Range(1f, 5f)] public float fakeTrembleMul = 2.8f;
 
     AttackStyle style = AttackStyle.Slam;
+
+    [Header("Goril kolu: OMUZ (armL_upper) -> KOL (legBack) -> EL (legBack_knee)")]
+    [Tooltip("Her cift = (kol acisi, el acisi) derece, MUTLAK. Kol omuz ekleminden, el bilekten doner. NEGATIF = one/yukari (boss sola bakar), pozitif = geri.")]
+    public Vector2 slamArmWindup = new Vector2(-52f, -20f);
+    public Vector2 slamArmStrike = new Vector2(-4f, 4f);
+    [Tooltip("Supurme: kol geride toplanir, darbede one dogru savrulur.")]
+    public Vector2 sweepArmWindup = new Vector2(34f, 22f);
+    public Vector2 sweepArmStrike = new Vector2(-38f, -8f);
+    [Tooltip("Gogus vurusu: taban + vurus (kol, el).")]
+    public Vector2 beatArmBase = new Vector2(-72f, -30f);
+    public Vector2 beatArmSwing = new Vector2(48f, 20f);
+    [Range(2, 10)] public int gorillaBeatCount = 5;
+    [Tooltip("Ziplama inisi: baslangic (kol, el); sonra yere carpar.")]
+    public Vector2 poundArm = new Vector2(-50f, -15f);
+    [Tooltip("Omuz blogunun kolu takip orani.")]
+    [Range(0f, 0.6f)] public float shoulderFollow = 0.3f;
+
+    float beatLeft, beatTotal, poundBump;
+
+    /// <summary>Sol kolla gogus vurusu (goril gibi): kukremede cagrilir.</summary>
+    public void BeatChest(float seconds)
+    {
+        beatTotal = beatLeft = Mathf.Max(0.3f, seconds);
+    }
+
+    /// <summary>Sol kolu bir kez yere carptirir (ziplama inisi vb.).</summary>
+    public void PoundGround()
+    {
+        poundBump = 1f;
+    }
 
     /// <summary>Kilic yere indi mi (darbe ani gecti)? Hasar ancak bundan sonra verilir.</summary>
     public bool StrikeLanded { get { return atkState == AtkState.Hold || atkState == AtkState.Recover; } }
@@ -452,7 +476,7 @@ public class Boss1Rig : MonoBehaviour
         return ok;
     }
 
-    /// <summary>Stilli saldiri: Sweep / Grab / Fake ayri bir poz ve silueti ile oynar.</summary>
+    /// <summary>Stilli saldiri: Sweep / Fake ayri bir poz ve silueti ile oynar.</summary>
     public bool PlayAttack(float contactSeconds, bool slowRaise, AttackStyle attackStyle)
     {
         bool ok = PlayAttack(contactSeconds, slowRaise);
@@ -988,7 +1012,6 @@ public class Boss1Rig : MonoBehaviour
         Pose wp = new Pose(windupChestDeg, windupBellyDeg, windupHeadDeg, windupArmDeg, windupSwordDeg, windupArmLDeg, windupCrouch);
         Pose sp = new Pose(strikeChestDeg, strikeBellyDeg, strikeHeadDeg, strikeArmDeg, strikeSwordDeg, strikeArmLDeg, strikeCrouch);
         if (style == AttackStyle.Sweep) { wp = sweepWindupPose; sp = sweepStrikePose; }
-        else if (style == AttackStyle.Grab) { wp = grabWindupPose; sp = grabStrikePose; }
 
         float atkChest = wp.chest * k + sp.chest * s + tremble * 0.5f + shake * 0.6f
                          + lean + kick * 2.5f + staggerW * 10f + deadW * 28f;
@@ -999,6 +1022,26 @@ public class Boss1Rig : MonoBehaviour
                          + w * walkSwordSwing * stepWave + kick * walkSwordSwing;
         float atkArmL = wp.armL * k + sp.armL * s - tremble * 0.8f
                         + w * walkArmLSwing * Mathf.Sin(walkPhase * 6.2832f + 1.57f) + staggerW * 10f + deadW * 15f;
+        // ---- GORIL KOLU: omuz -> kol -> el (FK). Saldiri stiline, kukremeye ve inise gore (kol, el) acilari ----
+        Vector2 armPose = Vector2.zero;
+        if (style == AttackStyle.Slam || style == AttackStyle.Fake) armPose = slamArmWindup * k + slamArmStrike * s;
+        else if (style == AttackStyle.Sweep) armPose = sweepArmWindup * k + sweepArmStrike * s;
+        float armW = atkAmt;
+        armPose += poundArm * poundBump;
+        armW = Mathf.Max(armW, poundBump);
+        poundBump = Mathf.MoveTowards(poundBump, 0f, dtR * 3.5f);
+        float beat = 0f;
+        if (beatLeft > 0f)
+        {
+            float prog = 1f - beatLeft / beatTotal;
+            float env = Mathf.Clamp01(prog * 6f) * Mathf.Clamp01((1f - prog) * 6f);
+            beat = Mathf.Abs(Mathf.Sin(prog * gorillaBeatCount * Mathf.PI)) * env;
+            armPose += (beatArmBase + beatArmSwing * beat) * Mathf.Clamp01(env * 2f);
+            armW = Mathf.Max(armW, Mathf.Clamp01(env * 2f));
+            beatLeft -= dtR;
+        }
+        atkChest += beat * 2.5f;
+        atkArmL += armPose.x * shoulderFollow * armW;   // omuz blogu kolu hafifce takip eder
         float atkCrouch = wp.crouch * k + sp.crouch * s + walkDip * kick * kick + staggerW * 0.05f + deadW * 0.12f;
 
         // Root: cokme/nefes arka ayagin zemin noktasi etrafinda olceklenir (ayak kaymaz).
@@ -1017,36 +1060,54 @@ public class Boss1Rig : MonoBehaviour
         Set("sword", Vector3.zero, swordAngle * dir);
         SetAround("armL_upper", armLPivot, (armLSwayDeg * -b3 * idleW - f * flinchDeg * 0.4f + atkArmL) * dir);
 
-        UpdateArmGlow(style == AttackStyle.Grab ? Mathf.Clamp01(k) : 0f, dtR);
+        ApplyArmFk(armPose.x, armPose.y, Mathf.Clamp01(armW));
 
         if (keepBladeAboveGround) ClampBladeAboveGround(swordAngle, dir);
     }
 
-    // YAKALAMA okunurlugu: kalkan sol el kizarip nabiz atar.
-    SpriteRenderer[] armLSrs;
-    float armGlowAmt;
-    bool armGlowDirty;
+    // ---- Sol kol FK: omuz (armL_upper'a bagli eklem) -> kol (legBack) -> el (legBack_knee) ----
+    // Eklemler rig birimi (rest, PSD pikselinden): omuz J0 = kolun ust ucu, bilek W0 = kolun alt ucu.
+    static readonly Vector2 ShoulderJ0 = new Vector2(0.96f, 4.53f);
+    static readonly Vector2 WristW0 = new Vector2(0.74f, 0.98f);
+    static readonly Vector2 ShoulderBlobCenter0 = new Vector2(0.425f, 5.01f);   // armL_upper rest merkezi
+    const float HandGroundY = 0.04f;   // yumruk tabani (rest)
+    // Elin gorunur kutusu (sprite merkezine gore, rig birimi): sol/sag/ust/alt
+    static readonly Vector4 HandBox = new Vector4(-0.70f, 0.68f, 0.535f, -0.535f);
 
-    void UpdateArmGlow(float target, float dt)
+    /// <summary>w = 0: yuruyus/rest pozu aynen kalir; w = 1: (aArm, aHand) FK pozu. Omuz, gogus/omuz blogunu takip eder.</summary>
+    void ApplyArmFk(float aArm, float aHand, float w)
     {
-        armGlowAmt = Mathf.MoveTowards(armGlowAmt, target, dt * 6f);
-        if (armGlowAmt <= 0.001f && !armGlowDirty) return;
+        if (w < 0.001f) return;
+        Transform arm, hand, blob;
+        if (!bones.TryGetValue("legBack", out arm) || !bones.TryGetValue("legBack_knee", out hand) || !bones.TryGetValue("armL_upper", out blob)) return;
+        if (arm == null || hand == null || blob == null || arm.parent == null) return;
 
-        if (armLSrs == null)
+        // Omuz eklemi: omuz blogunun (armL_upper) simdiki donusunden.
+        Vector3 jw = blob.TransformPoint(new Vector3(ShoulderJ0.x - ShoulderBlobCenter0.x, ShoulderJ0.y - ShoulderBlobCenter0.y, 0f));
+        Vector3 jl3 = arm.parent.InverseTransformPoint(jw);
+        Vector2 J = new Vector2(jl3.x, jl3.y);
+
+        Vector2 restArm = restPos["legBack"], restHand = restPos["legBack_knee"];
+        Vector2 armP = J + Rot2(restArm - ShoulderJ0, aArm);
+        Vector2 W = J + Rot2(WristW0 - ShoulderJ0, aArm);
+        Vector2 handP = W + Rot2(restHand - WristW0, aHand);
+
+        // Yumruk zemine girmesin (parmak dislariyla basar): en alt kosesi HandGroundY'nin altina inmez.
+        float lowest = float.MaxValue;
+        float r = aHand * Mathf.Deg2Rad, c = Mathf.Cos(r), sn = Mathf.Sin(r);
+        for (int i = 0; i < 4; i++)
         {
-            Transform ab;
-            armLSrs = bones.TryGetValue("armL_upper", out ab) && ab != null
-                ? ab.GetComponentsInChildren<SpriteRenderer>(true)
-                : new SpriteRenderer[0];
+            float bx = (i & 1) == 0 ? HandBox.x : HandBox.y, by = (i & 2) == 0 ? HandBox.z : HandBox.w;
+            lowest = Mathf.Min(lowest, handP.y + sn * bx + c * by);
         }
+        if (lowest < HandGroundY) handP.y += HandGroundY - lowest;
 
-        float pulse = 0.65f + 0.35f * Mathf.Sin(animClock * 20f);
-        float a = armGlowAmt * pulse;
-        Color c = armGlowAmt > 0.001f ? Color.Lerp(tint, grabArmGlow, Mathf.Clamp01(a)) : tint;
-        for (int i = 0; i < armLSrs.Length; i++)
-            if (armLSrs[i] != null) armLSrs[i].color = c;
-
-        armGlowDirty = armGlowAmt > 0.001f;
+        Quaternion armQ = restRot["legBack"] * Quaternion.Euler(0f, 0f, aArm);
+        Quaternion handQ = restRot["legBack_knee"] * Quaternion.Euler(0f, 0f, aHand);
+        arm.localPosition = Vector3.Lerp(arm.localPosition, new Vector3(armP.x, armP.y, arm.localPosition.z), w);
+        arm.localRotation = Quaternion.Slerp(arm.localRotation, armQ, w);
+        hand.localPosition = Vector3.Lerp(hand.localPosition, new Vector3(handP.x, handP.y, hand.localPosition.z), w);
+        hand.localRotation = Quaternion.Slerp(hand.localRotation, handQ, w);
     }
 
     // Bicagin en alcak noktasi (visual/rig uzayinda y).
