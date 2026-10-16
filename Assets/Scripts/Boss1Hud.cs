@@ -186,27 +186,30 @@ public class Boss1Hud : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type == EventType.Repaint) DrawName();
-        if (Event.current.type != EventType.Repaint || health == null || alpha <= 0.01f) return;
+    }
 
-        float s = Screen.height / 1080f * MobileInput.HudMul;
-        float w = width * s;
+    // Barlar HudCanvas'ta (overlay canvas): UI'nin altinda kalmaz, ekrana gore her karede konumlanir.
+    void LateUpdate()
+    {
+        if (health == null || alpha <= 0.01f || MainMenu.Active) return;
+
+        float s = HudCanvas.Scale();
+        Rect sa = HudCanvas.SafeArea();
+        float w = Mathf.Min(width * s, sa.width * 0.96f);
         float hh = Mathf.Max(1f, healthHeight * s);
         float ph = Mathf.Max(1f, postureHeight * s);
-        float x = (Screen.width - w) * 0.5f;
-        float y = marginTop * s + RunCameraZoom.TopBarPixels;
-        Texture2D t = Texture2D.whiteTexture;
+        float x = sa.x + (sa.width - w) * 0.5f;
+        float y = sa.y + marginTop * s + RunCameraZoom.TopBarPixels;
 
         Color a(Color c) { c.a *= alpha; return c; }
 
-        GUI.color = a(backColor);  GUI.DrawTexture(new Rect(x, y, w, hh), t);
-        GUI.color = a(trailColor); GUI.DrawTexture(new Rect(x, y, w * trail, hh), t);
-        GUI.color = a(fillColor);  GUI.DrawTexture(new Rect(x, y, w * shown, hh), t);
+        HudCanvas.Fill(new Rect(x, y, w, hh), a(backColor));
+        HudCanvas.Fill(new Rect(x, y, w * trail, hh), a(trailColor));
+        HudCanvas.Fill(new Rect(x, y, w * shown, hh), a(fillColor));
 
         float y2 = y + hh + gap * s;
         bool broken = balance != null && balance.IsBroken;
-        GUI.color = a(backColor); GUI.DrawTexture(new Rect(x, y2, w, ph), t);
-        GUI.color = a(broken ? fillColor : postureColor); GUI.DrawTexture(new Rect(x, y2, w * post, ph), t);
-
-        GUI.color = Color.white;
+        HudCanvas.Fill(new Rect(x, y2, w, ph), a(backColor));
+        HudCanvas.Fill(new Rect(x, y2, w * post, ph), a(broken ? fillColor : postureColor));
     }
 }

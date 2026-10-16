@@ -64,19 +64,20 @@ public class MinimalHealthBar : MonoBehaviour
         return Mathf.Clamp01((float)health.CurrentHealth / health.MaxHealth);
     }
 
-    void OnGUI()
+    // IMGUI yerine HudCanvas (overlay canvas): Game view'da UI'nin altinda kalmaz, ekrana gore her karede konumlanir.
+    void LateUpdate()
     {
-        if (Event.current.type != EventType.Repaint || health == null) return;
+        if (health == null || MainMenu.Active) return;
 
-        float s = Screen.height / 1080f * MobileInput.HudMul;
+        float s = HudCanvas.Scale();
         float w = width * s, h = Mathf.Max(2f, height * s);
         // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
-        float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;
-        Texture2D t = Texture2D.whiteTexture;
+        Rect sa = HudCanvas.SafeArea();
+        float x = sa.x + marginX * s, y = sa.yMax - marginY * s - h - RunCameraZoom.TopBarPixels;
+        w = Mathf.Min(w, sa.width - marginX * s * 2f);
 
-        GUI.color = backColor;  GUI.DrawTexture(new Rect(x, y, w, h), t);
-        GUI.color = trailColor; GUI.DrawTexture(new Rect(x, y, w * trail, h), t);
-        GUI.color = fillColor;  GUI.DrawTexture(new Rect(x, y, w * shown, h), t);
-        GUI.color = Color.white;
+        HudCanvas.Fill(new Rect(x, y, w, h), backColor);
+        HudCanvas.Fill(new Rect(x, y, w * trail, h), trailColor);
+        HudCanvas.Fill(new Rect(x, y, w * shown, h), fillColor);
     }
 }

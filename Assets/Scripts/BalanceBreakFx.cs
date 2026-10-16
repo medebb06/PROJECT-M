@@ -26,7 +26,7 @@ public class BalanceBreakFx : MonoBehaviour
     static readonly Color Hot = new Color(1f, 0.55f, 0.1f, 1f);
     static readonly Color White = new Color(1f, 0.97f, 0.85f, 1f);
 
-    public static void Play(Vector3 position)
+    public static void Play(Vector3 position, string label = "DENGE KIRILDI!")
     {
         if (!Application.isPlaying)
             return;
@@ -35,12 +35,15 @@ public class BalanceBreakFx : MonoBehaviour
         go.transform.position = position;
         go.AddComponent<BalanceBreakFx>();
 
-        CombatCallout.Popup(
-            position + new Vector3(0f, 2.2f, 0f),
-            "DENGE KIRILDI!",
-            new Color(1f, 0.6f, 0.15f),
-            2.2f
-        );
+        if (!string.IsNullOrEmpty(label))
+        {
+            CombatCallout.Popup(
+                position + new Vector3(0f, 2.2f, 0f),
+                label,
+                new Color(1f, 0.6f, 0.15f),
+                2.2f
+            );
+        }
     }
 
     static void BuildSprites()

@@ -84,7 +84,7 @@ public class Boss1Enemy : MonoBehaviour
     void Awake()
     {
         nextLeapTime = Time.time + leapFirstDelay;
-        nextWaveTime = Time.time + waveFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
         rig = GetComponent<Boss1Rig>();
         rig.EnsureBuilt();                       // katmanlar var olsun (Health/EnemyController sprite'lari toplar)
 
@@ -182,6 +182,25 @@ public class Boss1Enemy : MonoBehaviour
 
     void OnStrikeLanded()
     {
+        EnemyAttackState sst = enemy != null ? enemy.CurrentState as EnemyAttackState : null;
+        if (sst != null)
+        {
+            MoveHitType sht = sst.CurrentHitType;
+            float dirX = enemy.FacingDirection >= 0f ? 1f : -1f;
+            if (sht == MoveHitType.Sweep && sst.MoveName == SweepName)
+            {
+                Boss1Shock.Spawn(transform.position + new Vector3(dirX * 4f, 0f, 0f), dirX, attackReach * sweepReachMultiplier, sweepColor);
+                rig.SetSwordTint(sweepColor, 0f, 3f);
+            }
+            else if (sht == MoveHitType.Grab && sst.MoveName == GrabName)
+            {
+                BalanceBreakFx.Play(transform.position + new Vector3(dirX * attackReach * 0.6f, 2f, 0f), null);
+                rig.SetSwordTint(grabColor, 0f, 3f);
+            }
+            else if (sst.MoveName == FakeName)
+                rig.SetSwordTint(grabColor, 0f, 3f);
+        }
+
         if (comboTinted && comboStepNow >= comboLastIndex) comboEndAt = Time.time + 0.45f;
         else if (comboTinted) rig.SetSwordTint(comboColor, 1f, 12f);   // ipucu parlamasindan normal kirmiziya don
         if (attackShake <= 0f) return;
@@ -315,7 +334,7 @@ public class Boss1Enemy : MonoBehaviour
         introActive = false;
         if (hud != null) hud.HideName();
         nextLeapTime = Time.time + leapFirstDelay;
-        nextWaveTime = Time.time + waveFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
 
         RunCameraZoom.FocusTarget = null;
         RunCameraZoom.ForceCinematic = introPrevForce;
@@ -378,7 +397,7 @@ public class Boss1Enemy : MonoBehaviour
     [Range(0f, 1f)] public float leapCloseChance = 0.5f;
 
     float nextLeapTime;
-    bool leapActive, pendingLeap;
+    bool leapActive, pendingLeap, pendingWave;
 
     // ---------------------------------------------------------------------
     // DALGA SALDIRISI: uzaktan odaklanir (kilic kalkar, kirmizi parlar), sonra RITIMLI 3 dalga firlatir.
@@ -456,20 +475,42 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Boss'un her isabeti oyuncunun MAX canindan bu kadar alir (0.34 = 3 hata olum).")]
     [Range(0.05f, 1f)] public float bossHitPercent = 0.34f;
 
-    enum Skill { None, Melee, Combo, Leap, Wave }
+    enum Skill { None, Melee, Combo, Sweep, Grab, Leap, Wave }
     Skill lastSkill = Skill.None;
     int skillsSinceWave = 3;
     IEnemyState trackedState;
-    AttackMove comboMove;
+    AttackMove comboMove, sweepMove, grabMove, fakeMove;
 
-    bool SkillBlocked(Skill s) { return skillRotation && s == lastSkill; }
+    [Header("Yetenek sirasi (ogrenilebilir dongu)")]
+    [Tooltip("Dongudeki siradaki yetenek 'beklenir'; baska ozel yetenek secilmez. Beklenen yetenek bu kadar sn gerceklesmezse atlanir.")]
+    [Min(2f)] public float patternPatience = 9f;
+    // Faz 1 dongusu (Melee = duz vurus).
+    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Grab, Skill.Leap };
+    static readonly Skill[] Pattern2 = { Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Grab, Skill.Combo, Skill.Leap, Skill.Wave };
+    bool phase2;
+    int patIdx;
+    float expectedSince;
+    bool fakeFlag;
+
+    Skill[] CurPattern { get { return phase2 ? Pattern2 : Pattern1; } }
+    Skill Expected { get { Skill[] p = CurPattern; return p[patIdx % p.Length]; } }
+
+    // Dongu aciksa sadece sirasi gelen ozel yetenek secilebilir.
+    bool SkillBlocked(Skill s) { return skillRotation && s != Expected; }
+
+    void AdvancePattern()
+    {
+        patIdx++;
+        expectedSince = Time.time;
+        fakeFlag = Random.value < fakeChance;
+    }
 
     void NoteSkill(Skill s)
     {
         skillsSinceWave = s == Skill.Wave ? 0 : skillsSinceWave + 1;
         lastSkill = s;
-        if (comboMove != null)
-            comboMove.cooldown = (skillRotation && s == Skill.Combo) ? 9999f : comboCooldown;   // kombodan sonra kombo secilmez
+        if (skillRotation && s == Expected)
+            AdvancePattern();
     }
 
     void TrackSkill(IEnemyState st)
@@ -479,9 +520,66 @@ public class Boss1Enemy : MonoBehaviour
         else
         {
             EnemyAttackState a = st as EnemyAttackState;
-            if (a != null) NoteSkill(a.MoveName == ComboName ? Skill.Combo : Skill.Melee);
+            if (a == null) return;
+            string n = a.MoveName;
+            NoteSkill(n == ComboName ? Skill.Combo : n == SweepName ? Skill.Sweep : n == GrabName ? Skill.Grab : Skill.Melee);
         }
     }
+
+    // Moveset agirligi: sadece sirasi gelen hamle secilir (aldatmaca sadece Melee sirasinda, sansla).
+    float MoveWeight(AttackMove m)
+    {
+        if (!skillRotation) return 1f;
+        Skill ex = Expected;
+        if (m == comboMove) return ex == Skill.Combo ? 1000f : 0f;
+        if (m == sweepMove) return ex == Skill.Sweep ? 1000f : 0f;
+        if (m == grabMove) return ex == Skill.Grab ? 1000f : 0f;
+        if (m == fakeMove) return (ex == Skill.Melee && fakeFlag) ? 1000f : 0f;
+        return 0f;
+    }
+
+    // ---------------------------------------------------------------------
+    // YENI SALDIRILAR: Supurme (ZIPLA), Yakalama (DASH), Aldatmaca (gecikmeli vurus)
+    // ---------------------------------------------------------------------
+    [Header("Supurme (zipla)")]
+    [Tooltip("Uyari suresi (sn). Yerde ilerleyen sok dalgasi: ustunden ZIPLA (dash korumaz).")]
+    [Min(0.5f)] public float sweepWindup = 1.15f;
+    [Tooltip("Supurmenin boss'a gore menzili (attackReach carpani).")]
+    [Range(0.4f, 1.5f)] public float sweepReachMultiplier = 1f;
+    [Tooltip("Oyuncunun ayagi boss'un ayagindan bu kadar yukaridaysa supurmeden kurtulur.")]
+    [Min(0.5f)] public float sweepHitHeight = 2f;
+    public Color sweepColor = new Color(0.3f, 0.8f, 1f, 1f);
+
+    [Header("Yakalama (dash ile kac)")]
+    [Tooltip("Uyari suresi (sn). Parry / blok islemez; sadece DASH (kusursuz dash karsi vurus acar).")]
+    [Min(0.5f)] public float grabWindup = 1.35f;
+    [Tooltip("Yakalama hazirlanirken oyuncuya dogru ilerleme hizi.")]
+    [Min(0f)] public float grabAdvance = 26f;
+    public Color grabColor = new Color(1f, 0.1f, 0.35f, 1f);
+
+    [Header("Aldatmaca (gecikmeli vurus)")]
+    [Min(0.3f)] public float fakeWindup = 0.55f;
+    [Tooltip("Uyariya eklenen rastgele sure: ezbere parry'i cezalandirir.")]
+    [Min(0f)] public float fakeWindupRandom = 0.8f;
+    [Tooltip("Duz vurus sirasi geldiginde aldatmaca secilme sansi.")]
+    [Range(0f, 1f)] public float fakeChance = 0.45f;
+
+    const string SweepName = "Boss1 Supurme";
+    const string GrabName = "Boss1 Yakalama";
+    const string FakeName = "Boss1 Aldatmaca";
+
+    [Header("Faz 2 (ofke)")]
+    [Tooltip("Can bu oranin altina inince boss ofkelenir: daha hizli, 5 dalga, farkli dongu.")]
+    [Range(0.1f, 0.9f)] public float phase2HealthPercent = 0.5f;
+    [Tooltip("Faz 2 kukremesinde boss'un hareketsiz kaldigi sure (oyuncu icin firsat).")]
+    [Min(0.5f)] public float phase2RoarTime = 1.7f;
+
+    [Header("Vurus agirligi / cezalandirma")]
+    [Tooltip("Boss'a her can vurusunda bossun kisa 'takilmasi' (sadece boss yavaslar).")]
+    public bool hitWeight = true;
+    [Range(0f, 1f)] public float hitThudVolume = 0.55f;
+    [Tooltip("Boss saldirisini bitirip toparlanirken (acik an) duz vurus basina EK can hasari (max can orani). 0 = kapali.")]
+    [Range(0f, 0.05f)] public float punishHitPercent = 0.01f;
 
     float nextWaveTime;
     int comboLastIndex = 3;
@@ -610,7 +708,7 @@ public class Boss1Enemy : MonoBehaviour
 
         seenRoared = true;
         nextLeapTime = Time.time + leapFirstDelay;
-        nextWaveTime = Time.time + waveFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
 
         if (introCutscene)
             StartCoroutine(IntroRoutine(pl));
@@ -808,7 +906,10 @@ public class Boss1Enemy : MonoBehaviour
         enemy.attackRange = attackReach;
         enemy.normalAttackFrontOnly = true;
         enemy.normalAttackHitHeight = hitHeight;
-        enemy.useUnblockableAttacks = false;     // tum vuruslar parry/block edilebilir
+        enemy.useUnblockableAttacks = false;     // rastgele engellenemez yok; Yakalama/Supurme hamle olarak gelir
+        enemy.unblockableFrontOnly = true;
+        enemy.unblockableForwardReach = attackReach * 0.95f;
+        enemy.unblockableHitHeight = hitHeight + 1f;
         enemy.lockFacingDuringAttack = true;     // vurus yonu kilitli: arkasina gecen vurulmaz
         enemy.attackDamage = attackDamage;
         enemy.attackKnockbackForce = hitKnockback;
@@ -936,32 +1037,57 @@ public class Boss1Enemy : MonoBehaviour
             Destroy(comboVfx);
     }
 
-    // ---- kombo kurulumu ----
+    // ---- hamle kurulumu (kombo + supurme + yakalama + aldatmaca) ----
     void BuildComboMoveset()
     {
-        if (!comboEnabled) return;
-
         moveset = GetComponent<EnemyMoveset>();
         if (moveset == null) moveset = gameObject.AddComponent<EnemyMoveset>();
 
-        AttackMove m = new AttackMove();
-        m.name = ComboName;
-        m.weight = 1f;
-        m.cooldown = comboCooldown;
-        m.recoveryMultiplier = 1f;
-        int beats = Mathf.Clamp(comboBeatHits, 2, 5);
-        m.hits.Add(new MoveHit(MoveHitType.Normal, comboFirstWindup, 0f, 0.85f));
-        for (int bi = 1; bi < beats; bi++)
-            m.hits.Add(new MoveHit(MoveHitType.Normal, comboFastWindup, 0f, 0.85f).Retarget());   // hepsi ayni ritim
-        comboLastIndex = beats;   // son (gecikmeli) vurusun adim indeksi
-        m.hits.Add(new MoveHit(MoveHitType.Normal, comboDelayedWindup, comboDelayedRandom, comboLastDamage).Retarget().ParryReward(comboFinalParryReward));
+        float pf = phase2 ? 0.85f : 1f;   // faz 2: uyarilar %15 kisa
+        List<AttackMove> list = new List<AttackMove>();
+        comboMove = null;
 
-        comboMove = m;
-        moveset.moves = new List<AttackMove> { m };
+        if (comboEnabled)
+        {
+            AttackMove m = new AttackMove();
+            m.name = ComboName;
+            m.weight = 1f;
+            m.cooldown = comboCooldown;
+            m.recoveryMultiplier = 1f;
+            int beats = Mathf.Clamp(comboBeatHits, 2, 5);
+            m.hits.Add(new MoveHit(MoveHitType.Normal, comboFirstWindup * pf, 0f, 0.85f));
+            for (int bi = 1; bi < beats; bi++)
+                m.hits.Add(new MoveHit(MoveHitType.Normal, comboFastWindup * pf, 0f, 0.85f).Retarget());   // hepsi ayni ritim
+            comboLastIndex = beats;   // son (gecikmeli) vurusun adim indeksi
+            m.hits.Add(new MoveHit(MoveHitType.Normal, comboDelayedWindup * pf, comboDelayedRandom, comboLastDamage).Retarget().ParryReward(comboFinalParryReward));
+            comboMove = m;
+            list.Add(m);
+        }
+
+        float reach = attackReach + 6f;
+
+        sweepMove = new AttackMove { name = SweepName, weight = 1f, cooldown = 0f, maxDistance = reach, recoveryMultiplier = 1.3f };
+        sweepMove.hits.Add(new MoveHit(MoveHitType.Sweep, sweepWindup * pf, 0f, 1f, 1f));
+        list.Add(sweepMove);
+
+        grabMove = new AttackMove { name = GrabName, weight = 1f, cooldown = 0f, maxDistance = reach, recoveryMultiplier = 1.4f };
+        grabMove.hits.Add(new MoveHit(MoveHitType.Grab, grabWindup * pf, 0f, 1f, 1f).Advance(grabAdvance));
+        list.Add(grabMove);
+
+        fakeMove = new AttackMove { name = FakeName, weight = 1f, cooldown = 0f, maxDistance = reach, recoveryMultiplier = 1.1f };
+        fakeMove.hits.Add(new MoveHit(MoveHitType.Normal, fakeWindup * pf, fakeWindupRandom, 1f, 1f).ParryReward(1.6f));
+        list.Add(fakeMove);
+
+        moveset.moves = list;
+        moveset.weightModifier = MoveWeight;
         moveset.comboFirstWindupBonus = 0f;       // ilk vurus da hizli baslasin
         moveset.comboBlockPostureMultiplier = 1f; // kombo vuruslari blokta tam posture yer
         moveset.showComboIndicator = false;
         moveset.noParrySlowMoMidCombo = true;
+        moveset.sweepHitHeight = sweepHitHeight;
+        moveset.sweepReachMultiplier = sweepReachMultiplier;
+        moveset.sweepColor = sweepColor;
+        moveset.sweepIgnoresDash = true;          // supurmeyi dash degil ZIPLAMA kurtarir
     }
 
     // Blok posture hasari: oyuncunun posture'unu 'blocksToBreakPosture' blokta kirar.
@@ -1103,10 +1229,35 @@ public class Boss1Enemy : MonoBehaviour
             return;
         }
 
-        // Yakin mesafede de ziplama: normal vurus baslarken bazen onun yerine ziplama sec (Update'te state degisir).
-        if (leapEnabled && !leapActive && !pendingLeap && !SkillBlocked(Skill.Leap) && Time.time >= nextLeapTime && Random.value < leapCloseChance)
+        // Yakin mesafede de ziplama / dalga: sirasi geldiyse normal vurus yerine onu baslat (Update'te state degisir).
+        if (skillRotation)
+        {
+            Skill ex = Expected;
+            if (ex == Skill.Leap && leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime)
+            {
+                pendingLeap = true;
+                return;
+            }
+            if (ex == Skill.Wave && waveEnabled && !waveActive && !pendingWave && Time.time >= nextWaveTime)
+            {
+                pendingWave = true;
+                return;
+            }
+        }
+        else if (leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime && Random.value < leapCloseChance)
         {
             pendingLeap = true;
+            return;
+        }
+
+        // Supurme / Yakalama / Aldatmaca: uyari boyunca kilic yavasca kalkar, renkle ne olduguna dair ipucu.
+        if (st != null && (st.MoveName == SweepName || st.MoveName == GrabName || st.MoveName == FakeName))
+        {
+            MoveHitType ht = st.CurrentHitType;
+            Boss1Rig.AttackStyle sty = Boss1Rig.AttackStyle.Fake;
+            if (ht == MoveHitType.Sweep) { rig.SetSwordTint(sweepColor, 1f, 0.9f); sty = Boss1Rig.AttackStyle.Sweep; }
+            else if (ht == MoveHitType.Grab) { rig.SetSwordTint(grabColor, 1f, 0.9f); sty = Boss1Rig.AttackStyle.Grab; }
+            rig.PlayAttack(Mathf.Max(0.3f, st.RemainingWindup), true, sty);
             return;
         }
 
@@ -1177,15 +1328,95 @@ public class Boss1Enemy : MonoBehaviour
         RunCameraZoom.AddShake(1.5f);
     }
 
+    // ---- FAZ 2: ofke ----
+    void BeginPhase2()
+    {
+        phase2 = true;
+        patIdx = 0;
+        expectedSince = Time.time;
+        fakeFlag = Random.value < fakeChance;
+        pendingLeap = false;
+        pendingWave = false;
+
+        walkSpeed *= 1.2f;
+        enemy.chaseSpeed = walkSpeed;
+        waveCount = 5;
+        waveInterval = Mathf.Min(waveInterval, 0.7f);
+        waveCooldown *= 0.7f;
+        leapCooldown *= 0.8f;
+        rig.windupTime *= 0.88f;
+        rig.tensionTime *= 0.88f;
+        rig.recoverTime *= 0.85f;
+        rig.walkAnimSpeed = Mathf.Min(1f, rig.walkAnimSpeed * 1.2f);
+
+        BuildComboMoveset();   // faz 2 uyari sureleri ile yeniden kur
+        nextWaveTime = Time.time + 1f;
+
+        enemy.ChangeState(new Boss1RoarState(this, enemy));
+    }
+
+    AudioClip thudClip;
+    AudioSource thudSrc;
+
+    // Alcak 'tok' vurus sesi (kod ile uretilir).
+    void PlayThud()
+    {
+        if (hitThudVolume <= 0f) return;
+        if (thudClip == null)
+        {
+            const int rate = 44100;
+            int n = Mathf.RoundToInt(rate * 0.22f);
+            float[] d = new float[n];
+            float lp = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)rate;
+                float env = Mathf.Exp(-t * 20f);
+                lp += (Random.value * 2f - 1f - lp) * 0.08f;
+                d[i] = (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(85f, 42f, Mathf.Clamp01(t * 6f)) * t) * 0.85f + lp * 0.9f) * env;
+            }
+            thudClip = AudioClip.Create("Boss1Thud", n, 1, rate, false);
+            thudClip.SetData(d, 0);
+        }
+        if (thudSrc == null)
+        {
+            thudSrc = gameObject.AddComponent<AudioSource>();
+            thudSrc.playOnAwake = false;
+            thudSrc.spatialBlend = 0f;
+        }
+        thudSrc.pitch = Random.Range(0.92f, 1.08f);
+        thudSrc.PlayOneShot(thudClip, Mathf.Clamp01(hitThudVolume));
+    }
+
+    internal float RoarForPhase2() { return PlayRoar(); }
+
     void OnEnemyHit(EnemyController e, DamageInfo info, HitResult result)
     {
         if (e != enemy)
             return;
 
         // Denge vurusu hafif, can vurusu agir sarsar.
-        rig.Flinch(result.onBalance ? 0.6f : 1f);
-        rig.Squash(result.onBalance ? 0.7f : 1f);
+        rig.Flinch(result.onBalance ? 0.6f : 1.3f);
+        rig.Squash(result.onBalance ? 0.7f : 1.1f);
         rig.Flash();
+
+        // AGIRLIK: boss kisa sureligine 'takilir' (sadece boss yavaslar, oyuncu degil) + tok ses + sarsinti.
+        if (hitWeight && !result.onBalance && !result.killed)
+        {
+            EnemyTime.RequestRamp(0.1f, 0.3f, 2f);
+            RunCameraZoom.AddShake(0.7f);
+            PlayThud();
+        }
+
+        // CEZALANDIRMA: boss saldirisini bitirmis, toparlaniyor (acik an) -> duz vurus ek can goturur.
+        if (punishHitPercent > 0f && enemy.openUntil > EnemyTime.Now && !enemy.IsStaggered && !result.onBalance
+            && !result.killed && health != null && !health.IsDead)
+        {
+            int bonus = Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * punishHitPercent));
+            bonus = Mathf.Min(bonus, health.CurrentHealth - 1);
+            if (bonus > 0)
+                health.TakeDamage(bonus);
+        }
 
         // Sersemlemis boss: duz vurus sabit bir yuzde goturur (ne 1 hasar, ne aninda olum).
         if (staggerHitPercent > 0f && enemy.IsStaggered && !result.onBalance && !result.killed
@@ -1256,6 +1487,15 @@ public class Boss1Enemy : MonoBehaviour
         if (!enemy.enabled && !(health != null && health.IsDead))
             enemy.enabled = true;
 
+        // Faz 2: can esigin altina inince (saldirmiyorken) ofkelen.
+        if (!phase2 && health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * phase2HealthPercent
+            && enemy.CurrentState is EnemyChaseState && !enemy.IsStaggered && !leapActive && !waveActive)
+            BeginPhase2();
+
+        // Siradaki yetenek uzun suredir gerceklesemiyorsa (mesafe vb.) atla: dongu kilitlenmesin.
+        if (skillRotation && Time.time > expectedSince + patternPatience && enemy.CurrentState is EnemyChaseState)
+            AdvancePattern();
+
         // Uyari suresi = animasyonun darbeye kadar suresi (Inspector'dan degisirse senkron kalsin).
         enemy.attackWarningTime = rig.ContactTime;
         enemy.attackRecoveryTime = rig.holdTime + rig.recoverTime + extraCooldown;
@@ -1277,6 +1517,15 @@ public class Boss1Enemy : MonoBehaviour
             nextWaveTime = Mathf.Max(nextWaveTime, Time.time + postureBreakMercy);
             nextLeapTime = Mathf.Max(nextLeapTime, Time.time + postureBreakMercy);
             comboLastStart = Mathf.Max(comboLastStart, Time.time - comboCooldown + postureBreakMercy);
+        }
+
+        if (pendingWave)
+        {
+            pendingWave = false;
+            if (enemy.CurrentState is EnemyAttackState && !leapActive && !waveActive && !enemy.IsStaggered && !enemy.IsDead)
+                enemy.ChangeState(new Boss1WaveState(this, enemy));
+            else
+                rig.PlayAttack();
         }
 
         if (pendingLeap)
@@ -1552,6 +1801,7 @@ public class Boss1Enemy : MonoBehaviour
             {
                 ph = Ph.Land;
                 o.nextLeapTime = Time.time + o.leapCooldown;
+                e.openUntil = EnemyTime.Now + o.leapLandTime + 0.5f;   // inis sonrasi acik an
             }
             else
             {
@@ -1752,7 +2002,48 @@ public class Boss1Enemy : MonoBehaviour
                         want = Mathf.Min(want, Mathf.Max(0f, hits[k].distance - 1f));
                 }
             }
+            // ZEMIN KONTROLU: ziplamanin yolunda ve inecegi yerde zemin yoksa (harita kenari / ucurum)
+            // sadece zeminin bittigi yere kadar ziplar.
+            float safe = 0f;
+            landY = groundY;
+            for (float d = 2f; d <= want; d += 2f)
+            {
+                float gy;
+                if (!GroundAt(o.transform.position.x + hopDir * d, out gy))
+                    break;
+                safe = d;
+                landY = gy;
+            }
+            if (safe < want)
+                want = Mathf.Max(0f, safe - 3f);   // kenardan 3 birim pay
+            if (want >= 6f)
+            {
+                float gy2;
+                if (GroundAt(o.transform.position.x + hopDir * want, out gy2))
+                    landY = gy2;
+                else
+                    want = 0f;
+            }
             return want;
+        }
+
+        float landY;
+
+        // x konumunun altinda sabit zemin var mi? (boss ve oyuncu sayilmaz)
+        bool GroundAt(float x, out float y)
+        {
+            y = groundY;
+            RaycastHit2D[] hs = Physics2D.RaycastAll(new Vector2(x, groundY + 4f), Vector2.down, 14f);
+            for (int i = 0; i < hs.Length; i++)
+            {
+                Collider2D c = hs[i].collider;
+                if (c == null || c.isTrigger) continue;
+                if (c.transform.IsChildOf(o.transform)) continue;
+                if (c.attachedRigidbody != null && c.attachedRigidbody.bodyType != RigidbodyType2D.Static) continue;
+                y = hs[i].point.y;
+                return true;
+            }
+            return false;
         }
 
         void StartFocus()
@@ -1836,10 +2127,10 @@ public class Boss1Enemy : MonoBehaviour
             if (ph == Ph.Hop)
             {
                 float k = Mathf.Clamp01(phT / o.waveHopTime);
-                SetPos(startX + hopDir * hopDist * k, groundY + 4f * o.waveHopHeight * k * (1f - k));
+                SetPos(startX + hopDir * hopDist * k, Mathf.Lerp(groundY, landY, k) + 4f * o.waveHopHeight * k * (1f - k));
                 if (k >= 1f)
                 {
-                    SetPos(startX + hopDir * hopDist, groundY);
+                    SetPos(startX + hopDir * hopDist, landY);
                     airborne = false;
                     Restore();
                     o.rig.Squash(0.8f);
@@ -1884,6 +2175,49 @@ public class Boss1Enemy : MonoBehaviour
             if (fired < o.waveCount && o.rig.IsAttacking) o.rig.CancelAttack();
             o.rig.SetSwordTint(o.waveColor, 0f, 3f);
             o.nextWaveTime = Time.time + o.waveCooldown;
+            e.openUntil = EnemyTime.Now + 0.8f;
+        }
+    }
+
+    // =====================================================================
+    // Boss1RoarState: faz 2 kukremesi. Boss kisa sure hareketsiz kalir (oyuncu icin firsat).
+    // =====================================================================
+    internal sealed class Boss1RoarState : IEnemyState
+    {
+        readonly Boss1Enemy o;
+        readonly EnemyController e;
+        float t, dur;
+
+        public Boss1RoarState(Boss1Enemy owner, EnemyController enemy) { o = owner; e = enemy; }
+
+        public void Enter()
+        {
+            dur = o.phase2RoarTime;
+            e.superArmorOverride = true;
+            e.openUntil = EnemyTime.Now + dur;
+            if (o.rb != null) o.rb.linearVelocity = new Vector2(0f, o.rb.linearVelocity.y);
+            o.rig.Squash(1f);
+            o.rig.Flash();
+            float len = o.RoarForPhase2();
+            dur = Mathf.Max(dur, Mathf.Min(len, 2.5f));
+            Vector3 top = o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f);
+            CombatCallout.Popup(top, "OFKE!", new Color(1f, 0.2f, 0.1f), 3f);
+            BalanceBreakFx.Play(o.transform.position + new Vector3(0f, 6f, 0f), null);
+            RunCameraZoom.AddShake(6f);
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake(5f);
+        }
+
+        public void Tick()
+        {
+            t += EnemyTime.DeltaTime;
+            if (o.rb != null) o.rb.linearVelocity = new Vector2(0f, o.rb.linearVelocity.y);
+            if (t >= dur)
+                e.ChangeState(new EnemyChaseState(e));
+        }
+
+        public void Exit()
+        {
+            e.superArmorOverride = false;
         }
     }
 }
@@ -2128,5 +2462,69 @@ public class Boss1SlowMo : MonoBehaviour
         if (!MainMenu.Active) Time.timeScale = 1f;
         if (baseFixed > 0f) Time.fixedDeltaTime = baseFixed;
         if (inst == this) inst = null;
+    }
+}
+
+/// <summary>
+/// Boss1 Supurme gorseli: boss'tan yerde hizla yayilan alcak sok dalgasi (ustunden ZIPLA).
+/// Hasari EnemyAttackState verir; bu sadece okunur bir isaret.
+/// </summary>
+public class Boss1Shock : MonoBehaviour
+{
+    static Sprite spr;
+
+    SpriteRenderer sr;
+    float t, life = 0.34f, len;
+    Color col;
+
+    public static Boss1Shock Spawn(Vector3 pos, float dir, float length, Color color)
+    {
+        if (spr == null)
+        {
+            const int W = 128, H = 32;
+            Texture2D tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            Color32[] px = new Color32[W * H];
+            for (int y = 0; y < H; y++)
+            {
+                float vy = 1f - Mathf.Abs((y + 0.5f) / H * 2f - 1f);
+                for (int x = 0; x < W; x++)
+                {
+                    float hx = (x + 0.5f) / W;
+                    float a = Mathf.Clamp01(vy * 1.4f) * (0.25f + 0.75f * hx);
+                    if (hx > 0.94f) a *= Mathf.Clamp01((1f - hx) / 0.06f);
+                    px[y * W + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255f));
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            spr = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0f, 0.5f), 16f);
+        }
+
+        GameObject go = new GameObject("Boss1Shock");
+        go.transform.position = pos + new Vector3(0f, 1.1f, 0f);
+        Boss1Shock s = go.AddComponent<Boss1Shock>();
+        s.sr = go.AddComponent<SpriteRenderer>();
+        s.sr.sprite = spr;
+        s.sr.sortingLayerName = "Default";
+        s.sr.sortingOrder = 46;
+        s.len = Mathf.Max(2f, length);
+        s.col = color;
+        go.transform.localScale = new Vector3(dir >= 0f ? 0.1f : -0.1f, 1.3f, 1f);
+        return s;
+    }
+
+    void Update()
+    {
+        t += Time.deltaTime;
+        float k = Mathf.Clamp01(t / life);
+        float grow = 1f - (1f - k) * (1f - k) * (1f - k);
+        float sign = transform.localScale.x >= 0f ? 1f : -1f;
+        transform.localScale = new Vector3(sign * Mathf.Max(0.1f, len / 8f * grow), Mathf.Lerp(1.4f, 0.3f, k), 1f);
+        Color c = Color.Lerp(Color.white, col, k * 0.8f);
+        c.a = Mathf.Pow(1f - k, 1.3f);
+        sr.color = c;
+        if (k >= 1f)
+            Destroy(gameObject);
     }
 }

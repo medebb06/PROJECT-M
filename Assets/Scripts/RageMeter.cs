@@ -287,34 +287,30 @@ public class RageMeter : MonoBehaviour
         return best;
     }
 
-    void OnGUI()
+    void LateUpdate()
     {
-        if (Event.current.type != EventType.Repaint) return;
-        float s = Screen.height / 1080f * MobileInput.HudMul;
+        if (MainMenu.Active) return;
+        float s = HudCanvas.Scale();
         float w = width * s, h = Mathf.Max(2f, height * s);
         // SOL ALT: marginY = ekranin altindan uzaklik; sinematik serit alttan da yukseldigi icin bar yukari kayar.
-        float x = marginX * s, y = Screen.height - marginY * s - h - RunCameraZoom.TopBarPixels;
-        Texture2D t = Texture2D.whiteTexture;
+        Rect sa = HudCanvas.SafeArea();
+        float x = sa.x + marginX * s, y = sa.yMax - marginY * s - h - RunCameraZoom.TopBarPixels;
+        w = Mathf.Min(w, sa.width - marginX * s * 2f);
         float pulse = IsFull ? 0.7f + 0.3f * Mathf.Sin(Time.unscaledTime * 9f) : 1f;
 
-        GUI.color = new Color(0.4f, 0.65f, 1f, 0.16f);
-        GUI.DrawTexture(new Rect(x, y, w, h), t);
+        HudCanvas.Fill(new Rect(x, y, w, h), new Color(0.4f, 0.65f, 1f, 0.16f));
 
         Color c = FlameActive ? Color.Lerp(new Color(1f, 0.1f, 0.02f), new Color(1f, 0.4f, 0.12f), 1f - pulse)
             : IsFull ? Color.Lerp(new Color(0.35f, 0.65f, 1f), new Color(0.8f, 0.95f, 1f), 1f - pulse) : new Color(0.3f, 0.6f, 1f, 0.95f);
-        GUI.color = c;
-        GUI.DrawTexture(new Rect(x, y, w * shown, h), t);
+        HudCanvas.Fill(new Rect(x, y, w * shown, h), c);
 
-        GUI.color = new Color(0.02f, 0.04f, 0.08f, 0.95f);
         for (int i = 1; i < Segments; i++)
-            GUI.DrawTexture(new Rect(x + w * i / Segments - 1f * s, y, 2f * s, h), t);
+            HudCanvas.Fill(new Rect(x + w * i / Segments - 1f * s, y, 2f * s, h), new Color(0.02f, 0.04f, 0.08f, 0.95f));
 
         if (flash > 0f)
         {
-            GUI.color = new Color(0.8f, 0.95f, 1f, flash * 0.5f);
-            GUI.DrawTexture(new Rect(x - 3f * s, y - 3f * s, w + 6f * s, h + 6f * s), t);
+            HudCanvas.Fill(new Rect(x - 3f * s, y - 3f * s, w + 6f * s, h + 6f * s), new Color(0.8f, 0.95f, 1f, flash * 0.5f));
         }
-        GUI.color = Color.white;
     }
 }
 

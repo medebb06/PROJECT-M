@@ -145,6 +145,36 @@ public class Boss1Rig : MonoBehaviour
 
     public bool IsAttacking { get { return atkState != AtkState.None; } }
 
+    /// <summary>Saldiri stili: Slam = klasik ust darbe; Sweep = alcak supurme; Grab = yakalama; Fake = titreyen gecikmeli darbe.</summary>
+    public enum AttackStyle { Slam, Sweep, Grab, Fake }
+
+    [Serializable]
+    public struct Pose
+    {
+        public float chest, belly, head, arm, sword, armL, crouch;
+        public Pose(float chest, float belly, float head, float arm, float sword, float armL, float crouch)
+        {
+            this.chest = chest; this.belly = belly; this.head = head; this.arm = arm;
+            this.sword = sword; this.armL = armL; this.crouch = crouch;
+        }
+    }
+
+    [Header("Saldiri stilleri (derece; Slam icin yukaridaki windup/strike alanlari kullanilir)")]
+    [Tooltip("SUPURME hazirlik: cok egilir, kilic geride/alcakta, derin cokme.")]
+    public Pose sweepWindupPose = new Pose(-24f, -12f, -8f, -30f, 95f, -10f, 0.10f);
+    [Tooltip("SUPURME darbe: govde one atilir, kilic yere yakin genis savrulur.")]
+    public Pose sweepStrikePose = new Pose(34f, 16f, 7f, 28f, 102f, 24f, 0.14f);
+    [Tooltip("YAKALAMA hazirlik: bos SOL EL yerden yukari kalkar (armL ~ -140), kilic asagida/pasif, bakis yukari.")]
+    public Pose grabWindupPose = new Pose(-22f, -10f, -14f, -8f, 100f, -140f, 0.08f);
+    [Tooltip("YAKALAMA darbe: govde one firlar, bos kol tam uzanir.")]
+    public Pose grabStrikePose = new Pose(30f, 14f, 8f, 12f, 100f, -70f, 0.04f);
+    [Tooltip("YAKALAMA: kalkan sol elin kizarma rengi (okunurluk).")]
+    public Color grabArmGlow = new Color(1f, 0.12f, 0.3f, 1f);
+    [Tooltip("ALDATMACA: hazirlikta titreme carpani.")]
+    [Range(1f, 5f)] public float fakeTrembleMul = 2.8f;
+
+    AttackStyle style = AttackStyle.Slam;
+
     /// <summary>Kilic yere indi mi (darbe ani gecti)? Hasar ancak bundan sonra verilir.</summary>
     public bool StrikeLanded { get { return atkState == AtkState.Hold || atkState == AtkState.Recover; } }
 
@@ -393,6 +423,7 @@ public class Boss1Rig : MonoBehaviour
     [ContextMenu("Test: Saldiri Oynat")]
     public bool PlayAttack()
     {
+        style = AttackStyle.Slam;
         atkScale = 1f; extraTension = 0f;
         holdTension = false;
         startK = lastK; startS = lastS;
@@ -418,6 +449,14 @@ public class Boss1Rig : MonoBehaviour
             else if (slowRaise) atkScale = Mathf.Clamp(baseT / contactSeconds, 0.35f, 1f);   // yavas yavas kaldir
             else extraTension = contactSeconds - baseT;
         }
+        return ok;
+    }
+
+    /// <summary>Stilli saldiri: Sweep / Grab / Fake ayri bir poz ve silueti ile oynar.</summary>
+    public bool PlayAttack(float contactSeconds, bool slowRaise, AttackStyle attackStyle)
+    {
+        bool ok = PlayAttack(contactSeconds, slowRaise);
+        style = attackStyle;
         return ok;
     }
 
@@ -941,20 +980,26 @@ public class Boss1Rig : MonoBehaviour
         float idleW = (1f - atkAmt) * (1f - w) * (1f - staggerW) * (1f - deadW);   // nefes sallanmasini kis
         float tremble = 0f;
         if (atkState == AtkState.Windup || atkState == AtkState.Tension)
-            tremble = Mathf.Sin(animClock * 55f) * windupTremble * Mathf.Clamp01(k) * Mathf.Clamp01(k);
+            tremble = Mathf.Sin(animClock * 55f) * windupTremble * (style == AttackStyle.Fake ? fakeTrembleMul : 1f) * Mathf.Clamp01(k) * Mathf.Clamp01(k);
         float shake = (sinceHit < 0.6f) ? Mathf.Exp(-sinceHit * 14f) * Mathf.Sin(sinceHit * 60f) * impactShakeDeg : 0f;
 
         float lean = walkLeanDeg * w;
-        float atkChest = windupChestDeg * k + strikeChestDeg * s + tremble * 0.5f + shake * 0.6f
+        // Stile gore hazirlik / darbe pozlari (Slam ve Fake: klasik alanlar).
+        Pose wp = new Pose(windupChestDeg, windupBellyDeg, windupHeadDeg, windupArmDeg, windupSwordDeg, windupArmLDeg, windupCrouch);
+        Pose sp = new Pose(strikeChestDeg, strikeBellyDeg, strikeHeadDeg, strikeArmDeg, strikeSwordDeg, strikeArmLDeg, strikeCrouch);
+        if (style == AttackStyle.Sweep) { wp = sweepWindupPose; sp = sweepStrikePose; }
+        else if (style == AttackStyle.Grab) { wp = grabWindupPose; sp = grabStrikePose; }
+
+        float atkChest = wp.chest * k + sp.chest * s + tremble * 0.5f + shake * 0.6f
                          + lean + kick * 2.5f + staggerW * 10f + deadW * 28f;
-        float atkBelly = windupBellyDeg * k + strikeBellyDeg * s + lean * 0.5f + staggerW * 6f + deadW * 14f;
-        float atkHead = windupHeadDeg * k + strikeHeadDeg * s - lean * 0.6f + kick * 3f + staggerW * 12f + deadW * 20f;
-        float atkArm = windupArmDeg * k + strikeArmDeg * s + tremble + kick * 2f + w * stepWave * 1.5f + staggerW * 8f + deadW * 25f;
-        float atkSword = windupSwordDeg * k + strikeSwordDeg * s + tremble * 0.6f + shake
+        float atkBelly = wp.belly * k + sp.belly * s + lean * 0.5f + staggerW * 6f + deadW * 14f;
+        float atkHead = wp.head * k + sp.head * s - lean * 0.6f + kick * 3f + staggerW * 12f + deadW * 20f;
+        float atkArm = wp.arm * k + sp.arm * s + tremble + kick * 2f + w * stepWave * 1.5f + staggerW * 8f + deadW * 25f;
+        float atkSword = wp.sword * k + sp.sword * s + tremble * 0.6f + shake
                          + w * walkSwordSwing * stepWave + kick * walkSwordSwing;
-        float atkArmL = windupArmLDeg * k + strikeArmLDeg * s - tremble * 0.8f
+        float atkArmL = wp.armL * k + sp.armL * s - tremble * 0.8f
                         + w * walkArmLSwing * Mathf.Sin(walkPhase * 6.2832f + 1.57f) + staggerW * 10f + deadW * 15f;
-        float atkCrouch = windupCrouch * k + strikeCrouch * s + walkDip * kick * kick + staggerW * 0.05f + deadW * 0.12f;
+        float atkCrouch = wp.crouch * k + sp.crouch * s + walkDip * kick * kick + staggerW * 0.05f + deadW * 0.12f;
 
         // Root: cokme/nefes arka ayagin zemin noktasi etrafinda olceklenir (ayak kaymaz).
         float sx = 1f + rootSquash * 0.5f * b + atkCrouch * 0.35f;
@@ -972,7 +1017,36 @@ public class Boss1Rig : MonoBehaviour
         Set("sword", Vector3.zero, swordAngle * dir);
         SetAround("armL_upper", armLPivot, (armLSwayDeg * -b3 * idleW - f * flinchDeg * 0.4f + atkArmL) * dir);
 
+        UpdateArmGlow(style == AttackStyle.Grab ? Mathf.Clamp01(k) : 0f, dtR);
+
         if (keepBladeAboveGround) ClampBladeAboveGround(swordAngle, dir);
+    }
+
+    // YAKALAMA okunurlugu: kalkan sol el kizarip nabiz atar.
+    SpriteRenderer[] armLSrs;
+    float armGlowAmt;
+    bool armGlowDirty;
+
+    void UpdateArmGlow(float target, float dt)
+    {
+        armGlowAmt = Mathf.MoveTowards(armGlowAmt, target, dt * 6f);
+        if (armGlowAmt <= 0.001f && !armGlowDirty) return;
+
+        if (armLSrs == null)
+        {
+            Transform ab;
+            armLSrs = bones.TryGetValue("armL_upper", out ab) && ab != null
+                ? ab.GetComponentsInChildren<SpriteRenderer>(true)
+                : new SpriteRenderer[0];
+        }
+
+        float pulse = 0.65f + 0.35f * Mathf.Sin(animClock * 20f);
+        float a = armGlowAmt * pulse;
+        Color c = armGlowAmt > 0.001f ? Color.Lerp(tint, grabArmGlow, Mathf.Clamp01(a)) : tint;
+        for (int i = 0; i < armLSrs.Length; i++)
+            if (armLSrs[i] != null) armLSrs[i].color = c;
+
+        armGlowDirty = armGlowAmt > 0.001f;
     }
 
     // Bicagin en alcak noktasi (visual/rig uzayinda y).
