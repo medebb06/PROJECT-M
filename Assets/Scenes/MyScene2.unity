@@ -10484,9 +10484,9 @@ MonoBehaviour:
   smoke: 1
   backLayer: 1
   frontLayer: 1
-  amount: 3
-  opacity: 1
-  size: 3
+  amount: 1.5
+  opacity: 0.5
+  size: 1.5
   speed: 3
   drift: -0.25
   color: {r: 0.78, g: 0.85, b: 0.95, a: 1}
@@ -16201,6 +16201,18 @@ PrefabInstance:
     - target: {fileID: 9045930727589892200, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: dashDistance
       value: 6.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9135974849126324683, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_Size.x
+      value: 3.3672473
+      objectReference: {fileID: 0}
+    - target: {fileID: 9135974849126324683, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_Size.y
+      value: 3.3672473
+      objectReference: {fileID: 0}
+    - target: {fileID: 9135974849126324683, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: m_Offset.x
+      value: 0.044211708
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

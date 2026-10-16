@@ -329,11 +329,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackRange: 8
   chaseStopDistance: 5
-  chaseSpeed: 9.5
+  chaseSpeed: 10
   alwaysHunt: 0
   useStandby: 1
-  standbyDistance: 4.5
-  standbySpacing: 2.5
+  standbyDistance: 5
+  standbySpacing: 5
   standbySpeedMultiplier: 0.7
   standbyArrivalTolerance: 0.2
   standbyMaxDistance: 9
@@ -465,6 +465,7 @@ MonoBehaviour:
   audioSource: {fileID: 1683981631884351114}
   balanceHitSounds: []
   playOldBalanceHitSound: 0
+  playOldBalanceBreakSound: 0
   balanceHitVFX: {fileID: 0}
   healthHitSounds: []
   healthHitVFX: {fileID: 0}
@@ -496,6 +497,9 @@ MonoBehaviour:
   commitSound: {fileID: 0}
   commitVolume: 1
   audioSource: {fileID: 0}
+  softVolume: 0.8
+  softPitch: {x: 0.94, y: 1.08}
+  unblockablePitchMul: 1.25
 --- !u!114 &449339544802574334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -518,6 +522,7 @@ MonoBehaviour:
   lowHealthDamageMultiplier: 1.6
   fullHealthRecoveryMultiplier: 1.6
   lowHealthRecoveryMultiplier: 0.4
+  breakHealthPercent: 0.15
 --- !u!82 &1683981631884351114
 AudioSource:
   m_ObjectHideFlags: 0
@@ -635,6 +640,10 @@ MonoBehaviour:
   unblockableColor: {r: 1, g: 0.85, b: 0.1, a: 1}
   unblockableFlashSpeed: 14
   unblockableMaxSpeedMultiplier: 2.4
+  warnPopTime: 0.14
+  warnBaseIntensity: 0.6
+  warnEndIntensity: 0.9
+  commitFlashTime: 0.09
 --- !u!114 &4106027573664735691
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -811,6 +820,35 @@ MonoBehaviour:
     scale: 1
     attackRangeOverride: 0
     chaseStopOverride: 0
+--- !u!114 &7770000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3697985245505729534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c3e7a19b2d84f06a1e9d4c7b8f20a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCapsuleBody
+  bodyColor: {r: 0.9, g: 0.91, b: 0.94, a: 1}
+  sizeMultiplier: {x: 1, y: 1}
+  hitSquash: 0.6
+  parrySquash: 0.5
+  breakSquash: 0.9
+  windupCrouch: 0.55
+  commitStretch: -0.3
+  leanBack: 9
+  leanForward: 7
+  knockbackWobble: 0.22
+  parryPunchSpeed: 16
+  parryScaleX: 0.38
+  parryScaleY: 0.34
+  parryKnock: 15
+  parryBreakBoost: 1.35
+  parryFlashTime: 0.16
+  parryShake: 0.45
 --- !u!1 &5727438279676675484
 GameObject:
   m_ObjectHideFlags: 0
@@ -1209,23 +1247,3 @@ MonoBehaviour:
   balance: {fileID: 449339544802574334}
   slider: {fileID: 557996581602208872}
   hideWhenEmpty: 1
---- !u!114 &7770000000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3697985245505729534}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c3e7a19b2d84f06a1e9d4c7b8f20a63, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyCapsuleBody
-  bodyColor: {r: 0.9, g: 0.91, b: 0.94, a: 1}
-  sizeMultiplier: {x: 1, y: 1}
-  hitSquash: 0.6
-  parrySquash: 0.5
-  breakSquash: 0.9
-  windupCrouch: 0.55
-  commitStretch: -0.3
-  knockbackWobble: 0.22

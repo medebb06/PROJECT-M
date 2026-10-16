@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ForegroundGrassBlur
-  m_Shader: {fileID: 4800000, guid: c3ca26f8de71a0547b6d742955f273d7, type: 3}
+  m_Shader: {fileID: 4800000, guid: 506d4bea424439f4882bbdd71a16f491, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -42,10 +42,31 @@ Material:
     m_Ints: []
     m_Floats:
     - _BlurSize: 1.5
+    - _CoreShadow: 0.2
     - _EnableExternalAlpha: 0
+    - _FlutterAmount: 0
+    - _FlutterSpeed: 3
+    - _Haze: 0
+    - _HazeBottom: 0
+    - _LightBack: 0.35
+    - _MoonFade: 0
+    - _MoonFadeRadius: 5
+    - _MoonRimMin: 0.3
+    - _MoonRimRadius: 16
+    - _NormalIntensity: 0
+    - _NormalPower: 1.6
+    - _RimIntensity: 0.05
+    - _RimTop: 0.35
+    - _RimWidth: 4.1
+    - _UseMoon: 0
+    - _WindAmount: 0
+    - _WindLight: 0.6
+    - _WindSpeed: 1
     - _ZWrite: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _HazeColor: {r: 0.75, g: 0.7, b: 0.65, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RimColor: {r: 1.4, g: 1.1, b: 0.8, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
