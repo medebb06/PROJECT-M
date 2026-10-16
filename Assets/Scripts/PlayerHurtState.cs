@@ -12,6 +12,9 @@ public class PlayerHurtState : IPlayerState
     private readonly float lockDuration;
     private readonly float invincibleDuration;
 
+    /// <summary>Hasar sonrasi korumali (dokunulmaz) donem. Kapali.</summary>
+    public static bool GrantPostHitInvincibility = false;
+
     // Knockback hızının uygulandığı süre.
     // Süre bitince yatay hız sıfırlanır.
     private float knockbackTimer;
@@ -67,11 +70,15 @@ public class PlayerHurtState : IPlayerState
         // Korumalı dönem: sersemleme + sonrası.
         // (Ayrı sayaç; Dash gibi state'ler isInvincible'ı kapatınca
         // bu koruma silinmez.)
-        player.hitInvincibilityTimer =
-            Mathf.Max(
-                player.hitInvincibilityTimer,
-                invincibleDuration
-            );
+        // KAPALI: hasar sonrasi dokunulmazlik yok (sersemleme suresi lockDuration ile devam eder).
+        if (GrantPostHitInvincibility)
+        {
+            player.hitInvincibilityTimer =
+                Mathf.Max(
+                    player.hitInvincibilityTimer,
+                    invincibleDuration
+                );
+        }
 
         player.canControl = false;
 

@@ -1540,6 +1540,13 @@ public class Boss1Enemy : MonoBehaviour
 
             DamagePlayer();
 
+            // Boss oyuncunun uzerine indiyse govde icinde sikismasin: en yakin kenara al.
+            {
+                PlayerController lp = e.target != null ? e.target.GetComponent<PlayerController>() : null;
+                if (lp != null && lp.col != null)
+                    HitboxUtil.SeparateHorizontally(lp.rb, lp.col, o.GetComponent<Collider2D>());
+            }
+
             t = 0f;
             if (last)
             {
@@ -1924,6 +1931,7 @@ public class Boss1Wave : MonoBehaviour
         if (life > 8f) { Destroy(gameObject); return; }
 
         Vector3 p = transform.position;
+        float prevX = p.x;
         p.x += dir * o.waveSpeed * (reflected ? o.waveReflectSpeedMultiplier : 1f) * dt;
         transform.position = p;
 
@@ -1955,11 +1963,17 @@ public class Boss1Wave : MonoBehaviour
         if (resolved || e.target == null || e.IsTargetDead) return;
         if (o.InMercy) return;                                // posture kirik oyuncudan dalga gecer
 
-        float rel = (e.target.position.x - p.x) * dir;      // + : oyuncu dalganin onunde
-        if (rel > o.waveHitHalfWidth || rel < -o.waveHitHalfWidth * 1.5f) return;
-
         PlayerController pl = e.target.GetComponent<PlayerController>();
         if (pl == null) return;
+
+        // SUPURMELI carpisma: bu karede dalganin kat ettigi yol boyunca oyuncu govdesine degdi mi?
+        // (Frame takilmasi / yuksek hizda dalga oyuncunun icinden "atlayip" gecmesin.)
+        float bodyHalf = pl.col != null ? pl.col.bounds.extents.x * 0.4f : 0f;
+        float hw = o.waveHitHalfWidth + bodyHalf;
+        float px = e.target.position.x;
+        float relNow = (px - p.x) * dir;                     // + : oyuncu dalganin onunde
+        float relPrev = (px - prevX) * dir;
+        if (relNow > hw || relPrev < -hw * 1.5f) return;
         float feet = pl.col != null ? pl.col.bounds.min.y : pl.transform.position.y;
         if (feet > groundY + o.waveHeight) return;           // ustunden atladi
 

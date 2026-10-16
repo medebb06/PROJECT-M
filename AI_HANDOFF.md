@@ -246,3 +246,14 @@ Dokunulmayan (oynayarak karar verilmeli): dashCooldown 0.4s (Exit'ten sonra), pa
 
 ## (2026-10-17, 37) Parry yavaslamasi sadece dusmanlar icin (DERLENMEDI / OYNANMADI)
 - CombatImpactFeedback.PlayParryImpact: global HitStop (Time.timeScale) kaldirildi; yerine EnemyTime.RequestRamp(>=0.75s, baslangic 0.05, power 2.6). Oyuncu parry sirasinda normal hizda; dusman/boss/dalga (EnemyTime kullananlar) yavas baslayip hizlanarak normale doner. Balance-break slow-mo hala global (ayri istek). EnemyController.PlayParrySlowMotion profili ayrica calisir (en yavas olan gecerli).
+
+## (2026-10-17, 38) Hasar sonrasi dokunulmazlik kaldirildi (DERLENMEDI / OYNANMADI)
+- PlayerHurtState.Enter: hitInvincibilityTimer artik atanmiyor (static GrantPostHitInvincibility=false, geri acmak icin true). Sersemleme (lockDuration) ve knockback aynen duruyor. Diger kaynaklar (hava saldirisi 0.12s, parry odulu, ability, rage cikisi 0.35s, dash i-frame) DOKUNULMADI. Dikkat: sersemleme sirasinda ardisik kombo vuruslari artik isabet eder.
+
+## (2026-10-17, 39) Hitbox / collider denetimi + duzeltmeler (DERLENMEDI / OYNANMADI)
+Prefab verileri (Boss1.prefab, Player.prefab, Physics2DSettings): Boss1 kok scale 2, TEK BoxCollider2D offset(0,3.2) size(4.6,6.4) -> dunya 9.2x12.8; Player scale 1.5, CapsuleCollider2D dikey 2.29x3.17 -> dunya ~3.4x4.8; oyuncu saldiri kutusu hitBoxSize 10x4 (merkez AttackPoint 0.72*1.5), on erisim ~6.1; dashDistance 5; ziplama tepe ~4.2 (jumpForce 17, gravity 3.5). Katman matrisi: Dash katmani Enemy ile CARPISMIYOR (dash dusmanin icinden gecer), Player-Enemy carpisir.
+Bulgular/duzeltmeler:
+1. Dash (5 birim) 9.2 genis boss govdesinin icinde bitince layer geri donunce oyuncu cakisik kaliyor, fizik yavas/zipirdayarak itiyordu. FIX: yeni HitboxUtil.cs (SeparateHorizontally/EjectFromEnemies); DashState.Exit layer geri yuklendikten sonra EjectFromEnemies cagirir (en yakin yatay kenara aninda).
+2. Boss ziplama inisinde boss collider`i oyuncunun ustune acilabiliyordu (kutle 1000 -> oyuncu sikisip firliyordu). FIX: Boss1LeapState inis hasarindan sonra HitboxUtil.SeparateHorizontally(oyuncu, boss collider).
+3. Dalga carpismasi her karede sadece o anki x`e bakiyordu: 145 u/s hizda kare takilmasinda (100ms = 14.5 birim) dalga oyuncunun icinden "atlayip" gecebilirdi. FIX: supurmeli kontrol (onceki x -> simdiki x araligi) + pencereye oyuncu govde yaricapinin %40`i eklendi.
+Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama inisinden ziplayarak KACILMAZ (dash i-frame veya parry); Boss1 vurusu merkezden 24 birime kadar ve alt sinir yok (boss govdesine yapisan oyuncu da vurulur); boss stopDistance 15 vs oyuncu erisimi ~10.7 (boss govde kenari dahil) -> oyuncu 4 birim yaklasmali.

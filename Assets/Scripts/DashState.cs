@@ -134,6 +134,10 @@ public class DashState : IPlayerState
             colObject = null;
         }
 
+        // Dash bir dusmanin (ozellikle genis boss govdesinin) icinde bittiyse fizigin yavas
+        // itmesini bekleme: en yakin kenara hemen al.
+        HitboxUtil.EjectFromEnemies(player);
+
         player.dashCooldownTimer = player.dashCooldown * player.dashCooldownScale;
 
         // dash çıkışında momentum koru
