@@ -178,3 +178,11 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 - Font: `Knight_Souls.otf` -> `Assets/Resources/UI/Knight_Souls.otf`. Orijinalde Ğ ğ İ Ş ş YOKTU; fonttools ile mevcut aksan parcalarindan (cedilla, brevemod, dotaccentmod) uretilip eklendi (orijinal dosya degismedi). Font BUYUK HARFLIDIR (kucuk harfler kucuk-buyuk).
 - `GameFont.cs` (yeni): `GameFont.Get()/Or()` + otomatik `GameFontApplier` (OnGUI icin `GUI.skin.font`, 0.5 sn'de bir tum UI Text ve TextMesh). `MainMenu`, `TutorialMode`, `CombatCallout`, `Critfeedback` ayrica GameFont'u tercih eder. Eski `Resources/UI/ProjectM_Serif_*` yedek kalir.
 - Boss adi: `Boss1Enemy.bossName` = "Mustafa Golem". Giris sahnesinde kukreme basinda ekranin tam ortasinda buyuk (ekran yuksekliginin %10'u, `Boss1Hud.nameSize`) belirir, giris bitince solar.
+
+## Boss1 ad yazisi stili + olum yavas cekimi (2026-10-16, 25) — DERLENMEDİ / OYNANMADI
+- Ad yazisi (Elden Ring "ENEMY FELLED" tarzi): `Boss1Hud.nameSize` 0.10 -> 0.22 (ekran yuksekligi), harfler tek tek yerlestirilir (`nameTracking` 0.82 = sik harf araligi), arkada yumusak koyu serit, krem renk (0.93,0.86,0.68), yavas buyume. Genislik ekrana sigmazsa otomatik kucultulur.
+- Olum yavas cekimi: boss olunce `Boss1SlowMo.Run` (`deathSlowScale` 0.15, `deathSlowHold` 0.9 sn, `deathSlowRelease` 0.8 sn; gercek zaman). `Time.timeScale` + `fixedDeltaTime` degisir; bagimsiz nesnede calistigi icin boss yok edilse de yarim kalmaz; MainMenu.Active (duraklatma) iken zamana dokunmaz.
+
+## (2026-10-16, 26) Boss1 kombo parry okunurlugu + blok itmesi (DERLENMEDI / OYNANMADI)
+- Kombo windup'lari: 1. 1.6s, 2. (hizli) 0.62s (eskiden 0.36s: parry sonrasi grace/input buffer yuzunden kacirilirdi), 3. 1.25s +0..0.2 rastgele.
+- Boss1Enemy: PlayerBlocked'a abone olup oyuncuyu bossdan uzaga iter (blockKnockback, blockKnockbackDistance 4.5, blockKnockbackDuration 0.3). Vanilla PushPlayerBack |dx|>6 ise iptal ediyordu; bu yuzden boss icin ayri coroutine. Dash sirasinda itmez.

@@ -23,8 +23,10 @@ public class Boss1Hud : MonoBehaviour
 
     [Header("Boss adi (giriste ekranin ortasinda)")]
     [Tooltip("Ekran yuksekligine oranla yazi boyutu.")]
-    [Range(0.03f, 0.2f)] public float nameSize = 0.1f;
-    public Color nameColor = new Color(0.96f, 0.93f, 0.88f, 1f);
+    [Range(0.03f, 0.4f)] public float nameSize = 0.22f;
+    [Tooltip("Harf araligi carpani (1 = fontun kendi araligi, kucuk = sik).")]
+    [Range(0.5f, 1.2f)] public float nameTracking = 0.82f;
+    public Color nameColor = new Color(0.93f, 0.86f, 0.68f, 1f);
 
     string bossName;
     bool nameOn;
@@ -95,27 +97,86 @@ public class Boss1Hud : MonoBehaviour
         alpha = Mathf.MoveTowards(alpha, a, dt * 1.5f);
     }
 
+    Texture2D bandTex;
+
+    // Elden Ring "ENEMY FELLED" tarzi: arkada yumusak koyu serit, cok buyuk, sik harfli (tracking < 1),
+    // yavasca buyuyen krem renkli yazi. OnGUI harf araligi desteklemez: harfler tek tek yerlestirilir.
     void DrawName()
     {
         if (nameAlpha <= 0.01f || string.IsNullOrEmpty(bossName)) return;
 
         if (nameStyle == null)
-            nameStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Normal, wordWrap = false, clipping = TextClipping.Overflow };
+        {
+            nameStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Normal, wordWrap = false,
+                clipping = TextClipping.Overflow, padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0)
+            };
+        }
         Font f = GameFont.Get();
         if (f != null) nameStyle.font = f;
 
-        float pop = 1f + 0.12f * Mathf.Exp(-nameAge * 3.5f);     // belirirken hafif buyuk -> oturur
-        nameStyle.fontSize = Mathf.Max(8, Mathf.RoundToInt(Screen.height * nameSize * pop));
+        if (bandTex == null)
+        {
+            bandTex = new Texture2D(1, 64, TextureFormat.RGBA32, false);
+            bandTex.wrapMode = TextureWrapMode.Clamp;
+            for (int i = 0; i < 64; i++)
+            {
+                float v = Mathf.Sin(i / 63f * Mathf.PI);
+                bandTex.SetPixel(0, i, new Color(0f, 0f, 0f, Mathf.Pow(v, 0.7f)));
+            }
+            bandTex.Apply();
+        }
 
-        Rect r = new Rect(0f, 0f, Screen.width, Screen.height);       // tam ekran orta
-        float o = Mathf.Max(2f, Screen.height * 0.004f);
+        string txt = bossName.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+        float grow = 1f + 0.07f * Mathf.Clamp01(nameAge / 4f) + 0.12f * Mathf.Exp(-nameAge * 4f);
+        float fs = Screen.height * nameSize * grow;
+
+        // Genislik siginmazsa kucult.
+        float[] w = new float[txt.Length];
+        float total = MeasureName(txt, fs, w);
+        float limit = Screen.width * 0.94f;
+        if (total > limit) { float k = limit / total; fs *= k; total = MeasureName(txt, fs, w); }
+
+        float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
+        float h = fs * 1.35f;
+
         Color old = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.85f * nameAlpha);
-        GUI.Label(new Rect(r.x + o, r.y + o, r.width, r.height), bossName, nameStyle);
-        GUI.Label(new Rect(r.x - o, r.y + o, r.width, r.height), bossName, nameStyle);
-        GUI.color = new Color(nameColor.r, nameColor.g, nameColor.b, nameAlpha);
-        GUI.Label(r, bossName, nameStyle);
+
+        // Arka serit
+        float bandH = h * 1.9f;
+        GUI.color = new Color(1f, 1f, 1f, 0.72f * nameAlpha);
+        GUI.DrawTexture(new Rect(0f, cy - bandH * 0.5f, Screen.width, bandH), bandTex);
+
+        // Harfler
+        float x = cx - total * 0.5f;
+        float o = Mathf.Max(2f, fs * 0.025f);
+        for (int i = 0; i < txt.Length; i++)
+        {
+            string ch = txt[i].ToString();
+            if (txt[i] != ' ')
+            {
+                Rect r = new Rect(x, cy - h * 0.5f, w[i] + 4f, h);
+                GUI.color = new Color(0f, 0f, 0f, 0.9f * nameAlpha);
+                GUI.Label(new Rect(r.x + o, r.y + o, r.width, r.height), ch, nameStyle);
+                GUI.color = new Color(nameColor.r, nameColor.g, nameColor.b, nameAlpha);
+                GUI.Label(r, ch, nameStyle);
+            }
+            x += w[i] * nameTracking;
+        }
         GUI.color = old;
+    }
+
+    float MeasureName(string txt, float fs, float[] w)
+    {
+        nameStyle.fontSize = Mathf.Max(8, Mathf.RoundToInt(fs));
+        float total = 0f;
+        for (int i = 0; i < txt.Length; i++)
+        {
+            w[i] = txt[i] == ' ' ? fs * 0.35f : nameStyle.CalcSize(new GUIContent(txt[i].ToString())).x;
+            total += w[i] * nameTracking;
+        }
+        return total;
     }
 
     void OnGUI()

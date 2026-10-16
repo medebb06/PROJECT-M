@@ -384,13 +384,13 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Kombo sonrasi tekrar secilmeden onceki sure (sn). Arada normal tek vurus atar.")]
     [Min(0f)] public float comboCooldown = 6f;
     [Tooltip("1. vurus hazirlik suresi (sn): kilic bu surede yavasca kalkar ve kirmizi parlar, kombonun geldigi anlasilsin.")]
-    [Min(0.3f)] public float comboFirstWindup = 1.8f;
+    [Min(0.3f)] public float comboFirstWindup = 1.6f;
     [Tooltip("2. vurus: hizli (sn).")]
-    [Min(0.2f)] public float comboFastWindup = 0.36f;
+    [Min(0.2f)] public float comboFastWindup = 0.62f;
     [Tooltip("3. vurus: GECIKMELI (sn). Ezbere parry'i cezalandirir.")]
-    [Min(0.5f)] public float comboDelayedWindup = 1.45f;
+    [Min(0.5f)] public float comboDelayedWindup = 1.25f;
     [Tooltip("3. vurusun gecikmesine eklenen rastgele sure (0..bu).")]
-    [Min(0f)] public float comboDelayedRandom = 0.45f;
+    [Min(0f)] public float comboDelayedRandom = 0.2f;
     [Range(0.5f, 2.5f)] public float comboLastDamage = 1.3f;
     [Tooltip("3. vurusu parry'lemenin boss dengesine carpani.")]
     [Range(1f, 4f)] public float comboFinalParryReward = 1.5f;
@@ -424,6 +424,14 @@ public class Boss1Enemy : MonoBehaviour
     float comboLastStart = -999f;
 
     // Kukreme yalniz iki anda: oyuncunun gorusune ilk girdigi an + oldugu an.
+    [Header("Olum yavas cekimi (Dead Cells tarzi)")]
+    [Tooltip("Son vurus yenince oyun hizi (0.15 = cok yavas). 1 = kapali.")]
+    [Range(0.02f, 1f)] public float deathSlowScale = 0.15f;
+    [Tooltip("En yavas halde kalma suresi (gercek sn).")]
+    [Min(0f)] public float deathSlowHold = 0.9f;
+    [Tooltip("Normal hiza donus suresi (gercek sn).")]
+    [Min(0.05f)] public float deathSlowRelease = 0.8f;
+
     bool seenRoared, deathRoared;
     float nextSeenCheck;
 
@@ -432,6 +440,7 @@ public class Boss1Enemy : MonoBehaviour
         if (!deathRoared && health != null && health.IsDead)
         {
             deathRoared = true;
+            if (deathSlowScale < 0.999f) Boss1SlowMo.Run(deathSlowScale, deathSlowHold, deathSlowRelease);
             seenRoared = true;
             PlayRoar();
             return;
@@ -676,8 +685,14 @@ public class Boss1Enemy : MonoBehaviour
         startY = transform.position.y;
     }
 
+    [Header("Blok itmesi")]
+    public bool blockKnockback = true;
+    [Min(0f)] public float blockKnockbackDistance = 4.5f;
+    [Min(0.05f)] public float blockKnockbackDuration = 0.3f;
+
     void OnEnable()
     {
+        CombatEvents.PlayerBlocked += OnPlayerBlocked;
         CombatEvents.EnemyHit += OnEnemyHit;
         CombatEvents.ParrySucceeded += OnParry;
     }
@@ -685,8 +700,61 @@ public class Boss1Enemy : MonoBehaviour
     void OnDisable()
     {
         EndIntro();
+        CombatEvents.PlayerBlocked -= OnPlayerBlocked;
         CombatEvents.EnemyHit -= OnEnemyHit;
         CombatEvents.ParrySucceeded -= OnParry;
+    }
+
+    void OnPlayerBlocked(EnemyController e, bool postureBroken)
+    {
+        if (!blockKnockback || e != enemy || enemy == null || enemy.target == null) return;
+        PlayerController p = enemy.target.GetComponent<PlayerController>();
+        if (p == null || p.rb == null || p.isDashing) return;
+        float dir = p.rb.position.x >= transform.position.x ? 1f : -1f;
+        StartCoroutine(BlockPushRoutine(p, dir));
+    }
+
+    IEnumerator BlockPushRoutine(PlayerController p, float dir)
+    {
+        float dur = blockKnockbackDuration;
+        float t = 0f;
+        p.inputLocked = true;
+        p.inputLockTimer = Mathf.Max(p.inputLockTimer, dur + 0.1f);
+
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.useTriggers = false;
+        filter.SetLayerMask(Physics2D.AllLayers);
+        filter.useLayerMask = true;
+        RaycastHit2D[] hits = new RaycastHit2D[4];
+
+        while (t < dur && p != null && p.rb != null)
+        {
+            yield return new WaitForFixedUpdate();
+            if (p == null || p.rb == null || p.isDashing) yield break;
+
+            float prev = t / dur;
+            t += Time.fixedDeltaTime;
+            float next = Mathf.Min(1f, t / dur);
+            float f0 = 1f - (1f - prev) * (1f - prev);
+            float f1 = 1f - (1f - next) * (1f - next);
+            float step = blockKnockbackDistance * (f1 - f0);
+
+            Vector2 d = new Vector2(dir, 0f);
+            int n = p.rb.Cast(d, filter, hits, step + 0.02f);
+            for (int k = 0; k < n; k++)
+            {
+                Collider2D c = hits[k].collider;
+                if (c != null && !c.isTrigger && c.attachedRigidbody != p.rb &&
+                    (c.attachedRigidbody == null || c.attachedRigidbody.bodyType == RigidbodyType2D.Static) &&
+                    !c.transform.IsChildOf(p.transform) && hits[k].normal.x * dir < -0.5f)
+                {
+                    step = Mathf.Max(0f, hits[k].distance - 0.02f);
+                    break;
+                }
+            }
+            p.rb.position += d * step;
+            p.rb.linearVelocity = new Vector2(0f, p.rb.linearVelocity.y);
+        }
     }
 
     void OnDestroy()
@@ -1313,5 +1381,54 @@ public class Boss1Enemy : MonoBehaviour
             if (slam == 0 && o.rig.IsAttacking) o.rig.CancelAttack();
             o.nextLeapTime = Mathf.Max(o.nextLeapTime, Time.time + 3f);
         }
+    }
+}
+
+/// <summary>
+/// Boss olum yavas cekimi: boss yok edilse bile calisir (bagimsiz nesne). Duraklatma menusu acikken zamana dokunmaz.
+/// </summary>
+public class Boss1SlowMo : MonoBehaviour
+{
+    static Boss1SlowMo inst;
+    float baseFixed;
+
+    public static void Run(float scale, float hold, float release)
+    {
+        if (inst == null)
+        {
+            GameObject go = new GameObject("Boss1SlowMo");
+            DontDestroyOnLoad(go);
+            inst = go.AddComponent<Boss1SlowMo>();
+            inst.baseFixed = Time.fixedDeltaTime;
+        }
+        inst.StopAllCoroutines();
+        inst.StartCoroutine(inst.Routine(scale, hold, release));
+    }
+
+    IEnumerator Routine(float scale, float hold, float release)
+    {
+        float t = 0f;
+        float total = hold + release;
+        while (t < total)
+        {
+            if (!MainMenu.Active)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = t <= hold ? 0f : Mathf.Clamp01((t - hold) / Mathf.Max(0.01f, release));
+                float sc = Mathf.Lerp(scale, 1f, k * k * (3f - 2f * k));
+                Time.timeScale = sc;
+                Time.fixedDeltaTime = baseFixed * sc;
+            }
+            yield return null;
+        }
+        if (!MainMenu.Active) Time.timeScale = 1f;
+        Time.fixedDeltaTime = baseFixed;
+    }
+
+    void OnDestroy()
+    {
+        if (!MainMenu.Active) Time.timeScale = 1f;
+        if (baseFixed > 0f) Time.fixedDeltaTime = baseFixed;
+        if (inst == this) inst = null;
     }
 }
