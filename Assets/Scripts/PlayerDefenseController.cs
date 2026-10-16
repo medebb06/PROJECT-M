@@ -78,6 +78,14 @@ public class PlayerDefenseController : MonoBehaviour
     [Range(0.1f, 1f)]
     [SerializeField] private float whiffWindowMultiplier = 0.5f;
 
+    [Header("Boşa Basma Cezası v2 (daha affedici)")]
+    [Tooltip("Boşa giden parry'den sonra bu süre içinde tekrar basılırsa ceza uygulanır. (Yeni alan: eski prefab değeri ezilmesin.)")]
+    [Min(0f)]
+    [SerializeField] private float whiffPenaltyTimeV2 = 0.2f;
+    [Tooltip("Cezalı parry penceresinin çarpanı. 1 = ceza yok.")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float whiffWindowMultiplierV2 = 0.8f;
+
     [Header("Debug")]
     [Tooltip("Ekranda savunma durumunu gösterir (takılma teşhisi için).")]
     [SerializeField] private bool showDebug = false;
@@ -245,8 +253,11 @@ public class PlayerDefenseController : MonoBehaviour
         if (!CanStartDefense())
             return false;
 
-        // Zaten açık bir parry penceresi varsa ona dokunma.
-        if (currentState is PlayerParryState)
+        // Zaten açık bir parry penceresi varsa ona dokunma. AMA o pencere zaten
+        // başarılı olduysa (kısa payda kapanıyor) yeni basış yutulmasın: yeni parry başlar
+        // (üst üste gelen vuruşlarda ikinci parry kaçmasın).
+        PlayerParryState openParry = currentState as PlayerParryState;
+        if (openParry != null && lastSuccessTime < openParry.StartTime)
             return true;
 
         if (cancelAttackOnDefense && combat != null)
@@ -282,8 +293,8 @@ public class PlayerDefenseController : MonoBehaviour
 
         // Boşa basma cezası zincirde de geçerli: abanmak pencereyi
         // daraltır, ritme basmak tam pencere verir.
-        if (Time.time - lastFailTime <= whiffPenaltyTime)
-            window *= whiffWindowMultiplier;
+        if (Time.time - lastFailTime <= whiffPenaltyTimeV2)
+            window *= whiffWindowMultiplierV2;
 
         return window;
     }

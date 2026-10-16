@@ -26,7 +26,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Denge (posture) cubugu. Parry denge doldurur; dolunca boss sersemler (infaz firsati).")]
     [Min(1)] public int maxBalance = 240;
     [Tooltip("Parry'nin boss dengesine hasari (oyun bunu x0.5 ve cana gore x0.6-1.6 ile olcekler: ~18 = denge ~13 parry, can azaldikca daha az).")]
-    [Min(1)] public int parryBalanceDamage = 170;
+    [Min(1)] public int parryBalanceDamage = 60;
     [Tooltip("Denge kirilinca boss'un sersemleme suresi (sn).")]
     [Min(0.5f)] public float staggerDuration = 3.5f;
 
@@ -44,7 +44,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Oyuncunun ayagi boss'un ayagindan bu kadar yukaridaysa vurustan kurtulur (ziplama). Kilic yerde yatiyor: yuksek tutuldu.")]
     [Min(0.5f)] public float hitHeight = 3.5f;
     [Tooltip("Vurustan sonra bir sonraki saldiriya kadar ek bekleme (sn). Animasyon (bekleme + toparlanma) buna eklenir.")]
-    [Min(0f)] public float extraCooldown = 0.5f;
+    [Min(0f)] public float extraCooldown = 0.15f;
     [Tooltip("Sersemlemis (denge kirik) boss'a duz vurus basina max cana gore hasar yuzdesi. 0 = oyunun kendi degeri.")]
     [Range(0f, 0.2f)] public float staggerHitPercent = 0.03f;
     [Tooltip("Duz vuruslar boss'u bu yuzdenin altina dusuremez (infaz bitirsin). 0 = sinir yok.")]
@@ -241,6 +241,8 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Giriste ekranin ortasinda buyuk yazilan boss adi.")]
     public string bossName = "Mustafa Golem";
     public bool introCutscene = true;
+    [Tooltip("Kapali: boss sadece oyuncu 'introDistance' kadar yaklasinca uyanir (kukrer + kovalar). Acik: ekrana girer girmez de uyanir.")]
+    public bool introSeeOnScreen = false;
     [Tooltip("Oyuncu bu kadar yaklasinca (ya da boss ekrana girince) giris sahnesi baslar.")]
     [Min(1f)] public float introDistance = 45f;
     [Tooltip("Kamera boss'a yerlesirken kukremeden once bekleme (sn).")]
@@ -332,14 +334,14 @@ public class Boss1Enemy : MonoBehaviour
     [Header("Ziplama saldirisi")]
     public bool leapEnabled = true;
     [Tooltip("Giris sahnesinden / oyundan sonra ilk ziplamaya kadar en az sure (sn).")]
-    [Min(0f)] public float leapFirstDelay = 4f;
+    [Min(0f)] public float leapFirstDelay = 2.5f;
     [Tooltip("Iki ziplama arasi en az sure (sn).")]
-    [Min(1f)] public float leapCooldown = 5f;
+    [Min(1f)] public float leapCooldown = 3.5f;
     [Tooltip("Uzaktan ziplama icin en az yatay mesafe (0 = hep).")]
     [Min(0f)] public float leapMinDistance = 0f;
     [Min(1f)] public float leapMaxDistance = 90f;
     [Tooltip("Uygun mesafedeyken saniyede ziplama baslatma olasiligi.")]
-    [Range(0f, 1f)] public float leapChancePerSecond = 0.35f;
+    [Range(0f, 1f)] public float leapChancePerSecond = 0.6f;
     [Tooltip("Gerilme/cokme suresi (kilic yukari, govde ezik). Rig gerilmesinden (1.0 sn) kisa olmasin.")]
     [Min(0.3f)] public float leapCrouchTime = 0.85f;
     [Min(0.05f)] public float leapRiseTime = 0.22f;
@@ -348,7 +350,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Ilk inis: isaret bu sure oyuncuyu izler, sonra SABITLENIR.")]
     [Min(0.1f)] public float leapTrackTime = 0.55f;
     [Tooltip("Ziplama bir kez odaklandiktan sonra art arda kac kez inis yapsin.")]
-    [Range(1, 5)] public int leapSlamCount = 3;
+    [Range(1, 5)] public int leapSlamCount = 1;
     [Tooltip("2. ve 3. inislerde isaretin oyuncuyu izleme suresi (hizli hizli).")]
     [Min(0.1f)] public float leapChainTrackTime = 0.3f;
     [Tooltip("Iki inis arasi yerde bekleme (sn).")]
@@ -373,7 +375,7 @@ public class Boss1Enemy : MonoBehaviour
     [Range(0f, 10f)] public float leapShake = 4.5f;
 
     [Tooltip("Oyuncu yakinda, boss normal vurusa baslayacakken bunun yerine ziplama secme olasiligi (ziplama hazirsa).")]
-    [Range(0f, 1f)] public float leapCloseChance = 0.4f;
+    [Range(0f, 1f)] public float leapCloseChance = 0.5f;
 
     float nextLeapTime;
     bool leapActive, pendingLeap;
@@ -385,13 +387,13 @@ public class Boss1Enemy : MonoBehaviour
     [Header("Dalga saldirisi (3 ritimli dalga)")]
     public bool waveEnabled = true;
     [Tooltip("Giristen sonra ilk dalgaya kadar en az sure (sn).")]
-    [Min(0f)] public float waveFirstDelay = 5f;
+    [Min(0f)] public float waveFirstDelay = 2.5f;
     [Tooltip("Dalga saldirisi sonrasi tekrar secilmeden onceki sure (sn).")]
-    [Min(1f)] public float waveCooldown = 9f;
+    [Min(1f)] public float waveCooldown = 3f;
     [Tooltip("Dalga icin oyuncunun en az uzakligi (yakindaysa normal vurus/kombo kullanir).")]
     [Min(1f)] public float waveMinDistance = 32f;
     [Min(1f)] public float waveMaxDistance = 140f;
-    [Range(0f, 1f)] public float waveChancePerSecond = 0.3f;
+    [Range(0f, 1f)] public float waveChancePerSecond = 1.0f;
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
     [Min(0.4f)] public float waveFocusTime = 1.4f;
     [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
@@ -426,7 +428,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Acik: oyuncu yakindaysa boss once geriye ziplayip mesafe acar, sonra dalgalari atar.")]
     public bool waveBackHop = true;
     [Tooltip("Oyuncu yakindayken (waveMinDistance'tan az) saniyede geri ziplama baslatma olasiligi.")]
-    [Range(0f, 2f)] public float waveCloseChancePerSecond = 0.5f;
+    [Range(0f, 2f)] public float waveCloseChancePerSecond = 1.5f;
     [Tooltip("Ziplama sonrasi hedeflenen mesafe (oyuncuyla boss arasi).")]
     [Min(10f)] public float waveHopTargetDistance = 48f;
     [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
@@ -469,19 +471,19 @@ public class Boss1Enemy : MonoBehaviour
     [Header("Kombo (ritimli vuruslar + 1 gecikmeli son)")]
     public bool comboEnabled = true;
     [Tooltip("Kombo sonrasi tekrar secilmeden onceki sure (sn). Arada normal tek vurus atar.")]
-    [Min(0f)] public float comboCooldown = 5f;
+    [Min(0f)] public float comboCooldown = 3f;
     [Tooltip("1. vurus hazirlik suresi (sn): kilic bu surede yavasca kalkar ve kirmizi parlar, kombonun geldigi anlasilsin.")]
-    [Min(0.3f)] public float comboFirstWindup = 1.5f;
+    [Min(0.3f)] public float comboFirstWindup = 1.0f;
     [Tooltip("RITIM: 1. vurustan sonraki ritimli vuruslarin arasi (sn). Hepsi ayni aralikta, sabit.")]
-    [Min(0.3f)] public float comboFastWindup = 0.8f;
+    [Min(0.3f)] public float comboFastWindup = 0.5f;
     [Tooltip("Ayni ritimde kac vurus (1. dahil). Sonra 1 tane GECIKMELI son vurus gelir. 3 = 3 ritimli + 1 gecikmeli.")]
     [Range(2, 5)] public int comboBeatHits = 3;
     [Tooltip("Vurustan hemen once kilic parlar + 'tik' sesi: parry tusuna BASMA ani. Darbeden kac sn once (sn).")]
-    [Range(0.08f, 0.6f)] public float comboCueLead = 0.3f;
+    [Range(0.08f, 0.6f)] public float comboCueLead = 0.22f;
     [Range(0f, 1.5f)] public float comboCueVolume = 0.7f;
     public Color comboCueColor = new Color(1f, 0.92f, 0.55f, 1f);
     [Tooltip("3. vurus: GECIKMELI (sn). Ezbere parry'i cezalandirir.")]
-    [Min(0.5f)] public float comboDelayedWindup = 1.6f;
+    [Min(0.5f)] public float comboDelayedWindup = 1.0f;
     [Tooltip("3. vurusun gecikmesine eklenen rastgele sure (0..bu).")]
     [Min(0f)] public float comboDelayedRandom = 0f;
     [Range(0.5f, 2.5f)] public float comboLastDamage = 1.3f;
@@ -497,7 +499,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Oyuncu bu yatay mesafeden yakinsa (ve vurus menzili disindaysa) uzaktan kombo baslatabilir.")]
     [Min(1f)] public float comboRunMaxDistance = 70f;
     [Tooltip("Uygun mesafedeyken saniyede uzaktan kombo baslatma olasiligi.")]
-    [Range(0f, 1f)] public float comboRunChancePerSecond = 0.6f;
+    [Range(0f, 1f)] public float comboRunChancePerSecond = 1.2f;
     [Tooltip("Kilica baglanan efektin dunya boyutu carpani.")]
     [Min(0.1f)] public float comboVfxScale = 5f;
     [Tooltip("Efekt rengi: saf parlak kirmizi (Impact materyalinin HDR parlakligi korunur).")]
@@ -549,7 +551,7 @@ public class Boss1Enemy : MonoBehaviour
 
         bool seen = Vector2.Distance(pl.transform.position, transform.position) <= introDistance;
 
-        if (!seen)
+        if (!seen && introSeeOnScreen)
         {
             Camera cam = Camera.main;
             if (cam != null)
@@ -569,6 +571,8 @@ public class Boss1Enemy : MonoBehaviour
         if (!seen) return;
 
         seenRoared = true;
+        nextLeapTime = Time.time + leapFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay;
 
         if (introCutscene)
             StartCoroutine(IntroRoutine(pl));
@@ -728,8 +732,8 @@ public class Boss1Enemy : MonoBehaviour
     public bool agile = true;
     [Range(0.4f, 1.5f)] public float agileWindupTime = 0.6f;
     [Range(0.1f, 0.8f)] public float agileTensionTime = 0.24f;
-    [Range(0f, 0.8f)] public float agileHoldTime = 0.12f;
-    [Range(0.1f, 2f)] public float agileRecoverTime = 0.45f;
+    [Range(0f, 0.8f)] public float agileHoldTime = 0.08f;
+    [Range(0.1f, 2f)] public float agileRecoverTime = 0.35f;
     [Range(0.15f, 1f)] public float agileWalkAnimSpeed = 0.4f;
 
     void Configure()
@@ -1188,7 +1192,7 @@ public class Boss1Enemy : MonoBehaviour
             hud.show = seenRoared && !introActive;
 
         // Ana menu aciksa (oyuncu kilitli) boss beklesin: yoksa menu arkasinda oyuncuya vurur.
-        if (MainMenu.Active || introActive)
+        if (MainMenu.Active || introActive || !seenRoared)
         {
             if (enemy.enabled)
             {
@@ -1237,7 +1241,7 @@ public class Boss1Enemy : MonoBehaviour
 
         // Uzaktan kombo: oyuncu vurus menzili disindaysa kosarak baslat.
         if (comboEnabled && comboRunEnabled && !leapActive && enemy.CurrentState is EnemyChaseState
-            && Time.time >= comboLastStart + comboCooldown + 1.5f
+            && Time.time >= comboLastStart + comboCooldown + 0.4f
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead && enemy.CanAttack)
         {
             float cx = Mathf.Abs(enemy.target.position.x - transform.position.x);
@@ -1612,7 +1616,7 @@ public class Boss1Enemy : MonoBehaviour
             o.rig.ReleaseStrike();
             o.rig.SetBaseSquash(0f, 6f);
             if (slam == 0 && o.rig.IsAttacking) o.rig.CancelAttack();
-            o.nextLeapTime = Mathf.Max(o.nextLeapTime, Time.time + 3f);
+            o.nextLeapTime = Mathf.Max(o.nextLeapTime, Time.time + 1.5f);
         }
     }
 

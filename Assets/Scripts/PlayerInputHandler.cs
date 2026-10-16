@@ -22,8 +22,12 @@ public class PlayerInputHandler : MonoBehaviour
 
         if (MobileInput.GetKeyDown(KeyCode.Space))
         {
-            player.Movement.jumpBufferCounter =
-                player.Movement.jumpBufferTime;
+            // Dash / kilit sırasında basılan zıplama kaybolmasın: dash, saldırı ve parry ile aynı tampon.
+            float jb = player.Movement.jumpBufferTime;
+            if (player.isDashing || !player.canControl || player.inputLocked)
+                jb = Mathf.Max(jb, player.minInputBuffer);
+
+            player.Movement.jumpBufferCounter = jb;
 
             player.Movement.wallJumpBufferCounter =
                 player.Movement.wallJumpBufferTime;

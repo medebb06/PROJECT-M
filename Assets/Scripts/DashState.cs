@@ -10,6 +10,8 @@ public class DashState : IPlayerState
     private float dir;
     private float speed;
     private float fxTimer;
+    private float total;
+    private bool cancelIntent;
 
     // Hız çanı: 3 = ortada ortalama hızın ~2.2 katı. Büyük = ortası daha keskin, başı/sonu daha yavaş.
     private const float DashBellPower = 3f;
@@ -68,6 +70,8 @@ public class DashState : IPlayerState
         player.isAttackLocked = true;
 
         timer = player.dashTime * DurationScale;
+        total = timer;
+        cancelIntent = false;
 
         dir = player.GetDashDirection();
 
@@ -130,7 +134,7 @@ public class DashState : IPlayerState
             colObject = null;
         }
 
-        player.dashCooldownTimer = player.dashCooldown;
+        player.dashCooldownTimer = player.dashCooldown * player.dashCooldownScale;
 
         // dash çıkışında momentum koru
         Vector2 vel = player.rb.linearVelocity;
@@ -153,7 +157,18 @@ public class DashState : IPlayerState
     {
         timer -= Time.deltaTime;
 
-        if (timer <= 0f)
+        // Zıplama / saldırı / parry isteği dash sırasında hatırlanır; dash'in son kısmında
+        // (yavaş kuyruk) varsa dash erken biter ve istek hemen çalışır.
+        if (MobileInput.GetMouseButtonDown(0) || MobileInput.GetMouseButtonDown(1) ||
+            player.Movement.jumpBufferCounter > 0f)
+            cancelIntent = true;
+
+        bool cancelNow =
+            cancelIntent &&
+            total > 0f &&
+            (1f - timer / total) >= player.dashCancelPoint;
+
+        if (timer <= 0f || cancelNow)
         {
             if (player.isGrounded)
                 sm.ChangeState(new GroundedState(player, sm));

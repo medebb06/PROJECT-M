@@ -71,6 +71,12 @@ public class PlayerController : MonoBehaviour
     [Min(0f)]
     public float dashBufferTime = 0.15f;
 
+    [Header("Akış v3 (geçiş / iptal kuralları)")]
+    [Tooltip("Dash'in bu oranından sonra (0.7 = son %30) zıplama / saldırı / parry tuşuna basıldıysa dash erken biter (yavaş kuyruk kilitlemesin). 1 = kapalı.")]
+    [Range(0.3f, 1f)] public float dashCancelPoint = 0.7f;
+    [Tooltip("Dash bekleme süresi çarpanı (dashCooldown x bu). Yeni alan: prefab'daki eski dashCooldown değeri korunur ama daha kısa uygulanır.")]
+    [Range(0.1f, 1f)] public float dashCooldownScale = 0.5f;
+
     [Header("Akış v2 (46. adım)")]
     [Tooltip("Dash / parry / saldırı tamponu en az bu kadar (vurulunca 0.22 sn sersemleme tuşu yutmasın).")]
     public float minInputBuffer = 0.3f;
@@ -364,6 +370,14 @@ public class PlayerController : MonoBehaviour
         if (!(cur is JumpState) && !(cur is AirState))
             return;
 
+        // Aşağı + Space = ground slam: çift zıplama hakkını yakma (slam kendi state'inde başlar).
+        if (verticalInput < -0.5f && CanGroundSlam)
+            return;
+
+        // Havada çift zıplama havadaki saldırıyı keser (yoksa saldırı ve zıplama üst üste biniyordu).
+        if (combat != null)
+            combat.CancelAttack();
+
         airJumpsUsed++;
         movement.jumpBufferCounter = 0f;
         doingAirJump = true;
@@ -386,6 +400,10 @@ public class PlayerController : MonoBehaviour
 
         // Kilitliyken tamponu harcama (JumpState açılıp kapanırdı).
         if (inputLocked)
+            return;
+
+        // Slam iniş kilidinde de harcama: JumpState.Enter geri atıyor, tampon boşa gidiyordu.
+        if (slamGroundLock)
             return;
 
         if (movement.isWallSliding)

@@ -215,3 +215,21 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 
 ## (2026-10-16, 32) Parry hit-stop guclendirildi (DERLENMEDI / OYNANMADI)
 - CombatImpactFeedback.PlayParryImpact: otherHitStopScale (0.25) yerine yeni parryHitStopScale (varsayilan 0.8) kullanir -> freeze ~0.10s + ~0.18s yavaslama (scale ~0.32). Eskiden parry freeze ~0.03s idi (hissedilmiyordu). Blok / denge kirma hala otherHitStopScale kullanir. PlayerDefenseController.PlayParryFeedback -> PlayParryImpact oldugu icin oyuncunun tum parry'lerinde (dalga dahil) calisir.
+
+## (2026-10-16, 33) Boss1: daha agresif + yaklasmadan uyanmasin (DERLENMEDI / OYNANMADI)
+- Beklemeler kisaldi: extraCooldown 0.5->0.15, agileHold 0.08, agileRecover 0.35, leapFirstDelay 2.5, leapCooldown 3.5, leapChancePerSecond 0.6, leapCloseChance 0.5, waveFirstDelay 3.5, waveCooldown 5, waveChancePerSecond 0.6, waveCloseChancePerSecond 0.7, comboCooldown 3, comboRunChancePerSecond 1.2, kombo kosusu icin ekstra bekleme 1.5->0.4, ziplama Exit min bekleme 3->1.5.
+- Uyanma: Update'te `!seenRoared` iken enemy.enabled=false (kovalamaz). Eskiden oyun baslar baslamaz kovaliyordu cunku 'seen' kamera frustum'una girmesiyle de tetikleniyordu; yeni introSeeOnScreen (varsayilan false): sadece oyuncu introDistance (45) icine girince uyanir (intro + kukreme), sonra kovalar. seenRoared'da leap/wave sayaclari yeniden kurulur.
+
+## (2026-10-16, 34) Oyuncu gecis / iptal denetimi + duzeltmeler (DERLENMEDI / OYNANMADI)
+Denetim (kod okuyarak; oynanmadi). Mevcut iptal matrisi: Dash -> HER seyi keser (saldiri+savunma, Enter'da); Zipla -> saldiri/savunmayi HER AN keser; Parry/Blok tusu -> saldiriyi keser; Saldiri -> kombo iptal penceresi (comboCancelPoint 0.6); Dash Hurt'un 2. yarisinda cikis (hurtDashCancelAfter 0.5); Ground slam yukselirken de baslar.
+Bulunan sorunlar ve duzeltmeler:
+1. Dash ~0.33s boyunca canControl=false ve hiz egrisi cani (p^3(1-p)^3) -> son ~%30 yavas kuyruk, zipla/saldiri/parry ancak dash bitince calisiyordu. FIX: PlayerController.dashCancelPoint (0.7; 1=kapali). DashState.Update: dash sirasinda zipla/saldiri/parry istegi varsa ve ilerleme >= dashCancelPoint ise dash erken biter.
+2. Zipla tamponu 0.15s, dash 0.33s: dash sirasinda basilan Space kayboluyordu. FIX: PlayerInputHandler: dash/kilit sirasinda jump tamponu max(jumpBufferTime, minInputBuffer 0.3).
+3. TryAirJump (cift ziplama) havadaki saldiriyi (AirAttackState) iptal etmiyordu -> ust uste biniyordu. FIX: combat.CancelAttack().
+4. Asagi+Space (slam) HandleJump->TryAirJump tarafindan once yakalaniyor, cift ziplama hakki yaniyor, ziplama sesi/impulsu cikiyordu sonra slam basliyordu. FIX: TryAirJump verticalInput<-0.5 && CanGroundSlam ise cikar.
+5. Slam inis kilidinde (slamGroundLock) yerden zipla: tampon harcaniyor, JumpState.Enter guard'i geri atiyordu -> zipla yutuluyordu. FIX: HandleJump slamGroundLock'ta tamponu harcamaz.
+Dokunulmayan (oynayarak karar verilmeli): dashCooldown 0.4s (Exit'ten sonra), parry sonrasi PlayerParryState.ShortenTo(0.06) + "parry penceresi aciksa yeni basisi yut" (TryStartParry), whiffPenalty 0.3s x0.5 pencere, DashState Gamma() sabit.
+
+## (2026-10-16, 35) Boss kombo hizlandi, dalga cok kullanilir, ziplama teke, parry az posture + akis duzeltmeleri (DERLENMEDI / OYNANMADI)
+- Boss1Enemy: comboFirstWindup 1.5->1.0, comboFastWindup 0.8->0.5, comboDelayedWindup 1.6->1.0, comboCueLead 0.3->0.22. Dalga: waveCloseChancePerSecond 0.7->1.5, waveChancePerSecond 0.6->1.0, waveCooldown 5->3, waveFirstDelay 3.5->2.5. leapSlamCount 3->1 (havaya ziplama tek inis). parryBalanceDamage 170->60 (parry basina ~30 denge; eskiden 85, ParryScale 0.5 ile).
+- Akis duzeltmeleri (34'ten kalanlar): PlayerController.dashCooldownScale 0.5 (DashState.Exit: dashCooldown*scale, efektif 0.2s); PlayerDefenseController: whiffPenaltyTimeV2 0.2 / whiffWindowMultiplierV2 0.8 (eski alanlar artik kullanilmiyor, prefab degerleri ezilmesin diye yeni adla); TryStartParry: onceki parry penceresi BASARILI olduysa yeni basis yutulmaz, yeni parry baslar (zincirde 2. parry kacmasin).
