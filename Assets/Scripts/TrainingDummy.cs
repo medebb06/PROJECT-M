@@ -25,6 +25,7 @@ public class TrainingDummy : MonoBehaviour
     [Header("Görünüm")]
     [Tooltip("Açık: gövde yüksek çözünürlüklü, yumuşak kenarlı kapsül sprite'ı olur.")]
     public bool useCapsuleSprite = true;
+    public bool showStatsText = true;
 
     [Header("Ses (boşsa sahnedeki/prefab'taki düşman sesleri kullanılır)")]
     public AudioClip[] balanceHitSounds;
@@ -679,6 +680,12 @@ public class TrainingDummy : MonoBehaviour
     {
         if (statsText == null)
             return;
+
+        if (!showStatsText)
+        {
+            statsText.text = "";
+            return;
+        }
 
         statsText.text =
             "COMBO x" + Combo + "\n" +

@@ -1,0 +1,225 @@
+{
+ "ppu": 100,
+ "originX": 770,
+ "originY": 1231,
+ "bones": [
+  {
+   "name": "root",
+   "parent": "",
+   "px": 770,
+   "py": 1231
+  },
+  {
+   "name": "belly",
+   "parent": "root",
+   "px": 850,
+   "py": 935
+  },
+  {
+   "name": "chest",
+   "parent": "root",
+   "px": 800,
+   "py": 860
+  },
+  {
+   "name": "head",
+   "parent": "chest",
+   "px": 612,
+   "py": 790
+  },
+  {
+   "name": "shoulderR",
+   "parent": "chest",
+   "px": 690,
+   "py": 668
+  },
+  {
+   "name": "sword",
+   "parent": "shoulderR",
+   "px": 370,
+   "py": 830
+  }
+ ],
+ "layers": [
+  {
+   "name": "armR_upper",
+   "file": "boss1_armR_upper",
+   "x": 413,
+   "y": 619,
+   "w": 339,
+   "h": 310,
+   "order": 0,
+   "bone": "shoulderR"
+  },
+  {
+   "name": "armR_lower",
+   "file": "boss1_armR_lower",
+   "x": 349,
+   "y": 795,
+   "w": 175,
+   "h": 157,
+   "order": 1,
+   "bone": "shoulderR"
+  },
+  {
+   "name": "legR_lower",
+   "file": "boss1_legR_lower",
+   "x": 642,
+   "y": 992,
+   "w": 123,
+   "h": 193,
+   "order": 2,
+   "bone": "root"
+  },
+  {
+   "name": "legR_upper",
+   "file": "boss1_legR_upper",
+   "x": 663,
+   "y": 879,
+   "w": 237,
+   "h": 182,
+   "order": 3,
+   "bone": "root"
+  },
+  {
+   "name": "legL_upper",
+   "file": "boss1_legL_upper",
+   "x": 832,
+   "y": 870,
+   "w": 203,
+   "h": 228,
+   "order": 4,
+   "bone": "root"
+  },
+  {
+   "name": "legL_lower",
+   "file": "boss1_legL_lower",
+   "x": 916,
+   "y": 1006,
+   "w": 139,
+   "h": 181,
+   "order": 5,
+   "bone": "root"
+  },
+  {
+   "name": "sword",
+   "file": "boss1_sword",
+   "x": 156,
+   "y": 327,
+   "w": 938,
+   "h": 669,
+   "order": 6,
+   "bone": "sword"
+  },
+  {
+   "name": "handR",
+   "file": "boss1_handR",
+   "x": 294,
+   "y": 761,
+   "w": 148,
+   "h": 135,
+   "order": 7,
+   "bone": "shoulderR"
+  },
+  {
+   "name": "neck",
+   "file": "boss1_neck",
+   "x": 538,
+   "y": 637,
+   "w": 212,
+   "h": 177,
+   "order": 8,
+   "bone": "head"
+  },
+  {
+   "name": "torso_upper",
+   "file": "boss1_torso_upper",
+   "x": 604,
+   "y": 600,
+   "w": 332,
+   "h": 261,
+   "order": 9,
+   "bone": "chest"
+  },
+  {
+   "name": "armL_upper",
+   "file": "boss1_armL_upper",
+   "x": 685,
+   "y": 593,
+   "w": 255,
+   "h": 274,
+   "order": 10,
+   "bone": "chest"
+  },
+  {
+   "name": "torso_lower",
+   "file": "boss1_torso_lower",
+   "x": 746,
+   "y": 758,
+   "w": 211,
+   "h": 186,
+   "order": 11,
+   "bone": "belly"
+  },
+  {
+   "name": "legBack_knee",
+   "file": "boss1_legBack_knee",
+   "x": 785,
+   "y": 1111,
+   "w": 156,
+   "h": 125,
+   "order": 12,
+   "bone": "root"
+  },
+  {
+   "name": "legBack",
+   "file": "boss1_legBack",
+   "x": 776,
+   "y": 723,
+   "w": 204,
+   "h": 451,
+   "order": 13,
+   "bone": "root"
+  },
+  {
+   "name": "head",
+   "file": "boss1_head",
+   "x": 470,
+   "y": 680,
+   "w": 192,
+   "h": 214,
+   "order": 14,
+   "bone": "head"
+  },
+  {
+   "name": "face",
+   "file": "boss1_face",
+   "x": 460,
+   "y": 713,
+   "w": 106,
+   "h": 103,
+   "order": 15,
+   "bone": "head"
+  },
+  {
+   "name": "footR",
+   "file": "boss1_footR",
+   "x": 634,
+   "y": 1133,
+   "w": 146,
+   "h": 103,
+   "order": 16,
+   "bone": "root"
+  },
+  {
+   "name": "footL",
+   "file": "boss1_footL",
+   "x": 924,
+   "y": 1136,
+   "w": 146,
+   "h": 103,
+   "order": 17,
+   "bone": "root"
+  }
+ ]
+}

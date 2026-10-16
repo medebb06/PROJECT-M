@@ -1,0 +1,30 @@
+# PROJECT M — TASK HANDOFF
+
+## Current task
+Set up a reliable shared project context for multiple Claude Cowork accounts.
+
+## Last completed work
+- Created the AI context documentation structure.
+- Documented project rules and broad design direction.
+
+## Current status
+- Actual scripts and scene references have not yet been audited as part of this setup.
+- The current state of each combat mechanic must be verified against the project files.
+
+## Verified
+- Unity project is maintained locally.
+- GitHub is used for version control and backup.
+
+## Not verified / Known issues
+- Exact current script structure and Inspector references need inspection.
+- Compilation and gameplay have not been verified by this documentation setup.
+
+## Next task
+- Inspect the actual project.
+- Verify the player combat and enemy state machine architecture.
+- Update AI_CONTEXT.md with the verified implementation.
+- Confirm Git status before making code changes.
+
+## Git status
+- Check the current branch and uncommitted changes before editing.
+- Record the latest commit after checking GitHub Desktop.
