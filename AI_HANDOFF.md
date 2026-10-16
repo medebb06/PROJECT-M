@@ -186,3 +186,32 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 ## (2026-10-16, 26) Boss1 kombo parry okunurlugu + blok itmesi (DERLENMEDI / OYNANMADI)
 - Kombo windup'lari: 1. 1.6s, 2. (hizli) 0.62s (eskiden 0.36s: parry sonrasi grace/input buffer yuzunden kacirilirdi), 3. 1.25s +0..0.2 rastgele.
 - Boss1Enemy: PlayerBlocked'a abone olup oyuncuyu bossdan uzaga iter (blockKnockback, blockKnockbackDistance 4.5, blockKnockbackDuration 0.3). Vanilla PushPlayerBack |dx|>6 ise iptal ediyordu; bu yuzden boss icin ayri coroutine. Dash sirasinda itmez.
+
+## (2026-10-16, 27) Boss1 ad yazisi: ENEMY FELLED'e daha yakin (DERLENMEDI / OYNANMADI)
+- Boss1Hud: nameSize 0.34 (kocaman), nameTracking 0.70 (sikisik), altin renk (0.86,0.72,0.38), pop animasyonu kaldirildi (duz, sadece %3 yavas buyume), ince seffaf serit, sert golge yerine yumusak altin parlama.
+
+## (2026-10-16, 28) Boss1: can 6000, dash ile yon degistirme, DALGA yetenegi (DERLENMEDI / OYNANMADI)
+- Boss1Enemy.maxHealth 2000 -> 6000 (runtime eklenen bilesen oldugu icin varsayilan gecerli).
+- Dash retarget (dashRetarget, dashRetargetMinWindup 0.18, dashRetargetGrace 0.3): EnemyAttackState sirasinda oyuncu dash'le (veya dash'ten <=0.3s sonra) arkaya gecerse, vurusa >0.18s varsa enemy.RetargetFacing().
+- Dalga yetenegi: Boss1WaveState (Enter: odak, rig.PlayAttack(waveFocusTime 1.6, slowRaise), kilic kirmizi; her rig.AttackHit'te Boss1Wave.Spawn; sonraki darbe rig.PlayAttack(waveInterval 0.95) = esit RITIM; waveCount 3). Tetik: Chase durumunda oyuncu 32..140 birim uzaktaysa, waveChancePerSecond 0.3, ilk gecikme 5s, cooldown 9s. Oyuncu <20 birime gelirse iptal (Chase).
+- Boss1Wave (yerde ilerleyen yarim ay sprite, procedural, waveSpeed 22, waveHeight 5): oyuncuya degince: isInvincible(dash) -> icinden gecer (RaiseDodge); CanParry -> boss dengesine parryBalanceDamage*0.8, RaiseParry (waveParryNow bayragi OnParry'deki boss tepkisini bastirir), efekt dalganin yerinde; CanBlock -> posture hasari x0.5 + RaisePlayerBlocked (blok itmesi calisir); aksi halde PlayerDamageReceiver.TakeDamage(Normal). Ziplayarak ustunden asilir (feet > groundY + waveHeight).
+- Update: rig.CancelAttack kosulu waveActive ile korundu.
+
+## (2026-10-16, 29) Boss1: yakindayken geri ziplayip dalga + posture kirilma merhameti (DERLENMEDI / OYNANMADI)
+- Boss1WaveState'e Crouch->Hop->Focus fazlari: oyuncu waveMinDistance'tan yakindaysa (Chase'te, waveCloseChancePerSecond 0.5/sn) boss once geriye ziplar (kinematic + colliderlar kapali, parabolik; hedef mesafe waveHopTargetDistance 48, en fazla waveHopMaxDistance 40; rb.Cast ile duvar payi; <6 birim yer varsa ziplamaz, direkt odaklanir), sonra 3 ritimli dalga. waveAbortDistance 20 -> 8; oyuncu yakinsa dalga bossun hemen onunde dogar.
+- Posture merhameti (postureBreakMercy 1.8s): oyuncu posture'u kirilinca (PlayerBlocked postureBroken ya da PlayerPosture.IsBroken kenar tespiti) boss EnemyAttackState/Boss1WaveState'ten Chase'e doner (kombo kalan vuruslari iptal), enemy.StartAttackRecovery(mercy), dalga/ziplama/kombo sayaclari ileri atilir; mercy suresince ucan dalgalar ve ziplama inisi oyuncuya hasar vermez (InMercy). Neden: oyunda her isabet oyuncunun max canin %20'si (PlayerDamageReceiver.FixedHitPercent); kirik oyuncu kombonun kalan vuruslarini yiyip hemen oluyordu.
+
+## (2026-10-16, 30) Boss1 dalga: buyuk+hizli, parry'de renk degistirip geri seker; parry sesi yukseltildi (DERLENMEDI / OYNANMADI)
+- waveSpeed 22 -> 55, waveHeight 5 -> 9, waveHitHalfWidth 2 -> 3.5.
+- Parry'lenen dalga yok edilmez: reflected=true, yon ters, sprite cyan->beyaz (sprReflect), bossa dogru waveReflectSpeedMultiplier 0.8 hizla gider; bossa waveReflectStopDistance 7 kala WaveReflectHit (Flinch/Squash/Flash + parry efekti + sarsinti) ve yok olur. Boss dengesi parry aninda zaten dusuyor.
+- EnemyHitFeedback: parryVolume (varsayilan 2, 0..3) + static PlayLoud(src, clip, vol): PlayOneShot olcegi 1'i asmadigi icin ayni klip katman katman calinir (2 = ~+6dB). PlayParry artik bunu kullanir; Boss1Enemy.PlayParryFallback da (tf.ParryVolume). Inspector'da gerekirse EnemyHitFeedback > Parry Volume ile ayarlanir (prefab'larda eski serilestirme varsayilani 2 olarak gelir).
+
+## (2026-10-16, 31) Boss1: ritimli kombo + parry ipucu, ceviklik, dalga hizi (DERLENMEDI / OYNANMADI)
+- Dalga hizi 55 -> 75.
+- Ceviklik (agile): walkSpeed 15 -> 22, extraCooldown 1.2 -> 0.5, rig sureleri Configure'da ezilir (windup 0.6, tension 0.24, hold 0.12, recover 0.45, walkAnimSpeed 0.4), leapCrouchTime 1.1 -> 0.85, leapCooldown 6 -> 5, comboCooldown 6 -> 5, waveFocusTime 1.6 -> 1.4.
+- Kombo yeniden: 1. vurus yavas kalkis (comboFirstWindup 1.5), sonra comboBeatHits-1 (varsayilan 3 -> 2 ek) vurus HEP AYNI ARALIKTA (comboFastWindup 0.8, sabit, retarget), en son GECIKMELI vurus (comboDelayedWindup 1.6, rastgele 0). Toplam 4 vurus. comboLastIndex = beats; OnStrikeLanded son adimi buna gore sayar.
+- Parry ipucu: her vurustan comboCueLead (0.3s) once kilic sicak sari-beyaz parlar (SetSwordTint comboCueColor, hizli) + procedural 'tik' sesi (comboCueVolume 0.7); darbede kirmiziya geri doner. UpdateComboCue(), BuildCueClip().
+- 2. vurusun parrylenmemesi icin olasi nedenler (kod okuyarak): onceki windup 0.36/0.62s cok kisaydi; parry sonrasi oyuncu tarafinda grace/whiff cezasi (0.3s) ve hit-stop araya giriyordu. Net kok neden OYNANARAK dogrulanmadi.
+
+## (2026-10-16, 32) Parry hit-stop guclendirildi (DERLENMEDI / OYNANMADI)
+- CombatImpactFeedback.PlayParryImpact: otherHitStopScale (0.25) yerine yeni parryHitStopScale (varsayilan 0.8) kullanir -> freeze ~0.10s + ~0.18s yavaslama (scale ~0.32). Eskiden parry freeze ~0.03s idi (hissedilmiyordu). Blok / denge kirma hala otherHitStopScale kullanir. PlayerDefenseController.PlayParryFeedback -> PlayParryImpact oldugu icin oyuncunun tum parry'lerinde (dalga dahil) calisir.

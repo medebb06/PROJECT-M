@@ -52,6 +52,8 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private bool hitStopOnlyOnFinalHit = true;
     [Tooltip("Normal vuruşlarda (son vuruş dışı) donma süresi çarpanı. 0 = hiç donma.")]
     [Range(0f, 1f)] [SerializeField] private float lightHitFreezeScale = 0f;
+    [Tooltip("PARRY donma + ağır çekim şiddeti (1 = tam: freeze 0.13s + yavaşlama). Parry yapınca his gelsin diye diğerlerinden ayrı.")]
+    [Range(0f, 1f)] [SerializeField] private float parryHitStopScale = 0.8f;
     [Tooltip("Parry / blok / denge kırma donma ve ağır çekim şiddeti (1 = eskisi gibi, 0 = hiç).")]
     [Range(0f, 1f)] [SerializeField] private float otherHitStopScale = 0.25f;
 
@@ -173,12 +175,12 @@ public class CombatImpactFeedback : MonoBehaviour
     public void PlayParryImpact()
     {
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
-        float pf = parryFreezeTime * otherHitStopScale, ps = parrySlowTime * otherHitStopScale;
+        float pf = parryFreezeTime * parryHitStopScale, ps = parrySlowTime * parryHitStopScale;
 
         if (pf > 0.0005f)
         {
             HitStop.Request(pf, 0f, ParryPriority);
-            HitStop.RequestRamp(pf + ps, Mathf.Lerp(1f, parrySlowScale, otherHitStopScale), 1f, 2f, ParryPriority);
+            HitStop.RequestRamp(pf + ps, Mathf.Lerp(1f, parrySlowScale, parryHitStopScale), 1f, 2f, ParryPriority);
         }
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));

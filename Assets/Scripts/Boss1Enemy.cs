@@ -22,7 +22,7 @@ public class Boss1Enemy : MonoBehaviour
 {
     [Header("Can / denge")]
     [Tooltip("Boss'un cani. Normal dusman ~300. Duz vurus cana ~1 hasar verir; asil kayip denge KIRILINCA (%15 can) ve infazla gelir.")]
-    [Min(1)] public int maxHealth = 2000;
+    [Min(1)] public int maxHealth = 6000;
     [Tooltip("Denge (posture) cubugu. Parry denge doldurur; dolunca boss sersemler (infaz firsati).")]
     [Min(1)] public int maxBalance = 240;
     [Tooltip("Parry'nin boss dengesine hasari (oyun bunu x0.5 ve cana gore x0.6-1.6 ile olcekler: ~18 = denge ~13 parry, can azaldikca daha az).")]
@@ -32,7 +32,7 @@ public class Boss1Enemy : MonoBehaviour
 
     [Header("Hareket (dunya birimi)")]
     [Tooltip("Yurume hizi (birim/sn). Agir olsun diye yavas. Normal dusman: 10.")]
-    [Min(0.5f)] public float walkSpeed = 15f;
+    [Min(0.5f)] public float walkSpeed = 22f;
     [Tooltip("Oyuncuyu bu mesafeden once fark eder (0 = hep avlar).")]
     [Min(0f)] public float chaseRange = 5000f;
     [Tooltip("Oyuncuya bu mesafeye kadar yaklasir, sonra vurur. Kilic darbesi gövdeden ~9.5 - 23.5 birim oteye iner.")]
@@ -44,7 +44,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Oyuncunun ayagi boss'un ayagindan bu kadar yukaridaysa vurustan kurtulur (ziplama). Kilic yerde yatiyor: yuksek tutuldu.")]
     [Min(0.5f)] public float hitHeight = 3.5f;
     [Tooltip("Vurustan sonra bir sonraki saldiriya kadar ek bekleme (sn). Animasyon (bekleme + toparlanma) buna eklenir.")]
-    [Min(0f)] public float extraCooldown = 1.2f;
+    [Min(0f)] public float extraCooldown = 0.5f;
     [Tooltip("Sersemlemis (denge kirik) boss'a duz vurus basina max cana gore hasar yuzdesi. 0 = oyunun kendi degeri.")]
     [Range(0f, 0.2f)] public float staggerHitPercent = 0.03f;
     [Tooltip("Duz vuruslar boss'u bu yuzdenin altina dusuremez (infaz bitirsin). 0 = sinir yok.")]
@@ -84,6 +84,7 @@ public class Boss1Enemy : MonoBehaviour
     void Awake()
     {
         nextLeapTime = Time.time + leapFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay;
         rig = GetComponent<Boss1Rig>();
         rig.EnsureBuilt();                       // katmanlar var olsun (Health/EnemyController sprite'lari toplar)
 
@@ -181,7 +182,8 @@ public class Boss1Enemy : MonoBehaviour
 
     void OnStrikeLanded()
     {
-        if (comboTinted && comboStepNow >= 2) comboEndAt = Time.time + 0.45f;
+        if (comboTinted && comboStepNow >= comboLastIndex) comboEndAt = Time.time + 0.45f;
+        else if (comboTinted) rig.SetSwordTint(comboColor, 1f, 12f);   // ipucu parlamasindan normal kirmiziya don
         if (attackShake <= 0f) return;
         if (CameraShake.Instance != null)
             CameraShake.Instance.Shake(attackShake);
@@ -311,6 +313,7 @@ public class Boss1Enemy : MonoBehaviour
         introActive = false;
         if (hud != null) hud.HideName();
         nextLeapTime = Time.time + leapFirstDelay;
+        nextWaveTime = Time.time + waveFirstDelay;
 
         RunCameraZoom.FocusTarget = null;
         RunCameraZoom.ForceCinematic = introPrevForce;
@@ -331,14 +334,14 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Giris sahnesinden / oyundan sonra ilk ziplamaya kadar en az sure (sn).")]
     [Min(0f)] public float leapFirstDelay = 4f;
     [Tooltip("Iki ziplama arasi en az sure (sn).")]
-    [Min(1f)] public float leapCooldown = 6f;
+    [Min(1f)] public float leapCooldown = 5f;
     [Tooltip("Uzaktan ziplama icin en az yatay mesafe (0 = hep).")]
     [Min(0f)] public float leapMinDistance = 0f;
     [Min(1f)] public float leapMaxDistance = 90f;
     [Tooltip("Uygun mesafedeyken saniyede ziplama baslatma olasiligi.")]
     [Range(0f, 1f)] public float leapChancePerSecond = 0.35f;
     [Tooltip("Gerilme/cokme suresi (kilic yukari, govde ezik). Rig gerilmesinden (1.0 sn) kisa olmasin.")]
-    [Min(0.3f)] public float leapCrouchTime = 1.1f;
+    [Min(0.3f)] public float leapCrouchTime = 0.85f;
     [Min(0.05f)] public float leapRiseTime = 0.22f;
     [Tooltip("KULLANILMIYOR: ekran disi sure artik izleme + kilit penceresinden (oyuncunun dash degerlerinden) hesaplanir.")]
     [Min(0.3f)] public float leapAirTime = 1.0f;
@@ -376,21 +379,111 @@ public class Boss1Enemy : MonoBehaviour
     bool leapActive, pendingLeap;
 
     // ---------------------------------------------------------------------
+    // DALGA SALDIRISI: uzaktan odaklanir (kilic kalkar, kirmizi parlar), sonra RITIMLI 3 dalga firlatir.
+    // Dalgalar parry / blok edilebilir; ziplayarak ya da dash ile gecilebilir.
+    // ---------------------------------------------------------------------
+    [Header("Dalga saldirisi (3 ritimli dalga)")]
+    public bool waveEnabled = true;
+    [Tooltip("Giristen sonra ilk dalgaya kadar en az sure (sn).")]
+    [Min(0f)] public float waveFirstDelay = 5f;
+    [Tooltip("Dalga saldirisi sonrasi tekrar secilmeden onceki sure (sn).")]
+    [Min(1f)] public float waveCooldown = 9f;
+    [Tooltip("Dalga icin oyuncunun en az uzakligi (yakindaysa normal vurus/kombo kullanir).")]
+    [Min(1f)] public float waveMinDistance = 32f;
+    [Min(1f)] public float waveMaxDistance = 140f;
+    [Range(0f, 1f)] public float waveChancePerSecond = 0.3f;
+    [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
+    [Min(0.4f)] public float waveFocusTime = 1.4f;
+    [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
+    [Min(0.4f)] public float waveInterval = 0.95f;
+    [Range(1, 5)] public int waveCount = 3;
+    [Tooltip("Dalga hizi (birim/sn).")]
+    [Min(4f)] public float waveSpeed = 75f;
+    [Tooltip("Dalga yuksekligi (ziplayarak gecmek icin ustune cikmak gerekir).")]
+    [Min(1f)] public float waveHeight = 9f;
+    [Tooltip("Dalganin oyuncuya degme yaricapi (yatay).")]
+    [Min(0.5f)] public float waveHitHalfWidth = 3.5f;
+    [Tooltip("Dalga bossun onunden bu kadar uzakta dogar.")]
+    [Min(1f)] public float waveSpawnForward = 18f;
+    [Tooltip("Odaklanirken/dalgalar arasinda oyuncu bu kadar yakina gelirse saldiri iptal olur (boss normal vurusa gecer). Oyuncu bundan yakinsa dalga bossun hemen onunde dogar.")]
+    [Min(1f)] public float waveAbortDistance = 8f;
+    [Tooltip("Dalga carpinca hasar (normal vurus hasarina carpan).")]
+    [Min(0f)] public float waveDamageMultiplier = 1f;
+    [Tooltip("Parry'de boss dengesine verilen hasar (normal parry hasarina carpan).")]
+    [Min(0f)] public float waveParryBalanceMultiplier = 0.8f;
+    [Tooltip("Blokta oyuncunun posture hasari (normal blok hasarina carpan).")]
+    [Min(0f)] public float waveBlockPostureMultiplier = 0.5f;
+    public Color waveColor = new Color(1f, 0.1f, 0.02f, 1f);
+    [Tooltip("Parry'lenen dalganin rengi (geri seker).")]
+    public Color waveReflectColor = new Color(0.25f, 0.85f, 1f, 1f);
+    [Tooltip("Geri seken dalganin hizi (dalga hizina carpan).")]
+    [Min(0.2f)] public float waveReflectSpeedMultiplier = 0.8f;
+    [Tooltip("Geri seken dalga bossa bu kadar yaklasinca carpar.")]
+    [Min(0f)] public float waveReflectStopDistance = 7f;
+    [Min(0.1f)] public float waveEndDelay = 0.4f;
+
+    [Header("Dalga oncesi geri ziplama")]
+    [Tooltip("Acik: oyuncu yakindaysa boss once geriye ziplayip mesafe acar, sonra dalgalari atar.")]
+    public bool waveBackHop = true;
+    [Tooltip("Oyuncu yakindayken (waveMinDistance'tan az) saniyede geri ziplama baslatma olasiligi.")]
+    [Range(0f, 2f)] public float waveCloseChancePerSecond = 0.5f;
+    [Tooltip("Ziplama sonrasi hedeflenen mesafe (oyuncuyla boss arasi).")]
+    [Min(10f)] public float waveHopTargetDistance = 48f;
+    [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
+    [Min(5f)] public float waveHopMaxDistance = 40f;
+    [Min(0.2f)] public float waveHopTime = 0.6f;
+    [Min(0f)] public float waveHopHeight = 8f;
+    [Tooltip("Ziplamadan once cokme (sn).")]
+    [Min(0f)] public float waveHopCrouch = 0.3f;
+
+    [Header("Posture kirilma merhameti")]
+    [Tooltip("Oyuncunun posture'u kirilinca boss bu sure (sn) saldirmaz: kombo/dalga/ziplama iptal olur, oyuncu kirik halde olmesin.")]
+    [Min(0f)] public float postureBreakMercy = 1.8f;
+    float mercyUntil;
+    bool mercyPending, postureWasBroken;
+    internal bool InMercy { get { return Time.time < mercyUntil; } }
+
+    float nextWaveTime;
+    int comboLastIndex = 3;
+    float cueComboId = -1f;
+    int cueStep = -1;
+    AudioSource cueSrc;
+    static AudioClip cueClip;
+    bool waveActive;
+    internal bool waveParryNow;
+    float dashSeenTime = -10f, nextRetargetTime;
+    PlayerController playerCtl;
+
+    [Header("Dash ile yon degistirme")]
+    [Tooltip("Acik: boss vurus hazirlarken oyuncu dash atip arkasina gecerse boss ona doner.")]
+    public bool dashRetarget = true;
+    [Tooltip("Vurus bu kadar sn'den az kaldiysa donmez (son anda kacis serbest).")]
+    [Min(0f)] public float dashRetargetMinWindup = 0.18f;
+    [Tooltip("Dash bittikten sonra bu sure icinde de donmeye izin ver (sn).")]
+    [Min(0f)] public float dashRetargetGrace = 0.3f;
+
+    // ---------------------------------------------------------------------
     // UCLU KOMBO: 2 hizli vurus + 3. GECIKMELI vurus. Parry gerekir (blok posture'u kirar).
     // Kombo sirasinda kilic, koyu kirmizi 'Impact' VFX'ine bürünür.
     // ---------------------------------------------------------------------
-    [Header("Uclu kombo (2 hizli + 1 gecikmeli)")]
+    [Header("Kombo (ritimli vuruslar + 1 gecikmeli son)")]
     public bool comboEnabled = true;
     [Tooltip("Kombo sonrasi tekrar secilmeden onceki sure (sn). Arada normal tek vurus atar.")]
-    [Min(0f)] public float comboCooldown = 6f;
+    [Min(0f)] public float comboCooldown = 5f;
     [Tooltip("1. vurus hazirlik suresi (sn): kilic bu surede yavasca kalkar ve kirmizi parlar, kombonun geldigi anlasilsin.")]
-    [Min(0.3f)] public float comboFirstWindup = 1.6f;
-    [Tooltip("2. vurus: hizli (sn).")]
-    [Min(0.2f)] public float comboFastWindup = 0.62f;
+    [Min(0.3f)] public float comboFirstWindup = 1.5f;
+    [Tooltip("RITIM: 1. vurustan sonraki ritimli vuruslarin arasi (sn). Hepsi ayni aralikta, sabit.")]
+    [Min(0.3f)] public float comboFastWindup = 0.8f;
+    [Tooltip("Ayni ritimde kac vurus (1. dahil). Sonra 1 tane GECIKMELI son vurus gelir. 3 = 3 ritimli + 1 gecikmeli.")]
+    [Range(2, 5)] public int comboBeatHits = 3;
+    [Tooltip("Vurustan hemen once kilic parlar + 'tik' sesi: parry tusuna BASMA ani. Darbeden kac sn once (sn).")]
+    [Range(0.08f, 0.6f)] public float comboCueLead = 0.3f;
+    [Range(0f, 1.5f)] public float comboCueVolume = 0.7f;
+    public Color comboCueColor = new Color(1f, 0.92f, 0.55f, 1f);
     [Tooltip("3. vurus: GECIKMELI (sn). Ezbere parry'i cezalandirir.")]
-    [Min(0.5f)] public float comboDelayedWindup = 1.25f;
+    [Min(0.5f)] public float comboDelayedWindup = 1.6f;
     [Tooltip("3. vurusun gecikmesine eklenen rastgele sure (0..bu).")]
-    [Min(0f)] public float comboDelayedRandom = 0.2f;
+    [Min(0f)] public float comboDelayedRandom = 0f;
     [Range(0.5f, 2.5f)] public float comboLastDamage = 1.3f;
     [Tooltip("3. vurusu parry'lemenin boss dengesine carpani.")]
     [Range(1f, 4f)] public float comboFinalParryReward = 1.5f;
@@ -514,7 +607,7 @@ public class Boss1Enemy : MonoBehaviour
                 parrySrc.playOnAwake = false;
                 parrySrc.spatialBlend = 0f;
             }
-            parrySrc.PlayOneShot(tf.ParrySound);
+            EnemyHitFeedback.PlayLoud(parrySrc, tf.ParrySound, tf.ParryVolume);
         }
 
         if (!vfx) return;
@@ -630,8 +723,26 @@ public class Boss1Enemy : MonoBehaviour
         }
     }
 
+    [Header("Ceviklik")]
+    [Tooltip("Acik: boss'un saldiri toparlanmasi kisalir, adimlari hizlanir: daha tepkisel, daha az agir.")]
+    public bool agile = true;
+    [Range(0.4f, 1.5f)] public float agileWindupTime = 0.6f;
+    [Range(0.1f, 0.8f)] public float agileTensionTime = 0.24f;
+    [Range(0f, 0.8f)] public float agileHoldTime = 0.12f;
+    [Range(0.1f, 2f)] public float agileRecoverTime = 0.45f;
+    [Range(0.15f, 1f)] public float agileWalkAnimSpeed = 0.4f;
+
     void Configure()
     {
+        if (agile && rig != null)
+        {
+            rig.windupTime = agileWindupTime;
+            rig.tensionTime = agileTensionTime;
+            rig.holdTime = agileHoldTime;
+            rig.recoverTime = agileRecoverTime;
+            rig.walkAnimSpeed = agileWalkAnimSpeed;
+        }
+
         // Hareket
         enemy.chaseSpeed = walkSpeed;
         enemy.chaseRange = chaseRange;
@@ -707,6 +818,7 @@ public class Boss1Enemy : MonoBehaviour
 
     void OnPlayerBlocked(EnemyController e, bool postureBroken)
     {
+        if (e == enemy && postureBroken) mercyPending = true;
         if (!blockKnockback || e != enemy || enemy == null || enemy.target == null) return;
         PlayerController p = enemy.target.GetComponent<PlayerController>();
         if (p == null || p.rb == null || p.isDashing) return;
@@ -785,8 +897,11 @@ public class Boss1Enemy : MonoBehaviour
         m.weight = 1f;
         m.cooldown = comboCooldown;
         m.recoveryMultiplier = 1f;
+        int beats = Mathf.Clamp(comboBeatHits, 2, 5);
         m.hits.Add(new MoveHit(MoveHitType.Normal, comboFirstWindup, 0f, 0.85f));
-        m.hits.Add(new MoveHit(MoveHitType.Normal, comboFastWindup, 0f, 0.85f).Retarget());
+        for (int bi = 1; bi < beats; bi++)
+            m.hits.Add(new MoveHit(MoveHitType.Normal, comboFastWindup, 0f, 0.85f).Retarget());   // hepsi ayni ritim
+        comboLastIndex = beats;   // son (gecikmeli) vurusun adim indeksi
         m.hits.Add(new MoveHit(MoveHitType.Normal, comboDelayedWindup, comboDelayedRandom, comboLastDamage).Retarget().ParryReward(comboFinalParryReward));
 
         moveset.moves = new List<AttackMove> { m };
@@ -945,6 +1060,70 @@ public class Boss1Enemy : MonoBehaviour
         rig.PlayAttack();
     }
 
+    // Kombo ipucu: her vurustan 'comboCueLead' sn once kilic parlar + 'tik' (parry'ye basma zamani, ritim).
+    void UpdateComboCue()
+    {
+        EnemyAttackState cst = enemy.CurrentState as EnemyAttackState;
+        if (cst == null || cst.MoveName != ComboName || enemy.IsStaggered || enemy.IsDead) return;
+        if (cst.RemainingWindup > comboCueLead) return;
+        if (cueComboId == comboLastStart && cueStep == cst.StepIndex) return;
+
+        cueComboId = comboLastStart;
+        cueStep = cst.StepIndex;
+        rig.SetSwordTint(comboCueColor, 1f, 40f);
+
+        if (comboCueVolume > 0f)
+        {
+            if (cueClip == null) cueClip = BuildCueClip();
+            if (cueSrc == null)
+            {
+                cueSrc = gameObject.AddComponent<AudioSource>();
+                cueSrc.playOnAwake = false;
+                cueSrc.spatialBlend = 0f;
+            }
+            cueSrc.PlayOneShot(cueClip, Mathf.Clamp01(comboCueVolume));
+        }
+    }
+
+    static AudioClip BuildCueClip()
+    {
+        const int rate = 44100;
+        int n = Mathf.RoundToInt(rate * 0.09f);
+        float[] d = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float env = Mathf.Exp(-t * 55f);
+            d[i] = (Mathf.Sin(2f * Mathf.PI * 1250f * t) * 0.7f + Mathf.Sin(2f * Mathf.PI * 2500f * t) * 0.3f) * env;
+        }
+        AudioClip c = AudioClip.Create("Boss1Cue", n, 1, rate, false);
+        c.SetData(d, 0);
+        return c;
+    }
+
+    // Dalga parry'sinin ses/efekti: dalganin carptigi noktada.
+    internal void WaveParryFx(Vector3 pos, Vector2 dir)
+    {
+        PlayParryFallback(true, false);
+        if (CombatVFXManager.Instance != null)
+            CombatVFXManager.Instance.PlayParry(pos, dir);
+        else
+            ParryVFX.Play(pos, dir, "Default", 100);
+    }
+
+    // Geri seken dalga bossa carpti: kisa sarsinti + kivilcim.
+    internal void WaveReflectHit(Vector3 pos, Vector2 dir)
+    {
+        rig.Flinch(0.6f);
+        rig.Squash(0.6f);
+        rig.Flash();
+        if (CombatVFXManager.Instance != null)
+            CombatVFXManager.Instance.PlayParry(pos, dir);
+        else
+            ParryVFX.Play(pos, dir, "Default", 100);
+        RunCameraZoom.AddShake(1.5f);
+    }
+
     void OnEnemyHit(EnemyController e, DamageInfo info, HitResult result)
     {
         if (e != enemy)
@@ -971,6 +1150,9 @@ public class Boss1Enemy : MonoBehaviour
     {
         if (e != enemy)
             return;
+
+        if (waveParryNow)
+            return;   // dalga parry'si: boss uzakta, kilic/ezilme tepkisi ve efekti burada uretilmez
 
         rig.OnParried(brokeBalance);
 
@@ -1025,6 +1207,25 @@ public class Boss1Enemy : MonoBehaviour
         enemy.attackWarningTime = rig.ContactTime;
         enemy.attackRecoveryTime = rig.holdTime + rig.recoverTime + extraCooldown;
 
+        // Oyuncunun posture'u kirildi: boss bir sure saldirmaz (kirik oyuncu tek seferde olmesin).
+        if (playerPosture == null) playerPosture = FindFirstObjectByType<PlayerPosture>();
+        bool pBroken = playerPosture != null && playerPosture.IsBroken;
+        if (pBroken && !postureWasBroken) mercyPending = true;
+        postureWasBroken = pBroken;
+        if (mercyPending)
+        {
+            mercyPending = false;
+            mercyUntil = Time.time + postureBreakMercy;
+            pendingLeap = false;
+            if (!leapActive && !enemy.IsStaggered && !enemy.IsDead
+                && (enemy.CurrentState is EnemyAttackState || enemy.CurrentState is Boss1WaveState))
+                enemy.ChangeState(new EnemyChaseState(enemy));
+            enemy.StartAttackRecovery(postureBreakMercy);
+            nextWaveTime = Mathf.Max(nextWaveTime, Time.time + postureBreakMercy);
+            nextLeapTime = Mathf.Max(nextLeapTime, Time.time + postureBreakMercy);
+            comboLastStart = Mathf.Max(comboLastStart, Time.time - comboCooldown + postureBreakMercy);
+        }
+
         if (pendingLeap)
         {
             pendingLeap = false;
@@ -1053,6 +1254,36 @@ public class Boss1Enemy : MonoBehaviour
             }
         }
 
+        // Dash ile yon degistirme: vurus hazirlarken oyuncu dash'le arkaya gecerse boss doner.
+        if (dashRetarget && enemy.target != null && !enemy.IsTargetDead)
+        {
+            if (playerCtl == null) playerCtl = enemy.target.GetComponent<PlayerController>();
+            if (playerCtl != null && playerCtl.isDashing) dashSeenTime = Time.time;
+
+            EnemyAttackState ast = enemy.CurrentState as EnemyAttackState;
+            if (ast != null && !leapActive && !enemy.IsStaggered && Time.time >= nextRetargetTime
+                && Time.time - dashSeenTime <= dashRetargetGrace && ast.RemainingWindup > dashRetargetMinWindup)
+            {
+                float side = Mathf.Sign(enemy.target.position.x - transform.position.x + 0.0001f);
+                if (side != enemy.FacingDirection)
+                {
+                    enemy.RetargetFacing();
+                    nextRetargetTime = Time.time + 0.2f;
+                }
+            }
+        }
+
+        // Dalga saldirisi: uzaktan odaklan, 3 ritimli dalga.
+        if (waveEnabled && !leapActive && !waveActive && Time.time >= nextWaveTime && enemy.CurrentState is EnemyChaseState
+            && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead)
+        {
+            float wx = Mathf.Abs(enemy.target.position.x - transform.position.x);
+            if (wx >= waveMinDistance && wx <= waveMaxDistance && Random.value < waveChancePerSecond * Time.deltaTime)
+                enemy.ChangeState(new Boss1WaveState(this, enemy));
+            else if (waveBackHop && wx < waveMinDistance && !InMercy && Random.value < waveCloseChancePerSecond * Time.deltaTime)
+                enemy.ChangeState(new Boss1WaveState(this, enemy));   // yakin: once geri zipla
+        }
+
         if (leapEnabled && !leapActive && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead)
         {
@@ -1063,13 +1294,14 @@ public class Boss1Enemy : MonoBehaviour
 
         bool attacking = enemy.CurrentState is EnemyAttackState;
         UpdateComboVfx(attacking);
+        UpdateComboCue();
 
         rig.MoveAllowed = enemy.CurrentState is EnemyChaseState;
         rig.Staggered = enemy.IsStaggered;
         rig.Dead = enemy.IsDead;
 
         // Saldiri vurustan ONCE bozuldu (sersemledi, baska duruma gecti): animasyonu yumusakca birak.
-        if (rig.IsAttacking && !attacking && !leapActive)
+        if (rig.IsAttacking && !attacking && !leapActive && !waveActive)
             rig.CancelAttack();
 
         // Guvenlik: zemin yoksa sonsuza kadar dusme.
@@ -1263,6 +1495,7 @@ public class Boss1Enemy : MonoBehaviour
         {
             PlayerController pl = e.target.GetComponent<PlayerController>();
             if (pl == null) return;
+            if (o.InMercy) return;   // posture kirik oyuncuya ek hasar yok
 
             float dx = Mathf.Abs(pl.transform.position.x - markerX);
             float feet = pl.col != null ? pl.col.bounds.min.y : pl.transform.position.y;
@@ -1381,6 +1614,395 @@ public class Boss1Enemy : MonoBehaviour
             if (slam == 0 && o.rig.IsAttacking) o.rig.CancelAttack();
             o.nextLeapTime = Mathf.Max(o.nextLeapTime, Time.time + 3f);
         }
+    }
+
+    // =====================================================================
+    // Boss1WaveState: odaklan (kilic yavas kalkar) -> RITIMLI dalgalar (her darbede bir dalga)
+    // =====================================================================
+    internal sealed class Boss1WaveState : IEnemyState
+    {
+        enum Ph { Crouch, Hop, Focus }
+
+        readonly Boss1Enemy o;
+        readonly EnemyController e;
+        Rigidbody2D rb;
+        Ph ph;
+        int fired;
+        bool needNext, subscribed, airborne;
+        float t, phT, doneT, groundY, startX, hopDir, hopDist;
+        Collider2D[] cols;
+        bool[] colWas;
+
+        public Boss1WaveState(Boss1Enemy owner, EnemyController enemy) { o = owner; e = enemy; }
+
+        public void Enter()
+        {
+            rb = o.GetComponent<Rigidbody2D>();
+            o.waveActive = true;
+            e.superArmorOverride = true;
+            e.RetargetFacing();
+            e.LockFacing(true);
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            groundY = o.transform.position.y;
+            startX = o.transform.position.x;
+            o.rig.AttackHit += OnHit;
+            subscribed = true;
+
+            hopDist = ComputeHop();
+            if (hopDist >= 6f)
+            {
+                ph = Ph.Crouch; phT = 0f;
+                o.rig.SetBaseSquash(0.5f, 14f);               // geri zipla: once coker
+            }
+            else StartFocus();
+        }
+
+        // Oyuncu yakinsa geriye ne kadar ziplanabilir (duvar payi dahil). 0 = ziplama yok.
+        float ComputeHop()
+        {
+            if (!o.waveBackHop || e.target == null) return 0f;
+            float dx = e.target.position.x - o.transform.position.x;
+            float adx = Mathf.Abs(dx);
+            if (adx >= o.waveMinDistance) return 0f;
+            hopDir = dx >= 0f ? -1f : 1f;
+            float want = Mathf.Clamp(o.waveHopTargetDistance - adx, 8f, o.waveHopMaxDistance);
+
+            if (rb != null)
+            {
+                ContactFilter2D filter = new ContactFilter2D();
+                filter.useTriggers = false;
+                filter.SetLayerMask(Physics2D.AllLayers);
+                filter.useLayerMask = true;
+                RaycastHit2D[] hits = new RaycastHit2D[6];
+                int n = rb.Cast(new Vector2(hopDir, 0f), filter, hits, want + 1f);
+                for (int k = 0; k < n; k++)
+                {
+                    Collider2D c = hits[k].collider;
+                    if (c != null && !c.isTrigger && (c.attachedRigidbody == null || c.attachedRigidbody.bodyType == RigidbodyType2D.Static)
+                        && hits[k].normal.x * hopDir < -0.5f)
+                        want = Mathf.Min(want, Mathf.Max(0f, hits[k].distance - 1f));
+                }
+            }
+            return want;
+        }
+
+        void StartFocus()
+        {
+            ph = Ph.Focus; phT = 0f;
+            o.rig.SetBaseSquash(0f, 6f);
+            o.rig.PlayAttack(o.waveFocusTime, true);            // yavas kalkis: odaklandigi anlasilsin
+            o.rig.SetSwordTint(o.waveColor, 1f, 0.9f);
+        }
+
+        void BeginHop()
+        {
+            ph = Ph.Hop; phT = 0f;
+            airborne = true;
+            cols = o.GetComponentsInChildren<Collider2D>();
+            colWas = new bool[cols.Length];
+            for (int i = 0; i < cols.Length; i++) { colWas[i] = cols[i].enabled; cols[i].enabled = false; }
+            if (rb != null) { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
+            o.rig.SetBaseSquash(-0.5f, 14f);
+        }
+
+        void SetPos(float x, float y)
+        {
+            if (rb != null) rb.position = new Vector2(x, y);
+            o.transform.position = new Vector3(x, y, o.transform.position.z);
+        }
+
+        void Restore()
+        {
+            if (cols != null)
+            {
+                for (int i = 0; i < cols.Length; i++)
+                    if (cols[i] != null) cols[i].enabled = colWas[i];
+                cols = null;
+            }
+            if (rb != null && rb.bodyType != RigidbodyType2D.Dynamic)
+            {
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                rb.linearVelocity = Vector2.zero;
+            }
+        }
+
+        void OnHit()
+        {
+            if (ph != Ph.Focus || fired >= o.waveCount) return;
+            float dir = e.FacingDirection;
+            Vector3 bp = o.transform.position;
+            float fwd = o.waveSpawnForward;
+            if (e.target != null && Mathf.Abs(e.target.position.x - bp.x) < fwd + 4f) fwd = Mathf.Min(fwd, 4f);   // oyuncu yakin: dalga hemen onde dogsun
+            Boss1Wave.Spawn(o, e, new Vector2(bp.x + dir * fwd, bp.y), dir);
+            fired++;
+            if (fired < o.waveCount) needNext = true;
+        }
+
+        public void Tick()
+        {
+            if (e.target == null || e.IsTargetDead)
+            {
+                e.ChangeState(new EnemyIdleState(e));
+                return;
+            }
+
+            float dt = EnemyTime.DeltaTime;
+            t += dt;
+            phT += dt;
+
+            if (ph == Ph.Crouch)
+            {
+                if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+                if (phT >= o.waveHopCrouch) BeginHop();
+                return;
+            }
+
+            if (ph == Ph.Hop)
+            {
+                float k = Mathf.Clamp01(phT / o.waveHopTime);
+                SetPos(startX + hopDir * hopDist * k, groundY + 4f * o.waveHopHeight * k * (1f - k));
+                if (k >= 1f)
+                {
+                    SetPos(startX + hopDir * hopDist, groundY);
+                    airborne = false;
+                    Restore();
+                    o.rig.Squash(0.8f);
+                    RunCameraZoom.AddShake(1.5f);
+                    StartFocus();
+                }
+                return;
+            }
+
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            if (needNext)
+            {
+                needNext = false;
+                o.rig.PlayAttack(Mathf.Max(0.3f, o.waveInterval - dt));   // esit aralikli ritim
+            }
+
+            if (fired < o.waveCount && Mathf.Abs(e.target.position.x - o.transform.position.x) < o.waveAbortDistance)
+            {
+                e.ChangeState(new EnemyChaseState(e));   // oyuncu cok yaklasti: iptal
+                return;
+            }
+
+            if (fired >= o.waveCount && !o.rig.IsAttacking)
+            {
+                doneT += dt;
+                if (doneT >= o.waveEndDelay) { e.ChangeState(new EnemyChaseState(e)); return; }
+            }
+
+            if (t > 15f) e.ChangeState(new EnemyChaseState(e));
+        }
+
+        public void Exit()
+        {
+            if (subscribed) { o.rig.AttackHit -= OnHit; subscribed = false; }
+            if (airborne) SetPos(o.transform.position.x, groundY);   // yarida kesildi: yere indir
+            Restore();
+            o.rig.SetBaseSquash(0f, 6f);
+            o.waveActive = false;
+            e.superArmorOverride = false;
+            e.LockFacing(false);
+            if (fired < o.waveCount && o.rig.IsAttacking) o.rig.CancelAttack();
+            o.rig.SetSwordTint(o.waveColor, 0f, 3f);
+            o.nextWaveTime = Time.time + o.waveCooldown;
+        }
+    }
+}
+
+/// <summary>
+/// Boss1'in dalgasi: yerde ilerleyen yarim ay. Oyuncuya degince parry / blok / hasar cozulur.
+/// Dash (i-frame) icinden gecer, ziplayarak ustunden asilir.
+/// </summary>
+public class Boss1Wave : MonoBehaviour
+{
+    Boss1Enemy o;
+    EnemyController e;
+    float dir, life, groundY;
+    bool resolved;
+    SpriteRenderer sr;
+    bool reflected;
+    static Sprite spr, sprReflect;
+
+    public static Boss1Wave Spawn(Boss1Enemy owner, EnemyController enemy, Vector2 pos, float direction)
+    {
+        GameObject go = new GameObject("Boss1Wave");
+        go.transform.position = new Vector3(pos.x, pos.y, 0f);
+        Boss1Wave w = go.AddComponent<Boss1Wave>();
+        w.o = owner; w.e = enemy; w.dir = direction >= 0f ? 1f : -1f; w.groundY = pos.y;
+
+        if (spr == null) spr = BuildSprite(new Color(0.85f, 0.02f, 0.02f), new Color(1f, 0.82f, 0.55f));
+        w.sr = go.AddComponent<SpriteRenderer>();
+        w.sr.sprite = spr;
+        w.sr.sortingLayerName = "Default";
+        w.sr.sortingOrder = 45;
+        Color c = owner.waveColor; w.sr.color = new Color(c.r, c.g, c.b, 1f);
+
+        // Sprite 'waveHeight' birim yuksek olacak sekilde olceklenir (ppu = piksel yuksekligi).
+        float h = owner.waveHeight;
+        float sc = h * (spr.pixelsPerUnit / spr.rect.height);
+        go.transform.localScale = new Vector3(w.dir * sc, sc, 1f);
+        return w;
+    }
+
+    void Update()
+    {
+        if (o == null || e == null) { Destroy(gameObject); return; }
+        float dt = EnemyTime.DeltaTime;
+        life += dt;
+        if (life > 8f) { Destroy(gameObject); return; }
+
+        Vector3 p = transform.position;
+        p.x += dir * o.waveSpeed * (reflected ? o.waveReflectSpeedMultiplier : 1f) * dt;
+        transform.position = p;
+
+        // Nabiz
+        if (sr != null)
+        {
+            float k = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 22f);
+            if (reflected)
+                sr.color = new Color(0.8f + 0.2f * k, 0.8f + 0.2f * k, 1f, 1f);
+            else
+            {
+                Color c = o.waveColor;
+                sr.color = new Color(Mathf.Min(1f, c.r * (0.8f + 0.3f * k)), c.g + 0.1f * k, c.b + 0.05f * k, 1f);
+            }
+        }
+
+        // Parry'lenmis dalga: renk degisti, bossa dogru geri seker.
+        if (reflected)
+        {
+            float toBoss = (o.transform.position.x - transform.position.x) * dir;
+            if (toBoss <= o.waveReflectStopDistance || life > 6f)
+            {
+                o.WaveReflectHit(new Vector3(transform.position.x, transform.position.y + o.waveHeight * 0.4f, 0f), new Vector2(dir, 0f));
+                Destroy(gameObject);
+            }
+            return;
+        }
+
+        if (resolved || e.target == null || e.IsTargetDead) return;
+        if (o.InMercy) return;                                // posture kirik oyuncudan dalga gecer
+
+        float rel = (e.target.position.x - p.x) * dir;      // + : oyuncu dalganin onunde
+        if (rel > o.waveHitHalfWidth || rel < -o.waveHitHalfWidth * 1.5f) return;
+
+        PlayerController pl = e.target.GetComponent<PlayerController>();
+        if (pl == null) return;
+        float feet = pl.col != null ? pl.col.bounds.min.y : pl.transform.position.y;
+        if (feet > groundY + o.waveHeight) return;           // ustunden atladi
+
+        Resolve(pl, p);
+    }
+
+    void Resolve(PlayerController pl, Vector3 pos)
+    {
+        resolved = true;
+
+        if (pl.isInvincible)
+        {
+            CombatEvents.RaiseDodge(e, false);               // dash'le icinden gecti: dalga yoluna devam eder
+            return;
+        }
+
+        Vector2 hitDir = new Vector2(dir, 0f);
+        PlayerDefenseController def = pl.GetComponent<PlayerDefenseController>();
+
+        if (def != null && def.CanParry())
+        {
+            def.PlayParryFeedback();
+            EnemyBalance bal = e.GetComponent<EnemyBalance>();
+            bool broke = false;
+            if (bal != null)
+            {
+                bal.AddParryBalanceDamage(Mathf.Max(1, Mathf.RoundToInt(e.parryBalanceDamage * o.waveParryBalanceMultiplier)));
+                broke = bal.IsBroken;
+            }
+            e.PlayBalanceDamageFlash();
+            o.waveParryNow = true;
+            CombatEvents.RaiseParry(e, broke);
+            o.waveParryNow = false;
+            o.WaveParryFx(new Vector3(pos.x, pos.y + o.waveHeight * 0.4f, 0f), -hitDir);
+
+            // Geri sek: rengi degis, bossa dogru don.
+            reflected = true;
+            dir = -dir;
+            life = 0f;
+            if (sprReflect == null) sprReflect = BuildSprite(o.waveReflectColor, Color.white);
+            sr.sprite = sprReflect;
+            Vector3 ls = transform.localScale;
+            transform.localScale = new Vector3(-ls.x, ls.y, ls.z);
+            return;
+        }
+
+        if (def != null && def.CanBlock())
+        {
+            CombatImpactFeedback cf = pl.GetComponent<CombatImpactFeedback>();
+            if (cf != null) cf.PlayBlockImpact();
+            def.HandleBlockHit(hitDir, Mathf.Max(1, Mathf.RoundToInt(e.blockPostureDamage * o.waveBlockPostureMultiplier)));
+            PlayerPosture ps = pl.GetComponent<PlayerPosture>();
+            CombatEvents.RaisePlayerBlocked(e, ps != null && ps.IsBroken);
+            Destroy(gameObject);
+            return;
+        }
+
+        PlayerDamageReceiver rcv = pl.GetComponent<PlayerDamageReceiver>();
+        if (rcv != null)
+        {
+            rcv.TakeDamage(
+                Mathf.Max(1, Mathf.RoundToInt(e.attackDamage * o.waveDamageMultiplier)),
+                hitDir,
+                e.attackKnockbackForce,
+                e.attackKnockbackVerticalForce,
+                e.attackKnockbackDuration,
+                e.attackKnockbackDeceleration,
+                e,
+                PlayerHitKind.Normal,
+                false
+            );
+            EnemyAttackCoordinator.NotifyPlayerHit();
+        }
+        Destroy(gameObject);
+    }
+
+    // Yarim ay: one dogru (+x) tasan, arkasi oyuk. Pivot: alt orta (yere basar). Parlak cekirdek, kirmizi kenar.
+    static Sprite BuildSprite(Color edgeCol, Color coreCol)
+    {
+        const int W = 96, H = 128;
+        Texture2D tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        Color32[] px = new Color32[W * H];
+
+        float a1 = W * 0.62f, b1 = H * 0.5f, c1x = W * 0.30f, cy = H * 0.5f;      // dis elips
+        float a2 = W * 0.58f, b2 = H * 0.46f, c2x = W * 0.02f;                     // ic (oyuk) elips
+
+        for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                float dx1 = (x - c1x) / a1, dy1 = (y - cy) / b1;
+                float d1 = Mathf.Sqrt(dx1 * dx1 + dy1 * dy1);
+                float dx2 = (x - c2x) / a2, dy2 = (y - cy) / b2;
+                float d2 = Mathf.Sqrt(dx2 * dx2 + dy2 * dy2);
+
+                float inner = 1f - d1;     // dis kenardan iceri
+                float outer = d2 - 1f;     // oyuktan disari
+                float edge = Mathf.Min(inner, outer);
+                float a = Mathf.Clamp01(edge * 14f);
+                if (a <= 0f) { px[y * W + x] = new Color32(0, 0, 0, 0); continue; }
+
+                float core = Mathf.SmoothStep(0f, 0.16f, edge);
+                Color col = Color.Lerp(edgeCol, coreCol, core);
+                px[y * W + x] = new Color32((byte)(col.r * 255), (byte)(col.g * 255), (byte)(col.b * 255), (byte)(a * 255));
+            }
+
+        tex.SetPixels32(px);
+        tex.Apply();
+        Sprite sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0f), H, 0, SpriteMeshType.FullRect);
+        sp.name = "Boss1WaveSprite";
+        return sp;
     }
 }
 

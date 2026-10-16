@@ -23,10 +23,10 @@ public class Boss1Hud : MonoBehaviour
 
     [Header("Boss adi (giriste ekranin ortasinda)")]
     [Tooltip("Ekran yuksekligine oranla yazi boyutu.")]
-    [Range(0.03f, 0.4f)] public float nameSize = 0.22f;
+    [Range(0.03f, 0.4f)] public float nameSize = 0.34f;
     [Tooltip("Harf araligi carpani (1 = fontun kendi araligi, kucuk = sik).")]
-    [Range(0.5f, 1.2f)] public float nameTracking = 0.82f;
-    public Color nameColor = new Color(0.93f, 0.86f, 0.68f, 1f);
+    [Range(0.5f, 1.2f)] public float nameTracking = 0.7f;
+    public Color nameColor = new Color(0.86f, 0.72f, 0.38f, 1f);
 
     string bossName;
     bool nameOn;
@@ -129,7 +129,7 @@ public class Boss1Hud : MonoBehaviour
         }
 
         string txt = bossName.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
-        float grow = 1f + 0.07f * Mathf.Clamp01(nameAge / 4f) + 0.12f * Mathf.Exp(-nameAge * 4f);
+        float grow = 1f + 0.03f * Mathf.Clamp01(nameAge / 5f);
         float fs = Screen.height * nameSize * grow;
 
         // Genislik siginmazsa kucult.
@@ -144,8 +144,8 @@ public class Boss1Hud : MonoBehaviour
         Color old = GUI.color;
 
         // Arka serit
-        float bandH = h * 1.9f;
-        GUI.color = new Color(1f, 1f, 1f, 0.72f * nameAlpha);
+        float bandH = h * 1.5f;
+        GUI.color = new Color(1f, 1f, 1f, 0.55f * nameAlpha);
         GUI.DrawTexture(new Rect(0f, cy - bandH * 0.5f, Screen.width, bandH), bandTex);
 
         // Harfler
@@ -157,7 +157,11 @@ public class Boss1Hud : MonoBehaviour
             if (txt[i] != ' ')
             {
                 Rect r = new Rect(x, cy - h * 0.5f, w[i] + 4f, h);
-                GUI.color = new Color(0f, 0f, 0f, 0.9f * nameAlpha);
+                GUI.color = new Color(0.9f, 0.65f, 0.2f, 0.16f * nameAlpha);
+                for (int gx = -1; gx <= 1; gx += 2)
+                    for (int gy = -1; gy <= 1; gy += 2)
+                        GUI.Label(new Rect(r.x + gx * o * 2f, r.y + gy * o * 2f, r.width, r.height), ch, nameStyle);
+                GUI.color = new Color(0f, 0f, 0f, 0.6f * nameAlpha);
                 GUI.Label(new Rect(r.x + o, r.y + o, r.width, r.height), ch, nameStyle);
                 GUI.color = new Color(nameColor.r, nameColor.g, nameColor.b, nameAlpha);
                 GUI.Label(r, ch, nameStyle);

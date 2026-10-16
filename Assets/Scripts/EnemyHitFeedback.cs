@@ -27,6 +27,8 @@ public class EnemyHitFeedback : MonoBehaviour
 
     [Header("Parry")]
     [SerializeField] private AudioClip parrySound;
+    [Tooltip("Parry sesi seviyesi. 1 = klibin kendi sesi; 1'in uzeri ayni klibi ust uste calarak yukseltir (en fazla 3).")]
+    [SerializeField, Range(0f, 3f)] private float parryVolume = 2f;
     [SerializeField] private GameObject parryVFX;
 
     [Header("Block")]
@@ -38,6 +40,19 @@ public class EnemyHitFeedback : MonoBehaviour
     public AudioClip[] HealthHitSounds => healthHitSounds;
     public AudioClip BalanceBreakSound => balanceBreakSound;
     public AudioClip ParrySound => parrySound;
+    public float ParryVolume => parryVolume;
+
+    // Klibi 'volume' seviyesinde cal: 1'in ustu icin ayni klip katman katman calinir (PlayOneShot olcegi 1'i asmaz).
+    public static void PlayLoud(AudioSource src, AudioClip clip, float volume)
+    {
+        if (src == null || clip == null) return;
+        float remaining = Mathf.Clamp(volume, 0f, 3f);
+        for (int i = 0; i < 3 && remaining > 0.001f; i++)
+        {
+            src.PlayOneShot(clip, Mathf.Min(1f, remaining));
+            remaining -= 1f;
+        }
+    }
     public AudioClip BlockSound => blockSound;
     public AudioSource Source => audioSource;
 
@@ -168,8 +183,10 @@ public class EnemyHitFeedback : MonoBehaviour
         Vector2 hitDirection
     )
     {
-        PlaySound(
-            parrySound
+        PlayLoud(
+            audioSource,
+            parrySound,
+            parryVolume
         );
 
         if (CombatVFXManager.Instance != null)
