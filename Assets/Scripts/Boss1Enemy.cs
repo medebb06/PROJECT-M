@@ -191,8 +191,24 @@ public class Boss1Enemy : MonoBehaviour
     // Saldiri animasyonu bitene kadar yerinde dur (sersemlemis/vurulmus degilse).
     void LateUpdate()
     {
+        bool run = false;
         if (rb != null && rig != null && rig.IsAttacking && !leapActive && !enemy.IsStaggered && !enemy.IsDead)
-            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+        {
+            // Kombo hazirligi sirasinda uzaktaki oyuncuya KOS (vurus menziline gelince dur).
+            EnemyAttackState st = enemy.CurrentState as EnemyAttackState;
+            if (comboRunEnabled && st != null && st.MoveName == ComboName && st.RemainingWindup > 0.05f && enemy.target != null)
+            {
+                float dx = enemy.target.position.x - transform.position.x;
+                if (Mathf.Abs(dx) > stopDistance)
+                {
+                    rb.linearVelocity = new Vector2(Mathf.Sign(dx) * comboRunSpeed * EnemyTime.Scale, rb.linearVelocity.y);
+                    run = true;
+                }
+            }
+            if (!run)
+                rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+        }
+        if (rig != null) rig.RunWhileAttacking = run;
     }
 
     float PlayRoar()
@@ -220,6 +236,8 @@ public class Boss1Enemy : MonoBehaviour
     // boss kukrer, sonra oyun baslar.
     // ---------------------------------------------------------------------
     [Header("Giris sahnesi")]
+    [Tooltip("Giriste ekranin ortasinda buyuk yazilan boss adi.")]
+    public string bossName = "Mustafa Golem";
     public bool introCutscene = true;
     [Tooltip("Oyuncu bu kadar yaklasinca (ya da boss ekrana girince) giris sahnesi baslar.")]
     [Min(1f)] public float introDistance = 45f;
@@ -257,6 +275,7 @@ public class Boss1Enemy : MonoBehaviour
 
         yield return IntroWait(introSettle);
 
+        if (hud != null) hud.ShowName(bossName);
         float len = PlayRoar();
         rig.Flinch(1.8f);
         rig.Squash(2.2f);
@@ -290,6 +309,7 @@ public class Boss1Enemy : MonoBehaviour
     {
         if (!introActive) return;
         introActive = false;
+        if (hud != null) hud.HideName();
         nextLeapTime = Time.time + leapFirstDelay;
 
         RunCameraZoom.FocusTarget = null;
@@ -376,6 +396,15 @@ public class Boss1Enemy : MonoBehaviour
     [Range(1f, 4f)] public float comboFinalParryReward = 1.5f;
     [Tooltip("Bos ise Resources/Boss1/Vfx/Boss1SwordImpact (Free Slash VFX > Impact kopyasi).")]
     public GameObject comboVfxPrefab;
+    [Tooltip("Acik: kilica ek olarak Impact parcacik efekti (kivilcim) baglanir. Kapali: yalniz duz kirmizi bicak.")]
+    public bool comboUseParticles = false;
+    [Tooltip("Oyuncu uzaktaysa kombo hazirlanirken boss oyuncuya KOSAR ve kosarak vurur.")]
+    public bool comboRunEnabled = true;
+    [Min(1f)] public float comboRunSpeed = 26f;
+    [Tooltip("Oyuncu bu yatay mesafeden yakinsa (ve vurus menzili disindaysa) uzaktan kombo baslatabilir.")]
+    [Min(1f)] public float comboRunMaxDistance = 70f;
+    [Tooltip("Uygun mesafedeyken saniyede uzaktan kombo baslatma olasiligi.")]
+    [Range(0f, 1f)] public float comboRunChancePerSecond = 0.6f;
     [Tooltip("Kilica baglanan efektin dunya boyutu carpani.")]
     [Min(0.1f)] public float comboVfxScale = 5f;
     [Tooltip("Efekt rengi: saf parlak kirmizi (Impact materyalinin HDR parlakligi korunur).")]
@@ -392,6 +421,7 @@ public class Boss1Enemy : MonoBehaviour
     bool comboTinted, comboVfxWarned;
     int comboStepNow = -1;
     float comboEndAt = -1f;
+    float comboLastStart = -999f;
 
     // Kukreme yalniz iki anda: oyuncunun gorusune ilk girdigi an + oldugu an.
     bool seenRoared, deathRoared;
@@ -711,11 +741,12 @@ public class Boss1Enemy : MonoBehaviour
     void StartComboVfx(int step)
     {
         comboStepNow = step;
+        if (step == 0) comboLastStart = Time.time;
         comboEndAt = -1f;
         comboTinted = true;
         rig.SetSwordTint(comboColor, 1f, step == 0 ? 0.9f : 7f);   // 1. vurusta kilic yukari kalkarken yavasca parlar
 
-        if (comboVfx == null)
+        if (comboUseParticles && comboVfx == null)
         {
             GameObject prefab = comboVfxPrefab != null ? comboVfxPrefab : Resources.Load<GameObject>("Boss1/Vfx/Boss1SwordImpact");
             Transform sword = rig.SwordBone;
@@ -739,6 +770,7 @@ public class Boss1Enemy : MonoBehaviour
             TintVfx(comboVfx, comboColor);
         }
 
+        if (comboVfx == null) return;
         ParticleSystem[] pss = comboVfx.GetComponentsInChildren<ParticleSystem>(true);
         for (int i = 0; i < pss.Length; i++)
         {
@@ -932,6 +964,25 @@ public class Boss1Enemy : MonoBehaviour
                 enemy.ChangeState(new Boss1LeapState(this, enemy));
             else
                 rig.PlayAttack();
+        }
+
+        // Uzaktan kombo: oyuncu vurus menzili disindaysa kosarak baslat.
+        if (comboEnabled && comboRunEnabled && !leapActive && enemy.CurrentState is EnemyChaseState
+            && Time.time >= comboLastStart + comboCooldown + 1.5f
+            && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead && enemy.CanAttack)
+        {
+            float cx = Mathf.Abs(enemy.target.position.x - transform.position.x);
+            if (cx > attackReach && cx <= comboRunMaxDistance && Random.value < comboRunChancePerSecond * Time.deltaTime
+                && EnemyAttackCoordinator.TryRequestAttack(enemy, enemy.PlannedWindup))
+            {
+                enemy.ChangeState(new EnemyAttackState(enemy));
+                EnemyAttackState ns = enemy.CurrentState as EnemyAttackState;
+                if (ns == null || ns.MoveName != ComboName)
+                {
+                    enemy.ChangeState(new EnemyChaseState(enemy));   // kombo secilemedi: geri don
+                    comboLastStart = Time.time - comboCooldown;       // kisa sure tekrar denemesin
+                }
+            }
         }
 
         if (leapEnabled && !leapActive && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState

@@ -170,6 +170,8 @@ public class Boss1Rig : MonoBehaviour
     [NonSerialized] public bool MoveAllowed = true;
     /// <summary>Sersemlemis (denge kirik) poz.</summary>
     [NonSerialized] public bool Staggered;
+    /// <summary>Saldiri pozundayken de yuruyus/kosu bacak animasyonu oynasin (boss kosarak vururken).</summary>
+    [NonSerialized] public bool RunWhileAttacking;
     /// <summary>Oldu: yikilma pozu.</summary>
     [NonSerialized] public bool Dead;
 
@@ -438,7 +440,27 @@ public class Boss1Rig : MonoBehaviour
     // (Oyuncunun kilicindaki "execute hazir" parlamasinin kirmizi karsiligi; duz/koyu boya degil.)
     void EnsureMetalOverlay()
     {
-        if (metalBuilt || swordSrs.Count == 0 || swordSrs[0] == null || swordSrs[0].sprite == null) return;
+        if (metalBuilt) return;
+
+        // Rig sahnede hazir kaydedilmisse Rebuild calismamis olabilir: kilic katmanini kemikten bul.
+        if (swordSrs.Count == 0 || swordSrs[0] == null)
+        {
+            swordSrs.Clear();
+            Transform sb = SwordBone;
+            if (sb != null)
+            {
+                foreach (SpriteRenderer sr in sb.GetComponentsInChildren<SpriteRenderer>(true))
+                    if (sr.sprite != null && sr.sprite.name.ToLowerInvariant().Contains("sword")) swordSrs.Add(sr);
+                if (swordSrs.Count == 0)
+                    foreach (SpriteRenderer sr in sb.GetComponentsInChildren<SpriteRenderer>(true))
+                        if (sr.sprite != null) { swordSrs.Add(sr); break; }
+            }
+        }
+        if (swordSrs.Count == 0 || swordSrs[0] == null || swordSrs[0].sprite == null)
+        {
+            Debug.LogWarning("Boss1Rig: kilic sprite'i bulunamadi, kirmizi kaplama yapilamadi (duz boyama kullanilacak).");
+            return;
+        }
         metalBuilt = true;
 
         SpriteRenderer baseSr = swordSrs[0];
@@ -459,7 +481,7 @@ public class Boss1Rig : MonoBehaviour
         float[] mask = new float[px.Length];
         Vector2 lp = baseSr.transform.localPosition;
         float ppu = sp.pixelsPerUnit > 0f ? sp.pixelsPerUnit : 100f;
-        Color dark = new Color(0.62f, 0f, 0.01f), hotC = new Color(1f, 0.06f, 0.04f);
+        Color dark = new Color(0.5f, 0f, 0.05f), hotC = new Color(0.82f, 0.02f, 0.1f);   // duz kivrik kirmizi (boya gibi)
         for (int y = 0; y < rh; y++)
         {
             for (int x = 0; x < rw; x++)
@@ -510,6 +532,7 @@ public class Boss1Rig : MonoBehaviour
         metalSr = MakeOverlay("SwordMetalRed", baseSr, core, baseSr.sortingOrder + 2, 1f, null);
         coreSr = MakeOverlay("SwordCoreGlow", baseSr, core, baseSr.sortingOrder + 3, 1f, addMat);
         haloSr.enabled = false; metalSr.enabled = false; coreSr.enabled = false;
+        Debug.Log("[Boss1] kilic kirmizi kaplamasi hazir: sprite=" + sp.name + " " + rw + "x" + rh + " ppu=" + sp.pixelsPerUnit + " additiveShader=" + (add != null));
     }
 
     static float[] BoxBlur(float[] a, int w, int h, int rad, bool horiz)
@@ -831,6 +854,11 @@ public class Boss1Rig : MonoBehaviour
         float dtR = Time.deltaTime;
         if (swordTintCur < 0f) swordTintCur = 0f;
         swordTintCur = Mathf.MoveTowards(swordTintCur, swordTintTarget, dtR * swordTintSpeed);
+        if (metalSr == null && swordSrs.Count > 0 && swordSrs[0] != null)
+        {
+            // Kaplama kurulamadiysa: kilic sprite'ini dogrudan kirmiziya boya (bicak beyaz, sap koyu: carpim dogru calisir).
+            swordSrs[0].color = Color.Lerp(tint, new Color(0.85f, 0.02f, 0.1f, 1f), swordTintCur);
+        }
         if (metalSr != null)
         {
             bool on = swordTintCur > 0.003f;
@@ -839,8 +867,8 @@ public class Boss1Rig : MonoBehaviour
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 8f);
                 metalSr.color = new Color(1f, 1f, 1f, swordTintCur);
-                coreSr.color = new Color(1f, 0.02f, 0.02f, swordTintCur * (0.45f + 0.45f * pulse));
-                haloSr.color = new Color(1f, 0f, 0f, swordTintCur * (0.4f + 0.4f * pulse));
+                coreSr.color = new Color(1f, 0.02f, 0.04f, swordTintCur * (0.12f + 0.16f * pulse));
+                haloSr.color = new Color(1f, 0f, 0.02f, swordTintCur * (0.22f + 0.2f * pulse));
             }
         }
         float dt = EnemyTime.DeltaTime;      // dusman zamani: parry yavaslatmasinda animasyon da yavaslar
@@ -891,7 +919,7 @@ public class Boss1Rig : MonoBehaviour
         // ---- Yuruyus ----
         if (body == null) body = GetComponent<Rigidbody2D>();
         float speed = body != null ? Mathf.Abs(body.linearVelocity.x) : 0f;
-        bool canWalk = walkEnabled && MoveAllowed && !Staggered && !Dead && atkState == AtkState.None && speed > 0.3f;
+        bool canWalk = walkEnabled && (MoveAllowed || RunWhileAttacking) && !Staggered && !Dead && (atkState == AtkState.None || RunWhileAttacking) && speed > 0.3f;
         walkW = Mathf.MoveTowards(walkW, canWalk ? 1f : 0f, dtR * (canWalk ? 4f : 6f));
         if (canWalk)
         {

@@ -285,7 +285,7 @@ public class CombatCallout : MonoBehaviour
             return font;
 
         // Unity 6 yerleşik fontu.
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = GameFont.Or(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
 
         return font;
     }

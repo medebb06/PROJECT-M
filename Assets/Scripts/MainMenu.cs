@@ -283,6 +283,8 @@ public class MainMenu : MonoBehaviour
 
         fontBold = Resources.Load<Font>("UI/ProjectM_Serif_Bold");
         fontRegular = Resources.Load<Font>("UI/ProjectM_Serif_Regular");
+        fontBold = GameFont.Or(fontBold);        // oyun fontu (Knight Souls)
+        fontRegular = GameFont.Or(fontRegular);
 
         Font fallback = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 

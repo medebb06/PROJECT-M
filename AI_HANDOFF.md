@@ -167,3 +167,14 @@ Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-
 - Onceki koyu kirmizi kaplama "kan" gibi gorundu. Yerine: bicak metali parlak saf kirmizi (koyu 0.62 -> sicak 1.0 kirmizi, pembe yok) + additive cekirdek + bulanik hale. Additive shader: `Assets/Shaders/Boss1SpriteAdditive.shader` (`ProjectM/Boss1SpriteAdditive`, `_Intensity`=7, Impact materyali `_Color` ~8.6 HDR'ye yakin -> bloom). Shader bulunamazsa additive katmanlar normal materyalle (soluk) cizilir.
 - Impact VFX prefab rengi `comboColor` = saf kirmizi (1,0,0.01); `TintVfx` materyal Color ozelliklerini yogunluk (HDR) korunarak kirmiziya cevirir.
 - Impact shadergraph'i dogrudan kilic sprite'ina uygulanmadi (kendi _Main dokusunu cizer, bicak sekline oturmaz); bunun yerine ayni parlaklik/renk elle taklit edildi.
+
+## Boss1 duz kirmizi bicak + kosarak kombo (2026-10-16, 23) — DERLENMEDİ / OYNANMADI
+- Impact parcacik efekti kivilcim gibi gorundu: `comboUseParticles` (varsayilan KAPALI). Bicak metali artik duz kivrik kirmizi (0.5,0,0.05 -> 0.82,0.02,0.1; kilic dokusu zaten duz beyaz) + cok hafif additive isima/hale. Bicak maskesi cevrimdisi dogrulandi: opak piksellerin %81'i BladeHull icinde (sap haric).
+- Uzaktan kosarak kombo: oyuncu vurus menzili (`attackReach`) disinda ve `comboRunMaxDistance` (70) icindeyken Chase'ten `EnemyAttackState` baslatilir (`comboRunChancePerSecond`); kombo hazirlik surelerince boss `comboRunSpeed` (26) ile `stopDistance`'a kadar kosar (LateUpdate hiz kontrolu), rig `RunWhileAttacking` ile bacak animasyonu oynar. Kombo secilemezse Chase'e geri doner.
+- Not: 1. vurus hazirligi 1.8 sn: kosarken ~46 birim katedebilir.
+
+## Boss1 kilic kirmizi fix + oyun fontu + boss adi (2026-10-16, 24) — DERLENMEDİ / OYNANMADI
+- Kirmizi kilic: olasi kok neden = kilic katmani `swordSrs` Rebuild'de doldurulur; rig sahnede hazir kaydedildiyse bos kalir ve kaplama HIC olusmaz. `EnsureMetalOverlay` artik SwordBone altindan sprite'i bulur; olusmazsa dogrudan `sr.color` boyama fallback'i var. Basarida Console'a "[Boss1] kilic kirmizi kaplamasi hazir..." yazar, basarisizsa uyari verir.
+- Font: `Knight_Souls.otf` -> `Assets/Resources/UI/Knight_Souls.otf`. Orijinalde Ğ ğ İ Ş ş YOKTU; fonttools ile mevcut aksan parcalarindan (cedilla, brevemod, dotaccentmod) uretilip eklendi (orijinal dosya degismedi). Font BUYUK HARFLIDIR (kucuk harfler kucuk-buyuk).
+- `GameFont.cs` (yeni): `GameFont.Get()/Or()` + otomatik `GameFontApplier` (OnGUI icin `GUI.skin.font`, 0.5 sn'de bir tum UI Text ve TextMesh). `MainMenu`, `TutorialMode`, `CombatCallout`, `Critfeedback` ayrica GameFont'u tercih eder. Eski `Resources/UI/ProjectM_Serif_*` yedek kalir.
+- Boss adi: `Boss1Enemy.bossName` = "Mustafa Golem". Giris sahnesinde kukreme basinda ekranin tam ortasinda buyuk (ekran yuksekliginin %10'u, `Boss1Hud.nameSize`) belirir, giris bitince solar.

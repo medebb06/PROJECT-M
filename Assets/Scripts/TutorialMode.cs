@@ -472,6 +472,8 @@ public class TutorialManager : MonoBehaviour
             // Ana menüyle aynı yazı tipi (Resources/UI/ProjectM_Serif_*).
             fontBold = Resources.Load<Font>("UI/ProjectM_Serif_Bold");
             fontRegular = Resources.Load<Font>("UI/ProjectM_Serif_Regular");
+            fontBold = GameFont.Or(fontBold);        // oyun fontu (Knight Souls)
+            fontRegular = GameFont.Or(fontRegular);
             big = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = fontBold != null ? FontStyle.Normal : FontStyle.Bold };
             small = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
             top = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontStyle = fontBold != null ? FontStyle.Normal : FontStyle.Bold };

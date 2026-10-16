@@ -521,7 +521,7 @@ public class CritFeedback : MonoBehaviour
             return font;
 
         // Unity 2022.2+ / Unity 6 yerleşik fontu.
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = GameFont.Or(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
 
         return font;
     }
