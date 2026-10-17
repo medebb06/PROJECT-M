@@ -404,14 +404,19 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Not: staggerHitPercent sahnede serilestirilmemis gorunuyor (MyScene2'de aranip bulunmadi); boss baska sahnede/prefabta serilestirilmisse Inspector degeri varsayilani ezer.
 - DURUM: UYGULANDI, DERLENMEDI / OYNANMADI.
 
-## Boss1 agir darbe tepkisi (sendeleme + bagirma + isik soner)
-- Boss1Enemy.cs: `heavyHitStumbleSpeed` (9). Ilk agir darbede (stagger-hit blogu, `first`): boss oyuncudan uzaga rb hiziyla sendeler (EnemyStaggerState hizi `knockbackDeceleration` ile yavaslatir), `rig.Flinch(3)`, `rig.Squash(0.6)`, `PlayRoar()`, `rig.OpenGlowSpent = true`.
-- Boss1Rig.cs: `OpenGlowSpent` (NonSerialized) kirmizi isigi kapatir; yeni acik anda (Boss1Enemy rising edge) sifirlanir. `openGlowSize` 0.16 -> 0.09.
-- Durum: yazildi, Unity'de derlenmedi/test edilmedi. Inspector'daki kayitli openGlowSize eski degeri koruyabilir.
-- Geri alma: yukaridaki alanlari/blogu sil, openGlowSize'i 0.16 yap.
+## Boss1 acik an - agir ilk darbe + agir cekim (2026-10-17)
+- Boss1Enemy: ACIK (IsStaggered) iken sadece ILK duz vurus agir: `staggerFirstHitPercent` = 0.2 (max can; floor `staggerHitFloorPercent` 0.12 ayni). Sonraki vuruslar `staggerHitPercent` (varsayilan 0 = ek hasar yok, normal vurus). Eski `staggerFirstHitMultiplier` kaldirildi.
+- Agir darbe carptigi an HitStop.RequestRamp(`heavyHitSlowDuration` 0.9 s gercek zaman, baslangic `heavyHitSlowScale` 0.08, `heavyHitSlowPower` 2.2, oncelik 5): zaman cok agir baslar, yavasca normale doner. Genel (oyuncu dahil) zaman; EnemyTime degil.
+- Boss1Rig: kirmizi daire cok kucultuldu `openGlowSize` 0.45 -> 0.16 (govde yuksekliginin kati).
+- NOT: Inspector degerleri sahnede kaydedilmisse (sahne kaydedildiyse) varsayilanlari ezer; eski degerleri elle sifirla.
+- DURUM: UYGULANDI, DERLENMEDI / OYNANMADI. Geri alma: staggerFirstHitPercent 0, heavyHitSlowDuration 0.
 
-## Boss1 olumcul darbe = can cubugu sifirlanir, kukrerken dolar (Sekiro mantigi)
-- Boss1Enemy.cs: faz 1'de ilk agir darbe `DeadlyBlowPhase2()` coroutine'ini baslatir: `Health.MinHealth=1` kilidi, can 1'e iner (olmez), `heavyHitSlowDuration` kadar (sendeleme+yavas cekim) bekler, `BeginPhase2()` (kukreme) cagrilir, `phase2RefillTime` (2.2 sn, gercek zaman) boyunca can SetHealth ile tam dolar, MinHealth eski degere doner. `phase2Pending` dogal %50 faz tetigini bu sirada engeller.
-- Dogal faz 2 tetigi (can <= phase2HealthPercent, sersemlemeden) yedek olarak duruyor.
-- Durum: yazildi, derlenmedi/test edilmedi.
-- Geri alma: `DeadlyBlowPhase2` coroutine'ini ve cagrisini sil, eski `TakeDamage(toPhase)` mantigina don.
+## Boss1 olumcul darbe -> faz 2 + agir flash + faz 2 hizlanma
+- Boss1Enemy.cs: ilk agir darbe (faz 1'de) cani `phase2HealthPercent` esigine indirir (en az 1 can birakir), faz 2 boss sersemlemeden cikinca baslar. `heavyHitStumbleSpeed` 9 -> 18. Yeni `phase2AttackSpeed` (1.7): BeginPhase2'de rig windup/tension/hold/recover, wave/leap/combo cooldown, waveInterval bolunur; walkSpeed artar; `pf` (uyari) 0.85/hiz.
+- Boss1Rig.cs: `FlashFor(seconds)` (gercek zaman beyaz flas; agir darbede `heavyHitSlowDuration` boyunca). `Flash()` artik mevcut flasi kisaltmaz. `openGlowSize` 0.09 -> 0.05 (Min 0.01).
+- Durum: yazildi, Unity'de derlenmedi/test edilmedi. Inspector'daki kayitli degerler yeni varsayilanlari ezebilir.
+- Geri alma: phase2AttackSpeed = 1, heavyHitStumbleSpeed = 9, openGlowSize = 0.09.
+
+## Boss1 faz 2 olumcul darbe = olum + posture artisi
+- Boss1Enemy.cs: faz 2'de sersemlemis bossa ilk agir darbe (`first && phase2`, refill bitmis) `MinHealth=0` + `TakeDamage(CurrentHealth)` ile direkt oldurur. `phase2PostureScale` (1.8): BeginPhase2'de `EnemyBalance.SetMaxBalance(max * olcek)`.
+- Durum: yazildi, derlenmedi/test edilmedi. Geri alma: `else if (first && !phase2Pending)` blogunu ve BeginPhase2'deki bal2 satirlarini sil.

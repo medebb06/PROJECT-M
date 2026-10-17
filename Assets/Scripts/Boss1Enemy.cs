@@ -117,7 +117,9 @@ public class Boss1Enemy : MonoBehaviour
             balance = gameObject.AddComponent<EnemyBalance>();
         balance.SetMaxBalance(maxBalance);
         balance.SetRecovery(postureRecoveryDelay, postureRecoverySpeed);
-        balance.SetBreakHealthPercent(postureBreakHealthPercent);   // 0 = kirilma hasar vermez (Sekiro gibi: sadece acar)
+        balance.SetBreakHealthPercent(postureBreakHealthPercent);
+        balance.chipRatioOverride = hitChipHealthRatio;
+        health.MinHealth = 1;   // faz 1: can 0'a inmez, cubuk bitince faz 2 baslar   // 0 = kirilma hasar vermez (Sekiro gibi: sadece acar)
 
         // 4) Yon gostergesi: EnemyController yonu bir SpriteRenderer.flipX'ten okur/yazar.
         //    Gorunmez bir yardimci SpriteRenderer kullaniyoruz; Boss1Rig bunu okuyup aynalar.
@@ -466,23 +468,28 @@ public class Boss1Enemy : MonoBehaviour
     [Range(1f, 4f)] public float heavyHitSlowPower = 2.2f;
     bool staggerFirstHitPending;
     bool phase2Pending;
+    [Header("Can ile oldurme (kacip vurarak)")]
+    [Tooltip("Posture cubugunun tamami dolacak kadar duz vurus, max canin bu orani kadar can goturur. 0 = duz vurus can gotürmez.")]
+    [Range(0f, 1f)] public float hitChipHealthRatio = 0.3f;
+    [Tooltip("true: eski davranis, can %50'nin altina inince de faz 2 baslar. false: faz 2 sadece can cubugu sifirlaninca / olumcul darbede.")]
+    public bool phase2AtHalfHealth = false;
     [Tooltip("Faz 2'de posture (denge) cubugu bu kadar katina cikar; olumcul darbe icin daha zor kirilsin.")]
     [Range(1f, 3f)] public float phase2PostureScale = 1.8f;
     [Tooltip("Olumcul darbeden sonra can cubugunun (kukreme sirasinda) tamamen dolma suresi (sn, gercek zaman).")]
     [Min(0.5f)] public float phase2RefillTime = 2.2f;
 
     // Cani sifirla (olmeden), sendelemesi bitince faz 2'ye gec ve kukrerken cani doldur.
-    IEnumerator DeadlyBlowPhase2()
+    IEnumerator DeadlyBlowPhase2(float wait)
     {
         phase2Pending = true;
-        int oldMin = health.MinHealth;
         health.MinHealth = 1;                         // vuruslar bu surede oldurmesin
         int dmg = health.CurrentHealth - 1;
         if (dmg > 0) health.TakeDamage(dmg);          // cubuk sifira iner
 
-        float wait = Mathf.Max(0.2f, heavyHitSlowDuration);
+        wait = Mathf.Max(0.2f, wait);
         for (float t = 0f; t < wait; t += Time.unscaledDeltaTime) yield return null;
 
+        for (float g = 0f; g < 2f && (leapActive || waveActive); g += Time.unscaledDeltaTime) yield return null;
         if (health != null && !health.IsDead && !phase2) BeginPhase2();
 
         float dur = Mathf.Max(phase2RefillTime, 0.5f);
@@ -493,7 +500,7 @@ public class Boss1Enemy : MonoBehaviour
             yield return null;
         }
         if (health != null && !health.IsDead) health.SetHealth(health.MaxHealth);
-        if (health != null) health.MinHealth = oldMin;
+        if (health != null) health.MinHealth = 0;   // faz 2: can kilidi yok, 0 = olum
         phase2Pending = false;
     }
     [Header("Agir darbe tepkisi")]
@@ -1404,7 +1411,10 @@ public class Boss1Enemy : MonoBehaviour
 
         EnemyBalance bal2 = GetComponent<EnemyBalance>();
         if (bal2 != null && phase2PostureScale > 1f)
+        {
             bal2.SetMaxBalance(Mathf.RoundToInt(bal2.MaxBalance * phase2PostureScale));
+            if (bal2.chipRatioOverride > 0f) bal2.chipRatioOverride *= phase2PostureScale;   // posture buyudu: ayni vurus sayisi ayni can goturur
+        }
 
         // Faz 2 baski: tum saldirilar belirgin hizlanir.
         float ps = Mathf.Max(1f, phase2AttackSpeed);
@@ -1499,7 +1509,7 @@ public class Boss1Enemy : MonoBehaviour
             if (first && !phase2)
             {
                 // Olumcul darbe (Sekiro): can cubugu sifirlanir, boss kukrerken cubuk dolar, faz 2 baslar.
-                if (!phase2Pending) StartCoroutine(DeadlyBlowPhase2());
+                if (!phase2Pending) StartCoroutine(DeadlyBlowPhase2(heavyHitSlowDuration));
             }
             else if (first && !phase2Pending)
             {
@@ -1660,7 +1670,9 @@ public class Boss1Enemy : MonoBehaviour
             enemy.enabled = true;
 
         // Faz 2: can esigin altina inince (saldirmiyorken) ofkelen.
-        if (!phase2 && !phase2Pending && health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * phase2HealthPercent
+        if (!phase2 && !phase2Pending && health != null && !health.IsDead && health.CurrentHealth <= 1)
+            StartCoroutine(DeadlyBlowPhase2(0.4f));   // can cubugu bitti -> faz 2
+        if (phase2AtHalfHealth && !phase2 && !phase2Pending && health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * phase2HealthPercent
             && enemy.CurrentState is EnemyChaseState && !enemy.IsStaggered && !leapActive && !waveActive)
             BeginPhase2();
 

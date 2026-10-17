@@ -124,11 +124,12 @@ public static class PlayerDamage
                 return result;
 
             // Düz vuruş posture ilerlemesiyle orantılı küçük can hasarı da verir.
-            if (health != null && !health.IsDead && PostureToHealthRatio > 0f && balance.MaxBalance > 0)
+            float chipRatio = balance.chipRatioOverride >= 0f ? balance.chipRatioOverride : PostureToHealthRatio;
+            if (health != null && !health.IsDead && chipRatio > 0f && balance.MaxBalance > 0)
             {
                 float progress = (balance.CurrentBalance - balanceBefore) / (float)balance.MaxBalance;
 
-                balance.chipCarry += Mathf.Max(0f, progress) * PostureToHealthRatio * health.MaxHealth;
+                balance.chipCarry += Mathf.Max(0f, progress) * chipRatio * health.MaxHealth;
 
                 int chip = Mathf.FloorToInt(balance.chipCarry);
 

@@ -153,6 +153,9 @@ public class EnemyBalance : MonoBehaviour
     }
 
     /// <summary>Denge kirilinca giden can orani (max can). 0 = kirilma hasar vermez, sadece acik birakir (boss).</summary>
+    /// <summary>>=0 ise PlayerDamage.PostureToHealthRatio yerine bu oran kullanilir (duz vurusun can hasari; boss icin).</summary>
+    [System.NonSerialized] public float chipRatioOverride = -1f;
+
     public void SetBreakHealthPercent(float percent)
     {
         breakHealthPercent = Mathf.Clamp(percent, 0f, 0.5f);
