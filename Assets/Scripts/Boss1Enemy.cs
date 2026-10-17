@@ -445,7 +445,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Geri seken dalga bossa bu kadar yaklasinca carpar.")]
     [Min(0f)] public float waveReflectStopDistance = 2f;
     [Tooltip("Geri seken (parry'lenen) dalga bossa CARPINCA verdigi denge (posture) hasari (normal parry hasarina carpan). Buyuk = boss daha cabuk sersemler.")]
-    [Min(0f)] public float waveReflectBalanceMultiplier = 3.5f;
+    [Min(0f)] public float waveReflectBalanceMultiplier = 2f;
     [Min(0.1f)] public float waveEndDelay = 0.4f;
 
     [Header("Dalga oncesi geri ziplama")]
@@ -481,7 +481,7 @@ public class Boss1Enemy : MonoBehaviour
     bool phase2Pending;
     [Header("Posture kilidi + iksir penceresi")]
     [Tooltip("Boss cani bu oranin USTUNDEYKEN posture kirilamaz (cubuk tavanda durur, vurus yine can goturur). 0 = kilit yok.")]
-    [Range(0f, 0.9f)] public float postureLockAboveHealth = 0.5f;
+    [Range(0f, 0.9f)] public float postureLockAboveHealth = 0f;
     [Tooltip("Kilitliyken posture cubugunun cikabilecegi en yuksek oran.")]
     [Range(0.3f, 0.99f)] public float postureLockCap = 0.75f;
     [Tooltip("Kombo bitirici vurusundan sonra boss bu kadar sn saldirmaz (oyuncu iksir icsin). 0 = yok.")]

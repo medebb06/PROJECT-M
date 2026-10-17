@@ -491,3 +491,8 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Test (Play Mode, WaveReflectHit reflection ile cagrildi, tam canda): her carpma ~63/240 posture (iki carpma 126). Can kilidi (canda >%50 iken cubuk %75'te durur) AYNEN korundu.
 - Gercek dalgayi parry'leyip bossa carpmasi elle OYNANARAK denenmedi.
 - Not: Boss1Enemy.cs commit'i ilk seferde cihaza dusmedi; ikinci force commit ile dustu (cihazdaki dosya okunarak dogrulandi).
+
+## Boss posture kilidi kaldirildi + dalga hasari dusuruldu (2026-10-18)
+- Boss1Enemy.postureLockAboveHealth 0.5 -> 0 (kilit YOK: tam canda da posture dolar/kirilir). waveReflectBalanceMultiplier 3.5 -> 2.
+- Test (Play Mode, WaveReflectHit reflection): tam canda her carpma 36/240, 7. carpmada kirildi. Elle oynanarak denenmedi.
+- Not: Boss1Enemy.cs commit'i bir kez karisik icerikle dustu; son duzeltme cihazda dogrudan File.WriteAllText ile yapildi (cihaz dosyasi dogrulandi). outputs kopyasi gerekirse yeniden stage edilmeli.
