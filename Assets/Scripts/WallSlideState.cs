@@ -67,15 +67,14 @@ public class WallSlideState : IPlayerState
         bool touchingWall =
             player.IsTouchingWall();
 
-        // Duvarin tepesine yakin tutunduysa kenara tirman.
-        // (Duvardan uzaga basiliyorsa birakir, asagida kontrol ediliyor.)
+        // Duvarin tepesine yakin ve kenara DOGRU basiliyorsa tirman.
         int ledgeDir =
             touchingWall
                 ? movement.wallDirection
                 : (player.facingDir < 0f ? -1 : 1);
 
         if (
-            player.moveInput * ledgeDir >= -0.1f &&
+            player.moveInput * ledgeDir > 0.1f &&
             LedgeClimbState.TryStart(player, sm, ledgeDir)
         )
             return;

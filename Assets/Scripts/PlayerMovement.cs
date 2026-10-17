@@ -81,9 +81,9 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Tırmanmanın toplam süresi (sn). Küçük = daha çevik.")]
     public float ledgeClimbTime = 0.2f;
     [Tooltip("Kafanın ne kadar üstündeki kenar yakalanır (gövde boyunun oranı).")]
-    public float ledgeReachAbove = 0.2f;
+    public float ledgeReachAbove = 0.05f;
     [Tooltip("Kenar ayaktan en az bu kadar yukarıda olmalı (gövde boyunun oranı). Alçak basamaklar normal zıplamayla geçilir.")]
-    public float ledgeMinAboveFeet = 0.2f;
+    public float ledgeMinAboveFeet = 0.6f;
     [Tooltip("Tırmanma bitince yöne basılıysa koşu hızının bu oranıyla devam eder.")]
     public float ledgeExitSpeedRatio = 0.7f;
     [Tooltip("Tırmanmadan sonra tekrar kenar yakalamadan önce bekleme (sn).")]
@@ -587,12 +587,13 @@ public class PlayerMovement : MonoBehaviour
         Bounds b = col.bounds;
         float h = b.size.y;
         Vector2 forward = dir > 0 ? Vector2.right : Vector2.left;
-        float reach = b.extents.x + Mathf.Max(0.05f, wallGrabMargin);
+        // Kenar yakalama icin gövde duvara gercekten yakin olmali (wall slide'dan dar).
+        float reach = b.extents.x + 0.2f;
 
-        // 1) Duvar
+        // 1) Duvar (govdenin ust yarisinda: el hizasi)
         RaycastHit2D wall =
             Physics2D.Raycast(
-                new Vector2(b.center.x, b.min.y + h * 0.12f),
+                new Vector2(b.center.x, b.center.y + h * 0.25f),
                 forward,
                 reach,
                 wallMask
@@ -637,7 +638,7 @@ public class PlayerMovement : MonoBehaviour
         Vector2 standCenter =
             new Vector2(
                 wallX + dir * (b.extents.x + 0.1f),
-                ledgeTop + b.extents.y + 0.05f
+                ledgeTop + b.extents.y + 0.12f
             );
 
         if (Physics2D.OverlapBox(standCenter, boxSize, 0f, wallMask) != null)
@@ -648,7 +649,13 @@ public class PlayerMovement : MonoBehaviour
         if (Physics2D.OverlapBox(riseCenter, boxSize, 0f, wallMask) != null)
             return false;
 
-        Vector2 offset = (Vector2)(b.center - transform.position);
+        // Collider bounds fizik pozisyonunu izler (transform interpolasyonlu olabilir).
+        Vector2 bodyPos =
+            player != null && player.rb != null
+                ? player.rb.position
+                : (Vector2)transform.position;
+
+        Vector2 offset = (Vector2)b.center - bodyPos;
 
         standPos = standCenter - offset;
         return true;

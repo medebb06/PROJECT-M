@@ -22,6 +22,7 @@ public class LedgeClimbState : IPlayerState
     private bool finished;
 
     private float originalGravityScale;
+    private RigidbodyType2D originalBodyType;
     private bool gravityOverridden;
 
     public LedgeClimbState(
@@ -63,6 +64,13 @@ public class LedgeClimbState : IPlayerState
             else if (player.moveInput < -0.1f) dir = -1;
             else return false;
         }
+
+        // Kenara DOGRU basiliyor olmali ve kenara bakmali (arkan donukken tutunma).
+        if (player.moveInput * dir < 0.1f)
+            return false;
+
+        if (player.facingDir * dir < 0f)
+            return false;
 
         Vector2 standPos;
 
@@ -107,11 +115,14 @@ public class LedgeClimbState : IPlayerState
         // Kısa tırmanmalar daha da kısa sürsün (alçak kenar = anlık).
         duration = Mathf.Max(0.06f, movement.ledgeClimbTime);
 
+        // Tırmanırken gövde kinematik: sürtünme / temas yolu bozmasın
+        // (yol TryGetLedge'de önceden boş olduğu kontrol edildi).
         originalGravityScale = player.rb.gravityScale;
-        player.rb.gravityScale = 0f;
-        gravityOverridden = true;
-
+        originalBodyType = player.rb.bodyType;
         player.rb.linearVelocity = Vector2.zero;
+        player.rb.gravityScale = 0f;
+        player.rb.bodyType = RigidbodyType2D.Kinematic;
+        gravityOverridden = true;
 
         player.facingDir = dir;
 
@@ -135,7 +146,11 @@ public class LedgeClimbState : IPlayerState
     private void RestoreGravity()
     {
         if (gravityOverridden && player.rb != null)
+        {
+            player.rb.bodyType = originalBodyType;
             player.rb.gravityScale = originalGravityScale;
+            player.rb.linearVelocity = Vector2.zero;
+        }
 
         gravityOverridden = false;
     }
@@ -188,7 +203,6 @@ public class LedgeClimbState : IPlayerState
             p = Vector2.Lerp(mid, stand, k);
         }
 
-        player.rb.linearVelocity = Vector2.zero;
         player.rb.MovePosition(p);
 
         if (n >= 1f)

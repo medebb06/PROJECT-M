@@ -530,6 +530,13 @@ MonoBehaviour:
   wallJumpHeightRatio: 1
   wallJumpLockTime: 0.15
   wallJumpBlendTime: 0.1
+  ledgeClimbEnabled: 1
+  ledgeClimbTime: 0.2
+  ledgeReachAbove: 0.05
+  ledgeMinAboveFeet: 0.6
+  ledgeExitSpeedRatio: 0.7
+  ledgeRegrabCooldown: 0.2
+  ledgeCooldownTimer: 0
   jumpRising: 0
   jumpCutLockTimer: 0
   wallCheck: {fileID: 9183172421072942573}

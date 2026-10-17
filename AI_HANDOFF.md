@@ -457,3 +457,5 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Yedek: _backup_before_ledge_climb/ (PlayerMovement, AirState, WallSlideState, JumpState, WallJumpState, PlayerController, PlayerAnimationController).
 - Test (state'i dogrudan tetikleyerek, gercek klavye degil): duvarda kayma->tirmanma ve duvar ziplamasi->karsi kenar->tirmanma calisti, cok yuksek kenarda tirmanmadi. Klavyeyle (A/D basili) AirState/JumpState tetiklemesi test edilmedi.
 - NOT: Diskteki WallJumpState su an v2 (capraz/miknatis v3 diskte yok; PlayerMovement'ta wallJumpRiseSpeed alani yok).
+
+- Ledge Climb sıkılaştırma: artık SADECE kenara dogru yon tusuna basilirken VE kenara bakarken tutunur (notr / ters yon / arkasi donukken tutunmaz; WallSlide'da da ayni). Yakalama penceresi daralti: ledgeMinAboveFeet 0.6, ledgeReachAbove 0.05 (kenar goğus-kafa hizasinda olmali), duvar mesafesi govde kenari+0.2. Test: kenar ayaktan ~3.5-5.3 birim yukarida iken tutunur; 3.2 ve 5.5'te tutunmaz.

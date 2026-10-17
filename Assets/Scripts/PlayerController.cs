@@ -392,7 +392,8 @@ public class PlayerController : MonoBehaviour
     private void HandleJump()
     {
         // Yere ya da duvara tutununca havada zıplama hakkı yenilenir.
-        if (isGrounded || movement.isWallSliding)
+        // Havada zıplama hakkı SADECE yere basınca yenilenir (duvardan yenilenirse sonsuz tırmanılıyordu).
+        if (isGrounded)
             airJumpsUsed = 0;
 
         if (!canControl)
