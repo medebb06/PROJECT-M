@@ -71,6 +71,12 @@ public class CombatImpactFeedback : MonoBehaviour
     [SerializeField] private float[] hitKick = { 0.06f, 0.07f, 0.10f, 0.10f };
     [Tooltip("Aynı vuruşta her ek düşman için donma/sarsıntı çarpanı artışı (en çok +%40).")]
     [SerializeField] private float multiHitBonus = 0.15f;
+    [Tooltip("Kombonun 4. (son) vuruşunda en az bu kadar tam donma (gerçek sn). Kritik/ağır vuruş hissi.")]
+    [SerializeField] private float finalHitMinFreeze = 0.13f;
+    [Tooltip("4. vuruşta donmadan sonra en az bu kadar ağır çekim (gerçek sn).")]
+    [SerializeField] private float finalHitMinSlow = 0.1f;
+    [Tooltip("4. vuruşta kamera sarsıntısı en az bu kadar.")]
+    [SerializeField] private float finalHitMinShake = 0.6f;
     [Tooltip("Sarsıntının aşağı bileşeni (0 = tam yatay itme).")]
     [Range(0f, 1f)] [SerializeField] private float shakeDown = 0.35f;
 
@@ -146,13 +152,19 @@ public class CombatImpactFeedback : MonoBehaviour
             slow *= lightHitFreezeScale;
         }
 
+        if (step >= 4)
+        {
+            freeze = Mathf.Max(freeze, finalHitMinFreeze);
+            slow = Mathf.Max(slow, finalHitMinSlow);
+        }
+
         if (freeze > 0.0005f)
             HitStop.Request(freeze, 0f, NormalPriority);
 
         if (slow > 0f && freeze > 0f)
             HitStop.RequestRamp(freeze + slow, hitSlowScaleSharp, 1f, 2f, NormalPriority);
 
-        PlayDirectionalShake(Pick(hitShake, step, 0f) * m, dir);
+        PlayDirectionalShake(Mathf.Max(Pick(hitShake, step, 0f) * m, step >= 4 ? finalHitMinShake : 0f), dir);
 
         AttackImpact?.Invoke(step, Pick(hitKick, step, 0f));
     }

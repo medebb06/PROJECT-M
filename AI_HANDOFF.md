@@ -404,19 +404,27 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Not: staggerHitPercent sahnede serilestirilmemis gorunuyor (MyScene2'de aranip bulunmadi); boss baska sahnede/prefabta serilestirilmisse Inspector degeri varsayilani ezer.
 - DURUM: UYGULANDI, DERLENMEDI / OYNANMADI.
 
-## Boss1 acik an - agir ilk darbe + agir cekim (2026-10-17)
-- Boss1Enemy: ACIK (IsStaggered) iken sadece ILK duz vurus agir: `staggerFirstHitPercent` = 0.2 (max can; floor `staggerHitFloorPercent` 0.12 ayni). Sonraki vuruslar `staggerHitPercent` (varsayilan 0 = ek hasar yok, normal vurus). Eski `staggerFirstHitMultiplier` kaldirildi.
-- Agir darbe carptigi an HitStop.RequestRamp(`heavyHitSlowDuration` 0.9 s gercek zaman, baslangic `heavyHitSlowScale` 0.08, `heavyHitSlowPower` 2.2, oncelik 5): zaman cok agir baslar, yavasca normale doner. Genel (oyuncu dahil) zaman; EnemyTime degil.
-- Boss1Rig: kirmizi daire cok kucultuldu `openGlowSize` 0.45 -> 0.16 (govde yuksekliginin kati).
-- NOT: Inspector degerleri sahnede kaydedilmisse (sahne kaydedildiyse) varsayilanlari ezer; eski degerleri elle sifirla.
-- DURUM: UYGULANDI, DERLENMEDI / OYNANMADI. Geri alma: staggerFirstHitPercent 0, heavyHitSlowDuration 0.
+## Boss1 agir darbe tepkisi (sendeleme + bagirma + isik soner)
+- Boss1Enemy.cs: `heavyHitStumbleSpeed` (9). Ilk agir darbede (stagger-hit blogu, `first`): boss oyuncudan uzaga rb hiziyla sendeler (EnemyStaggerState hizi `knockbackDeceleration` ile yavaslatir), `rig.Flinch(3)`, `rig.Squash(0.6)`, `PlayRoar()`, `rig.OpenGlowSpent = true`.
+- Boss1Rig.cs: `OpenGlowSpent` (NonSerialized) kirmizi isigi kapatir; yeni acik anda (Boss1Enemy rising edge) sifirlanir. `openGlowSize` 0.16 -> 0.09.
+- Durum: yazildi, Unity'de derlenmedi/test edilmedi. Inspector'daki kayitli openGlowSize eski degeri koruyabilir.
+- Geri alma: yukaridaki alanlari/blogu sil, openGlowSize'i 0.16 yap.
 
-## Boss1 olumcul darbe -> faz 2 + agir flash + faz 2 hizlanma
-- Boss1Enemy.cs: ilk agir darbe (faz 1'de) cani `phase2HealthPercent` esigine indirir (en az 1 can birakir), faz 2 boss sersemlemeden cikinca baslar. `heavyHitStumbleSpeed` 9 -> 18. Yeni `phase2AttackSpeed` (1.7): BeginPhase2'de rig windup/tension/hold/recover, wave/leap/combo cooldown, waveInterval bolunur; walkSpeed artar; `pf` (uyari) 0.85/hiz.
-- Boss1Rig.cs: `FlashFor(seconds)` (gercek zaman beyaz flas; agir darbede `heavyHitSlowDuration` boyunca). `Flash()` artik mevcut flasi kisaltmaz. `openGlowSize` 0.09 -> 0.05 (Min 0.01).
-- Durum: yazildi, Unity'de derlenmedi/test edilmedi. Inspector'daki kayitli degerler yeni varsayilanlari ezebilir.
-- Geri alma: phase2AttackSpeed = 1, heavyHitStumbleSpeed = 9, openGlowSize = 0.09.
+## Boss1 olumcul darbe = can cubugu sifirlanir, kukrerken dolar (Sekiro mantigi)
+- Boss1Enemy.cs: faz 1'de ilk agir darbe `DeadlyBlowPhase2()` coroutine'ini baslatir: `Health.MinHealth=1` kilidi, can 1'e iner (olmez), `heavyHitSlowDuration` kadar (sendeleme+yavas cekim) bekler, `BeginPhase2()` (kukreme) cagrilir, `phase2RefillTime` (2.2 sn, gercek zaman) boyunca can SetHealth ile tam dolar, MinHealth eski degere doner. `phase2Pending` dogal %50 faz tetigini bu sirada engeller.
+- Dogal faz 2 tetigi (can <= phase2HealthPercent, sersemlemeden) yedek olarak duruyor.
+- Durum: yazildi, derlenmedi/test edilmedi.
+- Geri alma: `DeadlyBlowPhase2` coroutine'ini ve cagrisini sil, eski `TakeDamage(toPhase)` mantigina don.
 
-## Boss1 faz 2 olumcul darbe = olum + posture artisi
-- Boss1Enemy.cs: faz 2'de sersemlemis bossa ilk agir darbe (`first && phase2`, refill bitmis) `MinHealth=0` + `TakeDamage(CurrentHealth)` ile direkt oldurur. `phase2PostureScale` (1.8): BeginPhase2'de `EnemyBalance.SetMaxBalance(max * olcek)`.
-- Durum: yazildi, derlenmedi/test edilmedi. Geri alma: `else if (first && !phase2Pending)` blogunu ve BeginPhase2'deki bal2 satirlarini sil.
+## Boss1 can ile oldurme (kacip vurma) + can=0 faz gecisi
+- Sorun: duz vurus balance'a gider, can sadece `PlayerDamage.PostureToHealthRatio` (varsayilan 0) ile asinir -> posture kirmadan boss'a can hasari yoktu.
+- EnemyBalance.cs: `chipRatioOverride` (NonSerialized, -1 = kapali). PlayerDamage.cs: chip orani olarak `balance.chipRatioOverride >= 0 ? override : PostureToHealthRatio`.
+- Boss1Enemy.cs: `hitChipHealthRatio` (0.3: tum posture cubugu dolacak kadar vurus = max canin %30'u; faz 2'de posture olcegiyle carpilir). Awake'te `health.MinHealth = 1` (faz 1 kilidi). Update: can <= 1 ise `DeadlyBlowPhase2(0.4f)` -> faz 2 + can dolumu, sonra MinHealth = 0 (faz 2'de can 0 = olum). `phase2AtHalfHealth` (false) eski %50 tetigini kapatir. Posture'un cana gore hasar carpani zaten EnemyBalance.scaleByHealth ile var (0.6 -> 1.6).
+- Durum: yazildi, derlenmedi/test edilmedi. Geri alma: hitChipHealthRatio = 0, phase2AtHalfHealth = true.
+
+## Boss can azaltma + 4. vurus agirligi
+- Boss1Enemy.cs: `maxHealth` 6000 -> 3000, `hitChipHealthRatio` 0.3 -> 0.5 (kacip vurma hizlansin; chip orani max cana yuzdelik oldugu icin asil kaldirac bu).
+- PlayerDamage.cs: `FinalHitDamageMultiplier` = 1.6 (static, ResetStatics'te sifirlanir). `comboStep >= 4` Attack vurusunda denge hasari (sourceMultiplier) ve can hasari bununla carpilir.
+- CombatImpactFeedback.cs: step >= 4 icin tabanlar: `finalHitMinFreeze` 0.13, `finalHitMinSlow` 0.1, `finalHitMinShake` 0.6 (dizilerdeki eski A4 degerleri bunun altindaysa yukselir; uzerindeyse korunur).
+- Durum: yazildi, derlenmedi/test edilmedi. Havada saldiri (AirAttackState) bu yolu kullanmiyor, etkilenmedi. Sahnede kayitli maxHealth/chip degerleri ezebilir.
+- Geri alma: maxHealth 6000, chip 0.3, FinalHitDamageMultiplier 1, finalHitMin* 0.

@@ -17,6 +17,26 @@ public class PlayerPosture : MonoBehaviour
     [Tooltip("Kilitliyken dolum hizi (posture/sn). 200 max icin 65 = ~3 sn.")]
     [SerializeField] private float brokenRecoverySpeed = 65f;
 
+    [Header("Can etkisi (Sekiro gibi)")]
+    [Tooltip("Normal toparlanma hizi carpani (1 = eski hiz).")]
+    [SerializeField] private float recoverySpeedScale = 0.7f;
+    [Tooltip("Hasardan sonra toparlanma beklemesine eklenen sure (sn).")]
+    [SerializeField] private float extraRecoveryDelay = 0.7f;
+    [Tooltip("Can bitmek uzereyken posture toparlanma carpani (tam canda 1).")]
+    [Range(0.05f, 1f)] [SerializeField] private float lowHealthRecoveryMult = 0.35f;
+    [Tooltip("Can bitmek uzereyken yenen posture hasari carpani (tam canda 1; >1 = daha cabuk kirilir).")]
+    [Range(1f, 3f)] [SerializeField] private float lowHealthDamageMult = 1.5f;
+
+    private Health healthRef;
+
+    // 1 = tam can, 0 = canin bittigi an.
+    private float HealthFraction()
+    {
+        if (healthRef == null) healthRef = GetComponent<Health>();
+        if (healthRef == null || healthRef.MaxHealth <= 0) return 1f;
+        return Mathf.Clamp01(healthRef.CurrentHealth / (float)healthRef.MaxHealth);
+    }
+
     public int CurrentPosture => currentPosture;
     public int MaxPosture => maxPosture;
 
@@ -63,7 +83,8 @@ public class PlayerPosture : MonoBehaviour
         }
 
         recoveryAccumulator +=
-            (BlockLocked ? brokenRecoverySpeed : recoverySpeed) * Time.deltaTime;
+            (BlockLocked ? brokenRecoverySpeed : recoverySpeed * recoverySpeedScale)
+            * Mathf.Lerp(lowHealthRecoveryMult, 1f, HealthFraction()) * Time.deltaTime;
 
         int recoveryAmount =
             Mathf.FloorToInt(
@@ -121,6 +142,8 @@ public class PlayerPosture : MonoBehaviour
         if (IsBroken)
             return;
 
+        damage = Mathf.CeilToInt(damage * Mathf.Lerp(lowHealthDamageMult, 1f, HealthFraction()));
+
         currentPosture -= damage;
 
         currentPosture =
@@ -129,7 +152,7 @@ public class PlayerPosture : MonoBehaviour
                 0
             );
 
-        recoveryTimer = BlockLocked ? brokenRecoveryDelay : recoveryDelay;
+        recoveryTimer = BlockLocked ? brokenRecoveryDelay : recoveryDelay + extraRecoveryDelay;
         recoveryAccumulator = 0f;
 
         OnPostureChanged?.Invoke(

@@ -403,6 +403,13 @@ public class PlayerDefenseController : MonoBehaviour
     // BLOCK
     // =========================================================
 
+    [Header("Blok bedeli (bedava blok yok)")]
+    [Tooltip("Blokta yenen posture hasari oraninda candan gider: kayip = MaxCan x bu oran x (posture hasari / max posture). " +
+             "0 = blok can goturmez. Oldurmez, en az 1 can birakir.")]
+    [Range(0f, 1f)] [SerializeField] private float blockChipHealthRatio = 0.12f;
+
+    private float blockChipCarry;
+
     public void HandleBlockHit(
         Vector2 hitDirection,
         int postureDamage
@@ -434,6 +441,8 @@ public class PlayerDefenseController : MonoBehaviour
         posture.TakePostureDamage(
             postureDamage
         );
+
+        ApplyBlockChip(posture, postureDamage, hitDirection);
 
         Debug.Log(
             "PLAYER BLOCK → POSTURE -" +
@@ -488,6 +497,39 @@ public class PlayerDefenseController : MonoBehaviour
             (player.stateMachine != null && player.stateMachine.CurrentState != null
                 ? player.stateMachine.CurrentState.GetType().Name
                 : "-")
+        );
+    }
+
+    // Normal blok: yenen posture hasarina orantili chip can hasari (olduremez).
+    private void ApplyBlockChip(PlayerPosture posture, int postureDamage, Vector2 hitDirection)
+    {
+        if (blockChipHealthRatio <= 0f || posture == null || posture.MaxPosture <= 0) return;
+
+        Health health = GetComponent<Health>();
+        if (health == null || health.IsDead) return;
+
+        blockChipCarry += health.MaxHealth * blockChipHealthRatio * (postureDamage / (float)posture.MaxPosture);
+
+        int amount = Mathf.FloorToInt(blockChipCarry);
+        if (amount <= 0) return;
+        blockChipCarry -= amount;
+
+        amount = Mathf.Min(amount, health.CurrentHealth - 1);
+        if (amount <= 0) return;
+
+        health.TakeDamage(amount);
+
+        CombatEvents.RaisePlayerDamaged(
+            new PlayerDamageReport
+            {
+                amount = amount,
+                healthAfter = health.CurrentHealth,
+                maxHealth = health.MaxHealth,
+                lethal = false,
+                kind = PlayerHitKind.BlockCost,
+                source = null,
+                direction = hitDirection
+            }
         );
     }
 

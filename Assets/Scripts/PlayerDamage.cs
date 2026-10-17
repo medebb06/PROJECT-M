@@ -24,6 +24,9 @@ public static class PlayerDamage
     // düşmanın MAX canının bu oranını götürür (parry'den dolan posture can götürmez).
     public static float PostureToHealthRatio = 0f;
 
+    /// <summary>Kombonun 4. (son) vuruşunun denge ve can hasarı çarpanı.</summary>
+    public static float FinalHitDamageMultiplier = 1.6f;
+
     // Düz vuruşların (kombo, havada, slam) denge hasarı çarpanı. Kesirli: 2 → ortalama vuruş başına 2.
     public static float NormalHitBalanceBoost = 2f;
 
@@ -38,6 +41,7 @@ public static class PlayerDamage
     private static void ResetStatics()
     {
         PostureToHealthRatio = 0f;
+        FinalHitDamageMultiplier = 1.6f;
         NormalHitBalanceBoost = 2f;
         AttackBalanceMultiplier = 1f;
         WeaponBalanceMultiplier = 1f;
@@ -98,6 +102,9 @@ public static class PlayerDamage
 
             if (info.source == DamageSource.Attack)
                 sourceMultiplier *= WeaponBalanceMultiplier;
+
+            if (info.source == DamageSource.Attack && info.comboStep >= 4)
+                sourceMultiplier *= FinalHitDamageMultiplier;
 
             int amount =
                 Resolve(
@@ -195,7 +202,8 @@ public static class PlayerDamage
             Resolve(
                 StatType.HealthDamage,
                 info.healthDamage,
-                critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f),
+                critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
+                * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
                 stats
             );
 
