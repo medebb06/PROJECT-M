@@ -513,3 +513,11 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Boss1Enemy.arenaHalfWidth 100 -> 70 (toplam 140 birim; oyundaki kamera ortho ~18'de yaklasik 2 ekran). Alan 5..145 (boss x=75 merkez). Dalga mesafeleri alana sigsin diye kisaldi: waveMinDistance 65->48 (Configure tabani 60->40), waveHopTargetDistance 82->62 (taban 78->55), waveHopMaxDistance 58->42 (taban 55->38). Geri ziplama kapi collider'larina carpip kisalir.
 - RunCameraZoom.showDebug artik [NonSerialized] (sahnede kayitli true degeri yoksayilir; sol ustteki 'RunCameraZoom: bekleme...' yazisi ve ilgili Debug.Log'lar kapali). Sahne dosyasina dokunulmadi.
 - Test: Play Mode'da arena 5..145, showDebug=False dogrulandi. Dalga/zipla davranisi ve ekrandaki yazinin kayboldugu gozle kontrol EDILMEDI.
+
+## Boss sayi raporu (2026-10-18) - SADECE olcum, kod degismedi
+- Kullanici geri bildirimi: baski biraz fazla, dalgalar yeni oyuncu icin cok hizli ama pattern ogrenilebilir; posture kilidi kalkinca boss mantikli; ledge ve dash istenen gibi.
+- Olculen (Play Mode, PlayerDamage.HitEnemy ile 0.33 sn aralikli kombo, boss mudahalesiz): tam canda posture 53 vurusta kirildi (~17.7 sn), kirilana kadar can 3000->1350 (chip). Sersemken vurus basina ~12 can. Parry: tam canda ~18 posture (13 parry), %50 canda ~33; geri seken dalga: tam canda 36 (7 carpma), %50 canda ~66.
+- Dalga: hiz 145 u/sn, bossun 18 birim onunden dogar -> oyuncuya varis suresi 48 birimde ~0.21 sn, 70'te ~0.36, 100'de ~0.57. Parry penceresi 0.17 sn. Telegraph 1.4 sn, dalgalar arasi 0.8 sn, 3 dalga.
+
+## Dalga yavaslatildi (2026-10-18)
+- Boss1Enemy: waveSpeed 145->110 (Configure tabani 140->105), waveInterval 0.8->0.95 (Configure tavani 0.85->1.0), faz 2 araligi 0.7->0.8 (faz 2 yine faz 1'den hizli, 5 dalga). Varis suresi: 48 birimde ~0.27 sn, 70'te ~0.47, 100'de ~0.75. Play Mode'da degerler okundu; gercek dovusta hissi denenmedi.

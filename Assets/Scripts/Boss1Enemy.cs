@@ -424,10 +424,10 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
     [Min(0.4f)] public float waveFocusTime = 1.4f;
     [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
-    [Min(0.4f)] public float waveInterval = 0.8f;
+    [Min(0.4f)] public float waveInterval = 0.95f;
     [Range(1, 5)] public int waveCount = 3;
     [Tooltip("Dalga hizi (birim/sn).")]
-    [Min(4f)] public float waveSpeed = 145f;
+    [Min(4f)] public float waveSpeed = 110f;
     [Tooltip("Dalga yuksekligi (ziplayarak gecmek icin ustune cikmak gerekir).")]
     [Min(1f)] public float waveHeight = 9f;
     [Tooltip("Dalganin oyuncuya degme yaricapi (yatay).")]
@@ -1025,11 +1025,11 @@ public class Boss1Enemy : MonoBehaviour
     void Configure()
     {
         // Sahnede kayitli eski (yavas/kolay) degerleri guvenli sekilde yeni dengeye cek.
-        waveSpeed = Mathf.Max(waveSpeed, 140f);
+        waveSpeed = Mathf.Max(waveSpeed, 105f);                   // yeni oyuncu icin yavaslatildi (eskiden 140)
         waveMinDistance = Mathf.Max(waveMinDistance, 40f);        // arena kuculdu (2 ekran): dalga mesafeleri de kisaldi
         waveHopTargetDistance = Mathf.Max(waveHopTargetDistance, 55f);
         waveHopMaxDistance = Mathf.Max(waveHopMaxDistance, 38f);
-        waveInterval = Mathf.Min(waveInterval, 0.85f);
+        waveInterval = Mathf.Min(waveInterval, 1.0f);
         waveCooldown = Mathf.Min(waveCooldown, 2.5f);
         postureBreakMercy = 0f;                 // oyuncunun blogu kirilsa da boss son vuruslari ATAR
         PlayerDamageReceiver.BossHitPercent = bossHitPercent;
@@ -1499,7 +1499,7 @@ public class Boss1Enemy : MonoBehaviour
         walkSpeed *= 1.2f;
         enemy.chaseSpeed = walkSpeed;
         waveCount = 5;
-        waveInterval = Mathf.Min(waveInterval, 0.7f);
+        waveInterval = Mathf.Min(waveInterval, 0.8f);   // faz 2 yine faz 1'den hizli
         waveCooldown *= 0.7f;
         leapCooldown *= 0.8f;
         rig.windupTime *= 0.88f;
