@@ -126,6 +126,9 @@ public class DashState : IPlayerState
 
         fxTimer = 0f;
 
+        // Basta: ileri dogru UZAMA (squash & stretch) + ilk iz.
+        DashFx.Begin(player);
+
         SpawnGhost();
     }
 
@@ -149,6 +152,9 @@ public class DashState : IPlayerState
         HitboxUtil.EjectFromEnemies(player);
 
         player.dashCooldownTimer = player.dashCooldown * player.dashCooldownScale;
+
+        // Sonda: durma ani SIKISMA (squash) + son iz.
+        DashFx.End(player);
 
         // dash çıkışında momentum koru
         Vector2 vel = player.rb.linearVelocity;
@@ -242,7 +248,7 @@ public class DashState : IPlayerState
         if (fxTimer > 0f)
             return;
 
-        fxTimer = player.afterImageSpacing;
+        fxTimer = Mathf.Max(0.02f, player.afterImageSpacing);
 
         SpawnGhost();
     }
@@ -252,6 +258,9 @@ public class DashState : IPlayerState
 
     void SpawnGhost()
     {
+        // Ronni (mesh iskelet) icin iz: DashFx tum ciziminin anlik kopyasini birakir.
+        DashFx.Ghost(player);
+
         if (!oldSpriteAfterImages)
             return;
 

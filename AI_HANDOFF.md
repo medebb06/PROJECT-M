@@ -465,3 +465,17 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Yedek: _backup_before_boss_agile/Boss1Rig.cs. Oyunda gorsel olarak test EDILMEDI (Tutorial_Arena'da Boss1 Play'de olusuyor/aktif degildi, derleme hatasiz).
 - Gerekirse Boss1Enemy 'Ceviklik' alanlari (agileWindupTime/TensionTime/HoldTime/RecoverTime) ve strikeTime ile ince ayar.
 - Boss hurtbox: Boss1Enemy.BuildHurtbox() govdeye 'BossHurtbox' adli trigger child ekler (hurtboxExtraSide 4, hurtboxExtraUp 2 dunya birimi). Fiziksel govde collider'i degismedi (oyuncuyu iten kisim ayni). Leap/Wave sirasinda tum child collider'lar zaten kapatiliyor -> hurtbox da kapanir. Test: oyuncu boss merkezinden 13 birim uzakta -> eski govde vurulmuyordu, yeni hurtbox vuruluyor. Yedek: _backup_before_boss_agile/Boss1Enemy.cs
+
+## Dash FX (2026-10-18)
+- Ozel dash animasyonu KAPATILDI: RonniPlayerBridge.useDashAnimation=false (varsayilan). Geri acmak icin bu bool'u true yap. Dash tozu (RonniDashDust) bu modda da calisir.
+- Yeni: Assets/Scripts/DashFx.cs (DashFx static + DashGhostHost). DashState Enter -> ileri uzama (x1.45, y0.72, 0.18 sn); Exit -> sikisma (x0.8, y1.22, 0.16 sn); dash boyunca afterImageSpacing aralikla + basta + sonda Ronni mesh parcalarinin anlik kopyasi (soguk mavi-beyaz, 0.30 sn'de solar, gercek karakterin 100 order arkasinda). Ayarlar DashFx static alanlari (StartStretch, EndSquash, GhostLife, GhostColor, GhostAlpha).
+- Player'daki SquashStretch bileseni KAPALI oldugu icin ona bagli degil; ModelPivot.localScale'i DashGhostHost surer.
+- Yedek: _backup_before_dash_fx/ (DashState, SquashStretch, RonniPlayerBridge). SquashStretch.cs degismedi.
+- Test: state dogrudan tetiklenerek; olcek ve iz sayisi dogrulandi, gorsel kalite goz ile DEGERLENDIRILMEDI.
+
+## Dash gerilme karesi (2026-10-18) - Attack1 GERI ALINDI
+- Kullanici PDF'indeki kare (ATTACK1_1: egilmis, el katanada) SADECE dash icindir. Attack1 eski haline donduruldu: Attack1.anim orijinal (yedek: _backup_before_attack1_windup/), SquashTable Attack1 satiri orijinal (1.06,0.94)/(1.12,0.92). Attack1HD_1_Windup.png tasindi.
+- Yeni asset: Assets/Sprites/RonniSkin/Resources/DashFrames/DashHD_1.png (Single sprite 'DashHD_1', ppu 100, pivot ~(0.515,0.0043)).
+- RonniPlayerBridge: yeni UpdateDashFrame() (LateUpdate sonunda). Dash sirasinda tum rigler gizlenir, frameSR'de DashHD_1 gosterilir; squash/stretch DashSquashTarget() ile: gerilme (dashCoilScale, dashCoilTime) -> firlama (dashStretchScale) -> gevseme -> son oturma (dashEndScale). Inspector'da 'Dash karesi' basligi altinda: frameDash (kapatirsan rig'li eski halde kalir). Dash bitince bMode=-99 ile rig secimi yeniden yapilir.
+- DashFx: kare gosteriliyorsa after image o sprite'in kopyasi (SpriteRenderer) olur; mesh izi yedek olarak durur.
+- Test (Play Mode, DashState dogrudan tetiklendi): dash sirasinda kare acik/rigler kapali, iz olusuyor, bitince rigler geri geliyor. Gorsel kalite goz ile DEGERLENDIRILMEDI, gercek klavye ile denenmedi.

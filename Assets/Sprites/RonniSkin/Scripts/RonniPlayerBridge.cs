@@ -141,6 +141,7 @@ namespace RonniSkin
         }
         Vector2 SquashTarget(Sprite s)
         {
+            if (s != null && s.name == "DashHD_1") return DashSquashTarget();
             if (!frameSquash || s == null) return Vector2.one;
             string n = s.name;   // "Attack2HD_3"
             if (n.Length < 11) return Vector2.one;
@@ -495,6 +496,7 @@ namespace RonniSkin
             return (nxt.shortNameHash == ParryHash) || (cur.shortNameHash == ParryHash && cur.normalizedTime < 0.15f);
         }
 
+        [Tooltip("KAPALI (varsayilan): dash'te ozel dash animasyonu oynamaz; yerine squash/stretch + after image (DashFx) kullanilir.")] public bool useDashAnimation = false;
         bool wasDashing; float dashStart;
         PlayerPosture posture; int lastPosture; bool wasBroken; string defClip; float defStart;
         // --- parry / block (attack rig clips) ---
@@ -530,8 +532,8 @@ namespace RonniSkin
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
             wasDashing = dashing;
-            if (dashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt) { anim.ClearAction(); return; } // profil dash (mode 3) LateUpdate'te; ClearAction: saldırıdan kalan eylem dash boyunca açık kalıp bitişte idle yerine ana rig'i gösteriyordu
-            if (dashing && anim.HasClip("dash")) { anim.SetAction("dash", Time.time - dashStart); return; }
+            if (useDashAnimation && dashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt) { anim.ClearAction(); return; } // profil dash (mode 3) LateUpdate'te; ClearAction: saldırıdan kalan eylem dash boyunca açık kalıp bitişte idle yerine ana rig'i gösteriyordu
+            if (useDashAnimation && dashing && anim.HasClip("dash")) { anim.SetAction("dash", Time.time - dashStart); return; }
 
             // ---- attacks: timing from PlayerCombatController.AttackProgress ----
             bool attacking = combat != null && combat.IsAttacking;
@@ -688,7 +690,7 @@ namespace RonniSkin
                 else if (dashPrev) { dashPrev = false; dashEndT = Time.time; }
                 bool afterDash = Time.time - dashEndT < dashRunGrace && anim.grounded && player.rb != null && Mathf.Abs(player.rb.linearVelocity.x) > 0.5f;
                 bool run = useProfileRun && (anim.running || afterDash) && anim.grounded && !anim.ActionActive;
-                bool dashP = player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
+                bool dashP = useDashAnimation && player.isDashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt;
                 // koşu bitince kısa frenleme (stop klibi): idle'a doğrudan düşmez
                 float stopSpd = player.rb != null ? Mathf.Abs(player.rb.linearVelocity.x) : 0f;
                 bool canStop = stopAnimEnabled && playerRun != null && playerRun.HasClip("stop") && rigRun != null && rigRun.IsBuilt;
@@ -704,7 +706,7 @@ namespace RonniSkin
                 {
                     if (dashDust == null) { dashDust = GetComponent<RonniDashDust>(); if (dashDust == null) dashDust = gameObject.AddComponent<RonniDashDust>(); }
                     dashDust.Init(player, rigRun);
-                    bool dd = player.isDashing && dashP;
+                    bool dd = player.isDashing && (dashP || !useDashAnimation);
                     float dd01 = (Time.time - dashStart) / Mathf.Max(0.0001f, player.dashTime * DashState.DurationScale);
                     float ddir = player.GetDashDirection();
                     if (Mathf.Abs(ddir) < 0.01f) ddir = player.facingDir;
@@ -918,7 +920,52 @@ namespace RonniSkin
                 }
                 else { frameSR.enabled = false; if (glowSR != null) glowSR.enabled = false; }
             }
+            UpdateDashFrame();
             ApplyTransitionScale();
+        }
+
+        // ---- DASH KARESI: dash boyunca tek el cizimi (gerilmis poz, el katanada) + squash/stretch ----
+        [Header("Dash karesi")]
+        [Tooltip("Dash'te rig yerine Resources/DashFrames/DashHD_1 karesini goster (gerilme -> firlama squash/stretch ile).")] public bool frameDash = true;
+        [Tooltip("Gerilme (squash) suresi: dash'in basinda kare ezilir.")] public float dashCoilTime = 0.09f;
+        [Tooltip("Gerilme olcegi (x, y).")] public Vector2 dashCoilScale = new Vector2(1.10f, 0.86f);
+        [Tooltip("Firlama (stretch) olcegi (x, y): ileri uzar, ince kalir.")] public Vector2 dashStretchScale = new Vector2(1.38f, 0.82f);
+        [Tooltip("Dash sonunda son sikisma olcegi (x, y).")] public Vector2 dashEndScale = new Vector2(0.92f, 1.08f);
+        Sprite dashSprite; bool dashSpriteLoaded, dashFrameOn; float dashFrameT0;
+        Vector2 DashSquashTarget()
+        {
+            float total = Mathf.Max(0.05f, player.dashTime * DashState.DurationScale);
+            float t = Time.time - dashFrameT0;
+            if (t < dashCoilTime) return dashCoilScale;                                  // gerilme
+            float p = Mathf.Clamp01((t - dashCoilTime) / Mathf.Max(0.05f, total - dashCoilTime));
+            if (p > 0.8f) return dashEndScale;                                           // son oturma
+            float relax = Mathf.SmoothStep(0f, 1f, p / 0.8f);                            // firlama -> gevseme
+            return Vector2.Lerp(dashStretchScale, Vector2.one, relax * 0.85f);
+        }
+        void UpdateDashFrame()
+        {
+            bool want = frameDash && !useDashAnimation && player != null && player.isDashing;
+            if (want && !dashSpriteLoaded) { dashSpriteLoaded = true; dashSprite = Resources.Load<Sprite>("DashFrames/DashHD_1"); }
+            if (want && dashSprite == null) want = false;
+            if (want)
+            {
+                if (!dashFrameOn) { dashFrameOn = true; dashFrameT0 = Time.time; sqWas = false; }
+                if (rig != null) rig.SetShown(false);
+                if (rigIdle != null) rigIdle.SetShown(false);
+                if (rigAtk != null) rigAtk.SetShown(false);
+                if (rigRun != null) rigRun.SetShown(false);
+                if (rigJump != null) rigJump.SetShown(false);
+                if (rigBL != null) rigBL.SetShown(false);
+                if (rigBR != null) rigBR.SetShown(false);
+                ShowFrame(dashSprite);
+            }
+            else if (dashFrameOn)
+            {
+                dashFrameOn = false; sqWas = false;
+                if (frameSR != null) { frameFading = false; frameWant = false; frameSR.enabled = false; }
+                if (glowSR != null) glowSR.enabled = false;
+                bMode = -99;   // rig secimini yeniden yaptir
+            }
         }
 
         // Idle'da hareketsiz kalınca "wait" klibi (el uzat, ateş böceği konsun) arada bir oynar; oyuncu kıpırdarsa kesilir.

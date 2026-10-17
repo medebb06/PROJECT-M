@@ -30,6 +30,19 @@ public class SquashStretch : MonoBehaviour
     float impactTimer;
     float impactValue;
 
+    // Disaridan tetiklenen kisa squash/stretch (dash basi / sonu gibi).
+    Vector2 punchScale = Vector2.one;
+    float punchTime;
+    float punchTimer;
+
+    /// <summary>Verilen olcekle baslar, 'duration' icinde 1'e doner (yumusak). x = yatay, y = dikey.</summary>
+    public void Punch(Vector2 scale, float duration)
+    {
+        punchScale = scale;
+        punchTime = Mathf.Max(0.02f, duration);
+        punchTimer = punchTime;
+    }
+
     void LateUpdate()
     {
         if (rb == null || visual == null) return;
@@ -47,8 +60,20 @@ public class SquashStretch : MonoBehaviour
             impactTimer = impactDuration;
         }
 
+        // ---------------- PUNCH (dash vb.: en yuksek oncelik) ----------------
+        if (punchTimer > 0f)
+        {
+            punchTimer -= Time.deltaTime;
+            float k = Mathf.Clamp01(punchTimer / punchTime);   // 1 -> 0
+            k = k * k * (3f - 2f * k);
+            targetScale = new Vector3(
+                Mathf.Lerp(1f, punchScale.x, k),
+                Mathf.Lerp(1f, punchScale.y, k),
+                1f
+            );
+        }
         // ---------------- IMPACT (priority override) ----------------
-        if (impactTimer > 0f)
+        else if (impactTimer > 0f)
         {
             impactTimer -= Time.deltaTime;
 
