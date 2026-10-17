@@ -489,8 +489,7 @@ public class Boss1Rig : MonoBehaviour
         if (contactSeconds > 0.05f)
         {
             if (contactSeconds < baseT) atkScale = Mathf.Clamp(baseT / contactSeconds, 1f, 4f);
-            else if (slowRaise) atkScale = Mathf.Clamp(baseT / contactSeconds, 0.35f, 1f);   // yavas yavas kaldir
-            else extraTension = contactSeconds - baseT;
+            else extraTension = contactSeconds - baseT;   // CEVIK: kilic hizla kalkar, vurus ani gelene kadar gergin pozda bekler
         }
         return ok;
     }
@@ -776,7 +775,8 @@ public class Boss1Rig : MonoBehaviour
         sinceHit = 0f;
     }
 
-    static float EaseIn(float x) { x = Mathf.Clamp01(x); return x * x; }
+    static float EaseIn(float x) { x = Mathf.Clamp01(x); return x * x * x; }          // darbe: ani hizlanir
+    static float EaseOut(float x) { x = Mathf.Clamp01(x); float i = 1f - x; return 1f - i * i * i; }  // kalkis: hizli basla, yumusak otur
     static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
 
     // Saldiri fazini ilerletir. k = gerilme pozu miktari, s = darbe pozu miktari (0..1, k tension'da >1 olabilir).
@@ -797,7 +797,7 @@ public class Boss1Rig : MonoBehaviour
         {
             case AtkState.Windup:
                 {
-                    float wp = Smooth(atkTimer / windupTime);   // yavas basla, yavas otur: agir gerilme
+                    float wp = EaseOut(atkTimer / windupTime);  // CEVIK: kilic aninda kalkmaya baslar (yapiskan 'yavas basla' yok)
                     k = Mathf.Lerp(startK, 1f, wp);
                     s = startS * (1f - wp);                     // onceki saldirinin darbe pozundan cikis
                 }
@@ -835,7 +835,7 @@ public class Boss1Rig : MonoBehaviour
                 if (atkTimer >= holdTime) { atkState = AtkState.Recover; atkTimer = 0f; }
                 break;
             case AtkState.Recover:
-                s = 1f - Smooth(atkTimer / recoverTime);
+                { float ri = 1f - Mathf.Clamp01(atkTimer / recoverTime); s = ri * ri; }   // CEVIK: darbe pozundan hizla cik, sonra otur
                 if (atkTimer >= recoverTime)
                 {
                     atkState = AtkState.None; atkTimer = 0f; atkEndedAt = animClock;

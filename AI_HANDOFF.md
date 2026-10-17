@@ -459,3 +459,9 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - NOT: Diskteki WallJumpState su an v2 (capraz/miknatis v3 diskte yok; PlayerMovement'ta wallJumpRiseSpeed alani yok).
 
 - Ledge Climb sıkılaştırma: artık SADECE kenara dogru yon tusuna basilirken VE kenara bakarken tutunur (notr / ters yon / arkasi donukken tutunmaz; WallSlide'da da ayni). Yakalama penceresi daralti: ledgeMinAboveFeet 0.6, ledgeReachAbove 0.05 (kenar goğus-kafa hizasinda olmali), duvar mesafesi govde kenari+0.2. Test: kenar ayaktan ~3.5-5.3 birim yukarida iken tutunur; 3.2 ve 5.5'te tutunmaz.
+
+## Boss Ceviklik (2026-10-18)
+- Boss1Rig.cs: saldiri animasyonu 'yapiskan' hissi giderildi. Windup artik EaseOut (aninda kalkmaya baslar; eskiden Smooth = yavas basla/yavas otur), Strike kubik EaseIn (daha ani), Recover hizli cikis (1-x)^2. slowRaise (kombo ilk vurus / Supurme / Aldatmaca) kilici YAVAS kaldirmak yerine hizla kaldirip vurus aniina kadar gergin pozda bekletir -> vurus zamanlamasi (parry/block penceresi) AYNI kaldi, sadece hareket sertlesti.
+- Yedek: _backup_before_boss_agile/Boss1Rig.cs. Oyunda gorsel olarak test EDILMEDI (Tutorial_Arena'da Boss1 Play'de olusuyor/aktif degildi, derleme hatasiz).
+- Gerekirse Boss1Enemy 'Ceviklik' alanlari (agileWindupTime/TensionTime/HoldTime/RecoverTime) ve strikeTime ile ince ayar.
+- Boss hurtbox: Boss1Enemy.BuildHurtbox() govdeye 'BossHurtbox' adli trigger child ekler (hurtboxExtraSide 4, hurtboxExtraUp 2 dunya birimi). Fiziksel govde collider'i degismedi (oyuncuyu iten kisim ayni). Leap/Wave sirasinda tum child collider'lar zaten kapatiliyor -> hurtbox da kapanir. Test: oyuncu boss merkezinden 13 birim uzakta -> eski govde vurulmuyordu, yeni hurtbox vuruluyor. Yedek: _backup_before_boss_agile/Boss1Enemy.cs

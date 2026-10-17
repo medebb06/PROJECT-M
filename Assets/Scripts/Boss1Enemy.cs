@@ -73,6 +73,12 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Sersemleyen boss'un infaz mesafesi (gövde buyuk oldugu icin normal dusmandan uzak).")]
     [Min(0.5f)] public float executeDistance = 5f;
 
+    [Header("Vurulma alani (hurtbox)")]
+    [Tooltip("Oyuncunun vurusu boss'a bu kadar (dunya birimi) UZAKTAN da isler: her iki yanda gövdenin ötesine uzanir. Fiziksel govde (itme) degismez.")]
+    [Min(0f)] public float hurtboxExtraSide = 4f;
+    [Tooltip("Govdenin USTUNE eklenen vurulma alani (dunya birimi): havadan vurus icin.")]
+    [Min(0f)] public float hurtboxExtraUp = 2f;
+
     EnemyController enemy;
     Boss1Rig rig;
     Health health;
@@ -151,6 +157,7 @@ public class Boss1Enemy : MonoBehaviour
 
         enemy.SetFacingRenderer(facingProxy);
         Configure();
+        BuildHurtbox();
 
         enemy.AttackAnimationRequested += OnAttackAnimationRequested;
         enemy.AttackHitGate = rig.ReadyToHit;
@@ -944,6 +951,34 @@ public class Boss1Enemy : MonoBehaviour
                 if (clip != null && f.GetValue(enemy) == null) f.SetValue(enemy, clip);
             }
         }
+    }
+
+    // Oyuncunun vurusu icin gövdeden BUYUK, fiziksel olmayan (trigger) vurulma alani.
+    // Fiziksel gövde (oyuncuyu iten collider) aynen kalir; oyuncu yetisemiyorsa sorun vurus menziliydi.
+    void BuildHurtbox()
+    {
+        if (hurtboxExtraSide <= 0f && hurtboxExtraUp <= 0f) return;
+        if (transform.Find("BossHurtbox") != null) return;
+
+        BoxCollider2D body = null;
+        BoxCollider2D[] boxes = GetComponents<BoxCollider2D>();
+        for (int i = 0; i < boxes.Length; i++)
+            if (!boxes[i].isTrigger) { body = boxes[i]; break; }
+        if (body == null) return;
+
+        float sx = Mathf.Max(0.01f, Mathf.Abs(transform.lossyScale.x));
+        float sy = Mathf.Max(0.01f, Mathf.Abs(transform.lossyScale.y));
+        float addX = hurtboxExtraSide * 2f / sx;
+        float addY = hurtboxExtraUp / sy;
+
+        GameObject go = new GameObject("BossHurtbox");
+        go.layer = gameObject.layer;
+        go.transform.SetParent(transform, false);
+
+        BoxCollider2D hb = go.AddComponent<BoxCollider2D>();
+        hb.isTrigger = true;
+        hb.size = new Vector2(body.size.x + addX, body.size.y + addY);
+        hb.offset = new Vector2(body.offset.x, body.offset.y + addY * 0.5f);
     }
 
     [Header("Ceviklik")]
