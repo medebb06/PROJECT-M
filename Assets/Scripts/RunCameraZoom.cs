@@ -89,7 +89,7 @@ public class RunCameraZoom : MonoBehaviour
     public float forceZoomIn = 0.2f;
 
     [Tooltip("Ekranın sol üstünde durum yazısı göster (sorun giderme).")]
-    public bool showDebug = false;
+    [System.NonSerialized] public bool showDebug = false;   // sahnede/prefabta kayitli true degeri yoksayilir: sol ustteki debug yazisi kapali
 
     [Header("Durum (sadece bilgi, Play'de güncellenir)")]
     [SerializeField] private string status = "";

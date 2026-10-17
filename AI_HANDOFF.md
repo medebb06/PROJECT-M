@@ -496,3 +496,20 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Boss1Enemy.postureLockAboveHealth 0.5 -> 0 (kilit YOK: tam canda da posture dolar/kirilir). waveReflectBalanceMultiplier 3.5 -> 2.
 - Test (Play Mode, WaveReflectHit reflection): tam canda her carpma 36/240, 7. carpmada kirildi. Elle oynanarak denenmedi.
 - Not: Boss1Enemy.cs commit'i bir kez karisik icerikle dustu; son duzeltme cihazda dogrudan File.WriteAllText ile yapildi (cihaz dosyasi dogrulandi). outputs kopyasi gerekirse yeniden stage edilmeli.
+
+## Boss arenasi + kapilar (2026-10-18)
+- Yeni: Assets/Scripts/BossArena.cs. Boss1Enemy.Awake'te BuildArena() ile calisma zamaninda olusur (sahne kurulumu YOK, MyScene2'ye dokunulmadi). Alan = bossun baslangic x'i +/- arenaHalfWidth (varsayilan 100 -> test: -25..175). Boss1Enemy Inspector basligi 'Arena (dovus alani)': arenaEnabled, arenaHalfWidth, arenaCenterOffsetX.
+- Boss uyanip intro basladiginda (CheckRoarTriggers -> arena.RequestClose) oyuncu alanin icindeyse iki ucta kapilar (Ground katmaninda collider + kirmizi levha) yukselir. Oyuncu da boss da cikamaz (collider + FixedUpdate'te rb.position clamp: dash icinden gecmesin). Boss olunce ya da oyuncu olunce (enemy.IsTargetDead) kapilar iner.
+- Boss1Wave: alan disina cikan (parry'lenmemis) dalga yok edilir.
+- Test (Play Mode): oyuncu bossa yaklastirilinca kapilar kapandi (Closed=true), oyuncu alan disina (x=200) isinlaninca ~170'e geri cekildi. Boss olumunde kapilarin inmesi, gorsel kalite ve gercek oynayis DENENMEDI.
+- Not: device_commit_files Boss1Enemy.cs'i iki kez ust uste gondermek gerekti (ilki dusmedi); cihaz dosyasi okunarak dogrulandi.
+
+## Sinematik sonrasi input kilidi (2026-10-18)
+- Sebep: DashState canControl'u false yapiyor; boss intro'su baslarken oyuncu dash'teyse IntroRoutine bu false degeri 'eski deger' diye saklayip intro bitince geri yaziyordu -> kontrol kilitli kalirdi, boss vurusu/hasar sifirlayinca duzeliyordu.
+- Duzeltme: Boss1Enemy.IntroRoutine: introPrevCan = pl.canControl || pl.isDashing.
+- Test (Play Mode): oyuncu intro mesafesine isinlanip ayni anda DashState'e sokuldu; intro bitince canControl=True'ya dondu. Duzeltmeden ONCEKI davranis ayni testle olculmedi; gercek klavyeyle (zipla/dash sonra yaklas) denenmedi.
+
+## Arena kucultuldu + RunCameraZoom debug yazisi kapatildi (2026-10-18)
+- Boss1Enemy.arenaHalfWidth 100 -> 70 (toplam 140 birim; oyundaki kamera ortho ~18'de yaklasik 2 ekran). Alan 5..145 (boss x=75 merkez). Dalga mesafeleri alana sigsin diye kisaldi: waveMinDistance 65->48 (Configure tabani 60->40), waveHopTargetDistance 82->62 (taban 78->55), waveHopMaxDistance 58->42 (taban 55->38). Geri ziplama kapi collider'larina carpip kisalir.
+- RunCameraZoom.showDebug artik [NonSerialized] (sahnede kayitli true degeri yoksayilir; sol ustteki 'RunCameraZoom: bekleme...' yazisi ve ilgili Debug.Log'lar kapali). Sahne dosyasina dokunulmadi.
+- Test: Play Mode'da arena 5..145, showDebug=False dogrulandi. Dalga/zipla davranisi ve ekrandaki yazinin kayboldugu gozle kontrol EDILMEDI.

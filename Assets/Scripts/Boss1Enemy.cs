@@ -158,6 +158,7 @@ public class Boss1Enemy : MonoBehaviour
         enemy.SetFacingRenderer(facingProxy);
         Configure();
         BuildHurtbox();
+        BuildArena();
 
         enemy.AttackAnimationRequested += OnAttackAnimationRequested;
         enemy.AttackHitGate = rig.ReadyToHit;
@@ -289,7 +290,9 @@ public class Boss1Enemy : MonoBehaviour
         introActive = true;
         introPlayer = pl;
         introPrevForce = RunCameraZoom.ForceCinematic;
-        introPrevCan = pl.canControl;
+        // Dash sirasinda canControl zaten gecici olarak false: onu "eski deger" diye saklarsak
+        // sinematik bitince kontrol KILITLI kalirdi. Dash'teyse kontrol normalde acik sayilir.
+        introPrevCan = pl.canControl || pl.isDashing;
 
         if (introFocus == null)
         {
@@ -347,7 +350,7 @@ public class Boss1Enemy : MonoBehaviour
         RunCameraZoom.ForceCinematic = introPrevForce;
 
         if (introPlayer != null && !MainMenu.Active)
-            introPlayer.canControl = introPrevCan;
+            introPlayer.canControl = introPrevCan;   // dash hala suruyorsa DashState.Exit zaten true yapar
 
         if (introFocus != null)
             Destroy(introFocus.gameObject);
@@ -415,7 +418,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Dalga saldirisi sonrasi tekrar secilmeden onceki sure (sn).")]
     [Min(1f)] public float waveCooldown = 2.2f;
     [Tooltip("Dalga icin oyuncunun en az uzakligi (yakindaysa normal vurus/kombo kullanir).")]
-    [Min(1f)] public float waveMinDistance = 65f;
+    [Min(1f)] public float waveMinDistance = 48f;
     [Min(1f)] public float waveMaxDistance = 140f;
     [Range(0f, 1f)] public float waveChancePerSecond = 1.0f;
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
@@ -454,9 +457,9 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Oyuncu yakindayken (waveMinDistance'tan az) saniyede geri ziplama baslatma olasiligi.")]
     [Range(0f, 2f)] public float waveCloseChancePerSecond = 2f;
     [Tooltip("Ziplama sonrasi hedeflenen mesafe (oyuncuyla boss arasi).")]
-    [Min(10f)] public float waveHopTargetDistance = 82f;
+    [Min(10f)] public float waveHopTargetDistance = 62f;
     [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
-    [Min(5f)] public float waveHopMaxDistance = 58f;
+    [Min(5f)] public float waveHopMaxDistance = 42f;
     [Min(0.2f)] public float waveHopTime = 0.6f;
     [Min(0f)] public float waveHopHeight = 8f;
     [Tooltip("Ziplamadan once cokme (sn).")]
@@ -799,6 +802,7 @@ public class Boss1Enemy : MonoBehaviour
         if (!seen) return;
 
         seenRoared = true;
+        if (arena != null) arena.RequestClose();   // dovus basladi: kapilar kapanir
         nextLeapTime = Time.time + leapFirstDelay;
         nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
 
@@ -955,6 +959,32 @@ public class Boss1Enemy : MonoBehaviour
         }
     }
 
+    // ---- BOSS ARENASI: dovus alani + kapilar ----
+    [Header("Arena (dovus alani)")]
+    [Tooltip("Acik: boss uyaninca alanin iki ucunda kapilar kapanir; oyuncu da boss da disari cikamaz, dalgalar da alan disina gitmez.")]
+    public bool arenaEnabled = true;
+    [Tooltip("Alan yarim genisligi (birim). Merkez = bossun baslangic yeri + 'Arena Center Offset X'. Toplam genislik = 2 x bu.")]
+    [Min(20f)] public float arenaHalfWidth = 70f;
+    [Tooltip("Alan merkezini bossun baslangic yerinden kaydir (negatif = sola).")]
+    public float arenaCenterOffsetX = 0f;
+
+    internal BossArena arena;
+
+    void BuildArena()
+    {
+        if (!arenaEnabled || arena != null) return;
+
+        GameObject go = new GameObject("BossArena");
+        arena = go.AddComponent<BossArena>();
+        float cx = transform.position.x + arenaCenterOffsetX;
+        arena.Init(this, cx - arenaHalfWidth, cx + arenaHalfWidth, transform.position.y);
+    }
+
+    internal bool PlayerDeadForArena()
+    {
+        return enemy != null && enemy.IsTargetDead;
+    }
+
     // Oyuncunun vurusu icin gövdeden BUYUK, fiziksel olmayan (trigger) vurulma alani.
     // Fiziksel gövde (oyuncuyu iten collider) aynen kalir; oyuncu yetisemiyorsa sorun vurus menziliydi.
     void BuildHurtbox()
@@ -996,9 +1026,9 @@ public class Boss1Enemy : MonoBehaviour
     {
         // Sahnede kayitli eski (yavas/kolay) degerleri guvenli sekilde yeni dengeye cek.
         waveSpeed = Mathf.Max(waveSpeed, 140f);
-        waveMinDistance = Mathf.Max(waveMinDistance, 60f);
-        waveHopTargetDistance = Mathf.Max(waveHopTargetDistance, 78f);
-        waveHopMaxDistance = Mathf.Max(waveHopMaxDistance, 55f);
+        waveMinDistance = Mathf.Max(waveMinDistance, 40f);        // arena kuculdu (2 ekran): dalga mesafeleri de kisaldi
+        waveHopTargetDistance = Mathf.Max(waveHopTargetDistance, 55f);
+        waveHopMaxDistance = Mathf.Max(waveHopMaxDistance, 38f);
         waveInterval = Mathf.Min(waveInterval, 0.85f);
         waveCooldown = Mathf.Min(waveCooldown, 2.5f);
         postureBreakMercy = 0f;                 // oyuncunun blogu kirilsa da boss son vuruslari ATAR
@@ -2558,6 +2588,9 @@ public class Boss1Wave : MonoBehaviour
         float prevX = p.x;
         p.x += dir * o.waveSpeed * (reflected ? o.waveReflectSpeedMultiplier : 1f) * dt;
         transform.position = p;
+
+        // Arena disina cikan dalga kaybolur (parry'lenip geri donen dalga bossa gidiyor, o etkilenmez).
+        if (!reflected && o.arena != null && !o.arena.Contains(p.x, 4f)) { Destroy(gameObject); return; }
 
         // Nabiz
         if (sr != null)
