@@ -224,6 +224,8 @@ public class Boss1Rig : MonoBehaviour
     [NonSerialized] public bool MoveAllowed = true;
     /// <summary>Sersemlemis (denge kirik) poz.</summary>
     [NonSerialized] public bool Staggered;
+    /// <summary>Agir darbe yendi: kirmizi isik sonene kadar kapali (sonraki acik anda sifirlanir).</summary>
+    [NonSerialized] public bool OpenGlowSpent;
     /// <summary>Saldiri pozundayken de yuruyus/kosu bacak animasyonu oynasin (boss kosarak vururken).</summary>
     [NonSerialized] public bool RunWhileAttacking;
     /// <summary>Oldu: yikilma pozu.</summary>
@@ -238,7 +240,7 @@ public class Boss1Rig : MonoBehaviour
     [Tooltip("Saniyede kac kez parlayip soner.")]
     [Min(0.2f)] public float openGlowPulsesPerSecond = 1.6f;
     [Tooltip("Dairenin capi: govde yuksekliginin kati (0.16 = govdenin %16'si).")]
-    [Min(0.05f)] public float openGlowSize = 0.16f;
+    [Min(0.01f)] public float openGlowSize = 0.05f;
     [Tooltip("Dairenin dikey konumu: govde merkezinden yukari, govde yuksekliginin kati (gogus hizasi icin ~0.1).")]
     public float openGlowYOffset = 0.1f;
     SpriteRenderer openGlowSr;
@@ -708,7 +710,15 @@ public class Boss1Rig : MonoBehaviour
     {
         if (flashTime <= 0f) return;
         if (!flashBuilt) BuildWhiteSprites();
-        flashTimer = flashTime;
+        flashTimer = Mathf.Max(flashTimer, flashTime);
+    }
+
+    /// <summary>Gercek zamanda 'seconds' sn boyunca beyaz kal (agir darbe flasi; flashTime'a bagli degil).</summary>
+    public void FlashFor(float seconds)
+    {
+        if (seconds <= 0f) return;
+        if (!flashBuilt) BuildWhiteSprites();
+        flashTimer = Mathf.Max(flashTimer, seconds);
     }
 
     // Her katmanin duz beyaz silueti (okunabilir olmayan doku icin RenderTexture uzerinden okunur).
@@ -963,7 +973,7 @@ public class Boss1Rig : MonoBehaviour
 
     void UpdateOpenGlow()
     {
-        float target = (openGlow && Staggered && !Dead) ? 1f : 0f;
+        float target = (openGlow && Staggered && !Dead && !OpenGlowSpent) ? 1f : 0f;
         openGlowW = Mathf.MoveTowards(openGlowW, target, Time.unscaledDeltaTime * 8f);
 
         if (openGlowW <= 0.003f)

@@ -403,3 +403,15 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Boss1Enemy: `staggerHitPercent` varsayilan 0.03 -> 0.08 (Range 0-0.3); yeni `staggerFirstHitMultiplier` = 2 (boss acildiktan sonraki ILK duz vurus 2x: ~%16 max can; floor `staggerHitFloorPercent` 0.12 ayni). `staggerFirstHitPending` acilis aninda (IsStaggered yukselen kenar) kurulur.
 - Not: staggerHitPercent sahnede serilestirilmemis gorunuyor (MyScene2'de aranip bulunmadi); boss baska sahnede/prefabta serilestirilmisse Inspector degeri varsayilani ezer.
 - DURUM: UYGULANDI, DERLENMEDI / OYNANMADI.
+
+## Boss1 agir darbe tepkisi (sendeleme + bagirma + isik soner)
+- Boss1Enemy.cs: `heavyHitStumbleSpeed` (9). Ilk agir darbede (stagger-hit blogu, `first`): boss oyuncudan uzaga rb hiziyla sendeler (EnemyStaggerState hizi `knockbackDeceleration` ile yavaslatir), `rig.Flinch(3)`, `rig.Squash(0.6)`, `PlayRoar()`, `rig.OpenGlowSpent = true`.
+- Boss1Rig.cs: `OpenGlowSpent` (NonSerialized) kirmizi isigi kapatir; yeni acik anda (Boss1Enemy rising edge) sifirlanir. `openGlowSize` 0.16 -> 0.09.
+- Durum: yazildi, Unity'de derlenmedi/test edilmedi. Inspector'daki kayitli openGlowSize eski degeri koruyabilir.
+- Geri alma: yukaridaki alanlari/blogu sil, openGlowSize'i 0.16 yap.
+
+## Boss1 olumcul darbe = can cubugu sifirlanir, kukrerken dolar (Sekiro mantigi)
+- Boss1Enemy.cs: faz 1'de ilk agir darbe `DeadlyBlowPhase2()` coroutine'ini baslatir: `Health.MinHealth=1` kilidi, can 1'e iner (olmez), `heavyHitSlowDuration` kadar (sendeleme+yavas cekim) bekler, `BeginPhase2()` (kukreme) cagrilir, `phase2RefillTime` (2.2 sn, gercek zaman) boyunca can SetHealth ile tam dolar, MinHealth eski degere doner. `phase2Pending` dogal %50 faz tetigini bu sirada engeller.
+- Dogal faz 2 tetigi (can <= phase2HealthPercent, sersemlemeden) yedek olarak duruyor.
+- Durum: yazildi, derlenmedi/test edilmedi.
+- Geri alma: `DeadlyBlowPhase2` coroutine'ini ve cagrisini sil, eski `TakeDamage(toPhase)` mantigina don.

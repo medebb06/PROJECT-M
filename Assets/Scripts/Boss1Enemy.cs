@@ -465,6 +465,42 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("1 = duz hizlanma; 2-3 = bir sure agir kalir sonra hizlanir.")]
     [Range(1f, 4f)] public float heavyHitSlowPower = 2.2f;
     bool staggerFirstHitPending;
+    bool phase2Pending;
+    [Tooltip("Faz 2'de posture (denge) cubugu bu kadar katina cikar; olumcul darbe icin daha zor kirilsin.")]
+    [Range(1f, 3f)] public float phase2PostureScale = 1.8f;
+    [Tooltip("Olumcul darbeden sonra can cubugunun (kukreme sirasinda) tamamen dolma suresi (sn, gercek zaman).")]
+    [Min(0.5f)] public float phase2RefillTime = 2.2f;
+
+    // Cani sifirla (olmeden), sendelemesi bitince faz 2'ye gec ve kukrerken cani doldur.
+    IEnumerator DeadlyBlowPhase2()
+    {
+        phase2Pending = true;
+        int oldMin = health.MinHealth;
+        health.MinHealth = 1;                         // vuruslar bu surede oldurmesin
+        int dmg = health.CurrentHealth - 1;
+        if (dmg > 0) health.TakeDamage(dmg);          // cubuk sifira iner
+
+        float wait = Mathf.Max(0.2f, heavyHitSlowDuration);
+        for (float t = 0f; t < wait; t += Time.unscaledDeltaTime) yield return null;
+
+        if (health != null && !health.IsDead && !phase2) BeginPhase2();
+
+        float dur = Mathf.Max(phase2RefillTime, 0.5f);
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            if (health == null || health.IsDead) break;
+            health.SetHealth(Mathf.Max(1, Mathf.RoundToInt(health.MaxHealth * Mathf.SmoothStep(0f, 1f, t / dur))));
+            yield return null;
+        }
+        if (health != null && !health.IsDead) health.SetHealth(health.MaxHealth);
+        if (health != null) health.MinHealth = oldMin;
+        phase2Pending = false;
+    }
+    [Header("Agir darbe tepkisi")]
+    [Tooltip("Agir darbeden sonra geriye sendeleme hizi (0 = sendelemez).")]
+    [Min(0f)] public float heavyHitStumbleSpeed = 18f;
+    [Tooltip("Faz 2 saldiri hizi carpani (1 = degismez). Hazirlik/toparlanma sureleri ve bekleme sureleri bolunur.")]
+    [Range(1f, 3f)] public float phase2AttackSpeed = 1.7f;
 
     void PlayOpenWarn()
     {
@@ -1064,7 +1100,7 @@ public class Boss1Enemy : MonoBehaviour
         moveset = GetComponent<EnemyMoveset>();
         if (moveset == null) moveset = gameObject.AddComponent<EnemyMoveset>();
 
-        float pf = phase2 ? 0.85f : 1f;   // faz 2: uyarilar %15 kisa
+        float pf = phase2 ? 0.85f / phase2AttackSpeed : 1f;   // faz 2: uyarilar %15 kisa
         List<AttackMove> list = new List<AttackMove>();
         comboMove = null;
 
@@ -1366,6 +1402,23 @@ public class Boss1Enemy : MonoBehaviour
         rig.recoverTime *= 0.85f;
         rig.walkAnimSpeed = Mathf.Min(1f, rig.walkAnimSpeed * 1.2f);
 
+        EnemyBalance bal2 = GetComponent<EnemyBalance>();
+        if (bal2 != null && phase2PostureScale > 1f)
+            bal2.SetMaxBalance(Mathf.RoundToInt(bal2.MaxBalance * phase2PostureScale));
+
+        // Faz 2 baski: tum saldirilar belirgin hizlanir.
+        float ps = Mathf.Max(1f, phase2AttackSpeed);
+        rig.windupTime /= ps;
+        rig.tensionTime /= ps;
+        rig.holdTime /= ps;
+        rig.recoverTime /= ps;
+        waveCooldown /= ps;
+        leapCooldown /= ps;
+        comboCooldown /= ps;
+        waveInterval /= ps;
+        walkSpeed *= 1f + (ps - 1f) * 0.5f;
+        enemy.chaseSpeed = walkSpeed;
+
         BuildComboMoveset();   // faz 2 uyari sureleri ile yeniden kur
         nextWaveTime = Time.time + 1f;
 
@@ -1443,7 +1496,18 @@ public class Boss1Enemy : MonoBehaviour
             bool first = staggerFirstHitPending;
             staggerFirstHitPending = false;
             float pct = first ? staggerFirstHitPercent : staggerHitPercent;
-            if (pct > 0f)
+            if (first && !phase2)
+            {
+                // Olumcul darbe (Sekiro): can cubugu sifirlanir, boss kukrerken cubuk dolar, faz 2 baslar.
+                if (!phase2Pending) StartCoroutine(DeadlyBlowPhase2());
+            }
+            else if (first && !phase2Pending)
+            {
+                // Faz 2 olumcul darbe: boss direkt oler.
+                health.MinHealth = 0;
+                health.TakeDamage(health.CurrentHealth);
+            }
+            else if (pct > 0f)
             {
                 int want = Mathf.RoundToInt(health.MaxHealth * pct) - result.amount;
                 int floor = Mathf.RoundToInt(health.MaxHealth * staggerHitFloorPercent);
@@ -1454,6 +1518,24 @@ public class Boss1Enemy : MonoBehaviour
             // Agir darbe carptigi an: zaman agir cekime girer, yavasca hizlanir.
             if (first && heavyHitSlowDuration > 0f)
                 HitStop.RequestRamp(heavyHitSlowDuration, heavyHitSlowScale, 1f, heavyHitSlowPower, 5);
+            if (first)
+            {
+                // Kirmizi isik soner, boss geriye dogru sendeler ve bagirir.
+                rig.OpenGlowSpent = true;
+                rig.FlashFor(heavyHitSlowDuration);   // yavas cekim bitene kadar beyaz kal
+                rig.Flinch(3f);
+                rig.Squash(0.6f);
+                if (heavyHitStumbleSpeed > 0f && enemy.target != null)
+                {
+                    Rigidbody2D brb = GetComponent<Rigidbody2D>();
+                    if (brb != null)
+                    {
+                        float away = transform.position.x >= enemy.target.position.x ? 1f : -1f;
+                        brb.linearVelocity = new Vector2(away * heavyHitStumbleSpeed, brb.linearVelocity.y);
+                    }
+                }
+                PlayRoar();
+            }
         }
     }
 
@@ -1578,7 +1660,7 @@ public class Boss1Enemy : MonoBehaviour
             enemy.enabled = true;
 
         // Faz 2: can esigin altina inince (saldirmiyorken) ofkelen.
-        if (!phase2 && health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * phase2HealthPercent
+        if (!phase2 && !phase2Pending && health != null && !health.IsDead && health.CurrentHealth <= health.MaxHealth * phase2HealthPercent
             && enemy.CurrentState is EnemyChaseState && !enemy.IsStaggered && !leapActive && !waveActive)
             BeginPhase2();
 
@@ -1722,7 +1804,7 @@ public class Boss1Enemy : MonoBehaviour
 
         // ACILDIGI an (denge kirildi, sersem): uyari sesi bir kez calar.
         bool openNow = enemy.IsStaggered && !enemy.IsDead;
-        if (openNow && !openWarnWas) { PlayOpenWarn(); staggerFirstHitPending = true; }
+        if (openNow && !openWarnWas) { PlayOpenWarn(); staggerFirstHitPending = true; rig.OpenGlowSpent = false; }
         openWarnWas = openNow;
 
         // Saldiri vurustan ONCE bozuldu (sersemledi, baska duruma gecti): animasyonu yumusakca birak.
