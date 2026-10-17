@@ -155,6 +155,16 @@ public class JumpState : IPlayerState
         }
 
         // =====================================================
+        // LEDGE CLIMB (zıplamanın sonlarına doğru, kenara basarken)
+        // =====================================================
+
+        if (
+            player.rb.linearVelocity.y < movement.jumpForce * 0.6f &&
+            LedgeClimbState.TryStart(player, sm, 0)
+        )
+            return;
+
+        // =====================================================
         // FALL
         // =====================================================
 

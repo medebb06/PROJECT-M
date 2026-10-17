@@ -447,3 +447,13 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Not: Prefab-instance alanlarini kodla degistirirken SerializedObject kullan; dogrudan atama domain reload'da kaybolabiliyor.
 
 - 2026-10-18 (Wall jump v3): WallJumpState artik DUZ CAPRAZ firlar (yercekimi kapali, sabit hiz wallJumpSpeedX/wallJumpRiseSpeed, en fazla wallJumpDiagonalMaxTime); karsida duvara degince yapisir. Duvarda kayma wallSlideFallSpeed=9, wallJumpSpeedX=34 (prefab). Oyun fontu: Resources/UI/Hoshiko_Satsuki.ttf (GameFont.cs; yedek Knight_Souls; ğ İ ı Ş ş icin Arial yedegi). Tutorial sahnesinde RunCameraZoom.showDebug kapatildi.
+
+
+## Ledge Climb (2026-10-18)
+- Yeni: Assets/Scripts/LedgeClimbState.cs. Otomatik, hizli kenar tirmanma (~0.2 sn, iki faz: duvar boyunca yukari, sonra kenarin ustune). Tirmanirken Rigidbody Kinematic + gravity 0, Exit'te geri yuklenir.
+- PlayerMovement: 'Ledge Climb' basligi (ledgeClimbEnabled, ledgeClimbTime 0.2, ledgeReachAbove 0.2, ledgeMinAboveFeet 0.2, ledgeExitSpeedRatio 0.7, ledgeRegrabCooldown 0.2) + TryGetLedge(dir, out standPos).
+- Tetikleyiciler: AirState (kenara dogru basarken), JumpState (vy < jumpForce*0.6 ve kenara basarken), WallSlideState (tepeye yakin tutununca, uzaga basmiyorsa), WallJumpState (0.06 sn sonra karsi kenara yetisince). Asagi (S) basiliyken yakalamaz.
+- Animasyon: PlayerAnimationController.PlayLedgeClimb -> Animator'da 'LedgeClimb' state'i varsa o, yoksa 'Jump'. Su an LedgeClimb animasyonu yok.
+- Yedek: _backup_before_ledge_climb/ (PlayerMovement, AirState, WallSlideState, JumpState, WallJumpState, PlayerController, PlayerAnimationController).
+- Test (state'i dogrudan tetikleyerek, gercek klavye degil): duvarda kayma->tirmanma ve duvar ziplamasi->karsi kenar->tirmanma calisti, cok yuksek kenarda tirmanmadi. Klavyeyle (A/D basili) AirState/JumpState tetiklemesi test edilmedi.
+- NOT: Diskteki WallJumpState su an v2 (capraz/miknatis v3 diskte yok; PlayerMovement'ta wallJumpRiseSpeed alani yok).

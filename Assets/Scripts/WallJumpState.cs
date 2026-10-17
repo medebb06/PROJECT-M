@@ -132,6 +132,16 @@ public class WallJumpState : IPlayerState
         }
 
         // --------------------------------------------------
+        // LEDGE CLIMB: karsi duvarin kenarina yetisince tirman
+        // --------------------------------------------------
+
+        if (
+            timer > 0.06f &&
+            LedgeClimbState.TryStart(player, sm, jumpDirection)
+        )
+            return;
+
+        // --------------------------------------------------
         // WALL JUMP CONTROL TIME
         // --------------------------------------------------
 

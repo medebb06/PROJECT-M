@@ -1,0 +1,619 @@
+using UnityEngine;
+
+public class PlayerMovement : MonoBehaviour
+{
+    private PlayerController player;
+
+    // =========================================================
+    // MOVEMENT
+    // =========================================================
+
+    [Header("Movement")]
+    public float moveSpeed = 7f;
+    public float acceleration = 45f;
+    public float deceleration = 60f;
+    public float airControl = 0.6f;
+
+    // =========================================================
+    // JUMP
+    // =========================================================
+
+    [Header("Jump")]
+    public float jumpForce = 18f;
+    [Tooltip("Sahnedeki eski jumpForce degerini ezer. 0 = Inspector degerini kullan.")]
+    public float jumpForceOverride = 18f;
+
+    [Header("Jump Feel")]
+    public float jumpBufferTime = 0.15f;
+    public float coyoteTime = 0.12f;
+    public float jumpCutMultiplier = 2f;
+    public float jumpCutVelocityMultiplier = 0.3f;
+    public float fallMultiplier = 2.5f;
+    [Tooltip("Yukselirken ek yercekimi: yuksek = hizli cikar, tepeye cabuk ulasir (seri / responsive).")]
+    public float riseMultiplier = 2.2f;
+    public float maxFallSpeed = 20f;
+
+    // =========================================================
+    // JUMP v2  (sifirdan: yukseklik + sure ile tanimlanir)
+    // Eski jumpForce / riseMultiplier / fallMultiplier / jumpCut* /
+    // maxFallSpeed alanlari geriye uyumluluk icin duruyor ama artik KULLANILMIYOR.
+    // =========================================================
+
+    [Header("Jump v2")]
+    [Tooltip("Tek zıplamanın çıkacağı yükseklik (dünya birimi).")]
+    public float jumpHeight = 8f;
+    [Tooltip("Tepe noktasına çıkış süresi (sn). Küçük = daha çevik / sert zıplama.")]
+    public float timeToApex = 0.36f;
+    [Tooltip("Düşüş yerçekimi = yükseliş yerçekimi x bu oran (büyük = hızlı iner).")]
+    public float fallGravityRatio = 1.5f;
+    [Tooltip("Space bırakılınca yükseliş yerçekimi x bu oran (değişken zıplama).")]
+    public float jumpCutGravityRatio = 3f;
+    [Tooltip("Zıplamadan sonra bu kadar sn Space bırakılsa da zıplama kesilmez (kısa tık da düzgün zıplatır).")]
+    public float minJumpHoldTime = 0.1f;
+    [Tooltip("En yüksek düşüş hızı.")]
+    public float terminalVelocity = 55f;
+
+    [Header("Air Control v2")]
+    [Tooltip("Havada hızlanma (birim/sn²). Büyük = anında tepki.")]
+    public float airAcceleration = 260f;
+    [Tooltip("Havada tuş bırakılınca yavaşlama.")]
+    public float airDeceleration = 180f;
+    [Tooltip("Havada ters yöne basınca hızlanma çarpanı (çevik dönüş).")]
+    public float airTurnMultiplier = 1.5f;
+
+    [Header("Wall v2")]
+    [Tooltip("Duvar algılama: oyuncu kenarının ötesine bu kadar bakılır.")]
+    public float wallGrabMargin = 0.45f;
+    [Tooltip("Duvarda kayma (düşüş) hızı. Küçük = duvara yapışık gibi.")]
+    public float wallSlideFallSpeed = 3f;
+    [Tooltip("Duvar zıplamasında yatay hız.")]
+    public float wallJumpSpeedX = 24f;
+    [Tooltip("Duvar zıplamasının yüksekliği = jumpHeight x bu oran.")]
+    public float wallJumpHeightRatio = 1f;
+    [Tooltip("Duvar zıplamasında yatay hızın sabit kaldığı süre (sn).")]
+    public float wallJumpLockTime = 0.12f;
+    [Tooltip("Sabit süreden sonra hava kontrolüne geçiş süresi (sn).")]
+    public float wallJumpBlendTime = 0.1f;
+
+    // Calisma zamani
+    [HideInInspector] public bool jumpRising;
+    [HideInInspector] public float jumpCutLockTimer;
+
+    // =========================================================
+    // WALL
+    // =========================================================
+
+    [Header("Wall")]
+    public Transform wallCheck;
+    public float wallCheckDistance = 0.3f;
+    public LayerMask wallMask;
+
+    [Header("Wall Slide")]
+    public float wallSlideSpeed = 2f;
+
+    [Header("Wall Jump")]
+    public float wallJumpForceX = 9f;
+    public float wallJumpForceY = 12f;
+    public float wallJumpControlLock = 0.08f;
+    public float wallJumpBufferTime = 0.12f;
+    public float wallJumpControlBlendTime = 0.18f;
+    public float wallJumpControlAccelerationMultiplier = 1f;
+
+    // =========================================================
+    // GROUND CHECK
+    // =========================================================
+
+    [Header("Ground Check")]
+    public Transform groundCheck;
+    public float groundCheckRadius = 0.15f;
+    public LayerMask groundMask;
+
+    // =========================================================
+    // RUNTIME STATE
+    // =========================================================
+
+    [HideInInspector] public float jumpBufferCounter;
+    [HideInInspector] public float coyoteCounter;
+
+    [HideInInspector] public float wallJumpBufferCounter;
+    [HideInInspector] public int wallDirection;
+    [HideInInspector] public bool isWallSliding;
+    [HideInInspector] public int wallJumpBlockedDirection;
+
+    private bool wasGrounded;
+    private bool wasAirborne;
+
+    private float airTime;
+    private float maxAirHeight;
+
+    // =========================================================
+    // INITIALIZE
+    // =========================================================
+
+    public void Initialize(PlayerController controller)
+    {
+        player = controller;
+
+        RecalculateJump();
+    }
+
+    // Zıplama hızı yükseklik ve sürenin sonucudur: v0 = 2h / t
+    public void RecalculateJump()
+    {
+        float t = Mathf.Max(0.05f, timeToApex);
+        jumpForce = 2f * Mathf.Max(0.1f, jumpHeight) / t;
+    }
+
+    // Yükseliş yerçekimi: g = 2h / t²
+    public float RiseGravity
+    {
+        get
+        {
+            float t = Mathf.Max(0.05f, timeToApex);
+            return 2f * Mathf.Max(0.1f, jumpHeight) / (t * t);
+        }
+    }
+
+    // =========================================================
+    // UPDATE TIMERS
+    // =========================================================
+
+    public void UpdateTimers()
+    {
+        jumpBufferCounter =
+            Mathf.Max(
+                0f,
+                jumpBufferCounter - Time.deltaTime
+            );
+
+        wallJumpBufferCounter =
+            Mathf.Max(
+                0f,
+                wallJumpBufferCounter - Time.deltaTime
+            );
+
+        // FIX: Eskiden coyoteCounter hiç azalmıyordu.
+        // Bu yüzden platformdan yürüyerek düşünce havada,
+        // istediğin zaman bir kez zıplayabiliyordun.
+        //
+        // Artık: yerdeyken sürekli dolu, havadayken geri sayar.
+        if (
+            player != null &&
+            player.isGrounded
+        )
+        {
+            coyoteCounter = coyoteTime;
+        }
+        else
+        {
+            coyoteCounter =
+                Mathf.Max(
+                    0f,
+                    coyoteCounter - Time.deltaTime
+                );
+        }
+    }
+
+    // =========================================================
+    // FIXED UPDATE
+    // =========================================================
+
+    public void FixedUpdateMovement()
+    {
+        GroundCheck();
+
+        if (!player.isGrounded)
+        {
+            wasAirborne = true;
+
+            airTime +=
+                Time.fixedDeltaTime;
+
+            if (
+                player.transform.position.y >
+                maxAirHeight
+            )
+            {
+                maxAirHeight =
+                    player.transform.position.y;
+            }
+        }
+
+        ApplyBetterGravity();
+    }
+
+    // =========================================================
+    // HORIZONTAL MOVEMENT
+    // =========================================================
+
+    public void ApplyMovement(float control)
+    {
+        if (!player.canControl)
+            return;
+
+        if (player.inputLocked)
+            return;
+
+        float targetSpeed =
+            player.moveInput *
+            moveSpeed;
+
+        bool moving =
+            Mathf.Abs(
+                player.moveInput
+            ) > 0.01f;
+
+        float accelerationRate;
+
+        if (player.isGrounded)
+        {
+            accelerationRate =
+                (moving ? acceleration : deceleration) * control;
+        }
+        else
+        {
+            // HAVA KONTROLU v2: yerdekinden bagimsiz, cok daha keskin.
+            accelerationRate =
+                moving ? airAcceleration : airDeceleration;
+
+            float vx = player.rb.linearVelocity.x;
+
+            // Ters yone basinca hizli don.
+            if (moving && vx * targetSpeed < 0f)
+                accelerationRate *= airTurnMultiplier;
+
+            // control = airControl -> tam; (duvar zıplaması 0..airControl arası geçiş yapar)
+            accelerationRate *= Mathf.Clamp01(control / Mathf.Max(0.01f, airControl));
+        }
+
+        float newVelocityX =
+            Mathf.MoveTowards(
+                player.rb.linearVelocity.x,
+                targetSpeed,
+                accelerationRate *
+                Time.fixedDeltaTime
+            );
+
+        player.rb.linearVelocity =
+            new Vector2(
+                newVelocityX,
+                player.rb.linearVelocity.y
+            );
+    }
+
+    // =========================================================
+    // VELOCITY
+    // =========================================================
+
+    public void SetVelocity(Vector2 velocity)
+    {
+        if (player == null)
+            return;
+
+        if (player.rb == null)
+            return;
+
+        player.rb.linearVelocity =
+            velocity;
+    }
+
+    // =========================================================
+    // GRAVITY / JUMP CUT
+    // =========================================================
+
+    private void ApplyBetterGravity()
+    {
+        if (!player.canControl)
+            return;
+
+        if (player.slamGroundLock)
+            return;
+
+        // ZIPLAMA v2: yercekimi, istenen yukseklik/sureden hesaplanir.
+        //   yukselis  : g = 2h / t²
+        //   dusus     : g x fallGravityRatio
+        //   Space birak: g x jumpCutGravityRatio (sadece zıplama yukselirken)
+        float baseG =
+            Mathf.Abs(Physics2D.gravity.y) *
+            player.rb.gravityScale;
+
+        // Yercekimi kapaliysa (dash / slam vb.) dokunma.
+        if (baseG < 0.01f)
+            return;
+
+        float vy = player.rb.linearVelocity.y;
+
+        if (jumpCutLockTimer > 0f)
+            jumpCutLockTimer -= Time.fixedDeltaTime;
+
+        if (vy <= 0f)
+            jumpRising = false;
+
+        // Duvarda kayarken hizi WallSlideState sinirliyor; ek yercekimi ekleme.
+        if (isWallSliding)
+            return;
+
+        float riseG = RiseGravity;
+        float targetG;
+
+        if (vy < 0f)
+        {
+            targetG = riseG * fallGravityRatio;
+        }
+        else if (vy > 0f)
+        {
+            bool cut =
+                jumpRising &&
+                !player.jumpHeld &&
+                jumpCutLockTimer <= 0f;
+
+            targetG = cut ? riseG * jumpCutGravityRatio : riseG;
+        }
+        else
+        {
+            return;
+        }
+
+        // Hedef yercekimi ile temel yercekimi arasindaki fark kadar ek ivme.
+        player.rb.linearVelocity +=
+            Vector2.down *
+            (targetG - baseG) *
+            Time.fixedDeltaTime;
+
+        if (
+            player.rb.linearVelocity.y <
+            -terminalVelocity
+        )
+        {
+            player.rb.linearVelocity =
+                new Vector2(
+                    player.rb.linearVelocity.x,
+                    -terminalVelocity
+                );
+        }
+    }
+
+    // =========================================================
+    // GROUND CHECK
+    // =========================================================
+
+    private void GroundCheck()
+    {
+        if (player.slamGroundLock)
+        {
+            player.isGrounded = true;
+            return;
+        }
+
+        if (groundCheck == null)
+        {
+            player.isGrounded = false;
+            return;
+        }
+
+        bool groundedNow =
+            Physics2D.OverlapCircle(
+                groundCheck.position,
+                groundCheckRadius,
+                groundMask
+            );
+
+        // =====================================================
+        // LAND
+        // =====================================================
+
+        if (
+            groundedNow &&
+            !wasGrounded
+        )
+        {
+            if (wasAirborne)
+            {
+                player.OnPlayerLand();
+
+                wasAirborne = false;
+            }
+
+            airTime = 0f;
+
+            maxAirHeight =
+                player.transform.position.y;
+        }
+
+        // =====================================================
+        // COYOTE TIME
+        // =====================================================
+
+        if (
+            !groundedNow &&
+            wasGrounded
+        )
+        {
+            coyoteCounter =
+                coyoteTime;
+
+            wasAirborne = true;
+        }
+
+        wasGrounded =
+            groundedNow;
+
+        player.isGrounded =
+            groundedNow;
+    }
+
+    // =========================================================
+    // WALL CHECK
+    // =========================================================
+
+    private Collider2D bodyCollider;
+
+    private Collider2D GetBodyCollider()
+    {
+        if (bodyCollider != null)
+            return bodyCollider;
+
+        Collider2D[] cols =
+            GetComponents<Collider2D>();
+
+        for (int i = 0; i < cols.Length; i++)
+        {
+            if (cols[i] != null && !cols[i].isTrigger)
+            {
+                bodyCollider = cols[i];
+                break;
+            }
+        }
+
+        return bodyCollider;
+    }
+
+    // WALL CHECK v2: oyuncunun gercek govdesinin kenarindan, uc yukseklikte
+    // (alt / orta / ust) bakar. Olcekten bagimsiz; duvara dokunmasa bile
+    // wallGrabMargin kadar yaklasinca yakalar.
+    public bool IsTouchingWall()
+    {
+        Collider2D col = GetBodyCollider();
+
+        if (col == null)
+        {
+            wallDirection = 0;
+            return false;
+        }
+
+        Bounds b = col.bounds;
+
+        float reach =
+            b.extents.x + Mathf.Max(0.05f, wallGrabMargin);
+
+        float[] heights =
+            new float[]
+            {
+                b.center.y,
+                b.center.y + b.extents.y * 0.6f,
+                b.center.y - b.extents.y * 0.6f
+            };
+
+        int rightHits = 0;
+        int leftHits = 0;
+
+        for (int i = 0; i < heights.Length; i++)
+        {
+            Vector2 origin =
+                new Vector2(b.center.x, heights[i]);
+
+            if (
+                Physics2D.Raycast(
+                    origin,
+                    Vector2.right,
+                    reach,
+                    wallMask
+                ).collider != null
+            )
+                rightHits++;
+
+            if (
+                Physics2D.Raycast(
+                    origin,
+                    Vector2.left,
+                    reach,
+                    wallMask
+                ).collider != null
+            )
+                leftHits++;
+        }
+
+        // En az iki yukseklikte (govde duvara gercekten yakin) temas gerekir.
+        if (rightHits >= 2 && rightHits >= leftHits)
+        {
+            wallDirection = 1;
+            return true;
+        }
+
+        if (leftHits >= 2)
+        {
+            wallDirection = -1;
+            return true;
+        }
+
+        wallDirection = 0;
+
+        return false;
+    }
+
+    // =========================================================
+    // JUMP RESET
+    // =========================================================
+
+    public void ResetJump()
+    {
+        jumpConsumedReset();
+    }
+
+    private void jumpConsumedReset()
+    {
+        // JumpState / PlayerController yönetir.
+        // Compatibility amacıyla tutuluyor.
+    }
+
+    // =========================================================
+    // EXTERNAL SETTERS
+    // =========================================================
+
+    public void SetGroundCheck(
+        Transform check,
+        float radius,
+        LayerMask mask
+    )
+    {
+        groundCheck =
+            check;
+
+        groundCheckRadius =
+            radius;
+
+        groundMask =
+            mask;
+    }
+
+    public void SetWallCheck(
+        Transform check,
+        float distance,
+        LayerMask mask
+    )
+    {
+        wallCheck =
+            check;
+
+        wallCheckDistance =
+            distance;
+
+        wallMask =
+            mask;
+    }
+
+    // =========================================================
+    // AIR DATA
+    // =========================================================
+
+    public float GetMaxAirHeight()
+    {
+        return maxAirHeight;
+    }
+
+    public float GetAirTime()
+    {
+        return airTime;
+    }
+
+    public void ResetAirData()
+    {
+        airTime = 0f;
+
+        if (player != null)
+        {
+            maxAirHeight =
+                player.transform.position.y;
+        }
+    }
+}

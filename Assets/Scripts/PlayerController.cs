@@ -691,6 +691,13 @@ public class PlayerController : MonoBehaviour
         animationController.PlayJump();
     }
 
+    // LedgeClimbState tarafından çağrılır.
+    public void PlayLedgeClimbAnimation()
+    {
+        if (animationController != null)
+            animationController.PlayLedgeClimb();
+    }
+
     // Respawn gibi durumlarda animator'ü temiz bir
     // hareket animasyonuna döndürür (Death'te takılı kalmasın).
     public void ResetAnimation()

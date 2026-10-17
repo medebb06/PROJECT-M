@@ -75,6 +75,21 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Sabit süreden sonra hava kontrolüne geçiş süresi (sn).")]
     public float wallJumpBlendTime = 0.1f;
 
+    [Header("Ledge Climb")]
+    [Tooltip("Kenar tırmanma açık mı.")]
+    public bool ledgeClimbEnabled = true;
+    [Tooltip("Tırmanmanın toplam süresi (sn). Küçük = daha çevik.")]
+    public float ledgeClimbTime = 0.2f;
+    [Tooltip("Kafanın ne kadar üstündeki kenar yakalanır (gövde boyunun oranı).")]
+    public float ledgeReachAbove = 0.2f;
+    [Tooltip("Kenar ayaktan en az bu kadar yukarıda olmalı (gövde boyunun oranı). Alçak basamaklar normal zıplamayla geçilir.")]
+    public float ledgeMinAboveFeet = 0.2f;
+    [Tooltip("Tırmanma bitince yöne basılıysa koşu hızının bu oranıyla devam eder.")]
+    public float ledgeExitSpeedRatio = 0.7f;
+    [Tooltip("Tırmanmadan sonra tekrar kenar yakalamadan önce bekleme (sn).")]
+    public float ledgeRegrabCooldown = 0.2f;
+    [HideInInspector] public float ledgeCooldownTimer;
+
     // Calisma zamani
     [HideInInspector] public bool jumpRising;
     [HideInInspector] public float jumpCutLockTimer;
@@ -170,6 +185,12 @@ public class PlayerMovement : MonoBehaviour
             Mathf.Max(
                 0f,
                 wallJumpBufferCounter - Time.deltaTime
+            );
+
+        ledgeCooldownTimer =
+            Mathf.Max(
+                0f,
+                ledgeCooldownTimer - Time.deltaTime
             );
 
         // FIX: Eskiden coyoteCounter hiç azalmıyordu.
@@ -539,6 +560,98 @@ public class PlayerMovement : MonoBehaviour
         wallDirection = 0;
 
         return false;
+    }
+
+    // =========================================================
+    // LEDGE CHECK
+    // =========================================================
+
+    // dir yönünde (1 sağ, -1 sol) tırmanılabilir bir kenar var mı?
+    // Varsa standPos = tırmanma bitince oyuncunun (transform) duracağı yer.
+    //  1) Önde, ayağa yakın yükseklikte duvar olmalı.
+    //  2) Duvarın biraz içinden yukarıdan aşağı bakılır: düz bir üst yüzey
+    //     ayak +ledgeMinAboveFeet ile kafa +ledgeReachAbove arasında olmalı.
+    //  3) Kenarın üstünde ve yukarı çıkış yolunda gövde sığmalı.
+    public bool TryGetLedge(int dir, out Vector2 standPos)
+    {
+        standPos = Vector2.zero;
+
+        if (!ledgeClimbEnabled || dir == 0 || ledgeCooldownTimer > 0f)
+            return false;
+
+        Collider2D col = GetBodyCollider();
+
+        if (col == null)
+            return false;
+
+        Bounds b = col.bounds;
+        float h = b.size.y;
+        Vector2 forward = dir > 0 ? Vector2.right : Vector2.left;
+        float reach = b.extents.x + Mathf.Max(0.05f, wallGrabMargin);
+
+        // 1) Duvar
+        RaycastHit2D wall =
+            Physics2D.Raycast(
+                new Vector2(b.center.x, b.min.y + h * 0.12f),
+                forward,
+                reach,
+                wallMask
+            );
+
+        if (wall.collider == null || wall.distance <= 0f)
+            return false;
+
+        if (Mathf.Abs(wall.normal.x) < 0.7f)
+            return false;
+
+        float wallX = wall.point.x;
+
+        // 2) Kenarın üst yüzeyi
+        float probeX = wallX + dir * 0.3f;
+        float probeTop = b.max.y + h * Mathf.Max(0f, ledgeReachAbove);
+        float lowest = b.min.y + h * Mathf.Max(0f, ledgeMinAboveFeet);
+
+        if (probeTop <= lowest)
+            return false;
+
+        RaycastHit2D top =
+            Physics2D.Raycast(
+                new Vector2(probeX, probeTop),
+                Vector2.down,
+                probeTop - lowest,
+                wallMask
+            );
+
+        // distance 0 = çıkış noktası duvarın içinde (kenar çok yukarıda).
+        if (top.collider == null || top.distance <= 0.01f)
+            return false;
+
+        if (top.normal.y < 0.7f)
+            return false;
+
+        float ledgeTop = top.point.y;
+
+        // 3) Yer var mı?
+        Vector2 boxSize = new Vector2(b.size.x * 0.9f, b.size.y * 0.9f);
+
+        Vector2 standCenter =
+            new Vector2(
+                wallX + dir * (b.extents.x + 0.1f),
+                ledgeTop + b.extents.y + 0.05f
+            );
+
+        if (Physics2D.OverlapBox(standCenter, boxSize, 0f, wallMask) != null)
+            return false;
+
+        Vector2 riseCenter = new Vector2(b.center.x, standCenter.y);
+
+        if (Physics2D.OverlapBox(riseCenter, boxSize, 0f, wallMask) != null)
+            return false;
+
+        Vector2 offset = (Vector2)(b.center - transform.position);
+
+        standPos = standCenter - offset;
+        return true;
     }
 
     // =========================================================

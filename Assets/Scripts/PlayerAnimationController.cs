@@ -168,6 +168,28 @@ public class PlayerAnimationController : MonoBehaviour
         );
     }
 
+    // Kenar tırmanma: Animator'da "LedgeClimb" state'i varsa onu,
+    // yoksa zıplama animasyonunu oynatır.
+    public void PlayLedgeClimb()
+    {
+        if (animator == null)
+            return;
+
+        animator.ResetTrigger("Land");
+
+        string target =
+            animator.HasState(0, Animator.StringToHash("LedgeClimb"))
+                ? "LedgeClimb"
+                : "Jump";
+
+        animator.CrossFadeInFixedTime(
+            target,
+            0.03f,
+            0,
+            0f
+        );
+    }
+
     public void PlayAttackAnimation(
         int attackStep
     )
