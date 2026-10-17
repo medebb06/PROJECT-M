@@ -389,3 +389,17 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - UYARI: Bu oturumda cihazdaki dosyalar (DashState.cs, bu dosya, RonniPlayerBridge.cs) birkac kez bir onceki surume dondu; Visual Studio'da acik/eski kopya suphesi. Degisikliklerin yerinde oldugunu dogrula.
 - Geri alma: (a) ilk `if`i `if (!frameWant && frameSR != null && frameSR.enabled)` yap ve eklenen blok + `else` kelimesini sil; (b) `{ anim.ClearAction(); return; }` -> `return;`.
 - Commit/push yapilmadi.
+
+## Boss1 acik an (Sekiro gibi) - denge kirilinca hasar yok, kirmizi isik, uyari sesi yuvasi (2026-10-17)
+- Istek: boss'un dengesi kirilinca can GITMESIN; sadece saldiriya/infaza ACIK olsun, uzerinde kirmizi isik surekli parlayip sonsun; acildigi an calacak uyari sesi (tik) icin yuva olsun. Aciktayken vurdukca can gitmesi zaten vardi (Boss1Enemy.staggerHitPercent 0.03, floor 0.12).
+- EnemyBalance.cs: yeni `SetBreakHealthPercent(float)` (kirilinca giden can orani; diger dusmanlar degismedi, varsayilan breakHealthPercent 0.15 duruyor).
+- Boss1Enemy.cs: yeni alanlar `postureBreakHealthPercent` (varsayilan 0), `openWarnSound` (AudioClip yuvasi), `openWarnVolume`; Awake'te `balance.SetBreakHealthPercent(postureBreakHealthPercent)`; boss IsStaggered olunca (yukselen kenar) `PlayOpenWarn()` bir kez 2D calar. Ses bos ise bir sey calmaz.
+- Boss1Rig.cs: yeni `openGlow` ayarlari (renk, siddet, saniyede parlama sayisi, olcek) + `UpdateOpenGlow()` (LateUpdate'te): Staggered iken govdeyi saran kirmizi yumusak disk (Sprites/Default, alfa), parlayip sonuyor (gercek zaman).
+- DURUM: UYGULANDI, DERLENMEDI / OYNANMADI. Ses dosyasi atanmadi (kullanici verecek).
+- Geri alma: Boss1Enemy'de `postureBreakHealthPercent` = 0.15; Boss1Rig'de openGlow kapat (Inspector'da isaretini kaldir).
+
+## Boss1 acik an - duzeltme (2026-10-17)
+- Boss1Rig: kirmizi isik artik DUZ (flat) daire (duman/yumusak degil). Ayarlar: `openGlowSize` (govde yuksekliginin kati, 0.45), `openGlowYOffset` (0.1), `openGlowIntensity` 0.95. Eski `openGlowScale` kaldirildi.
+- Boss1Enemy: `staggerHitPercent` varsayilan 0.03 -> 0.08 (Range 0-0.3); yeni `staggerFirstHitMultiplier` = 2 (boss acildiktan sonraki ILK duz vurus 2x: ~%16 max can; floor `staggerHitFloorPercent` 0.12 ayni). `staggerFirstHitPending` acilis aninda (IsStaggered yukselen kenar) kurulur.
+- Not: staggerHitPercent sahnede serilestirilmemis gorunuyor (MyScene2'de aranip bulunmadi); boss baska sahnede/prefabta serilestirilmisse Inspector degeri varsayilani ezer.
+- DURUM: UYGULANDI, DERLENMEDI / OYNANMADI.

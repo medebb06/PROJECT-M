@@ -45,8 +45,8 @@ public class Boss1Enemy : MonoBehaviour
     [Min(0.5f)] public float hitHeight = 3.5f;
     [Tooltip("Vurustan sonra bir sonraki saldiriya kadar ek bekleme (sn). Animasyon (bekleme + toparlanma) buna eklenir.")]
     [Min(0f)] public float extraCooldown = 0.15f;
-    [Tooltip("Sersemlemis (denge kirik) boss'a duz vurus basina max cana gore hasar yuzdesi. 0 = oyunun kendi degeri.")]
-    [Range(0f, 0.2f)] public float staggerHitPercent = 0.03f;
+    [Tooltip("Sersemlemis boss'a ILK vurustan SONRAKI duz vuruslarin ek hasari (max can yuzdesi). 0 = ilk agir darbeden sonra vuruslar normal hasar verir.")]
+    [Range(0f, 0.3f)] public float staggerHitPercent = 0f;
     [Tooltip("Duz vuruslar boss'u bu yuzdenin altina dusuremez (infaz bitirsin). 0 = sinir yok.")]
     [Range(0f, 0.5f)] public float staggerHitFloorPercent = 0.12f;
     [Tooltip("Oyuncuya vurus hasari. (Oyuncu hasari oyunda 'Fixed Hit Percent' ile sabit; bu deger istatistik/olum icin.)")]
@@ -117,6 +117,7 @@ public class Boss1Enemy : MonoBehaviour
             balance = gameObject.AddComponent<EnemyBalance>();
         balance.SetMaxBalance(maxBalance);
         balance.SetRecovery(postureRecoveryDelay, postureRecoverySpeed);
+        balance.SetBreakHealthPercent(postureBreakHealthPercent);   // 0 = kirilma hasar vermez (Sekiro gibi: sadece acar)
 
         // 4) Yon gostergesi: EnemyController yonu bir SpriteRenderer.flipX'ten okur/yazar.
         //    Gorunmez bir yardimci SpriteRenderer kullaniyoruz; Boss1Rig bunu okuyup aynalar.
@@ -447,6 +448,36 @@ public class Boss1Enemy : MonoBehaviour
     [Min(0f)] public float waveHopHeight = 8f;
     [Tooltip("Ziplamadan once cokme (sn).")]
     [Min(0f)] public float waveHopCrouch = 0.3f;
+
+    [Header("Acik an (denge kirilinca - Sekiro gibi)")]
+    [Tooltip("Boss'un dengesi kirilinca ANINDA giden can (max canin yuzdesi). 0 = kirilma hasar VERMEZ; boss sadece saldiriya/infaza acilir, can acikken vurdukca gider (Stagger Hit Percent).")]
+    [Range(0f, 0.5f)] public float postureBreakHealthPercent = 0f;
+    [Tooltip("Boss saldiriya/infaza ACILDIGI an bir kez calan uyari sesi (tik). Bos birakilabilir; sesi sonra buraya surukle.")]
+    public AudioClip openWarnSound;
+    [Range(0f, 1f)] public float openWarnVolume = 1f;
+    bool openWarnWas;
+    [Tooltip("Boss ACILDIKTAN sonraki ILK duz vurus max canin bu yuzdesi kadar can goturur (agir darbe). Sonraki vuruslar staggerHitPercent kullanir.")]
+    [Range(0f, 0.5f)] public float staggerFirstHitPercent = 0.2f;
+    [Tooltip("Agir darbe CARPTIGI an zaman yavaslar ve yavasca normale doner: toplam sure (gercek sn). 0 = kapali.")]
+    [Min(0f)] public float heavyHitSlowDuration = 0.9f;
+    [Tooltip("Agir darbede baslangic zaman hizi (0.05 = %5 hiz, cok agir).")]
+    [Range(0.02f, 1f)] public float heavyHitSlowScale = 0.08f;
+    [Tooltip("1 = duz hizlanma; 2-3 = bir sure agir kalir sonra hizlanir.")]
+    [Range(1f, 4f)] public float heavyHitSlowPower = 2.2f;
+    bool staggerFirstHitPending;
+
+    void PlayOpenWarn()
+    {
+        if (openWarnSound == null) return;
+        GameObject go = new GameObject("Boss1_OpenWarnSfx");
+        AudioSource a = go.AddComponent<AudioSource>();
+        a.clip = openWarnSound;
+        a.volume = openWarnVolume;
+        a.spatialBlend = 0f;     // 2D: uzakliktan bagimsiz, hep duyulur
+        a.playOnAwake = false;
+        a.Play();
+        Destroy(go, openWarnSound.length + 0.2f);
+    }
 
     [Header("Posture kirilma merhameti")]
     [Tooltip("0 = kapali (boss her halukarda saldirisini bitirir). >0: oyuncunun posture'u kirilinca boss bu sure (sn) saldirmaz.")]
@@ -1405,14 +1436,24 @@ public class Boss1Enemy : MonoBehaviour
         }
 
         // Sersemlemis boss: duz vurus sabit bir yuzde goturur (ne 1 hasar, ne aninda olum).
-        if (staggerHitPercent > 0f && enemy.IsStaggered && !result.onBalance && !result.killed
+        // ILK vurus agirdir (buyuk can kaybi + agir cekim), sonrakiler staggerHitPercent (varsayilan 0 = normal).
+        if (enemy.IsStaggered && !result.onBalance && !result.killed
             && health != null && !health.IsDead)
         {
-            int want = Mathf.RoundToInt(health.MaxHealth * staggerHitPercent) - result.amount;
-            int floor = Mathf.RoundToInt(health.MaxHealth * staggerHitFloorPercent);
-            int extra = Mathf.Min(want, health.CurrentHealth - floor);
-            if (extra > 0)
-                health.TakeDamage(extra);
+            bool first = staggerFirstHitPending;
+            staggerFirstHitPending = false;
+            float pct = first ? staggerFirstHitPercent : staggerHitPercent;
+            if (pct > 0f)
+            {
+                int want = Mathf.RoundToInt(health.MaxHealth * pct) - result.amount;
+                int floor = Mathf.RoundToInt(health.MaxHealth * staggerHitFloorPercent);
+                int extra = Mathf.Min(want, health.CurrentHealth - floor);
+                if (extra > 0)
+                    health.TakeDamage(extra);
+            }
+            // Agir darbe carptigi an: zaman agir cekime girer, yavasca hizlanir.
+            if (first && heavyHitSlowDuration > 0f)
+                HitStop.RequestRamp(heavyHitSlowDuration, heavyHitSlowScale, 1f, heavyHitSlowPower, 5);
         }
     }
 
@@ -1678,6 +1719,11 @@ public class Boss1Enemy : MonoBehaviour
         rig.MoveAllowed = enemy.CurrentState is EnemyChaseState;
         rig.Staggered = enemy.IsStaggered;
         rig.Dead = enemy.IsDead;
+
+        // ACILDIGI an (denge kirildi, sersem): uyari sesi bir kez calar.
+        bool openNow = enemy.IsStaggered && !enemy.IsDead;
+        if (openNow && !openWarnWas) { PlayOpenWarn(); staggerFirstHitPending = true; }
+        openWarnWas = openNow;
 
         // Saldiri vurustan ONCE bozuldu (sersemledi, baska duruma gecti): animasyonu yumusakca birak.
         if (rig.IsAttacking && !attacking && !leapActive && !waveActive)

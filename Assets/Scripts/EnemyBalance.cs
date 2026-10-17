@@ -152,6 +152,12 @@ public class EnemyBalance : MonoBehaviour
         recoverySpeed = Mathf.Max(0f, speed);
     }
 
+    /// <summary>Denge kirilinca giden can orani (max can). 0 = kirilma hasar vermez, sadece acik birakir (boss).</summary>
+    public void SetBreakHealthPercent(float percent)
+    {
+        breakHealthPercent = Mathf.Clamp(percent, 0f, 0.5f);
+    }
+
     public void SetMaxBalance(int value)
     {
         maxBalance = Mathf.Max(1, value);

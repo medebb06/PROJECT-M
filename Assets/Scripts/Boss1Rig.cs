@@ -229,6 +229,23 @@ public class Boss1Rig : MonoBehaviour
     /// <summary>Oldu: yikilma pozu.</summary>
     [NonSerialized] public bool Dead;
 
+    // ---- ACIK AN (denge kirik / sersem): govdeyi saran kirmizi isik surekli parlayip soner (Sekiro gibi) ----
+    [Tooltip("Sersem (denge kirik) boss'un ustunde kirmizi isik parlayip sonsun.")]
+    public bool openGlow = true;
+    public Color openGlowColor = new Color(1f, 0.05f, 0.03f, 1f);
+    [Tooltip("Parlama siddeti (en parlak anin opakligi). 0.5-1 arasi.")]
+    [Range(0f, 1f)] public float openGlowIntensity = 0.95f;
+    [Tooltip("Saniyede kac kez parlayip soner.")]
+    [Min(0.2f)] public float openGlowPulsesPerSecond = 1.6f;
+    [Tooltip("Dairenin capi: govde yuksekliginin kati (0.16 = govdenin %16'si).")]
+    [Min(0.05f)] public float openGlowSize = 0.16f;
+    [Tooltip("Dairenin dikey konumu: govde merkezinden yukari, govde yuksekliginin kati (gogus hizasi icin ~0.1).")]
+    public float openGlowYOffset = 0.1f;
+    SpriteRenderer openGlowSr;
+    SpriteRenderer[] openGlowBody;
+    float openGlowW;
+    static Sprite openGlowSprite;
+
     // Kilic bicaginin dis cizgisi (sword kemigi uzayi, birim). boss1_sword.png'den turetildi.
     static readonly Vector2[] BladeHull =
     {
@@ -911,6 +928,88 @@ public class Boss1Rig : MonoBehaviour
         }
     }
 
+    void BuildOpenGlow()
+    {
+        if (openGlowSprite == null)
+        {
+            const int N = 64;
+            Texture2D tx = new Texture2D(N, N, TextureFormat.RGBA32, false);
+            tx.wrapMode = TextureWrapMode.Clamp;
+            for (int y = 0; y < N; y++)
+            {
+                for (int x = 0; x < N; x++)
+                {
+                    float dx = (x + 0.5f) / N * 2f - 1f;
+                    float dy = (y + 0.5f) / N * 2f - 1f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.Clamp01((1f - r) / 0.05f);   // DUZ (flat) daire: icinde tam dolu, sadece ince kenar yumusatmasi
+                    tx.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            }
+            tx.Apply();
+            openGlowSprite = Sprite.Create(tx, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+        }
+
+        openGlowBody = visual.GetComponentsInChildren<SpriteRenderer>(true);
+
+        GameObject go = new GameObject("OpenGlow");
+        go.transform.SetParent(transform, false);
+        openGlowSr = go.AddComponent<SpriteRenderer>();
+        openGlowSr.sprite = openGlowSprite;
+        Shader sh = Shader.Find("Sprites/Default");
+        if (sh != null) openGlowSr.sharedMaterial = new Material(sh) { name = "Boss1_OpenGlow" };
+        openGlowSr.enabled = false;
+    }
+
+    void UpdateOpenGlow()
+    {
+        float target = (openGlow && Staggered && !Dead) ? 1f : 0f;
+        openGlowW = Mathf.MoveTowards(openGlowW, target, Time.unscaledDeltaTime * 8f);
+
+        if (openGlowW <= 0.003f)
+        {
+            if (openGlowSr != null && openGlowSr.enabled) openGlowSr.enabled = false;
+            return;
+        }
+
+        if (openGlowSr == null) BuildOpenGlow();
+        if (openGlowSr == null || openGlowBody == null) return;
+
+        // Govdenin sinirlari (glow kendisi haric) + ust siralama.
+        bool any = false;
+        Bounds b = new Bounds();
+        int maxOrder = int.MinValue;
+        int layerId = 0;
+        for (int i = 0; i < openGlowBody.Length; i++)
+        {
+            SpriteRenderer sr = openGlowBody[i];
+            if (sr == null || sr == openGlowSr || !sr.enabled || sr.sprite == null) continue;
+            if (!any) { b = sr.bounds; any = true; layerId = sr.sortingLayerID; }
+            else b.Encapsulate(sr.bounds);
+            if (sr.sortingOrder > maxOrder) maxOrder = sr.sortingOrder;
+        }
+        if (!any) return;
+
+        // Parla ve sol: keskin parlama, yumusak sonme (gercek zaman: hit-stop'ta da akici).
+        float phase = (Time.unscaledTime * openGlowPulsesPerSecond) % 1f;
+        float flash = Mathf.Pow(1f - phase, 2.2f);
+        float alpha = openGlowW * openGlowIntensity * (0.06f + 0.94f * flash);
+
+        Color c = openGlowColor;
+        c.a = Mathf.Clamp01(alpha);
+
+        openGlowSr.enabled = true;
+        openGlowSr.color = c;
+        openGlowSr.sortingLayerID = layerId;
+        openGlowSr.sortingOrder = maxOrder + 1;
+        openGlowSr.transform.position = new Vector3(b.center.x, b.center.y + b.size.y * openGlowYOffset, openGlowSr.transform.position.z);
+        float diameter = b.size.y * openGlowSize;
+        Vector3 ls = transform.lossyScale;
+        openGlowSr.transform.localScale = new Vector3(
+            diameter / (Mathf.Abs(ls.x) > 1e-5f ? Mathf.Abs(ls.x) : 1f),
+            diameter / (Mathf.Abs(ls.y) > 1e-5f ? Mathf.Abs(ls.y) : 1f), 1f);
+    }
+
     void LateUpdate()
     {
         if (visual == null || bones.Count == 0) return;
@@ -934,6 +1033,8 @@ public class Boss1Rig : MonoBehaviour
                 haloSr.color = new Color(1f, 0f, 0.02f, swordTintCur * (0.22f + 0.2f * pulse));
             }
         }
+        UpdateOpenGlow();
+
         float dt = EnemyTime.DeltaTime;      // dusman zamani: parry yavaslatmasinda animasyon da yavaslar
         animClock += dt;
 
