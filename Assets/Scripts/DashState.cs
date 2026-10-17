@@ -13,8 +13,8 @@ public class DashState : IPlayerState
     private float total;
     private bool cancelIntent;
 
-    // Hız çanı: 3 = ortada ortalama hızın ~2.2 katı. Büyük = ortası daha keskin, başı/sonu daha yavaş.
-    private const float DashBellPower = 3f;
+    // Hız çanı (eski değer: 3): 3 = ortada ortalama hızın ~2.2 katı. Büyük = ortası daha keskin, başı/sonu daha yavaş.
+    private const float DashBellPower = 1f;
 
     // Dash süresi çarpanı (mesafe sabit kalır, hız buna göre düşer). Animasyon köprüsü de bunu kullanır.
     public const float DurationScale = 2.2f;

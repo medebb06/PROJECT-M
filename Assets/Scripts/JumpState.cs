@@ -117,14 +117,6 @@ public class JumpState : IPlayerState
         }
 
         // =====================================================
-        // AIR MOVEMENT
-        // =====================================================
-
-        movement.ApplyMovement(
-            movement.airControl
-        );
-
-        // =====================================================
         // GROUND SLAM (yükselirken de: ↓ + Space)
         // =====================================================
 
@@ -206,5 +198,10 @@ public class JumpState : IPlayerState
 
     public void FixedUpdate()
     {
+        // Hava hareketi sabit fizik adiminda uygulanir (kare hizindan bagimsiz).
+        // ApplyMovement Time.fixedDeltaTime kullandigi icin Update'te cagrilmamali.
+        player.Movement.ApplyMovement(
+            player.Movement.airControl
+        );
     }
 }

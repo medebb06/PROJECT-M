@@ -346,3 +346,30 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Duzenlenen dosyalar: AirAttackState, AttackState (LevelProps/PlayerWeapon/mermi kaldirildi), BlockBreakDamage, ParryMark, EnemyArchetype (Archer/Shield/Flyer/Bomber bilesen ekleme + EnemyShape kaldirildi; enum degerleri duruyor), EnemyAttackState (IsBossEnemy=false, FireShot silindi: MoveHitType.Shot vurusu artik bos gecer, moveset verisi duruyor), EnemyController, EnemyExecuteState, Enemyoverheadbars, ExecuteMeter, ExecuteReadyIndicator, GroundSlamState (CharmUtil yerine yerel EnemiesInRadius), PlayerCombatController (EffectiveHitBox=hitBoxSize, silah carpani yok), PlayerDamage, PlayerFinisher, RageMeter, EnemyStatus.
 - DAVRANIS NOTU: BossController hic sahnede/prefab'ta yoktu; onun kontrolleri olan yerler Boss1Enemy'ye cevrildi (GroundSlam sabit denge hasari + zirh delme istisnasi, yanik hasari yari, ExecuteMeter boss dolumu, RageMeter 'lethal' degil, BlockBreak). IsBossEnemy (EnemyAttackState) ve EnemyController.isBossEnemy: false (eskiyle ayni).
 - Kalan sadece yorum/tooltip metinlerinde RunManager/RunUI adi gecer. UnblockableCounter korundu.
+
+## Animasyon akiciligi incelemesi - duzeltme 1 (2026-10-17)
+- Kapsam: once SADECE inceleme yapildi (rapor kullaniciya sunuldu), sonra kullanici "tek tek yap" dedi. Bu girdi ilk duzeltmedir.
+- Degisiklik: Assets/Animations/PlayerAnimator.controller, Attack3 -> Idle gecisi (id -6977304799891269468): m_ExitTime 0 -> 1. Baska hicbir satir degismedi (diff ile dogrulandi: tek satir).
+- Neden: Attack3->Idle gecisi Exit Time 0 ve kosulsuzdu; Attack1/2/4 klip sonunu beklerken Attack3 hemen Idle'a fade oluyordu (Attack2 ile ayni deger: exit 1). 
+- DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI. Unity'de 1-2-3-4 kombosu denenmeli.
+- Geri alma: ayni gecisin Exit Time degerini 0 yap (Animator penceresinde Attack3 -> Idle oku, Has Exit Time acik, Exit Time 0) veya Git ile PlayerAnimator.controller'i geri al (Git durumu bu oturumda goruntulenemedi).
+- Siradaki (onay bekliyor, sirayla): 2) AirState/JumpState ApplyMovement Update -> FixedUpdate; sonra bulgular 3-9 (olcum gerektirenler once Play Mode gozlemi).
+- Commit/push yapilmadi.
+
+## Animasyon akiciligi incelemesi - duzeltme 2 (2026-10-17)
+- Degisiklik: Assets/Scripts/AirState.cs ve JumpState.cs. `movement.ApplyMovement(movement.airControl)` cagrisi Update()'ten kaldirildi, FixedUpdate()'e tasindi (PlayerController.FixedUpdate -> stateMachine.FixedUpdate -> CurrentState.FixedUpdate zinciri dogrulandi).
+- Neden: PlayerMovement.ApplyMovement Time.fixedDeltaTime ile ivme uyguluyor; Update'te her karede cagrilinca hava kontrolu kare hizina bagliydi (GroundedState zaten FixedUpdate'te).
+- Dokunulmayanlar: GroundSlam/Dash/Land/WallSlide gecis kontrolleri Update'te kaldi; WallJumpState/WallSlideState degismedi.
+- DURUM: UYGULANDI, Unity'de derleme ve Play Mode'da TEST EDILMEDI. Beklenen yan etki: hava kontrol hissi degisir, airControl yeniden ayar isteyebilir.
+- Geri alma: iki dosyada ApplyMovement cagrisini FixedUpdate'ten silip Update() basina (ground slam blogundan once) geri koy, ya da Git ile iki dosyayi geri al.
+
+## Animasyon akiciligi incelemesi - bulgu 3 karari (2026-10-17)
+- Kod DEGISMEDI. RonniPlayerBridge (execution order -200) combat/dash durumunu PlayerController/PlayerCombatController'dan (order 0) once okudugu icin gorsel en fazla 1 kare (60 FPS'te ~16 ms) geriden gelir. Duzeltme RonniPlayerBridge + RonniSkinAnimator + RonniClipPlayer siralamasini birlikte degistirmeyi gerektirir; kazanc 1 kare, bu yuzden yapilmadi (iyilestirme firsati).
+
+## Animasyon akiciligi incelemesi - duzeltme 3: dash (2026-10-17)
+- Degisiklik: Assets/Scripts/DashState.cs, `DashBellPower` const 3f -> 1f (yorum satirina eski deger notu eklendi). Kullanici "Daha keskin cikis" secti.
+- Etki: dash hiz egrisinin basi hizlanir (ilk ~33 ms'de hiz ~2 -> ~12 birim/sn, hesapla), ortasi daha az keskin. Sure (dashTime*DurationScale = 0.15*2.2 = 0.33 s) ve mesafe (5*1.5 = 7.5) ayni. Ronni dash gorseli sureye (DurationScale) bagli oldugu icin senkron kalmali; egriyi kullanmiyor.
+- DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI.
+- Geri alma: `DashBellPower = 1f` -> `3f`.
+- Siradaki: bulgu 6 (global slow-mo, tasarim sorusu), 7, 8, 9; bulgu 4 gozlem bekliyor.
+- Commit/push yapilmadi.
