@@ -435,3 +435,13 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Boss1Enemy.cs: `postureLockAboveHealth` 0.5, `postureLockCap` 0.75 (Awake'te balance'a verilir). Iksir penceresi: `potionWindowAfterCombo` 1.5, `potionWindowAfterLeap` 1.3, `potionWindowBelowHealth` 0.75. Bitirici kombo vurusu (OnStrikeLanded) ve ziplama-ezme cikisi (Leap Exit) `potionWindowPending` kurar; Update'te saldiri bitince, oyuncu cani < %75 ve iksir hakki varsa `enemy.StartAttackRecovery(sure)` + wave/leap/combo bekleme ileri alinir. Faz 2'de pencere x0.7.
 - PlayerPotion.cs (mevcut sistem: F basili tut, 3 hak, 1.1 sn, %40 can): can cubugunun saginda 3 kirmizi nokta (`LateUpdate`, HudCanvas.Fill). Dolu = hak var, soluk = harcandi, icerken son nokta titrer. `MinimalHealthBar.LastRect/HasRect` eklendi.
 - Durum: yazildi, derlenmedi/test edilmedi. Geri alma: postureLockAboveHealth = 0, potionWindow* = 0, nokta cizimi icin PlayerPotion.LateUpdate'i sil.
+
+
+## 2026-10-18 - Hareket v2 (ziplama / hava kontrolu / duvar) + Tutorial_Arena
+- PlayerMovement.cs: ziplama artik jumpHeight + timeToApex ile tanimli (v0=2h/t, g=2h/t^2); dusus fallGravityRatio, Space birakma jumpCutGravityRatio, minJumpHoldTime; hava kontrolu airAcceleration/airDeceleration/airTurnMultiplier; duvar: wallGrabMargin, wallSlideFallSpeed, wallJumpSpeedX, wallJumpHeightRatio, wallJumpLockTime, wallJumpBlendTime. Eski jumpForce/jumpForceOverride/riseMultiplier/fallMultiplier/jumpCut*/maxFallSpeed/wallJumpForceX/Y/wallSlideSpeed alanlari serilestirme icin duruyor ama KULLANILMIYOR (sahne/prefab degerleri artik ziplamayi etkilemez).
+- IsTouchingWall: oyuncu govdesinin kenarindan 3 yukseklikte ray (olcekten bagimsiz).
+- JumpState (dikey hiz dogrudan atanir), AirState (duvara yapisma kosulu), WallSlideState, WallJumpState, PlayerController.HandleJump (duvar yakininda yukselirken cift ziplama serbest) degisti.
+- Yedek (eski dosyalar): proje kokunde _backup_before_movement_v2/ (6 dosya). Git ile de geri alinabilir.
+- Olculen (Play, dogrudan state tetikleme): basili zipla yuk. 7.56, tepe 0.36 sn, havada 0.68 sn; kisa tik 4.77; duvara yapisma calisiyor; duvar zipla yatay -5.4 (girdisiz), dikey 7.4. Elle gercek girdiyle denenmedi.
+- Yeni dosyalar: Assets/Scenes/Tutorial_Arena.unity, Assets/Scripts/Tutorial/{TutorialCheckpoint,TutorialKillZone,TutorialBossGate,TutorialLessonDuelist}.cs. Sahne Build Settings'te DEGIL.
+- Not: Prefab-instance alanlarini kodla degistirirken SerializedObject kullan; dogrudan atama domain reload'da kaybolabiliyor.

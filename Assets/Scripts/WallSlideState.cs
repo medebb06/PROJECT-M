@@ -24,11 +24,18 @@ public class WallSlideState : IPlayerState
         Vector2 velocity =
             player.rb.linearVelocity;
 
-        if (velocity.y < -movement.wallSlideSpeed)
+        // WALL SLIDE v2: yakalayinca yukari hiz sifirlanir, yavas kayar (yapisma hissi).
+        if (velocity.y > 0f)
+            velocity.y = 0f;
+
+        if (velocity.y < -movement.wallSlideFallSpeed)
         {
             velocity.y =
-                -movement.wallSlideSpeed;
+                -movement.wallSlideFallSpeed;
         }
+
+        // Duvara dogru yatay hizi sifirla (duvarda titreme olmasin).
+        velocity.x = 0f;
 
         player.SetVelocity(velocity);
     }
@@ -139,10 +146,10 @@ public class WallSlideState : IPlayerState
         Vector2 velocity =
             player.rb.linearVelocity;
 
-        if (velocity.y < -movement.wallSlideSpeed)
+        if (velocity.y < -movement.wallSlideFallSpeed)
         {
             velocity.y =
-                -movement.wallSlideSpeed;
+                -movement.wallSlideFallSpeed;
         }
 
         player.SetVelocity(velocity);

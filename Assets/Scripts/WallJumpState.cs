@@ -39,14 +39,24 @@ public class WallJumpState : IPlayerState
         // INITIAL WALL JUMP LAUNCH
         // --------------------------------------------------
 
+        // WALL JUMP v2: yatay hiz sabit + yukseklik = jumpHeight x oran.
+        // (v0 = jumpForce x sqrt(oran) -> yukseklik oranla orantili)
         player.SetVelocity(
             new Vector2(
                 jumpDirection *
-                movement.wallJumpForceX,
+                movement.wallJumpSpeedX,
 
-                movement.wallJumpForceY
+                movement.jumpForce *
+                Mathf.Sqrt(
+                    Mathf.Max(0.1f, movement.wallJumpHeightRatio)
+                )
             )
         );
+
+        // Space hizli birakilsa da duvar zıplaması tam yukselsin.
+        movement.jumpRising = true;
+        movement.jumpCutLockTimer =
+            movement.timeToApex * 0.9f;
 
         // --------------------------------------------------
         // FACING
@@ -126,8 +136,8 @@ public class WallJumpState : IPlayerState
         // --------------------------------------------------
 
         float totalWallJumpTime =
-            movement.wallJumpControlLock +
-            movement.wallJumpControlBlendTime;
+            movement.wallJumpLockTime +
+            movement.wallJumpBlendTime;
 
         if (timer >= totalWallJumpTime)
         {
@@ -157,12 +167,12 @@ public class WallJumpState : IPlayerState
 
         if (
             timer <
-            movement.wallJumpControlLock
+            movement.wallJumpLockTime
         )
         {
             velocity.x =
                 jumpDirection *
-                movement.wallJumpForceX;
+                movement.wallJumpSpeedX;
 
             player.SetVelocity(
                 velocity
@@ -178,12 +188,12 @@ public class WallJumpState : IPlayerState
 
         float blendTimer =
             timer -
-            movement.wallJumpControlLock;
+            movement.wallJumpLockTime;
 
         float blendDuration =
             Mathf.Max(
                 0.001f,
-                movement.wallJumpControlBlendTime
+                movement.wallJumpBlendTime
             );
 
         float blend =
@@ -200,12 +210,7 @@ public class WallJumpState : IPlayerState
             blend *
             (3f - 2f * blend);
 
-        float control =
-            Mathf.Lerp(
-                0f,
-                movement.airControl,
-                smoothBlend
-            );
+        float control = smoothBlend;
 
         // --------------------------------------------------
         // TARGET SPEED
@@ -224,17 +229,15 @@ public class WallJumpState : IPlayerState
         )
         {
             accelerationRate =
-                movement.acceleration;
+                movement.airAcceleration;
         }
         else
         {
             accelerationRate =
-                movement.deceleration;
+                movement.airDeceleration;
         }
 
-        accelerationRate *=
-            control *
-            movement.wallJumpControlAccelerationMultiplier;
+        accelerationRate *= control;
 
         // --------------------------------------------------
         // APPLY HORIZONTAL CONTROL

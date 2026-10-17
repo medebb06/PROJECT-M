@@ -34,6 +34,52 @@ public class PlayerMovement : MonoBehaviour
     public float maxFallSpeed = 20f;
 
     // =========================================================
+    // JUMP v2  (sifirdan: yukseklik + sure ile tanimlanir)
+    // Eski jumpForce / riseMultiplier / fallMultiplier / jumpCut* /
+    // maxFallSpeed alanlari geriye uyumluluk icin duruyor ama artik KULLANILMIYOR.
+    // =========================================================
+
+    [Header("Jump v2")]
+    [Tooltip("Tek zıplamanın çıkacağı yükseklik (dünya birimi).")]
+    public float jumpHeight = 8f;
+    [Tooltip("Tepe noktasına çıkış süresi (sn). Küçük = daha çevik / sert zıplama.")]
+    public float timeToApex = 0.36f;
+    [Tooltip("Düşüş yerçekimi = yükseliş yerçekimi x bu oran (büyük = hızlı iner).")]
+    public float fallGravityRatio = 1.5f;
+    [Tooltip("Space bırakılınca yükseliş yerçekimi x bu oran (değişken zıplama).")]
+    public float jumpCutGravityRatio = 3f;
+    [Tooltip("Zıplamadan sonra bu kadar sn Space bırakılsa da zıplama kesilmez (kısa tık da düzgün zıplatır).")]
+    public float minJumpHoldTime = 0.1f;
+    [Tooltip("En yüksek düşüş hızı.")]
+    public float terminalVelocity = 55f;
+
+    [Header("Air Control v2")]
+    [Tooltip("Havada hızlanma (birim/sn²). Büyük = anında tepki.")]
+    public float airAcceleration = 260f;
+    [Tooltip("Havada tuş bırakılınca yavaşlama.")]
+    public float airDeceleration = 180f;
+    [Tooltip("Havada ters yöne basınca hızlanma çarpanı (çevik dönüş).")]
+    public float airTurnMultiplier = 1.5f;
+
+    [Header("Wall v2")]
+    [Tooltip("Duvar algılama: oyuncu kenarının ötesine bu kadar bakılır.")]
+    public float wallGrabMargin = 0.45f;
+    [Tooltip("Duvarda kayma (düşüş) hızı. Küçük = duvara yapışık gibi.")]
+    public float wallSlideFallSpeed = 3f;
+    [Tooltip("Duvar zıplamasında yatay hız.")]
+    public float wallJumpSpeedX = 24f;
+    [Tooltip("Duvar zıplamasının yüksekliği = jumpHeight x bu oran.")]
+    public float wallJumpHeightRatio = 1f;
+    [Tooltip("Duvar zıplamasında yatay hızın sabit kaldığı süre (sn).")]
+    public float wallJumpLockTime = 0.12f;
+    [Tooltip("Sabit süreden sonra hava kontrolüne geçiş süresi (sn).")]
+    public float wallJumpBlendTime = 0.1f;
+
+    // Calisma zamani
+    [HideInInspector] public bool jumpRising;
+    [HideInInspector] public float jumpCutLockTimer;
+
+    // =========================================================
     // WALL
     // =========================================================
 
@@ -88,8 +134,24 @@ public class PlayerMovement : MonoBehaviour
     {
         player = controller;
 
-        if (jumpForceOverride > 0f)
-            jumpForce = jumpForceOverride;
+        RecalculateJump();
+    }
+
+    // Zıplama hızı yükseklik ve sürenin sonucudur: v0 = 2h / t
+    public void RecalculateJump()
+    {
+        float t = Mathf.Max(0.05f, timeToApex);
+        jumpForce = 2f * Mathf.Max(0.1f, jumpHeight) / t;
+    }
+
+    // Yükseliş yerçekimi: g = 2h / t²
+    public float RiseGravity
+    {
+        get
+        {
+            float t = Mathf.Max(0.05f, timeToApex);
+            return 2f * Mathf.Max(0.1f, jumpHeight) / (t * t);
+        }
     }
 
     // =========================================================
@@ -176,14 +238,33 @@ public class PlayerMovement : MonoBehaviour
             player.moveInput *
             moveSpeed;
 
-        float accelerationRate =
+        bool moving =
             Mathf.Abs(
                 player.moveInput
-            ) > 0.01f
-                ? acceleration
-                : deceleration;
+            ) > 0.01f;
 
-        accelerationRate *= control;
+        float accelerationRate;
+
+        if (player.isGrounded)
+        {
+            accelerationRate =
+                (moving ? acceleration : deceleration) * control;
+        }
+        else
+        {
+            // HAVA KONTROLU v2: yerdekinden bagimsiz, cok daha keskin.
+            accelerationRate =
+                moving ? airAcceleration : airDeceleration;
+
+            float vx = player.rb.linearVelocity.x;
+
+            // Ters yone basinca hizli don.
+            if (moving && vx * targetSpeed < 0f)
+                accelerationRate *= airTurnMultiplier;
+
+            // control = airControl -> tam; (duvar zıplaması 0..airControl arası geçiş yapar)
+            accelerationRate *= Mathf.Clamp01(control / Mathf.Max(0.01f, airControl));
+        }
 
         float newVelocityX =
             Mathf.MoveTowards(
@@ -228,49 +309,66 @@ public class PlayerMovement : MonoBehaviour
         if (player.slamGroundLock)
             return;
 
-        if (player.rb.linearVelocity.y < 0f)
+        // ZIPLAMA v2: yercekimi, istenen yukseklik/sureden hesaplanir.
+        //   yukselis  : g = 2h / t²
+        //   dusus     : g x fallGravityRatio
+        //   Space birak: g x jumpCutGravityRatio (sadece zıplama yukselirken)
+        float baseG =
+            Mathf.Abs(Physics2D.gravity.y) *
+            player.rb.gravityScale;
+
+        // Yercekimi kapaliysa (dash / slam vb.) dokunma.
+        if (baseG < 0.01f)
+            return;
+
+        float vy = player.rb.linearVelocity.y;
+
+        if (jumpCutLockTimer > 0f)
+            jumpCutLockTimer -= Time.fixedDeltaTime;
+
+        if (vy <= 0f)
+            jumpRising = false;
+
+        // Duvarda kayarken hizi WallSlideState sinirliyor; ek yercekimi ekleme.
+        if (isWallSliding)
+            return;
+
+        float riseG = RiseGravity;
+        float targetG;
+
+        if (vy < 0f)
         {
-            player.rb.linearVelocity +=
-                Vector2.up *
-                Physics2D.gravity.y *
-                (fallMultiplier - 1f) *
-                Time.fixedDeltaTime;
+            targetG = riseG * fallGravityRatio;
         }
-        else if (
-            player.rb.linearVelocity.y > 0f &&
-            player.jumpHeld &&
-            riseMultiplier > 1f
-        )
+        else if (vy > 0f)
         {
-            // Yukselirken de ek yercekimi: ziplama sert baslar, tepeye hizli ulasir.
-            player.rb.linearVelocity +=
-                Vector2.up *
-                Physics2D.gravity.y *
-                (riseMultiplier - 1f) *
-                Time.fixedDeltaTime;
+            bool cut =
+                jumpRising &&
+                !player.jumpHeld &&
+                jumpCutLockTimer <= 0f;
+
+            targetG = cut ? riseG * jumpCutGravityRatio : riseG;
         }
-        else if (
-            player.rb.linearVelocity.y > 0f &&
-            !player.jumpHeld
-        )
+        else
         {
-            player.rb.linearVelocity =
-                new Vector2(
-                    player.rb.linearVelocity.x,
-                    player.rb.linearVelocity.y *
-                    jumpCutVelocityMultiplier
-                );
+            return;
         }
+
+        // Hedef yercekimi ile temel yercekimi arasindaki fark kadar ek ivme.
+        player.rb.linearVelocity +=
+            Vector2.down *
+            (targetG - baseG) *
+            Time.fixedDeltaTime;
 
         if (
             player.rb.linearVelocity.y <
-            -maxFallSpeed
+            -terminalVelocity
         )
         {
             player.rb.linearVelocity =
                 new Vector2(
                     player.rb.linearVelocity.x,
-                    -maxFallSpeed
+                    -terminalVelocity
                 );
         }
     }
@@ -348,40 +446,91 @@ public class PlayerMovement : MonoBehaviour
     // WALL CHECK
     // =========================================================
 
+    private Collider2D bodyCollider;
+
+    private Collider2D GetBodyCollider()
+    {
+        if (bodyCollider != null)
+            return bodyCollider;
+
+        Collider2D[] cols =
+            GetComponents<Collider2D>();
+
+        for (int i = 0; i < cols.Length; i++)
+        {
+            if (cols[i] != null && !cols[i].isTrigger)
+            {
+                bodyCollider = cols[i];
+                break;
+            }
+        }
+
+        return bodyCollider;
+    }
+
+    // WALL CHECK v2: oyuncunun gercek govdesinin kenarindan, uc yukseklikte
+    // (alt / orta / ust) bakar. Olcekten bagimsiz; duvara dokunmasa bile
+    // wallGrabMargin kadar yaklasinca yakalar.
     public bool IsTouchingWall()
     {
-        if (wallCheck == null)
+        Collider2D col = GetBodyCollider();
+
+        if (col == null)
         {
             wallDirection = 0;
             return false;
         }
 
-        Vector2 origin =
-            wallCheck.position;
+        Bounds b = col.bounds;
 
-        RaycastHit2D rightHit =
-            Physics2D.Raycast(
-                origin,
-                Vector2.right,
-                wallCheckDistance,
-                wallMask
-            );
+        float reach =
+            b.extents.x + Mathf.Max(0.05f, wallGrabMargin);
 
-        RaycastHit2D leftHit =
-            Physics2D.Raycast(
-                origin,
-                Vector2.left,
-                wallCheckDistance,
-                wallMask
-            );
+        float[] heights =
+            new float[]
+            {
+                b.center.y,
+                b.center.y + b.extents.y * 0.6f,
+                b.center.y - b.extents.y * 0.6f
+            };
 
-        if (rightHit.collider != null)
+        int rightHits = 0;
+        int leftHits = 0;
+
+        for (int i = 0; i < heights.Length; i++)
+        {
+            Vector2 origin =
+                new Vector2(b.center.x, heights[i]);
+
+            if (
+                Physics2D.Raycast(
+                    origin,
+                    Vector2.right,
+                    reach,
+                    wallMask
+                ).collider != null
+            )
+                rightHits++;
+
+            if (
+                Physics2D.Raycast(
+                    origin,
+                    Vector2.left,
+                    reach,
+                    wallMask
+                ).collider != null
+            )
+                leftHits++;
+        }
+
+        // En az iki yukseklikte (govde duvara gercekten yakin) temas gerekir.
+        if (rightHits >= 2 && rightHits >= leftHits)
         {
             wallDirection = 1;
             return true;
         }
 
-        if (leftHit.collider != null)
+        if (leftHits >= 2)
         {
             wallDirection = -1;
             return true;

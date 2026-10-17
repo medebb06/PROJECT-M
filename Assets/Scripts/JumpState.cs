@@ -68,24 +68,22 @@ public class JumpState : IPlayerState
         // CLEAR DOWNWARD VELOCITY
         // =====================================================
 
+        // =====================================================
+        // JUMP v2: dikey hizi DOGRUDAN ayarla (eskiden ustune ekleniyordu;
+        // bu yuzden yukseklik zamanlamaya gore degisiyordu). Hep ayni yukseklik.
+        // =====================================================
+
         Vector2 velocity =
             player.rb.linearVelocity;
 
-        if (velocity.y < 0f)
-            velocity.y = 0f;
+        velocity.y =
+            movement.jumpForce *
+            (airJump ? player.airJumpForceMul : 1f);
 
         player.SetVelocity(velocity);
 
-        // =====================================================
-        // JUMP IMPULSE
-        // =====================================================
-
-        player.rb.AddForce(
-            Vector2.up *
-            movement.jumpForce *
-            (airJump ? player.airJumpForceMul : 1f),
-            ForceMode2D.Impulse
-        );
+        movement.jumpRising = true;
+        movement.jumpCutLockTimer = movement.minJumpHoldTime;
     }
 
     public void Exit()

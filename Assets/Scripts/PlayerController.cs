@@ -409,8 +409,13 @@ public class PlayerController : MonoBehaviour
         if (movement.isWallSliding)
             return;
 
+        // Duvara yapisma aninda (dusuyor + duvarda) Space duvar zıplamasına gider;
+        // yukselirken duvar yakinindaysa normal / cift zıplama calissin.
         if (!isGrounded &&
-            movement.IsTouchingWall())
+            rb.linearVelocity.y < 1f &&
+            movement.IsTouchingWall() &&
+            !(movement.wallDirection == 1 && moveInput < -0.1f) &&
+            !(movement.wallDirection == -1 && moveInput > 0.1f))
             return;
 
         if (movement.jumpBufferCounter <= 0f)

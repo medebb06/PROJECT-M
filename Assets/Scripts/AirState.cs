@@ -92,10 +92,24 @@ public class AirState : IPlayerState
         bool touchingWall =
             player.IsTouchingWall();
 
+        // WALL SLIDE v2: duvara yaklasinca (dusmeye basladigi / tepe noktasi) yapisir.
+        // Duvardan uzaga basiliyorsa yapismaz (tekrar tekrar yakalamayi onler).
+        bool pressingAway =
+            (
+                movement.wallDirection == 1 &&
+                player.moveInput < -0.1f
+            )
+            ||
+            (
+                movement.wallDirection == -1 &&
+                player.moveInput > 0.1f
+            );
+
         if (
             !player.isGrounded &&
-            player.rb.linearVelocity.y < 0f &&
-            touchingWall
+            player.rb.linearVelocity.y < 1f &&
+            touchingWall &&
+            !pressingAway
         )
         {
             sm.ChangeState(
