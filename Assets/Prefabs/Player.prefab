@@ -278,6 +278,7 @@ MonoBehaviour:
   switchPopTime: 0.11
   landTime: 0.16
   landSquash: 0.12
+  useDashAnimation: 0
   parryRaise9: 0.07
   parryHold5: 0.35
   parryReturn5: 0.3
@@ -287,6 +288,11 @@ MonoBehaviour:
   chiburiDur: 2.6
   chiSpinTime: 0.3
   chiSpinPhase: 0.62
+  frameDash: 1
+  dashCoilTime: 0.09
+  dashCoilScale: {x: 1.1, y: 0.86}
+  dashStretchScale: {x: 1.38, y: 0.82}
+  dashEndScale: {x: 0.92, y: 1.08}
 --- !u!1 &6518560691318549444
 GameObject:
   m_ObjectHideFlags: 0
@@ -532,8 +538,8 @@ MonoBehaviour:
   wallJumpBlendTime: 0.1
   ledgeClimbEnabled: 1
   ledgeClimbTime: 0.2
-  ledgeReachAbove: 0.05
-  ledgeMinAboveFeet: 0.6
+  ledgeReachAbove: 0
+  ledgeMinAboveFeet: 0.8
   ledgeExitSpeedRatio: 0.7
   ledgeRegrabCooldown: 0.2
   ledgeCooldownTimer: 0
@@ -671,6 +677,7 @@ MonoBehaviour:
   jumpHeld: 0
   isGrounded: 0
   facingDir: 1
+  facingLockTimer: 0
   slamPressed: 0
   verticalInput: 0
 --- !u!114 &9197762990885015695

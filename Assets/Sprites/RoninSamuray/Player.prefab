@@ -33,7 +33,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3471097084547755544}
+  m_Father: {fileID: 7536978035833587185}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &9087282568792326975
 MonoBehaviour:
@@ -51,6 +51,7 @@ MonoBehaviour:
   sortingLayerName: Default
   sortingOrderOffset: 0
   skinGrid: {x: 8, y: 14}
+  LastAlpha: 1
   resourceFolder: RonniSkin
 --- !u!114 &1170000420337042426
 MonoBehaviour:
@@ -74,6 +75,7 @@ MonoBehaviour:
   blinkInterval: {x: 2, y: 5}
   actionBlendIn: 0.05
   actionBlendOut: 0.12
+  swordReady: 1
 --- !u!114 &7756061466116606015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -86,20 +88,103 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f470aec318b0ddc4f81a6e50eb3ed6f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RonniSkin.RonniPlayerBridge
-  player: {fileID: 9045930727589892200}
+  player: {fileID: 0}
   originalSprite: {fileID: 0}
   hideOriginal: 1
   matchOriginalSize: 1
   sizeMultiplier: 1
   offset: {x: 0, y: 0}
   mirrorSpriteColor: 1
+  sheatheKey: 114
+  startDrawn: 0
   forceRun: 0
   useProfileRun: 1
   useProfileJump: 1
+  runFolder: RonniRunVivid
+  runScale: 1
+  idleFolder: RonniIdle
+  idleScale: 1
+  standJumpFolder: RonniJump
+  smearGlow: 6
+  atkCutStart: 0.42
+  atkCutEnd: 0.56
+  atkClipCutA: 0.38
+  atkClipCutB: 0.64
+  atkCrossfade: 0
+  atkHoldTime3: 0.5
+  atkHoldPhase: 0.8
+  atkReturnTime3: 0.8
+  atkSettlePhase: 0.68
+  atkSettle2: 0.55
+  atkHold5x: 0.4
+  atkHoldTime5: 2.2
+  atkEndPause2: 0.8
+  atkReturnTime5: 3.5
+  frameAttack1: 1
+  frameAttack2: 1
+  frameAttack3: 1
+  frameAttack4: 1
+  frameAtkPxScale: 3.7
+  frameAtkOffset: {x: 0, y: 0}
+  frameAtkOrder: 60
+  frameSquash: 1
+  squashAmount: 1
+  squashSpeed: 26
+  frameFadeOut: 0.16
+  frameFadeSettle: 1
+  frameSmearGlow: 1
+  smearDissolve: 1
+  frameBlendAtk4: 1
+  frameBlendTime: 0.07
+  frameBlendAlpha: 0.55
+  dissolveLife: 0.5
+  dissolveGrow: 1.1
+  dissolveAlpha: 0.7
+  dissolveRise: 0.1
+  dissolveHaze: 1
+  dissolveHazeGrow: 1.12
+  frameSmearColor: {r: 1.2, g: 2.2, b: 4.5, a: 1}
+  frameParry: 1
+  parryF1Time: 0.045
+  parryF2Time: 0.06
+  parryOffset: {x: 0, y: 0}
+  parryHoldAfterSuccess: 0.28
+  parryAttack2Reverse: 0
+  parryRevFrameTime: 0.04
+  smearTrail: 0.55
+  smearEndStart: 0.6
+  smearFlip2: 1
+  standJumpMaxSpeed: 1
+  attackFolder: RonniAtk
+  fireflyWait: 1
+  waitDelay: {x: 12, y: 24}
   airVelocityRange: 12
+  stopAnimEnabled: 1
+  stopDuration: 0.25
+  stopMinSpeed: 2
+  stopFade: 0.14
+  stopPopAmount: 0.3
+  dashRunGrace: 0.25
+  dashDustEnabled: 1
+  dashTrailEndFrac: 0.75
   switchPopTime: 0.11
   landTime: 0.16
   landSquash: 0.12
+  useDashAnimation: 0
+  parryRaise9: 0.07
+  parryHold5: 0.35
+  parryReturn5: 0.3
+  blockRaise2: 0.18
+  blockReturn2: 0.3
+  idleDrawnPeriod2: 3.2
+  chiburiDur: 2.6
+  chiSpinTime: 0.3
+  chiSpinPhase: 0.62
+  frameDash: 1
+  dashCoilTime: 0.09
+  dashCoilScale: {x: 1.1, y: 0.86}
+  dashStretchScale: {x: 1.38, y: 0.82}
+  dashEndScale: {x: 0.92, y: 1.08}
 --- !u!136 &4692825756387666691
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -159,7 +244,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3471097084547755544}
+  m_Father: {fileID: 7536978035833587185}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &3212990304400142721
 MeshFilter:
@@ -559,36 +644,21 @@ PrefabInstance:
       propertyPath: hitVFXInsideAmount
       value: 2
       objectReference: {fileID: 0}
-    - target: {fileID: 8699249975078374667, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-      propertyPath: player
-      value: 
-      objectReference: {fileID: 9045930727589892200}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 4301498018943129808, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
     - {fileID: 6501445533221864210, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-      insertIndex: 0
+    - targetCorrespondingSourceObject: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 7316418240797981877}
-    - targetCorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+    - targetCorrespondingSourceObject: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3334355279521314381}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
---- !u!4 &3471097084547755544 stripped
+--- !u!4 &7536978035833587185 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: 1425016800824621251, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+  m_CorrespondingSourceObject: {fileID: 5437468479207363370, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
   m_PrefabInstance: {fileID: 2588863154452797147}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9045930727589892200 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6801815613620143795, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
-  m_PrefabInstance: {fileID: 2588863154452797147}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 716cf96fdc0bab44ebe80c78212a4183, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController

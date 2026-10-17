@@ -248,7 +248,7 @@ public class DashState : IPlayerState
         if (fxTimer > 0f)
             return;
 
-        fxTimer = Mathf.Max(0.02f, player.afterImageSpacing);
+        fxTimer = Mathf.Min(Mathf.Max(0.02f, player.afterImageSpacing), DashFx.GhostSpacing);
 
         SpawnGhost();
     }

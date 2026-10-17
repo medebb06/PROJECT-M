@@ -443,7 +443,9 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Geri seken dalganin hizi (dalga hizina carpan).")]
     [Min(0.2f)] public float waveReflectSpeedMultiplier = 0.8f;
     [Tooltip("Geri seken dalga bossa bu kadar yaklasinca carpar.")]
-    [Min(0f)] public float waveReflectStopDistance = 7f;
+    [Min(0f)] public float waveReflectStopDistance = 2f;
+    [Tooltip("Geri seken (parry'lenen) dalga bossa CARPINCA verdigi denge (posture) hasari (normal parry hasarina carpan). Buyuk = boss daha cabuk sersemler.")]
+    [Min(0f)] public float waveReflectBalanceMultiplier = 3.5f;
     [Min(0.1f)] public float waveEndDelay = 0.4f;
 
     [Header("Dalga oncesi geri ziplama")]
@@ -1432,8 +1434,20 @@ public class Boss1Enemy : MonoBehaviour
     // Geri seken dalga bossa carpti: kisa sarsinti + kivilcim.
     internal void WaveReflectHit(Vector3 pos, Vector2 dir)
     {
-        rig.Flinch(0.6f);
-        rig.Squash(0.6f);
+        // Geri seken dalga bossun POSTURE'unu sağlam doldurur.
+        bool broke = false;
+        EnemyBalance bal = enemy != null ? enemy.GetComponent<EnemyBalance>() : null;
+        if (bal != null && !bal.IsBroken)
+        {
+            int dmg = Mathf.Max(1, Mathf.RoundToInt(enemy.parryBalanceDamage * waveReflectBalanceMultiplier));
+            bal.AddParryBalanceDamage(dmg);
+            broke = bal.IsBroken;
+            enemy.PlayBalanceDamageFlash();
+        }
+
+        float k = broke ? 1.4f : 1f;
+        rig.Flinch(0.6f * k);
+        rig.Squash(0.6f * k);
         rig.Flash();
         if (CombatVFXManager.Instance != null)
             CombatVFXManager.Instance.PlayParry(pos, dir);

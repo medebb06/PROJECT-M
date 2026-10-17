@@ -70,6 +70,10 @@ public class WallJumpState : IPlayerState
         player.facingDir =
             jumpDirection;
 
+        // Kilit suresi: kilit + blend suresi (en az 0.25 sn) boyunca yon ziplama yonunde kalir.
+        player.facingLockTimer =
+            Mathf.Max(0.25f, movement.wallJumpLockTime + movement.wallJumpBlendTime);
+
         if (player.playerSprite != null)
         {
             player.playerSprite.flipX =

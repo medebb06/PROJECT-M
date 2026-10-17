@@ -165,6 +165,7 @@ public class PlayerController : MonoBehaviour
     public bool jumpHeld;
     public bool isGrounded;
     public float facingDir = 1f;
+    [HideInInspector] public float facingLockTimer;   // >0 iken HandleFacing yonu degistirmez (duvar ziplamasi)
 
     [HideInInspector] public bool slamPressed;
     public float verticalInput;
@@ -391,8 +392,8 @@ public class PlayerController : MonoBehaviour
     // (öncesinde tampon bekler).
     private void HandleJump()
     {
-        // Yere ya da duvara tutununca havada zıplama hakkı yenilenir.
-        // Havada zıplama hakkı SADECE yere basınca yenilenir (duvardan yenilenirse sonsuz tırmanılıyordu).
+        // Havada zıplama hakkı SADECE yere basınca yenilenir.
+        // (Duvardan yenilenirse duvar -> double jump -> duvar ile sonsuz tırmanılıyordu.)
         if (isGrounded)
             airJumpsUsed = 0;
 
@@ -486,6 +487,13 @@ public class PlayerController : MonoBehaviour
 
         if (attackFacingLocked)
             return;
+
+        // Duvar ziplamasi: karakter ziplama yonune baksin (duvara dogru tusa basilsa da cevirme).
+        if (facingLockTimer > 0f)
+        {
+            facingLockTimer -= Time.deltaTime;
+            return;
+        }
 
         if (moveInput == 0f)
             return;

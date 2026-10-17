@@ -16,10 +16,11 @@ public static class DashFx
     public static Vector2 EndSquash = new Vector2(0.80f, 1.22f);      // durunca x kisalir, y kabarir
     public static float EndSquashTime = 0.16f;
 
-    public static float GhostLife = 0.30f;
-    public static Color GhostColor = new Color(0.62f, 0.85f, 1f, 1f); // soguk mavi-beyaz
-    public static float GhostAlpha = 0.55f;
-    public static int GhostOrderBehind = 100;                         // gercek karakterin arkasinda
+    public static float GhostLife = 0.45f;
+    public static Color GhostColor = new Color(0.55f, 0.85f, 1f, 1f); // parlak mavi-beyaz
+    public static float GhostAlpha = 0.85f;
+    public static float GhostSpacing = 0.035f;                        // iz araligi (sn)
+    public static int GhostOrderBehind = 1;                           // gercek karakterin hemen arkasinda (arka plana gitmesin)
 
     public static void Begin(PlayerController p)
     {
@@ -61,6 +62,7 @@ public class DashGhostHost : MonoBehaviour
         public Mesh[] meshes;
         public Color[][] colors;
         public float age;
+        public SpriteRenderer sr;   // dash karesi (sprite) izi
     }
 
     // ---- squash & stretch (SquashStretch bilesenine bagimli degil: o oyuncuda kapali) ----
@@ -112,6 +114,34 @@ public class DashGhostHost : MonoBehaviour
 
     public void Spawn(PlayerController p)
     {
+        // Dash karesi (tek sprite) gosteriliyorsa iz de o sprite'in kopyasi olur.
+        SpriteRenderer[] srs = p.GetComponentsInChildren<SpriteRenderer>(false);
+        for (int i = 0; i < srs.Length; i++)
+        {
+            SpriteRenderer f = srs[i];
+            if (f == null || !f.enabled || f.sprite == null || !f.sprite.name.StartsWith("DashHD")) continue;
+
+            Ghost sg = new Ghost();
+            sg.root = new GameObject("DashGhost");
+            sg.root.transform.SetParent(null, false);
+            sg.root.transform.SetPositionAndRotation(f.transform.position, f.transform.rotation);
+            sg.root.transform.localScale = f.transform.lossyScale;
+
+            SpriteRenderer gr = sg.root.AddComponent<SpriteRenderer>();
+            gr.sprite = f.sprite;
+            gr.flipX = f.flipX;
+            gr.sharedMaterial = f.sharedMaterial;
+            gr.sortingLayerID = f.sortingLayerID;
+            gr.sortingOrder = f.sortingOrder - DashFx.GhostOrderBehind;
+
+            sg.sr = gr;
+            sg.meshes = new Mesh[0];
+            sg.colors = new Color[0][];
+            Paint(sg, 0f);
+            ghosts.Add(sg);
+            return;
+        }
+
         srcBuf.Clear();
 
         MeshRenderer[] all = p.GetComponentsInChildren<MeshRenderer>(false);
@@ -181,6 +211,8 @@ public class DashGhostHost : MonoBehaviour
         float a = DashFx.GhostAlpha * (1f - t01) * (1f - t01);
         Color c = DashFx.GhostColor;
         c.a = a;
+
+        if (g.sr != null) g.sr.color = c;
 
         for (int i = 0; i < g.meshes.Length; i++)
         {

@@ -479,3 +479,15 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - RonniPlayerBridge: yeni UpdateDashFrame() (LateUpdate sonunda). Dash sirasinda tum rigler gizlenir, frameSR'de DashHD_1 gosterilir; squash/stretch DashSquashTarget() ile: gerilme (dashCoilScale, dashCoilTime) -> firlama (dashStretchScale) -> gevseme -> son oturma (dashEndScale). Inspector'da 'Dash karesi' basligi altinda: frameDash (kapatirsan rig'li eski halde kalir). Dash bitince bMode=-99 ile rig secimi yeniden yapilir.
 - DashFx: kare gosteriliyorsa after image o sprite'in kopyasi (SpriteRenderer) olur; mesh izi yedek olarak durur.
 - Test (Play Mode, DashState dogrudan tetiklendi): dash sirasinda kare acik/rigler kapali, iz olusuyor, bitince rigler geri geliyor. Gorsel kalite goz ile DEGERLENDIRILMEDI, gercek klavye ile denenmedi.
+
+## Dash izi + ledge sikilastirma + walljump yonu (2026-10-18)
+- DashFx: iz daha belirgin (GhostAlpha 0.85, GhostLife 0.45, parlak mavi, GhostSpacing 0.035 sn; DashState bunu kullanir). Iz siralamasi karakterin HEMEN arkasi (GhostOrderBehind 1; eskiden -100 arka plana gidiyor olabilirdi).
+- Ledge: PlayerMovement varsayilanlari ledgeReachAbove 0, ledgeMinAboveFeet 0.8 (sadece vucudun ust %20'si/el hizasi); duvar mesafesi extents+0.08. LedgeClimbState.TryStart: yukari hiz > 1.0 iken tutunmaz. Player.prefab (iki kopya) + Tutorial_Arena sahne ornegi serialize degerleri guncellendi.
+- Walljump yonu: PlayerController.facingLockTimer (HandleFacing kilidi); WallJumpState.Enter en az 0.25 sn (lock+blend) kilitler. Duvara dogru tusa basilsa da karakter ziplama yonune bakar.
+- Test: Play Mode'da WallJumpState dogrudan tetiklendi + moveInput duvara zorlandi -> facing/flipX ziplama yonunde kaldi. Ledge ve iz gorsel/gercek klavye ile DENENMEDI.
+
+## Boss dalgasi parry -> posture (2026-10-18)
+- Boss1Enemy.WaveReflectHit (geri seken dalga bossa carpinca) artik bossun denge (posture) cubugunu doldurur: enemy.parryBalanceDamage x waveReflectBalanceMultiplier (yeni, varsayilan 3.5) -> EnemyBalance.AddParryBalanceDamage. Kirilirsa sarsinti %40 daha guclu. waveReflectStopDistance 7 -> 2 (dalga bossa yaklasip carpar).
+- Test (Play Mode, WaveReflectHit reflection ile cagrildi, tam canda): her carpma ~63/240 posture (iki carpma 126). Can kilidi (canda >%50 iken cubuk %75'te durur) AYNEN korundu.
+- Gercek dalgayi parry'leyip bossa carpmasi elle OYNANARAK denenmedi.
+- Not: Boss1Enemy.cs commit'i ilk seferde cihaza dusmedi; ikinci force commit ile dustu (cihazdaki dosya okunarak dogrulandi).

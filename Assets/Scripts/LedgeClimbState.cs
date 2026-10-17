@@ -72,6 +72,10 @@ public class LedgeClimbState : IPlayerState
         if (player.facingDir * dir < 0f)
             return false;
 
+        // Hizla yukari cikarken tutunma: kenar ancak ziplamanin zirvesine yaklasinca / dusunce yakalanir.
+        if (player.rb.linearVelocity.y > 1.0f)
+            return false;
+
         Vector2 standPos;
 
         if (!player.Movement.TryGetLedge(dir, out standPos))
