@@ -156,6 +156,15 @@ public class EnemyBalance : MonoBehaviour
     /// <summary>>=0 ise PlayerDamage.PostureToHealthRatio yerine bu oran kullanilir (duz vurusun can hasari; boss icin).</summary>
     [System.NonSerialized] public float chipRatioOverride = -1f;
 
+    /// <summary>>0 ise: can bu oranin USTUNDEYKEN posture kirilamaz (cubuk 'breakLockCapFraction'ta durur).</summary>
+    [System.NonSerialized] public float breakLockBelowHealth = 0f;
+    [System.NonSerialized] public float breakLockCapFraction = 0.75f;
+
+    /// <summary>Son AddBalanceDamage'de kilit yuzunden cubuga SIGMAYAN miktar (chip can hasari icin sayilir).</summary>
+    [System.NonSerialized] public int lastOverflow;
+
+    public bool IsBreakLocked => breakLockBelowHealth > 0f && HealthFraction() > breakLockBelowHealth;
+
     public void SetBreakHealthPercent(float percent)
     {
         breakHealthPercent = Mathf.Clamp(percent, 0f, 0.5f);
@@ -213,6 +222,8 @@ public class EnemyBalance : MonoBehaviour
 
     public bool AddBalanceDamage(int amount, bool useHealthScaling = true)
     {
+        lastOverflow = 0;
+
         if (isBroken)
             return false;
 
@@ -241,6 +252,19 @@ public class EnemyBalance : MonoBehaviour
 
         currentBalance += amount;
 
+        if (IsBreakLocked)
+        {
+            int lockCap = Mathf.Max(
+                Mathf.RoundToInt(maxBalance * Mathf.Clamp01(breakLockCapFraction)),
+                previousBalance);
+
+            if (currentBalance > lockCap)
+            {
+                lastOverflow = currentBalance - lockCap;
+                currentBalance = lockCap;
+            }
+        }
+
         currentBalance =
             Mathf.Clamp(
                 currentBalance,
@@ -266,7 +290,8 @@ public class EnemyBalance : MonoBehaviour
             BreakBalance();
         }
 
-        return currentBalance != previousBalance;
+        // Kilit yuzunden cubuga sigmayan vurus da GECERLI sayilir (yoksa PlayerDamage vurusu yok sayar, boss dokunulmaz olur).
+        return currentBalance != previousBalance || lastOverflow > 0;
     }
 
     private void BreakBalance()

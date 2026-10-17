@@ -428,3 +428,10 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - CombatImpactFeedback.cs: step >= 4 icin tabanlar: `finalHitMinFreeze` 0.13, `finalHitMinSlow` 0.1, `finalHitMinShake` 0.6 (dizilerdeki eski A4 degerleri bunun altindaysa yukselir; uzerindeyse korunur).
 - Durum: yazildi, derlenmedi/test edilmedi. Havada saldiri (AirAttackState) bu yolu kullanmiyor, etkilenmedi. Sahnede kayitli maxHealth/chip degerleri ezebilir.
 - Geri alma: maxHealth 6000, chip 0.3, FinalHitDamageMultiplier 1, finalHitMin* 0.
+
+## Boss posture kilidi (can %50 ustunde) + iksir penceresi + iksir noktalari
+- EnemyBalance.cs: `breakLockBelowHealth`, `breakLockCapFraction`, `lastOverflow`, `IsBreakLocked`. Kilitliyken (boss cani > esik) `AddBalanceDamage` cubugu `breakLockCapFraction` * max'ta tutar, sigmayan kisim `lastOverflow`. Yani posture kirilmaz.
+- PlayerDamage.cs: chip can ilerlemesi `(balance delta + lastOverflow) / MaxBalance` (kilitliyken de duz vurus can goturur).
+- Boss1Enemy.cs: `postureLockAboveHealth` 0.5, `postureLockCap` 0.75 (Awake'te balance'a verilir). Iksir penceresi: `potionWindowAfterCombo` 1.5, `potionWindowAfterLeap` 1.3, `potionWindowBelowHealth` 0.75. Bitirici kombo vurusu (OnStrikeLanded) ve ziplama-ezme cikisi (Leap Exit) `potionWindowPending` kurar; Update'te saldiri bitince, oyuncu cani < %75 ve iksir hakki varsa `enemy.StartAttackRecovery(sure)` + wave/leap/combo bekleme ileri alinir. Faz 2'de pencere x0.7.
+- PlayerPotion.cs (mevcut sistem: F basili tut, 3 hak, 1.1 sn, %40 can): can cubugunun saginda 3 kirmizi nokta (`LateUpdate`, HudCanvas.Fill). Dolu = hak var, soluk = harcandi, icerken son nokta titrer. `MinimalHealthBar.LastRect/HasRect` eklendi.
+- Durum: yazildi, derlenmedi/test edilmedi. Geri alma: postureLockAboveHealth = 0, potionWindow* = 0, nokta cizimi icin PlayerPotion.LateUpdate'i sil.

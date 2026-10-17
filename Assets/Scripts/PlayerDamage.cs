@@ -134,7 +134,7 @@ public static class PlayerDamage
             float chipRatio = balance.chipRatioOverride >= 0f ? balance.chipRatioOverride : PostureToHealthRatio;
             if (health != null && !health.IsDead && chipRatio > 0f && balance.MaxBalance > 0)
             {
-                float progress = (balance.CurrentBalance - balanceBefore) / (float)balance.MaxBalance;
+                float progress = (balance.CurrentBalance - balanceBefore + balance.lastOverflow) / (float)balance.MaxBalance;
 
                 balance.chipCarry += Mathf.Max(0f, progress) * chipRatio * health.MaxHealth;
 

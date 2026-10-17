@@ -17,6 +17,10 @@ public class MinimalHealthBar : MonoBehaviour
     public Color backColor = new Color(1f, 1f, 1f, 0.16f);
     public Color trailColor = new Color(1f, 1f, 1f, 0.38f);
 
+    /// <summary>Son cizilen can cubugu dikdortgeni (IMGUI koordinati). Iksir noktalari bunun yanina cizilir.</summary>
+    public static Rect LastRect;
+    public static bool HasRect;
+
     Health health;
     float shown = 1f, trail = 1f, trailHold;
 
@@ -75,6 +79,9 @@ public class MinimalHealthBar : MonoBehaviour
         Rect sa = HudCanvas.SafeArea();
         float x = sa.x + marginX * s, y = sa.yMax - marginY * s - h - RunCameraZoom.TopBarPixels;
         w = Mathf.Min(w, sa.width - marginX * s * 2f);
+
+        LastRect = new Rect(x, y, w, h);
+        HasRect = true;
 
         HudCanvas.Fill(new Rect(x, y, w, h), backColor);
         HudCanvas.Fill(new Rect(x, y, w * trail, h), trailColor);

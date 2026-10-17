@@ -112,6 +112,42 @@ public class PlayerPotion : MonoBehaviour
         return true;
     }
 
+    [Header("Arayuz (can cubugunun yaninda kirmizi noktalar)")]
+    public Color dotColor = new Color(0.9f, 0.08f, 0.1f, 0.95f);
+    public float dotSize = 9f;       // 1080p'ye gore piksel
+    public float dotGap = 7f;
+    public float dotOffsetX = 16f;
+
+    private void LateUpdate()
+    {
+        if (health == null || !MinimalHealthBar.HasRect || MainMenu.Active) return;
+
+        float s = HudCanvas.Scale();
+        Rect bar = MinimalHealthBar.LastRect;
+        float d = dotSize * s, gap = dotGap * s;
+        float x = bar.xMax + dotOffsetX * s;
+        float y = bar.center.y - d * 0.5f;
+
+        for (int i = 0; i < maxCharges; i++)
+        {
+            bool full = i < Charges;
+            Color c = dotColor;
+
+            if (!full) c.a = 0.16f;
+            else if (drinking && i == Charges - 1)
+                c.a *= Mathf.Lerp(1f, 0.25f, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 14f) * progress);
+            else if (Time.unscaledTime < deniedUntil)
+                c.a *= 0.5f;
+
+            if (Time.unscaledTime < flashUntil && full) c = Color.Lerp(c, Color.white, 0.5f);
+
+            float px = x + i * (d + gap);
+            // Yuvarlak gorunum: iki ust uste binen dikdortgen (kose kirpilmis).
+            HudCanvas.Fill(new Rect(px + d * 0.2f, y, d * 0.6f, d), c);
+            HudCanvas.Fill(new Rect(px, y + d * 0.2f, d, d * 0.6f), c);
+        }
+    }
+
     private void Update()
     {
         Bind();

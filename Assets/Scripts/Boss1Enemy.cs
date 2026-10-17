@@ -119,6 +119,8 @@ public class Boss1Enemy : MonoBehaviour
         balance.SetRecovery(postureRecoveryDelay, postureRecoverySpeed);
         balance.SetBreakHealthPercent(postureBreakHealthPercent);
         balance.chipRatioOverride = hitChipHealthRatio;
+        balance.breakLockBelowHealth = postureLockAboveHealth;
+        balance.breakLockCapFraction = postureLockCap;
         health.MinHealth = 1;   // faz 1: can 0'a inmez, cubuk bitince faz 2 baslar   // 0 = kirilma hasar vermez (Sekiro gibi: sadece acar)
 
         // 4) Yon gostergesi: EnemyController yonu bir SpriteRenderer.flipX'ten okur/yazar.
@@ -198,7 +200,7 @@ public class Boss1Enemy : MonoBehaviour
                 rig.SetSwordTint(fakeColor, 0f, 3f);
         }
 
-        if (comboTinted && comboStepNow >= comboLastIndex) comboEndAt = Time.time + 0.45f;
+        if (comboTinted && comboStepNow >= comboLastIndex) { comboEndAt = Time.time + 0.45f; potionWindowPending = potionWindowAfterCombo; }
         else if (comboTinted) rig.SetSwordTint(comboColor, 1f, 12f);   // ipucu parlamasindan normal kirmiziya don
         if (attackShake <= 0f) return;
         if (CameraShake.Instance != null)
@@ -468,6 +470,18 @@ public class Boss1Enemy : MonoBehaviour
     [Range(1f, 4f)] public float heavyHitSlowPower = 2.2f;
     bool staggerFirstHitPending;
     bool phase2Pending;
+    [Header("Posture kilidi + iksir penceresi")]
+    [Tooltip("Boss cani bu oranin USTUNDEYKEN posture kirilamaz (cubuk tavanda durur, vurus yine can goturur). 0 = kilit yok.")]
+    [Range(0f, 0.9f)] public float postureLockAboveHealth = 0.5f;
+    [Tooltip("Kilitliyken posture cubugunun cikabilecegi en yuksek oran.")]
+    [Range(0.3f, 0.99f)] public float postureLockCap = 0.75f;
+    [Tooltip("Kombo bitirici vurusundan sonra boss bu kadar sn saldirmaz (oyuncu iksir icsin). 0 = yok.")]
+    [Min(0f)] public float potionWindowAfterCombo = 1.5f;
+    [Tooltip("Ziplama-ezme sonrasi iksir penceresi (sn).")]
+    [Min(0f)] public float potionWindowAfterLeap = 1.3f;
+    [Tooltip("Pencere sadece oyuncunun cani bu oranin altindaysa ve iksir hakki varsa acilir.")]
+    [Range(0.1f, 1f)] public float potionWindowBelowHealth = 0.75f;
+    float potionWindowPending;
     float heavyHitUntil;
     [Tooltip("Faz 1 olumcul darbe: max canin bu orani kadar can goturur (tamamini degil).")]
     [Range(0.05f, 1f)] public float deadlyBlowPercent = 0.34f;
@@ -1681,6 +1695,25 @@ public class Boss1Enemy : MonoBehaviour
         enemy.attackWarningTime = rig.ContactTime;
         enemy.attackRecoveryTime = rig.holdTime + rig.recoverTime + extraCooldown;
 
+        // Iksir penceresi: bitirici kombo / ezmeden sonra, oyuncu yaralı ve iksiri varsa boss kisa sure saldirmaz.
+        if (potionWindowPending > 0f && !enemy.IsStaggered && !enemy.IsDead && !leapActive && !waveActive
+            && !(enemy.CurrentState is EnemyAttackState) && !(enemy.CurrentState is Boss1RoarState))
+        {
+            float potionW = potionWindowPending;
+            potionWindowPending = 0f;
+            Health potionHp = enemy.target != null ? enemy.target.GetComponent<Health>() : null;
+            if (potionW > 0f && potionHp != null && !potionHp.IsDead && potionHp.MaxHealth > 0
+                && potionHp.CurrentHealth < potionHp.MaxHealth * potionWindowBelowHealth
+                && PlayerPotion.Instance != null && PlayerPotion.Instance.Charges > 0)
+            {
+                if (phase2) potionW *= 0.7f;
+                enemy.StartAttackRecovery(potionW);
+                nextWaveTime = Mathf.Max(nextWaveTime, Time.time + potionW);
+                nextLeapTime = Mathf.Max(nextLeapTime, Time.time + potionW);
+                comboLastStart = Mathf.Max(comboLastStart, Time.time - comboCooldown + potionW);
+            }
+        }
+
         // Oyuncunun posture'u kirildi: boss bir sure saldirmaz (kirik oyuncu tek seferde olmesin).
         if (playerPosture == null) playerPosture = FindFirstObjectByType<PlayerPosture>();
         bool pBroken = playerPosture != null && playerPosture.IsBroken;
@@ -2138,6 +2171,7 @@ public class Boss1Enemy : MonoBehaviour
             o.rig.SetBaseSquash(0f, 6f);
             if (slam == 0 && o.rig.IsAttacking) o.rig.CancelAttack();
             o.nextLeapTime = Mathf.Max(o.nextLeapTime, Time.time + 1.5f);
+            o.potionWindowPending = Mathf.Max(o.potionWindowPending, o.potionWindowAfterLeap);
         }
     }
 
