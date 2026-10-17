@@ -359,30 +359,33 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 ## Animasyon akiciligi incelemesi - duzeltme 2 (2026-10-17)
 - Degisiklik: Assets/Scripts/AirState.cs ve JumpState.cs. `movement.ApplyMovement(movement.airControl)` cagrisi Update()'ten kaldirildi, FixedUpdate()'e tasindi (PlayerController.FixedUpdate -> stateMachine.FixedUpdate -> CurrentState.FixedUpdate zinciri dogrulandi).
 - Neden: PlayerMovement.ApplyMovement Time.fixedDeltaTime ile ivme uyguluyor; Update'te her karede cagrilinca hava kontrolu kare hizina bagliydi (GroundedState zaten FixedUpdate'te).
-- Dokunulmayanlar: GroundSlam/Dash/Land/WallSlide gecis kontrolleri Update'te kaldi; WallJumpState/WallSlideState degismedi.
-- DURUM: UYGULANDI, Unity'de derleme ve Play Mode'da TEST EDILMEDI. Beklenen yan etki: hava kontrol hissi degisir, airControl yeniden ayar isteyebilir.
+- Dokunulmayanlar: GroundSlam/Dash/Land/WallSlide gecis kontrolleri Update'te kaldi; WallJumpState/WallSlideState degismedi. Update'teki bos kalan `PlayerMovement movement` yerel degiskeni (AirState) birakildi (derleme hatasi/uyarisi olmamali).
+- DURUM: UYGULANDI, Unity'de derleme ve Play Mode'da TEST EDILMEDI.
+- Beklenen yan etki: havada yon degistirme hissi degisir (60 FPS'te daha yumusak/yavas, yuksek FPS'te daha az sert). airControl degeri yeniden ayar isteyebilir.
 - Geri alma: iki dosyada ApplyMovement cagrisini FixedUpdate'ten silip Update() basina (ground slam blogundan once) geri koy, ya da Git ile iki dosyayi geri al.
+- Siradaki (onay bekliyor): bulgu 3-9.
 
-## Animasyon akiciligi incelemesi - bulgu 3 karari (2026-10-17)
-- Kod DEGISMEDI. RonniPlayerBridge (execution order -200) combat/dash durumunu PlayerController/PlayerCombatController'dan (order 0) once okudugu icin gorsel en fazla 1 kare (60 FPS'te ~16 ms) geriden gelir. Duzeltme RonniPlayerBridge + RonniSkinAnimator + RonniClipPlayer siralamasini birlikte degistirmeyi gerektirir; kazanc 1 kare, bu yuzden yapilmadi (iyilestirme firsati).
-
-## Animasyon akiciligi incelemesi - duzeltme 3: dash (2026-10-17)
-- Degisiklik: Assets/Scripts/DashState.cs, `DashBellPower` const 3f -> 1f (yorum satirina eski deger notu eklendi). Kullanici "Daha keskin cikis" secti.
-- Etki: dash hiz egrisinin basi hizlanir (ilk ~33 ms'de hiz ~2 -> ~12 birim/sn, hesapla), ortasi daha az keskin. Sure (dashTime*DurationScale = 0.15*2.2 = 0.33 s) ve mesafe (5*1.5 = 7.5) ayni. Ronni dash gorseli sureye (DurationScale) bagli oldugu icin senkron kalmali; egriyi kullanmiyor.
-- DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI.
-- Geri alma: `DashBellPower = 1f` -> `3f`.
-- Siradaki: bulgu 6 (global slow-mo, tasarim sorusu), 7, 8, 9; bulgu 4 gozlem bekliyor.
-- Commit/push yapilmadi.
-
-## Animasyon akiciligi incelemesi - duzeltme 3b: dash "balon" egrisi + cikis hizi (2026-10-17)
-- Kullanici geri bildirimi: dash hizli firlasin, sona dogru cok yavaslasin.
-- Degisiklik (DashState.cs): hiz egrisi simetrik can yerine v = ortalama*(m+1)*(1-p)^m*SmoothStep(p/0.04) (yeni `DashDecayPower` = 3). Sure (0.33 s) ve mesafe ayni. `DashBellPower`/`Gamma()` kullanilmiyor ama birakildi.
-- Ek: DashState.Exit cikis hizi, dash DOGAL bitince moveSpeed*0.2 (yeni `DashExitSpeedNatural`); iptalle (ziplama/saldiri/parry) bitince eskisi gibi 0.9 (`DashExitSpeedCancel`). Neden: eskiden dash yavaslayip bitince hiz aninda 0.9*moveSpeed'e ziplardi ("biterken hala hizli" hissi). Yeni alan `endedByCancel`.
-- UYARI: Bu dosyadaki degisiklik ve onceki handoff girdisi bir kez DISARIDAN ESKI HALINE DONDURULDU (editor/arac eski tamponu kaydetmis olabilir). Visual Studio'da dosya acikken "reload" sec.
+## Animasyon akiciligi incelemesi - duzeltme 3: dash "balon" egrisi + cikis hizi (2026-10-17)
+- Kullanici geri bildirimi: dash hizli firlasin, sona dogru cok yavaslasin (iki kez daha yavaslatildi).
+- Degisiklik (DashState.cs): hiz egrisi simetrik can yerine v = ortalama*(m+1)*(1-p)^m*SmoothStep(p/0.04); yeni `DashDecayPower` = 3.5 (once 3). Sure (0.33 s) ve mesafe ayni. `DashBellPower`/`Gamma()` kullanilmiyor ama birakildi.
+- Ek: DashState.Exit cikis hizi dash DOGAL bitince moveSpeed*0.2 (`DashExitSpeedNatural`); iptalle (ziplama/saldiri/parry) bitince eskisi gibi 0.9 (`DashExitSpeedCancel`). Neden: eskiden dash yavaslayip bitince hiz aninda 0.9*moveSpeed'e ziplardi. Yeni alan `endedByCancel`.
+- UYARI: Bu oturumda DashState.cs ve bu dosya cihazda birkac kez eski haline dondu (gecikmeli yazma / editorde acik eski kopya). Visual Studio'da dosya acikken "reload" sec; degisiklikler bu girdiye gore dogrulanmali (DashDecayPower 3.5, DashExitSpeedNatural var mi).
 - DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI.
 - Geri alma: curve'u eski formule (n=DashBellPower; norm=Gamma(2n+2)/Gamma(n+1)^2; curve=norm*p^n*(1-p)^n) ve Exit'te `0.9f` carpanina dondur.
 
-## Animasyon akiciligi incelemesi - bulgu 7 ve 8 kararlari (2026-10-17)
-- Bulgu 7 (tamponlarda scaled/unscaled karisikligi): kod DEGISMEDI. Dash/savunma tamponu unscaled, saldiri/ziplama scaled. Sadece yavaslatma sirasinda fark eder; dash tamponundaki yorum bilinçli secimi gosteriyor, hangi yonun dogru oldugu Play Mode'suz belli degil.
-- Bulgu 8 (AttackState rb.position Update'te): kod DEGISMEDI. FixedUpdate'e tasimak (20 ms adim) 0.117 s'lik saldirida atilma/vurus zamanini kabalastirir; sıçrama gozlemlenmedi.
+## Animasyon akiciligi incelemesi - bulgu 3, 7 ve 8 kararlari (2026-10-17)
+- Bulgu 3 (RonniPlayerBridge order -200 -> gorsel en fazla 1 kare geride): kod DEGISMEDI; duzeltme 3 scriptin (Bridge/SkinAnimator/ClipPlayer) siralamasini birlikte degistirmeyi gerektirir, kazanc 1 kare.
+- Bulgu 7 (tamponlarda scaled/unscaled karisikligi): kod DEGISMEDI. Dash/savunma tamponu unscaled, saldiri/ziplama scaled. Sadece yavaslatma sirasinda fark eder; dash tamponundaki yorum bilincli secimi gosteriyor, hangi yonun dogru oldugu Play Mode'suz belli degil.
+- Bulgu 8 (AttackState rb.position Update'te): kod DEGISMEDI. FixedUpdate'e tasimak (20 ms adim) 0.117 s'lik saldirida atilma/vurus zamanini kabalastirir; sicrama gozlemlenmedi.
 - Siradaki: bulgu 9 (parry/block gorsel sureleri), bulgu 4 (ziplama/inis gorseli) gozlem bekliyor.
+- Commit/push yapilmadi.
+
+## Animasyon akiciligi incelemesi - duzeltme 4: saldiri kesilince yanlis poz (2026-10-17)
+- Kullanici: hizli saldiri<->dash ve dash<->ziplama/kosu girislerinde bir an yanlis poz cikiyor; saldiri hemen ardindan dash atip birakinca idle'a gecerken yarim saniyeden kisa idle benzeri farkli bir poz gorunuyor.
+- Dosya: Assets/Sprites/RonniSkin/Scripts/RonniPlayerBridge.cs
+- (a) LateUpdate sonu: saldiri dash/ziplama/kosu ile kesilince son saldiri karesi (frameSR) 0.16 s boyunca o hareketin USTUNDE soluyordu. Simdi `if (!frameWant && frameSR.enabled && (bMode != 0 || player.isDashing))` ise kare aninda gizlenir; durağan idle'a donuste eski solma kalir.
+- (b) UpdateCombat, profil dash erken `return`u (satir ~533): `anim.ClearAction()` eklendi. Neden: saldiri sirasinda acilan SetAction("attackN") dash boyunca kapanmiyordu (erken return ClearAction'a ulasmiyordu); dash bitince ActionActive ~0.2 s (actionBlendOut) acik kalip idleNow=false yaparak rigIdle yerine ana rig'i gosteriyordu.
+- DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI. Dash<->ziplama/kosu yanlis pozu icin ayri aday var (anim.grounded 1 kare gec -> kosu klibi Restart(0)); henuz DEGISTIRILMEDI.
+- UYARI: Bu oturumda cihazdaki dosyalar (DashState.cs, bu dosya, RonniPlayerBridge.cs) birkac kez bir onceki surume dondu; Visual Studio'da acik/eski kopya suphesi. Degisikliklerin yerinde oldugunu dogrula.
+- Geri alma: (a) ilk `if`i `if (!frameWant && frameSR != null && frameSR.enabled)` yap ve eklenen blok + `else` kelimesini sil; (b) `{ anim.ClearAction(); return; }` -> `return;`.
+- Commit/push yapilmadi.

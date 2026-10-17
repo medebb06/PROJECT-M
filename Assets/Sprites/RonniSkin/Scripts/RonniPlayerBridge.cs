@@ -530,7 +530,7 @@ namespace RonniSkin
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
             wasDashing = dashing;
-            if (dashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt) return; // profil dash (mode 3) LateUpdate'te
+            if (dashing && playerRun != null && playerRun.HasClip("dash") && rigRun != null && rigRun.IsBuilt) { anim.ClearAction(); return; } // profil dash (mode 3) LateUpdate'te; ClearAction: saldırıdan kalan eylem dash boyunca açık kalıp bitişte idle yerine ana rig'i gösteriyordu
             if (dashing && anim.HasClip("dash")) { anim.SetAction("dash", Time.time - dashStart); return; }
 
             // ---- attacks: timing from PlayerCombatController.AttackProgress ----
@@ -889,7 +889,13 @@ namespace RonniSkin
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
             }
-            if (!frameWant && frameSR != null && frameSR.enabled)
+            if (!frameWant && frameSR != null && frameSR.enabled && (bMode != 0 || player.isDashing))
+            {
+                // Saldırı dash / zıplama / koşu ile KESİLDİYSE: son saldırı karesi o hareketin üstünde solmasın
+                // (yanlış poz bir an görünüyordu); anında gizle. Solma yalnızca durağan idle'a dönüşte kalır.
+                frameFading = false; frameSR.enabled = false; if (glowSR != null) glowSR.enabled = false;
+            }
+            else if (!frameWant && frameSR != null && frameSR.enabled)
             {
                 // Çapraz geçiş: altta kılıçlı idle (rig) zaten görünüyor; son kare üstte yavaşça söner.
                 if (!frameFading) { frameFading = frameFadeOut > 0.001f; frameFadeT = frameFadeOut; sqWas = false; }
