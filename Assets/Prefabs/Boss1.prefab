@@ -469,7 +469,7 @@ Transform:
   m_GameObject: {fileID: 3164142379554466725}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 14, y: -4.893567, z: 0}
+  m_LocalPosition: {x: 96, y: -4.893567, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -571,8 +571,9 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: 50025a787b88e8147b0d8ca931e8d9b7, type: 2}
   sortingLayerName: 
   sortingOrder: 4
+  makeEnemy: 1
   breathsPerSecond: 0.22
-  chestScale: 0.022
+  chestScale: 0.0265
   chestLift: 0.06
   chestTiltDeg: 1.2
   bellyLift: 0.03
@@ -580,9 +581,83 @@ MonoBehaviour:
   armSwayDeg: 2.2
   swordSwayDeg: 1.4
   rootSquash: 0.012
+  armLSwayDeg: 1.6
   flinchDeg: 7
   flinchShove: 0.18
   flinchStiffness: 16
+  pivotBackFoot: {x: 2.27, y: -0.05}
+  armLPivot: {x: -0.1, y: 2}
+  walkEnabled: 1
+  walkStride: 1.6
+  walkAnimSpeed: 0.28
+  walkSwing: 0.4
+  walkLift: 0.5
+  walkLeanDeg: 6
+  walkDip: 0.045
+  walkSwordSwing: 3.5
+  walkArmLSwing: 9
+  stepShake: 0.12
+  windupTime: 0.7
+  tensionTime: 0.3
+  strikeTime: 0.09
+  holdTime: 0.25
+  recoverTime: 0.8
+  windupChestDeg: -14
+  windupBellyDeg: -7
+  windupHeadDeg: -4
+  windupArmDeg: -69.5
+  windupSwordDeg: 105.6
+  windupArmLDeg: -14
+  windupCrouch: 0.04
+  strikeChestDeg: 18
+  strikeBellyDeg: 10
+  strikeHeadDeg: 5
+  strikeArmDeg: 10
+  strikeSwordDeg: 130.2
+  strikeArmLDeg: 16
+  strikeCrouch: 0.07
+  keepBladeAboveGround: 1
+  groundY: -0.06
+  windupTremble: 1.2
+  tensionOvershoot: 0.06
+  impactShakeDeg: 2.5
+  autoAttackEvery: 0
+  sweepWindupPose:
+    chest: -24
+    belly: -12
+    head: -8
+    arm: -30
+    sword: 95
+    armL: -10
+    crouch: 0.1
+  sweepStrikePose:
+    chest: 34
+    belly: 16
+    head: 7
+    arm: 28
+    sword: 102
+    armL: 24
+    crouch: 0.14
+  fakeTrembleMul: 2.8
+  slamArmWindup: {x: -52, y: -20}
+  slamArmStrike: {x: -4, y: 4}
+  sweepArmWindup: {x: 34, y: 22}
+  sweepArmStrike: {x: -38, y: -8}
+  beatArmBase: {x: -72, y: -30}
+  beatArmSwing: {x: 48, y: 20}
+  gorillaBeatCount: 5
+  poundArm: {x: -50, y: -15}
+  shoulderFollow: 0.3
+  openGlow: 1
+  openGlowColor: {r: 1, g: 0.05, b: 0.03, a: 1}
+  openGlowIntensity: 0.95
+  openGlowPulsesPerSecond: 1.6
+  openGlowSize: 0.05
+  openGlowYOffset: 0.1
+  squashAmount: 0.2
+  squashStiffness: 20
+  flashTime: 0.09
+  leapSquashAmount: 0.12
 --- !u!1 &3672012925554917333
 GameObject:
   m_ObjectHideFlags: 0
