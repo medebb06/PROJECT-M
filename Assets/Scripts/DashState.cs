@@ -12,9 +12,18 @@ public class DashState : IPlayerState
     private float fxTimer;
     private float total;
     private bool cancelIntent;
+    private bool endedByCancel;
 
     // Hız çanı (eski değer: 3): 3 = ortada ortalama hızın ~2.2 katı. Büyük = ortası daha keskin, başı/sonu daha yavaş.
-    private const float DashBellPower = 1f;
+    private const float DashBellPower = 1f;   // artik kullanilmiyor (eski cani; geri almak icin birakildi)
+
+    // Dash hiz dususu: buyudukce son kisim daha yavas (3 = hizli firlar, sonda cok yavaslar).
+    private const float DashDecayPower = 3.5f;
+
+    // Dash DOGAL bittiginde cikis hizi (moveSpeed carpani). Eskiden hep 0.9'du: dash yavaslayip
+    // bitince kosu hizina ziplatiyordu. Iptal ile (ziplama/saldiri/parry) bitince 0.9 korunur.
+    private const float DashExitSpeedNatural = 0.2f;
+    private const float DashExitSpeedCancel = 0.9f;
 
     // Dash süresi çarpanı (mesafe sabit kalır, hız buna göre düşer). Animasyon köprüsü de bunu kullanır.
     public const float DurationScale = 2.2f;
@@ -72,6 +81,7 @@ public class DashState : IPlayerState
         timer = player.dashTime * DurationScale;
         total = timer;
         cancelIntent = false;
+        endedByCancel = false;
 
         dir = player.GetDashDirection();
 
@@ -143,7 +153,7 @@ public class DashState : IPlayerState
         // dash çıkışında momentum koru
         Vector2 vel = player.rb.linearVelocity;
 
-        vel.x = dir * player.moveSpeed * 0.9f;
+        vel.x = dir * player.moveSpeed * (endedByCancel ? DashExitSpeedCancel : DashExitSpeedNatural);
 
         player.SetVelocity(vel);
 
@@ -174,6 +184,8 @@ public class DashState : IPlayerState
 
         if (timer <= 0f || cancelNow)
         {
+            endedByCancel = cancelNow && timer > 0f;
+
             if (player.isGrounded)
                 sm.ChangeState(new GroundedState(player, sm));
             else
@@ -202,9 +214,11 @@ public class DashState : IPlayerState
         // v(p) = ortalama * (2n+1)!/(n!)^2 * p^n * (1-p)^n  (integral = dashDistance, mesafe sabit).
         // n büyüdükçe orta kısım daha keskin/hızlı, uçlar daha yavaş olur.
         float p = Mathf.Clamp01(1f - timer / Mathf.Max(0.0001f, player.dashTime * DurationScale));
-        float n = DashBellPower;
-        float norm = Gamma(2f * n + 2f) / (Gamma(n + 1f) * Gamma(n + 1f));
-        float curve = norm * Mathf.Pow(p, n) * Mathf.Pow(1f - p, n);
+        // Balon gibi: ilk anda hizli firlar, sona dogru cok yavaslar.
+        // v(p) = ortalama * (m+1) * (1-p)^m  (integral = 1, mesafe sabit).
+        // Basta ~%4'luk kisa yumusak giris sert sicramayi onler.
+        float m = DashDecayPower;
+        float curve = (m + 1f) * Mathf.Pow(1f - p, m) * Mathf.SmoothStep(0f, 1f, p / 0.04f);
 
         vel.x = dir * speed * curve;
 

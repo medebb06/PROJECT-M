@@ -373,3 +373,16 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Geri alma: `DashBellPower = 1f` -> `3f`.
 - Siradaki: bulgu 6 (global slow-mo, tasarim sorusu), 7, 8, 9; bulgu 4 gozlem bekliyor.
 - Commit/push yapilmadi.
+
+## Animasyon akiciligi incelemesi - duzeltme 3b: dash "balon" egrisi + cikis hizi (2026-10-17)
+- Kullanici geri bildirimi: dash hizli firlasin, sona dogru cok yavaslasin.
+- Degisiklik (DashState.cs): hiz egrisi simetrik can yerine v = ortalama*(m+1)*(1-p)^m*SmoothStep(p/0.04) (yeni `DashDecayPower` = 3). Sure (0.33 s) ve mesafe ayni. `DashBellPower`/`Gamma()` kullanilmiyor ama birakildi.
+- Ek: DashState.Exit cikis hizi, dash DOGAL bitince moveSpeed*0.2 (yeni `DashExitSpeedNatural`); iptalle (ziplama/saldiri/parry) bitince eskisi gibi 0.9 (`DashExitSpeedCancel`). Neden: eskiden dash yavaslayip bitince hiz aninda 0.9*moveSpeed'e ziplardi ("biterken hala hizli" hissi). Yeni alan `endedByCancel`.
+- UYARI: Bu dosyadaki degisiklik ve onceki handoff girdisi bir kez DISARIDAN ESKI HALINE DONDURULDU (editor/arac eski tamponu kaydetmis olabilir). Visual Studio'da dosya acikken "reload" sec.
+- DURUM: UYGULANDI, Play Mode'da TEST EDILMEDI.
+- Geri alma: curve'u eski formule (n=DashBellPower; norm=Gamma(2n+2)/Gamma(n+1)^2; curve=norm*p^n*(1-p)^n) ve Exit'te `0.9f` carpanina dondur.
+
+## Animasyon akiciligi incelemesi - bulgu 7 ve 8 kararlari (2026-10-17)
+- Bulgu 7 (tamponlarda scaled/unscaled karisikligi): kod DEGISMEDI. Dash/savunma tamponu unscaled, saldiri/ziplama scaled. Sadece yavaslatma sirasinda fark eder; dash tamponundaki yorum bilinçli secimi gosteriyor, hangi yonun dogru oldugu Play Mode'suz belli degil.
+- Bulgu 8 (AttackState rb.position Update'te): kod DEGISMEDI. FixedUpdate'e tasimak (20 ms adim) 0.117 s'lik saldirida atilma/vurus zamanini kabalastirir; sıçrama gozlemlenmedi.
+- Siradaki: bulgu 9 (parry/block gorsel sureleri), bulgu 4 (ziplama/inis gorseli) gozlem bekliyor.
