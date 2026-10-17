@@ -9,7 +9,7 @@ public class TutorialLessonDuelist : MonoBehaviour
     public EnemyController enemy;
     public GameObject gateToOpen;
     public float triggerDistance = 30f;
-    public float enemyDistance = 7f;
+    public float enemyDistance = 3.5f;
 
     public float slowStartWindup = 0.8f;
     public float blockFreezeWindup = 0.45f;
@@ -43,6 +43,54 @@ public class TutorialLessonDuelist : MonoBehaviour
         CombatEvents.ParrySucceeded -= OnParry;
         CombatEvents.PlayerBlocked -= OnBlocked;
         RunCameraZoom.ForceCinematic = false;
+        RestoreControls();
+    }
+
+    PlayerDefenseController defense;
+    bool controlsRestricted, wasPassive;
+
+    // Ders sirasinda SADECE o dersin hareketi yapilabilsin:
+    //   BLOCK / PARRY : vurus ve dash kapali
+    //   DODGE         : vurus ve blok/parry kapali
+    void ApplyRestrictions()
+    {
+        if (player == null) return;
+        if (defense == null) defense = player.GetComponent<PlayerDefenseController>();
+
+        bool dodge = lesson == Lesson.Dodge;
+        controlsRestricted = true;
+
+        player.isAttackLocked = true;
+
+        if (!dodge)
+            player.dashCooldownTimer = Mathf.Max(player.dashCooldownTimer, 1f);
+
+        if (defense != null)
+        {
+            if (dodge && defense.enabled)
+            {
+                defense.CancelDefense();
+                defense.enabled = false;
+            }
+            else if (!dodge && !defense.enabled)
+            {
+                defense.enabled = true;
+            }
+        }
+    }
+
+    void RestoreControls()
+    {
+        if (!controlsRestricted) return;
+        controlsRestricted = false;
+
+        if (player != null)
+        {
+            player.isAttackLocked = false;
+            player.dashCooldownTimer = 0f;
+        }
+
+        if (defense != null) defense.enabled = true;
     }
 
     void OnParry(EnemyController e, bool broke) { gotParry = true; }
@@ -61,6 +109,7 @@ public class TutorialLessonDuelist : MonoBehaviour
 
         if (enemy == null)
         {
+            RestoreControls();
             OpenGate();
             return;
         }
@@ -69,11 +118,16 @@ public class TutorialLessonDuelist : MonoBehaviour
         if (eHealth != null && eHealth.IsDead)
         {
             RunCameraZoom.ForceCinematic = false;
+            RestoreControls();
             OpenGate();
             return;
         }
 
-        if (lesson == Lesson.Free) return;
+        if (lesson == Lesson.Free)
+        {
+            RestoreControls();
+            return;
+        }
 
         // Dersler boyunca Duelist olmesin.
         if (eHealth != null && eHealth.CurrentHealth < eHealth.MaxHealth)
@@ -88,17 +142,23 @@ public class TutorialLessonDuelist : MonoBehaviour
             {
                 lesson = Lesson.Block;
                 phase = Phase.WaitAttack;
-                passiveUntil = Time.unscaledTime + 1.5f;
+                passiveUntil = Time.unscaledTime + 0.4f;
                 phaseTimer = 0f;
+                wasPassive = true;
+                PlaceEnemyInFront();
             }
             return;
         }
+
+        ApplyRestrictions();
 
         if (pHealth != null && !pHealth.IsDead && pHealth.CurrentHealth < pHealth.MaxHealth * 0.2f)
             pHealth.Heal(pHealth.MaxHealth);
 
         bool passive = Time.unscaledTime < passiveUntil;
         if (passive) enemy.StartAttackRecovery(5f);
+        else if (wasPassive) enemy.StartAttackRecovery(0.2f);   // pasiflik bitince beklemeden saldirsin
+        wasPassive = passive;
 
         phaseTimer += Time.unscaledDeltaTime;
         enemy.alwaysHunt = true;
@@ -112,7 +172,7 @@ public class TutorialLessonDuelist : MonoBehaviour
         if (phase == Phase.WaitAttack)
         {
             waitTimer += Time.unscaledDeltaTime;
-            if (waitTimer > 3.5f && !passive)
+            if (waitTimer > 1.5f && !passive)
             {
                 waitTimer = 0f;
                 PlaceEnemyInFront();
@@ -166,27 +226,27 @@ public class TutorialLessonDuelist : MonoBehaviour
                 bool ok;
                 if (lesson == Lesson.Parry) ok = gotParry;
                 else if (lesson == Lesson.Block) ok = gotBlock || gotParry;
-                else ok = dashSeen && !hurt && phaseTimer > 0.6f;
+                else ok = dashSeen && !hurt && phaseTimer > 0.45f;
 
                 if (ok)
                 {
                     SetToast(lesson == Lesson.Parry ? "MUKEMMEL PARRY!" : (lesson == Lesson.Block ? "BLOK!" : "KACTIN!"));
-                    passiveUntil = Time.unscaledTime + 1.6f;
+                    passiveUntil = Time.unscaledTime + 0.5f;
                     phase = Phase.Gap; phaseTimer = 0f; retry = false;
                 }
-                else if (hurt || phaseTimer > 2.2f)
+                else if (hurt || phaseTimer > 1.6f)
                 {
                     SetToast("TEKRAR DENE");
                     if (pHealth != null) pHealth.Heal(pHealth.MaxHealth);
-                    passiveUntil = Time.unscaledTime + 1.2f;
+                    passiveUntil = Time.unscaledTime + 0.5f;
                     phase = Phase.Gap; phaseTimer = 0f; retry = true;
                 }
                 break;
             }
 
             case Phase.Gap:
-                if (phaseTimer > 0.6f) RunCameraZoom.ForceCinematic = false;
-                if (phaseTimer > 1.6f)
+                if (phaseTimer > 0.25f) RunCameraZoom.ForceCinematic = false;
+                if (phaseTimer > 0.55f)
                 {
                     phase = Phase.WaitAttack; phaseTimer = 0f;
                     if (!retry)
