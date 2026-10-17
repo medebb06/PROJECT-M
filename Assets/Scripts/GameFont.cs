@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// OYUN YAZI TIPI (Knight Souls): Resources/UI/Knight_Souls.otf.
+/// OYUN YAZI TIPI (Hoshiko Satsuki): Resources/UI/Hoshiko_Satsuki.ttf (yedek: Knight_Souls).
 /// Tum yazilarda kullanilir: OnGUI (GUI.skin.font), UI Text, TextMesh (kritik sayilari, callout'lar) ve
 /// kodla kurulan stiller (GameFont.Get / Or). Font yoksa hicbir sey degismez.
 /// Not: font buyuk harflidir (kucuk harfler kucuk-buyuk harf gibi gorunur).
@@ -17,8 +17,9 @@ public static class GameFont
         if (!tried)
         {
             tried = true;
-            font = Resources.Load<Font>("UI/Knight_Souls");
-            if (font == null) Debug.LogWarning("[GameFont] Resources/UI/Knight_Souls bulunamadi: varsayilan font kullanilacak.");
+            font = Resources.Load<Font>("UI/Hoshiko_Satsuki");
+            if (font == null) font = Resources.Load<Font>("UI/Knight_Souls");
+            if (font == null) Debug.LogWarning("[GameFont] Resources/UI/Hoshiko_Satsuki bulunamadi: varsayilan font kullanilacak.");
         }
         return font;
     }

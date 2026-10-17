@@ -159,6 +159,7 @@ MonoBehaviour:
   sortingLayerName: Default
   sortingOrderOffset: -1
   skinGrid: {x: 8, y: 14}
+  LastAlpha: 1
   resourceFolder: RonniSkin
 --- !u!114 &1170000420337042426
 MonoBehaviour:
@@ -211,13 +212,81 @@ MonoBehaviour:
   runScale: 1
   idleFolder: RonniIdle
   idleScale: 1
+  standJumpFolder: RonniJump
+  smearGlow: 6
+  atkCutStart: 0.42
+  atkCutEnd: 0.56
+  atkClipCutA: 0.38
+  atkClipCutB: 0.64
+  atkCrossfade: 0
+  atkHoldTime3: 0.5
+  atkHoldPhase: 0.8
+  atkReturnTime3: 0.8
+  atkSettlePhase: 0.68
+  atkSettle2: 0.55
+  atkHold5x: 0.4
+  atkHoldTime5: 2.2
+  atkEndPause2: 0.8
+  atkReturnTime5: 3.5
+  frameAttack1: 1
+  frameAttack2: 1
+  frameAttack3: 1
+  frameAttack4: 1
+  frameAtkPxScale: 3.7
+  frameAtkOffset: {x: 0, y: 0}
+  frameAtkOrder: 60
+  frameSquash: 1
+  squashAmount: 1
+  squashSpeed: 26
+  frameFadeOut: 0.16
+  frameFadeSettle: 1
+  frameSmearGlow: 1
+  smearDissolve: 1
+  frameBlendAtk4: 1
+  frameBlendTime: 0.07
+  frameBlendAlpha: 0.55
+  dissolveLife: 0.5
+  dissolveGrow: 1.1
+  dissolveAlpha: 0.7
+  dissolveRise: 0.1
+  dissolveHaze: 1
+  dissolveHazeGrow: 1.12
+  frameSmearColor: {r: 1.2, g: 2.2, b: 4.5, a: 1}
+  frameParry: 1
+  parryF1Time: 0.045
+  parryF2Time: 0.06
+  parryOffset: {x: 0, y: 0}
+  parryHoldAfterSuccess: 0.28
+  parryAttack2Reverse: 0
+  parryRevFrameTime: 0.04
+  smearTrail: 0.55
+  smearEndStart: 0.6
+  smearFlip2: 1
+  standJumpMaxSpeed: 1
+  attackFolder: RonniAtk
+  fireflyWait: 1
+  waitDelay: {x: 12, y: 24}
   airVelocityRange: 12
+  stopAnimEnabled: 1
+  stopDuration: 0.25
+  stopMinSpeed: 2
+  stopFade: 0.14
+  stopPopAmount: 0.3
   dashRunGrace: 0.25
   dashDustEnabled: 1
   dashTrailEndFrac: 0.75
   switchPopTime: 0.11
   landTime: 0.16
   landSquash: 0.12
+  parryRaise9: 0.07
+  parryHold5: 0.35
+  parryReturn5: 0.3
+  blockRaise2: 0.18
+  blockReturn2: 0.3
+  idleDrawnPeriod2: 3.2
+  chiburiDur: 2.6
+  chiSpinTime: 0.3
+  chiSpinPhase: 0.62
 --- !u!1 &6518560691318549444
 GameObject:
   m_ObjectHideFlags: 0
@@ -435,15 +504,34 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   moveSpeed: 12
   acceleration: 100
-  deceleration: 60
+  deceleration: 140
   airControl: 0.8
   jumpForce: 17
+  jumpForceOverride: 18
   jumpBufferTime: 0.15
   coyoteTime: 0.12
   jumpCutMultiplier: 2
   jumpCutVelocityMultiplier: 0.3
   fallMultiplier: 2.5
+  riseMultiplier: 2.2
   maxFallSpeed: 20
+  jumpHeight: 8
+  timeToApex: 0.36
+  fallGravityRatio: 1.5
+  jumpCutGravityRatio: 3
+  minJumpHoldTime: 0.1
+  terminalVelocity: 55
+  airAcceleration: 260
+  airDeceleration: 180
+  airTurnMultiplier: 1.5
+  wallGrabMargin: 0.45
+  wallSlideFallSpeed: 9
+  wallJumpSpeedX: 34
+  wallJumpHeightRatio: 1
+  wallJumpLockTime: 0.15
+  wallJumpBlendTime: 0.1
+  jumpRising: 0
+  jumpCutLockTimer: 0
   wallCheck: {fileID: 9183172421072942573}
   wallCheckDistance: 1
   wallMask:
@@ -532,6 +620,8 @@ MonoBehaviour:
   dashTime: 0.15
   dashCooldown: 0.4
   dashBufferTime: 0.15
+  dashCancelPoint: 0.7
+  dashCooldownScale: 0.5
   minInputBuffer: 0.3
   hurtDashCancelAfter: 0.5
   slamLandLock: 0.05
@@ -564,6 +654,10 @@ MonoBehaviour:
   dashBufferTimer: 0
   jumpConsumed: 0
   inputLocked: 0
+  maxAirJumps: 1
+  airJumpForceMul: 0.92
+  airJumpsUsed: 0
+  doingAirJump: 0
   inputLockTimer: 0
   attackFacingLocked: 0
   moveInput: 0
@@ -641,6 +735,42 @@ MonoBehaviour:
   blockFreezeTime: 0.08
   blockSlowTime: 0.12
   blockSlowScale: 0.3
+  hitStopOnlyOnFinalHit: 1
+  lightHitFreezeScale: 0
+  parryHitStopScale: 0.8
+  otherHitStopScale: 0.25
+  hitFreezeSharp:
+  - 0.03
+  - 0.035
+  - 0.05
+  - 0.06
+  hitSlowSharp:
+  - 0
+  - 0
+  - 0.025
+  - 0.03
+  hitSlowScaleSharp: 0.5
+  hitShake:
+  - 0.18
+  - 0.22
+  - 0.35
+  - 0.42
+  hitKick:
+  - 0.06
+  - 0.07
+  - 0.1
+  - 0.1
+  multiHitBonus: 0.15
+  finalHitMinFreeze: 0.13
+  finalHitMinSlow: 0.1
+  finalHitMinShake: 0.6
+  shakeDown: 0.35
+  parryShake2: 0.6
+  breakFreeze2: 0.14
+  breakSlowTime2: 0.2
+  breakSlowScale2: 0.2
+  breakShake2: 0.75
+  breakKick2: 0.12
   balanceBreakHitStopTimeScale: 0.1
   balanceBreakHitStopDuration: 0.12
   balanceBreakShakeForce: 0.3
@@ -674,7 +804,7 @@ MonoBehaviour:
   downAttackHitTime: 0.25
   downAttackBoxSize: {x: 1.4, y: 1.7}
   downAttackBalanceMultiplier: 1.2
-  pogoBounceVelocity: 15
+  pogoBounceVelocity: 30
   hitBoxSize: {x: 10, y: 4}
   hitVFXInsideAmount: 2
   hitVFXForwardOffset: 0.56
@@ -725,6 +855,7 @@ MonoBehaviour:
   attack4MoveStart: 0.2
   attack4MoveEnd: 0.282
   attack4HitTime: 0.1
+  counterHit: 0
 --- !u!114 &694326958765601266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -861,10 +992,16 @@ MonoBehaviour:
   jumpClip: {fileID: 8300000, guid: 150bd0ef5cf8592488f01336c4eb5821, type: 3}
   dashClip: {fileID: 8300000, guid: 3b81504dc5d5cc949b82f28234aefbfa, type: 3}
   runClip: {fileID: 8300000, guid: b1ba2e4918d96a54e8568978204a0d75, type: 3}
+  runPitchMul: 1.2
+  runVol: 1
   attack1WooshClip: {fileID: 8300000, guid: 55a1faac2a1b0c247b60d2f969174b80, type: 3}
   attack2WooshClip: {fileID: 8300000, guid: 4dc10c4297e75764d8cd7bbe92e768e3, type: 3}
   attack3WooshClip: {fileID: 8300000, guid: 9a2fe58ebf6ee6643aeeb7a8e2890d2d, type: 3}
   attack4WooshClip: {fileID: 8300000, guid: a401205cd3a90374a9ae67a35af95cac, type: 3}
+  wooshVol: 0.1
+  wooshTail: 0.22
+  wooshEndFade: 0.3
+  jumpVol: 1
 --- !u!114 &6581039512403499984
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -929,7 +1066,12 @@ MonoBehaviour:
   parryCancelTime: 0.45
   whiffPenaltyTime: 0.3
   whiffWindowMultiplier: 0.5
+  whiffPenaltyTimeV2: 0.2
+  whiffWindowMultiplierV2: 0.8
   showDebug: 0
+  postParryRecovery: 0.12
+  counterBonusBalance: 1
+  blockChipHealthRatio: 0.12
 --- !u!114 &6246365400100952835
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -946,6 +1088,12 @@ MonoBehaviour:
   currentPosture: 0
   recoveryDelay: 1.5
   recoverySpeed: 20
+  brokenRecoveryDelay: 0.8
+  brokenRecoverySpeed: 65
+  recoverySpeedScale: 0.7
+  extraRecoveryDelay: 0.7
+  lowHealthRecoveryMult: 0.35
+  lowHealthDamageMult: 1.5
 --- !u!50 &745476107488044533
 Rigidbody2D:
   serializedVersion: 5
@@ -1111,6 +1259,7 @@ MonoBehaviour:
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   flashDuration: 0.1
   blinkInterval: 0.1
+  enableBlink: 0
   dimmedAlpha: 0
 --- !u!114 &414704846381954979
 MonoBehaviour:

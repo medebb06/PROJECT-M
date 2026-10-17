@@ -445,3 +445,5 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Olculen (Play, dogrudan state tetikleme): basili zipla yuk. 7.56, tepe 0.36 sn, havada 0.68 sn; kisa tik 4.77; duvara yapisma calisiyor; duvar zipla yatay -5.4 (girdisiz), dikey 7.4. Elle gercek girdiyle denenmedi.
 - Yeni dosyalar: Assets/Scenes/Tutorial_Arena.unity, Assets/Scripts/Tutorial/{TutorialCheckpoint,TutorialKillZone,TutorialBossGate,TutorialLessonDuelist}.cs. Sahne Build Settings'te DEGIL.
 - Not: Prefab-instance alanlarini kodla degistirirken SerializedObject kullan; dogrudan atama domain reload'da kaybolabiliyor.
+
+- 2026-10-18 (Wall jump v3): WallJumpState artik DUZ CAPRAZ firlar (yercekimi kapali, sabit hiz wallJumpSpeedX/wallJumpRiseSpeed, en fazla wallJumpDiagonalMaxTime); karsida duvara degince yapisir. Duvarda kayma wallSlideFallSpeed=9, wallJumpSpeedX=34 (prefab). Oyun fontu: Resources/UI/Hoshiko_Satsuki.ttf (GameFont.cs; yedek Knight_Souls; ğ İ ı Ş ş icin Arial yedegi). Tutorial sahnesinde RunCameraZoom.showDebug kapatildi.
