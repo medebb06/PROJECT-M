@@ -36,7 +36,7 @@ Material:
     - _CoreShadow: 0
     - _FlutterAmount: 2
     - _FlutterSpeed: 0
-    - _Haze: 0.66
+    - _Haze: 0.74
     - _HazeBottom: 0.3
     - _LightBack: 2
     - _MoonFade: 0
@@ -45,7 +45,7 @@ Material:
     - _MoonRimRadius: 16
     - _NormalIntensity: 0
     - _NormalPower: 0.5
-    - _RimIntensity: 0.3
+    - _RimIntensity: 0
     - _RimTop: 0.62
     - _RimWidth: 3.5
     - _UseMoon: 0
@@ -54,7 +54,7 @@ Material:
     - _WindSpeed: 0.23
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _HazeColor: {r: 0.33, g: 0.33, b: 0.3432, a: 1}
+    - _HazeColor: {r: 0.22, g: 0.22, b: 0.22879998, a: 1}
     - _RimColor: {r: 1.25, g: 0.92, b: 0.62, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

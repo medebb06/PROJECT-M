@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Water_Showcase
+  m_Shader: {fileID: 4800000, guid: 4fb8d6170bdd87b46bf1c34413f94f73, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NoiseTex:
+        m_Texture: {fileID: 2800000, guid: 2504af0c13a8f424ca221e6290d379d9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BandContrast: 0.05
+    - _Blur: 0.015
+    - _FadeDistance: 22
+    - _LineIntensity: 0.55
+    - _LineWidth: 0.1
+    - _MoonGlow: 0.22
+    - _MoonIntensity: 2.2
+    - _MoonSpread: 0.12
+    - _MoonWidth: 1.6
+    - _ReflStrength: 1
+    - _RippleAspect: 4.5
+    - _RippleDistort: 0.25
+    - _RippleLife: 1.6
+    - _RippleLight: 0.9
+    - _RippleSpeed: 2.6
+    - _RippleWidth: 0.16
+    - _SparkleSharp: 5
+    - _Streaks: 0.08
+    - _Stretch: 5
+    - _WaveAmp: 0.12
+    - _WaveScale: 0.06
+    - _WaveSpeed: 0.7
+    m_Colors:
+    - _DeepColor: {r: 0.015, g: 0.04, b: 0.08, a: 1}
+    - _LineColor: {r: 0.55, g: 0.95, b: 1, a: 1}
+    - _MoonColor: {r: 0.8, g: 0.93, b: 1, a: 1}
+    - _ReflectTint: {r: 0.7, g: 0.88, b: 1, a: 1}
+    - _ShallowColor: {r: 0.1, g: 0.22, b: 0.3, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

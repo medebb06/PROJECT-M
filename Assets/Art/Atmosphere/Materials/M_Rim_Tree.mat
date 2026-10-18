@@ -43,9 +43,9 @@ Material:
     - _MoonFadeRadius: 5
     - _MoonRimMin: 0.3
     - _MoonRimRadius: 16
-    - _NormalIntensity: 0.95
+    - _NormalIntensity: 0.55
     - _NormalPower: 0.5
-    - _RimIntensity: 2.4
+    - _RimIntensity: 1.8
     - _RimTop: 0.62
     - _RimWidth: 9.4
     - _UseMoon: 0
