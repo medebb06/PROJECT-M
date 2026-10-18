@@ -242,13 +242,16 @@ Shader "ProjectM/Water"
 
             return half4(col, spr.a);
         }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(Varyings pi) : SV_Target { return WorldGray(frag(pi)); }
         ENDHLSL
 
         Pass
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #pragma multi_compile_instancing
             #pragma target 3.0
             ENDHLSL

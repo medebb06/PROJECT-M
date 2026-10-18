@@ -24,7 +24,7 @@ Shader "ProjectM/ParticleGlow"
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             TEXTURE2D(_MainTex);
@@ -63,6 +63,9 @@ Shader "ProjectM/ParticleGlow"
                 half3 rgb = t.rgb * i.color.rgb * (t.a * i.color.a);
                 return half4(rgb, 0);
             }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(Varyings pi) : SV_Target { return WorldGray(frag(pi)); }
             ENDHLSL
         }
     }

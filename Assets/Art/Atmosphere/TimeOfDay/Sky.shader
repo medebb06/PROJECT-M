@@ -87,13 +87,16 @@ Shader "ProjectM/Sky"
 
             return half4(c * i.color.rgb, 1);
         }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(Varyings pi) : SV_Target { return WorldGray(frag(pi)); }
         ENDHLSL
 
         Pass
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #pragma multi_compile_instancing
             ENDHLSL
         }

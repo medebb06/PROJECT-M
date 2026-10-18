@@ -59,6 +59,7 @@ Shader "ProjectM/SilhouetteRim"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -231,7 +232,7 @@ Shader "ProjectM/SilhouetteRim"
             // Ayın önünden geçen bulut yarı saydamlaşır: ay içinden sızar.
             half fadeA = 1.0h - _MoonFade * (1.0h - smoothstep(0.0h, _MoonFadeRadius, (half)len)) * _UseMoon;
 
-            return half4(rgb, c.a * fadeA);
+            return WorldGray(half4(rgb, c.a * fadeA));
         }
         ENDHLSL
 

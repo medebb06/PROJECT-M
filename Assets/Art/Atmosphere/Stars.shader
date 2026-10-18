@@ -126,13 +126,16 @@ Shader "ProjectM/Stars"
 
             return half4(c * _Intensity * fade * i.color.rgb * i.color.a, 0);
         }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(Varyings pi) : SV_Target { return WorldGray(frag(pi)); }
         ENDHLSL
 
         Pass
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #pragma multi_compile_instancing
             ENDHLSL
         }

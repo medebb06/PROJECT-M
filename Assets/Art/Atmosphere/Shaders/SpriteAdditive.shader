@@ -72,6 +72,9 @@ Shader "ProjectM/SpriteAdditive"
             half3 rgb = t.rgb * t.a * _Intensity;
             return half4(rgb, 0);
         }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(Varyings pi) : SV_Target { return WorldGray(frag(pi)); }
         ENDHLSL
 
         // Tek etiketsiz pass (URP'nin Sprite-Unlit-Default'u gibi): 2D Renderer bunu çizer.
@@ -79,7 +82,7 @@ Shader "ProjectM/SpriteAdditive"
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #pragma multi_compile_instancing
             ENDHLSL
         }

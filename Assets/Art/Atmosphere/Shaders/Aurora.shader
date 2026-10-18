@@ -21,7 +21,7 @@ Shader "ProjectM/Aurora"
         {
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag
+            #pragma fragment frag_gray
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
@@ -59,6 +59,9 @@ Shader "ProjectM/Aurora"
                 half a = band * (0.35 + rays) * shimmer * edge * _Intensity * i.col.a;
                 return half4(col * a * i.col.rgb, 0);
             }
+
+#include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+half4 frag_gray(V pi) : SV_Target { return WorldGray(frag(pi)); }
             ENDHLSL
         }
     }

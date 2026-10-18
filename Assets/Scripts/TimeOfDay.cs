@@ -488,7 +488,7 @@ public class TimeOfDay : MonoBehaviour
                 ColorAdjustments ca;
                 if (p.TryGet(out ca))
                 {
-                    ca.colorFilter.Override(k.grade);
+                    ca.colorFilter.Override(WorldColorGrade.NeutralizeGrade ? Color.white : k.grade);
                     ca.postExposure.Override(k.exposure);
                     ca.saturation.Override(k.saturation);
                     ca.contrast.Override(k.contrast);
@@ -498,7 +498,7 @@ public class TimeOfDay : MonoBehaviour
                 if (p.TryGet(out bl))
                 {
                     bl.intensity.Override(k.bloom);
-                    bl.tint.Override(Color.Lerp(Color.white, k.light, 0.6f));
+                    bl.tint.Override(WorldColorGrade.NeutralizeGrade ? Color.white : Color.Lerp(Color.white, k.light, 0.6f));
                 }
 
                 Vignette vg;
