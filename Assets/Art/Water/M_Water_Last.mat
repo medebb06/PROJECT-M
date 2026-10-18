@@ -33,33 +33,33 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BandContrast: 0.05
+    - _BandContrast: 0.12
     - _Blur: 0.015
-    - _FadeDistance: 16
-    - _LineIntensity: 0
+    - _FadeDistance: 20
+    - _LineIntensity: 0.22
     - _LineWidth: 0.12
     - _MoonGlow: 0.12
-    - _MoonIntensity: 1.6
+    - _MoonIntensity: 2.2
     - _MoonSpread: 0.12
     - _MoonWidth: 1.6
     - _ReflStrength: 0.9
     - _RippleAspect: 4.5
     - _RippleDistort: 0.25
     - _RippleLife: 1.6
-    - _RippleLight: 0.6
+    - _RippleLight: 0.8
     - _RippleSpeed: 2.6
     - _RippleWidth: 0.16
     - _SparkleSharp: 5
-    - _Streaks: 0.08
+    - _Streaks: 0.12
     - _Stretch: 5
     - _WaveAmp: 0.12
     - _WaveScale: 0.06
     - _WaveSpeed: 0.7
     m_Colors:
-    - _DeepColor: {r: 0.035, g: 0.075, b: 0.095, a: 1}
+    - _DeepColor: {r: 0.02, g: 0.13, b: 0.23, a: 1}
     - _LineColor: {r: 0.75, g: 0.82, b: 0.9, a: 1}
     - _MoonColor: {r: 1, g: 0.86, b: 0.6, a: 1}
-    - _ReflectTint: {r: 0.7, g: 0.74, b: 0.76, a: 1}
-    - _ShallowColor: {r: 0.2, g: 0.3, b: 0.27, a: 1}
+    - _ReflectTint: {r: 0.82, g: 0.92, b: 0.98, a: 1}
+    - _ShallowColor: {r: 0.15, g: 0.5, b: 0.56, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
