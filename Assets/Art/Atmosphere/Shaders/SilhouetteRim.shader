@@ -39,6 +39,7 @@ Shader "ProjectM/SilhouetteRim"
         _MoonRimMin ("Aydan uzakta kenar isigi (0-1)", Range(0,1)) = 0.3
         _MoonFade ("Ayin yakininda saydamlasma", Range(0,1)) = 0
         _MoonFadeRadius ("Saydamlasma yaricapi (birim)", Float) = 5
+        _NearRim ("Yakin ay parlamasi (0 = yok)", Range(0,2)) = 0
     }
 
     SubShader
@@ -87,6 +88,7 @@ Shader "ProjectM/SilhouetteRim"
             half _MoonRimMin;
             half _MoonFade;
             half _MoonFadeRadius;
+            half _NearRim;
         CBUFFER_END
 
         #include "ProjectMWind.hlsl"
@@ -207,6 +209,8 @@ Shader "ProjectM/SilhouetteRim"
             half3 rimRGB = lerp(_RimColor.rgb, _ProjectM_LightColor.rgb * (rimLum * _ProjectM_LightColor.a), _ProjectM_TodOn);
 
             rgb += rimRGB * rim * _RimIntensity * windGlow * moonK;
+            if (_NearRim > 0.001h && _ProjectM_NightRim > 0.001)
+                rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), uv, tex.a, dir, 1.6) * _NearRim * _ProjectM_NightRim;
 
             // Yuvarlak ışık: sprite'tan üretilen kubbe normal map'i, arkadan/yandan gelen ışıkla.
             // Işığa bakan kenarlar yumuşakça parlar, ortası karanlık kalır -> hacim hissi.

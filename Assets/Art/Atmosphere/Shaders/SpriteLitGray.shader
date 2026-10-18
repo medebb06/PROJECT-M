@@ -6,6 +6,7 @@ Shader "ProjectM/SpriteLitGray"
         _MaskTex("Mask", 2D) = "white" {}
         _NormalMap("Normal Map", 2D) = "bump" {}
         [MaterialToggle] _ZWrite("ZWrite", Float) = 0
+        _NearRim("Yakin ay parlamasi (0 = yok)", Range(0,2)) = 0
 
         // Legacy properties. They're here so that materials using this shader can gracefully fallback to the legacy sprite shader.
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
@@ -58,6 +59,7 @@ Shader "ProjectM/SpriteLitGray"
             // NOTE: Do not ifdef the properties here as SRP batcher can not handle different layouts.
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
+                half _NearRim;
             CBUFFER_END
 
             Varyings LitVertex(Attributes input)
@@ -76,6 +78,8 @@ Shader "ProjectM/SpriteLitGray"
             {
                 half4 pmg_r = CommonLitFragment(input, input.color);
 #if USE_SHAPE_LIGHT_TYPE_0 || USE_SHAPE_LIGHT_TYPE_1 || USE_SHAPE_LIGHT_TYPE_2 || USE_SHAPE_LIGHT_TYPE_3
+                if (_NearRim > 0.001h && _ProjectM_NightRim > 0.001)
+                    pmg_r.rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), input.uv, pmg_r.a, float2(0, 1), 1.6) * _NearRim * _ProjectM_NightRim;
                 pmg_r = WorldGray(pmg_r);
 #endif
                 return pmg_r;
@@ -116,6 +120,7 @@ Shader "ProjectM/SpriteLitGray"
             // NOTE: Do not ifdef the properties here as SRP batcher can not handle different layouts.
             CBUFFER_START( UnityPerMaterial )
                 half4 _Color;
+                half _NearRim;
             CBUFFER_END
 
             Varyings NormalsRenderingVertex(Attributes input)
@@ -173,6 +178,7 @@ Shader "ProjectM/SpriteLitGray"
             // NOTE: Do not ifdef the properties here as SRP batcher can not handle different layouts.
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
+                half _NearRim;
             CBUFFER_END
 
             Varyings UnlitVertex(Attributes input)

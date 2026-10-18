@@ -10,7 +10,7 @@ using System.Linq;
 /// </summary>
 public class PropPlacer : EditorWindow
 {
-    const string MatPath = "Assets/Art/Atmosphere/Materials/M_SpriteLitGray.mat";
+    const string MatPath = "Assets/Art/Atmosphere/Materials/M_SpriteLitGray_Near.mat";
     Material mat;
     float depth = 2.1f;
     bool autoOrder = true;
