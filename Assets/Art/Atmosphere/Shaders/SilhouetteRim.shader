@@ -210,7 +210,7 @@ Shader "ProjectM/SilhouetteRim"
 
             rgb += rimRGB * rim * _RimIntensity * windGlow * moonK;
             if (_NearRim > 0.001h && _ProjectM_NightRim > 0.001)
-                rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), uv, tex.a, dir, 1.6) * _NearRim * _ProjectM_NightRim;
+                rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), uv, tex.a, float2(0, 1), 2.0) * _NearRim * _ProjectM_NightRim * 0.7;
 
             // Yuvarlak ışık: sprite'tan üretilen kubbe normal map'i, arkadan/yandan gelen ışıkla.
             // Işığa bakan kenarlar yumuşakça parlar, ortası karanlık kalır -> hacim hissi.

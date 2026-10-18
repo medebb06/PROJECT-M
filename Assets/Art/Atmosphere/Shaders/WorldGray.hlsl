@@ -18,18 +18,18 @@ float _ProjectM_NightRim;
 float4 _ProjectM_NearRimColor;
 
 // Sprite'in dis hattinda ~widthPx ekran pikseli kalinliginda ince kenar (0..1). lightDir: isiga bakan yon (kenar o tarafta daha parlak).
+float4 _ProjectM_NearRimDir;   // xy: aya dogru yon (kameradan)
+
+// Ay yonune bakan kenarlarda yumusak, kisa bir parlama (outline degil): isiga dogru bakan komsu bos ise yanar.
 half PMG_ThinRim(TEXTURE2D_PARAM(pmg_tex, pmg_smp), float2 pmg_uv, half pmg_selfA, float2 pmg_lightDir, float pmg_widthPx)
 {
     float2 pmg_px = max(fwidth(pmg_uv), float2(1e-6, 1e-6)) * pmg_widthPx;
-    half pmg_ar = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv + float2(pmg_px.x, 0)).a;
-    half pmg_al = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv - float2(pmg_px.x, 0)).a;
-    half pmg_au = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv + float2(0, pmg_px.y)).a;
-    half pmg_ad = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv - float2(0, pmg_px.y)).a;
-    half pmg_edge = saturate((1.0h - (pmg_ar + pmg_al + pmg_au + pmg_ad) * 0.25h) * 2.0h) * pmg_selfA;
-    float2 pmg_out = -float2(pmg_ar - pmg_al, pmg_au - pmg_ad);
-    float pmg_ol = length(pmg_out);
-    half pmg_bias = 0.55h + 0.45h * (pmg_ol > 1e-4 ? saturate(dot(pmg_out / pmg_ol, pmg_lightDir)) : 0.5h);
-    return pmg_edge * pmg_bias;
+    float2 pmg_d = normalize(pmg_lightDir + float2(1e-5, 1e-5));
+    half pmg_a1 = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv + pmg_d * pmg_px * 0.5).a;
+    half pmg_a2 = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv + pmg_d * pmg_px * 1.0).a;
+    half pmg_a3 = SAMPLE_TEXTURE2D(pmg_tex, pmg_smp, pmg_uv + pmg_d * pmg_px * 1.8).a;
+    half pmg_e = 1.0h - (pmg_a1 * 0.4h + pmg_a2 * 0.35h + pmg_a3 * 0.25h);
+    return saturate(pmg_e) * pmg_selfA;
 }
 
 half4 WorldGray(half4 pmg_in)

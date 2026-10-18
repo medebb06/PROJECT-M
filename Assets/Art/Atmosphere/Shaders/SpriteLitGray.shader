@@ -79,7 +79,7 @@ Shader "ProjectM/SpriteLitGray"
                 half4 pmg_r = CommonLitFragment(input, input.color);
 #if USE_SHAPE_LIGHT_TYPE_0 || USE_SHAPE_LIGHT_TYPE_1 || USE_SHAPE_LIGHT_TYPE_2 || USE_SHAPE_LIGHT_TYPE_3
                 if (_NearRim > 0.001h && _ProjectM_NightRim > 0.001)
-                    pmg_r.rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), input.uv, pmg_r.a, float2(0, 1), 1.6) * _NearRim * _ProjectM_NightRim;
+                    pmg_r.rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), input.uv, pmg_r.a, float2(0, 1), 2.0) * _NearRim * _ProjectM_NightRim;
                 pmg_r = WorldGray(pmg_r);
 #endif
                 return pmg_r;

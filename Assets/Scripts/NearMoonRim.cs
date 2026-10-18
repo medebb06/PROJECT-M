@@ -15,6 +15,8 @@ public class NearMoonRim : MonoBehaviour
 
     private TimeOfDay tod;
     private static readonly int NightId = Shader.PropertyToID("_ProjectM_NightRim");
+    private static readonly int DirId = Shader.PropertyToID("_ProjectM_NearRimDir");
+    private static readonly int MoonPosId = Shader.PropertyToID("_ProjectM_MoonPos");
     private static readonly int ColorId = Shader.PropertyToID("_ProjectM_NearRimColor");
 
     private void LateUpdate()
@@ -29,6 +31,15 @@ public class NearMoonRim : MonoBehaviour
             : Mathf.Lerp(duskAmount, 1f, Mathf.InverseLerp(18.5f, 20.5f, h));
         Shader.SetGlobalFloat(NightId, night * strength);
         Shader.SetGlobalVector(ColorId, moonColor);
+        Vector2 d = new Vector2(0.3f, 1f);
+        Camera cam = Camera.main;
+        Vector4 mp = Shader.GetGlobalVector(MoonPosId);
+        if (cam != null && (mp.x != 0f || mp.y != 0f))
+        {
+            Vector2 v = new Vector2(mp.x - cam.transform.position.x, mp.y - cam.transform.position.y);
+            if (v.sqrMagnitude > 0.01f) d = v.normalized;
+        }
+        Shader.SetGlobalVector(DirId, new Vector4(d.x, d.y, 0f, 0f));
     }
 
     private void OnDisable()
