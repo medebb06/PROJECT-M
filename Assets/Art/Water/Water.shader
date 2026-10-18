@@ -16,6 +16,7 @@ Shader "ProjectM/Water"
         _ReflectTint ("Yansıma tonu", Color) = (0.62, 0.62, 0.66, 1)
         _ReflStrength ("Yansıma gücü", Range(0,1.5)) = 0.9
         _FadeDistance ("Kararma mesafesi (birim)", Float) = 16
+        _ReflFadeDistance ("Yansıma silinme mesafesi (birim, büyük = tüm suda yansır)", Float) = 16
         _Blur ("Derinlikte bulanıklık", Range(0,0.2)) = 0.015
 
         [Header(Dalga)]
@@ -73,7 +74,7 @@ Shader "ProjectM/Water"
         CBUFFER_START(UnityPerMaterial)
             float4 _MainTex_ST;
             half4 _ShallowColor, _DeepColor, _ReflectTint, _LineColor, _MoonColor;
-            float _ReflStrength, _FadeDistance, _Blur;
+            float _ReflStrength, _FadeDistance, _Blur, _ReflFadeDistance;
             float _WaveAmp, _WaveScale, _WaveSpeed, _Stretch, _Streaks, _BandContrast;
             float _LineWidth, _LineIntensity;
             float _MoonWidth, _MoonSpread, _MoonIntensity, _MoonGlow, _SparkleSharp;
@@ -208,7 +209,7 @@ Shader "ProjectM/Water"
                 // Bant aralarında yansıma hafifçe kırılır (yatay şeritler).
                 float slice = 1.0 - _BandContrast + _BandContrast * smoothstep(-0.3, 0.6, bandA);
 
-                half amount = saturate(_ReflStrength) * lerp(1.0, 0.2, fade) * refl.a;
+                half amount = saturate(_ReflStrength) * lerp(1.0, 0.2, saturate(d / max(_ReflFadeDistance, 0.01))) * refl.a;
                 col = lerp(base, refl.rgb * _ReflectTint.rgb * slice * max(_ReflStrength, 1.0), amount);
             }
 
