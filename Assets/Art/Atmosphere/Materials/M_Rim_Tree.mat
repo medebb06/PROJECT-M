@@ -39,11 +39,16 @@ Material:
     - _Haze: 0
     - _HazeBottom: 0
     - _LightBack: 2
-    - _NormalIntensity: 1.57
+    - _MoonFade: 0
+    - _MoonFadeRadius: 5
+    - _MoonRimMin: 0.3
+    - _MoonRimRadius: 16
+    - _NormalIntensity: 0.95
     - _NormalPower: 0.5
-    - _RimIntensity: 4
+    - _RimIntensity: 2.4
     - _RimTop: 0.62
     - _RimWidth: 9.4
+    - _UseMoon: 0
     - _WindAmount: 0.1
     - _WindLight: 2
     - _WindSpeed: 0.23
