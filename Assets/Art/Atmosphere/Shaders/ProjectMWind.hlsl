@@ -4,6 +4,8 @@
 
 // Global: AtmosphereLight ayarlar (0 = rüzgâr yok).
 float _ProjectM_WindStrength;
+// Global yön eğilimi (-1 sola .. +1 sağa). WeatherDirector yavaşça değiştirir; 0 = simetrik.
+float _ProjectM_WindDir;
 
 // Obje başına (WindSway bileşeni MaterialPropertyBlock ile verir):
 //   x = faz, y = objenin dünya taban Y'si, z = dünya yüksekliği, w = hız çarpanı
@@ -28,7 +30,7 @@ float WindSway(float speed)
 float3 WindBend(float3 w, float amount, float speed, out float h, out float sway)
 {
     h = WindHeight(w.y);
-    sway = WindSway(speed) * _ProjectM_WindStrength;
+    sway = (WindSway(speed) + _ProjectM_WindDir * 1.1) * _ProjectM_WindStrength;
 
     float bend = h * h;
     w.x += sway * bend * amount;

@@ -20,6 +20,16 @@ public class GodRays : MonoBehaviour
     [Tooltip("Hüzmelerin yana dağılımı (ekran genişliği cinsinden).")]
     public float spread = 0.75f;
 
+    [Header("Işık kaynağını takip et (ay / güneş)")]
+    [Tooltip("Açıkken hüzmeler gökteki ay/güneşten çıkar ve sahneye doğru yelpaze gibi açılır; kaynak hareket edince birlikte döner.")]
+    public bool followLight = true;
+    public float fanSpread = 14f;
+    public float sourceWidth = 9f;
+    [Tooltip("Hüzmelerin hedeflediği nokta (kamera merkezine göre, ekran yüksekliği cinsinden). Negatif Y = zemine doğru.")]
+    public Vector2 aimPoint = new Vector2(0f, -0.35f);
+    [Tooltip("Kaynak ufkun bu kadar altına inince hüzmeler tamamen söner (dünya birimi).")]
+    public float fadeBelow = 1.5f;
+
     [Header("Hüzmeler")]
     [Range(1, 14)] public int count = 7;
     [Tooltip("Boy (ekran yüksekliği cinsinden).")]
@@ -188,6 +198,75 @@ public class GodRays : MonoBehaviour
         swayWorldW = viewW;
     }
 
+    private Transform sunT, moonT;
+    private SpriteRenderer sunR, moonR;
+    private float lightFade = 1f;
+
+    private void FindBodies()
+    {
+        if (sunT == null) { GameObject g = GameObject.Find("Sun"); if (g != null) { sunT = g.transform; sunR = g.GetComponent<SpriteRenderer>(); } }
+        if (moonT == null) { GameObject g = GameObject.Find("Moon"); if (g != null) { moonT = g.transform; moonR = g.GetComponent<SpriteRenderer>(); } }
+    }
+
+    // Aktif isik kaynagi: rengi daha gorunur olan (gunduz gunes, gece ay).
+    private bool PickLight(out Vector3 pos)
+    {
+        FindBodies();
+        float sa = (sunR != null && sunR.enabled) ? sunR.color.a : -1f;
+        float ma = (moonR != null && moonR.enabled) ? moonR.color.a : -1f;
+        pos = Vector3.zero;
+        if (sa < 0f && ma < 0f) return false;
+        pos = (sa >= ma ? sunT : moonT).position;
+        return true;
+    }
+
+    private void LayoutFromLight()
+    {
+        if (beams.Count == 0) return;
+        Vector3 src;
+        if (!PickLight(out src)) return;
+
+        Camera cam = Camera.main;
+        float viewH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 20f;
+        Vector3 camPos = cam != null ? cam.transform.position : transform.position;
+        Vector3 aim = camPos + new Vector3(aimPoint.x * viewH * (cam != null ? cam.aspect : 1.78f), aimPoint.y * viewH, 0f);
+
+        // Kaynak ufuk cizgisinin altina inince sonsun
+        lightFade = Mathf.Clamp01((src.y - (aim.y - fadeBelow)) / Mathf.Max(0.01f, fadeBelow + 2f));
+
+        Vector2 d = ((Vector2)(aim - src)).normalized;
+        float baseAngle = Mathf.Atan2(d.x, -d.y) * Mathf.Rad2Deg;
+        float dist = Vector2.Distance(src, aim);
+        float swayT = Application.isPlaying ? Time.time : 0f;
+
+        for (int i = 0; i < beams.Count; i++)
+        {
+            SpriteRenderer sr = beams[i];
+            if (sr == null) continue;
+
+            float t = beams.Count > 1 ? i / (float)(beams.Count - 1) - 0.5f : 0f;
+            float a = baseAngle + t * fanSpread + Mathf.Sin(swayT * swaySpeed + i * 0.9f) * angleSway;
+            float rad = a * Mathf.Deg2Rad;
+            Vector2 down = new Vector2(Mathf.Sin(rad), -Mathf.Cos(rad));
+
+            float len = Mathf.Max(dist * 1.25f, length * viewH * 0.8f);
+            Transform tr = sr.transform;
+            Vector2 perpD = new Vector2(-down.y, down.x);
+            Vector3 centerWorld = src + (Vector3)(perpD * (t * sourceWidth)) + (Vector3)(down * (len * 0.5f));
+            centerWorld.z = transform.position.z;
+            tr.position = centerWorld;
+            tr.rotation = Quaternion.Euler(0f, 0f, a);
+
+            Vector2 sp = raySprite != null ? (Vector2)raySprite.bounds.size : Vector2.one;
+            Vector3 sc = tr.localScale;
+            tr.localScale = new Vector3(sc.x, len / Mathf.Max(0.0001f, sp.y), 1f);
+
+            Color c = sr.color;
+            c.a = baseAlpha[i] * lightFade;
+            sr.color = c;
+        }
+    }
+
     private void Update()
     {
         if (needsBuild)
@@ -196,13 +275,16 @@ public class GodRays : MonoBehaviour
             Build();
         }
 
+        if (followLight)
+            LayoutFromLight();
+
         if (!Application.isPlaying)
             return;
 
         // Düzenli, yumuşak salınım: her hüzme sırayla aynı ritimde, hafif faz farkıyla yana kayar.
         float sw = Time.time * swaySpeed;
 
-        for (int i = 0; i < beams.Count && i < basePos.Count; i++)
+        for (int i = 0; !followLight && i < beams.Count && i < basePos.Count; i++)
         {
             if (beams[i] == null)
                 continue;
@@ -228,7 +310,7 @@ public class GodRays : MonoBehaviour
 
             float k = 1f - flicker * 0.5f * (1f + Mathf.Sin(time * (1f + i * 0.41f) + i * 2.3f));
             Color c = sr.color;
-            c.a = baseAlpha[i] * k;
+            c.a = baseAlpha[i] * k * lightFade;
             sr.color = c;
         }
     }

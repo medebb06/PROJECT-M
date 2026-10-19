@@ -14,6 +14,19 @@ public class HudCanvas : MonoBehaviour
     public const int SortingOrder = 20000;   // MainMenu (30000+) altinda, normal oyun UI'sinin ustunde
 
     static HudCanvas inst;
+
+    /// <summary>Savasta degilken HUD otomatik gizlenir. Kapatmak icin false yap.</summary>
+    public static bool AutoHide = true;
+    /// <summary>Savas bittikten sonra HUD bu kadar saniye daha gorunur kalir.</summary>
+    public static float HideDelay = 3f;
+    /// <summary>Dusman bu mesafeden yakinsa savas sayilir (dunya birimi).</summary>
+    public static float CombatRange = 28f;
+
+    CanvasGroup group;
+    float lastCombat = -999f;
+    float nextScan;
+    Health playerHealth;
+    int lastPlayerHp = -1;
     Canvas canvas;
     RectTransform root;
     readonly List<Image> pool = new List<Image>(48);
@@ -34,6 +47,10 @@ public class HudCanvas : MonoBehaviour
         inst.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         inst.canvas.sortingOrder = SortingOrder;
         inst.canvas.pixelPerfect = false;
+        inst.group = go.AddComponent<CanvasGroup>();
+        inst.group.interactable = false;
+        inst.group.blocksRaycasts = false;
+        inst.group.alpha = 0f;
         Debug.Log("[HudCanvas] kuruldu: ekran " + Screen.width + "x" + Screen.height + ", safeArea " + Screen.safeArea + ", sortingOrder " + SortingOrder);
 
         var rootGo = new GameObject("Root", typeof(RectTransform));
@@ -43,6 +60,44 @@ public class HudCanvas : MonoBehaviour
         inst.root.anchorMax = Vector2.one;
         inst.root.offsetMin = inst.root.offsetMax = Vector2.zero;
         return inst;
+    }
+
+    void Update()
+    {
+        if (group == null) return;
+
+        if (!AutoHide) { group.alpha = Mathf.MoveTowards(group.alpha, 1f, Time.unscaledDeltaTime * 3f); return; }
+
+        if (Time.unscaledTime >= nextScan)
+        {
+            nextScan = Time.unscaledTime + 0.25f;
+            PlayerController pc = FindObjectOfType<PlayerController>();
+            if (pc != null)
+            {
+                Vector3 pp = pc.transform.position;
+                var enemies = FindObjectsOfType<EnemyController>();
+                for (int i = 0; i < enemies.Length; i++)
+                {
+                    EnemyController e = enemies[i];
+                    if (e == null || !e.gameObject.activeInHierarchy) continue;
+                    Health eh = e.GetComponent<Health>();
+                    if (eh != null && eh.CurrentHealth <= 0) continue;
+                    if (Mathf.Abs(e.transform.position.x - pp.x) <= CombatRange) { lastCombat = Time.unscaledTime; break; }
+                }
+
+                // Oyuncu hasar aldiysa / iyilestiyse (iksir) kisa sure goster
+                if (playerHealth == null) playerHealth = pc.GetComponent<Health>();
+                if (playerHealth != null)
+                {
+                    int hp = playerHealth.CurrentHealth;
+                    if (lastPlayerHp >= 0 && hp != lastPlayerHp) lastCombat = Time.unscaledTime;
+                    lastPlayerHp = hp;
+                }
+            }
+        }
+
+        bool show = Time.unscaledTime - lastCombat <= HideDelay;
+        group.alpha = Mathf.MoveTowards(group.alpha, show ? 1f : 0f, Time.unscaledDeltaTime * (show ? 3f : 1.2f));
     }
 
     void OnEnable() { Canvas.willRenderCanvases += HideUnused; }
