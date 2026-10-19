@@ -49,3 +49,13 @@ When current files conflict with this document, report the discrepancy and confi
 - Derinlik: sorting order < 10 olan nesneler zemin dudağının (y≈-4.9) arkasında kalır; ağaç tabanı bu yüzden order 8'de.
 - KENAR IŞIĞI KURALI: Parlama ince olmalı (RimWidth ~4.5). Kalın/parlak kenar ışığı istenmedi. Sprite'a `~moonrim` ve outline bake EDİLMEZ; kenar ışığını yalnızca materyal (SilhouetteRim) verir. Yeni ağaç/prop için `M_Tree_Coloured` / `M_Prop_Coloured` kullan, değerleri değiştirme.
 - Çadır modeli (2026-10-19): yeni Blender render'ı (tarp çadır + fener, balta, kova, sandık, sandık-L, yatak) ile değiştirildi; bez koyu, soluk deniz-mavisi/yeşil (10,20,26)-(28,50,60)-(62,88,94) (parlak lacivert göze battığı için yumuşatıldı), fener ışığı SARI (cam + `LanternGlow` + `LanternLight` Light2D). Betik: Assets/Sprites/_ArtPipeline/tent_colorize.py mantığıyla (maskeler render koordinatlarında, paletler nesne başına).
+
+
+### BG ağaç gövdeleri — KARAR: ESKİ HAL KALIYOR (2026-10-19)
+- Arka plan BGTrunk_* sprite'ları (Assets/Sprites/Trees/BG, 24 dosya) ESKİ orijinal haliyle kalacak. 3D render'dan üretilen yeni gövdeler denendi, kullanıcı beğenmeyip eskilerini geri aldı.
+- BGTrunk_* dokularına DOKUNMA: üzerine yazma, yeniden üretme veya değiştirmeyi teklif etme.
+- Art pipeline BG gövdelerine uygulanmaz; sadece öne çıkan ağaçlara (Tree01 tarzı) ve prop'lara (çadır) uygulanır.
+
+
+### Zemin çimeni (2026-10-19)
+- ZeminCimen/Back (169 eski şerit) KAPATILDI (SetActive false, silinmedi); yerine ZeminCimen/Row: tek SpriteRenderer, Tiled mod, Assets/Sprites/Grass/Grass_Tile.png (kullanıcının 3D çimen render'ından, dikişsiz tile, ppu 466, FullRect), tek düzlem, scale 1.45, bottom y=-5.08, x -150..~662, M_Grass_Last + eski tint, order 6, WindSway. Betik: _ArtPipeline/grass_tile.py. Çimeni elle tek tek yerleştirme; Row'u uzat/kısalt.

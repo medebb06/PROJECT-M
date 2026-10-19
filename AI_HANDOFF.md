@@ -527,3 +527,13 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 
 ## Dalga yavaslatildi (2026-10-18)
 - Boss1Enemy: waveSpeed 145->110 (Configure tabani 140->105), waveInterval 0.8->0.95 (Configure tavani 0.85->1.0), faz 2 araligi 0.7->0.8 (faz 2 yine faz 1'den hizli, 5 dalga). Varis suresi: 48 birimde ~0.27 sn, 70'te ~0.47, 100'de ~0.75. Play Mode'da degerler okundu; gercek dovusta hissi denenmedi.
+
+
+### BG ağaç gövdeleri — KARAR: ESKİ HAL KALIYOR (2026-10-19)
+- Arka plan BGTrunk_* sprite'ları (Assets/Sprites/Trees/BG, 24 dosya) ESKİ orijinal haliyle kalacak. 3D render'dan üretilen yeni gövdeler denendi, kullanıcı beğenmeyip eskilerini geri aldı.
+- BGTrunk_* dokularına DOKUNMA: üzerine yazma, yeniden üretme veya değiştirmeyi teklif etme.
+- Art pipeline BG gövdelerine uygulanmaz; sadece öne çıkan ağaçlara (Tree01 tarzı) ve prop'lara (çadır) uygulanır.
+
+
+### Zemin çimeni (2026-10-19)
+- ZeminCimen/Back (169 eski şerit) KAPATILDI (SetActive false, silinmedi); yerine ZeminCimen/Row: tek SpriteRenderer, Tiled mod, Assets/Sprites/Grass/Grass_Tile.png (kullanıcının 3D çimen render'ından, dikişsiz tile, ppu 466, FullRect), tek düzlem, scale 1.45, bottom y=-5.08, x -150..~662, M_Grass_Last + eski tint, order 6, WindSway. Betik: _ArtPipeline/grass_tile.py. Çimeni elle tek tek yerleştirme; Row'u uzat/kısalt.
