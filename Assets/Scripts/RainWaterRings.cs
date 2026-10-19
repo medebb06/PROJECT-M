@@ -12,12 +12,12 @@ public class RainWaterRings : MonoBehaviour
     [Header("Halkalar")]
     public bool enabledRings = true;
     [Tooltip("Saniyedeki halka sayisi (tam siddette).")]
-    public float ringsPerSecond = 16f;
-    public Vector2 finalWidth = new Vector2(0.5f, 1.5f);
+    public float ringsPerSecond = 40f;
+    public Vector2 finalWidth = new Vector2(0.7f, 2.0f);
     [Tooltip("Halka basikligi (yukseklik / genislik).")]
     [Range(0.1f, 0.8f)] public float flatness = 0.3f;
-    public Vector2 life = new Vector2(0.9f, 1.4f);
-    [Range(0f, 1f)] public float alpha = 0.55f;
+    public Vector2 life = new Vector2(1.0f, 1.6f);
+    [Range(0f, 1f)] public float alpha = 0.85f;
     public Color color = new Color(0.82f, 0.92f, 1f, 1f);
     public int sortingOrder = 12;
     [Tooltip("Yakindaki (ekranin altindaki) halkalar ne kadar buyuk.")]
