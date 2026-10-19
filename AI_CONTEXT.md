@@ -39,3 +39,11 @@
 This document contains project direction and historical context, not a guarantee that every listed script or feature currently exists.
 Inspect the current repository and Unity project before modifying code.
 When current files conflict with this document, report the discrepancy and confirm before making destructive changes.
+
+## Art pipeline (3D render -> 2D sprite) — kalıcı karar (Ekim 2026)
+- Karakterler hariç dünyadaki her şey (ağaç, çadır, kaya, çit, kulübe...) Blender'da 3D modellenip 2D render olarak oyuna konur. Render gri/nötr alınır (şeffaf arka plan), renk Python ile sprite'a bake edilir.
+- Betikler: `Assets/Sprites/_ArtPipeline/tree_colorize.py` (ağaç) ve `tent_colorize.py` (çadır/prop). Yeni modelde bunlar kopyalanıp maskeler/paletler değiştirilir.
+- AĞAÇ STİLİ (sahnedeki TÜM ağaçlara uygulanacak): taç = 3 büyük, birbirinin üstüne binen yumuşak geçişli sulu boya katmanı (sert katman sınırı yok, geçişler yumuşatılmış), çok az gürültü/tane, silüet çevresinde koyu halka/outline YOK. Gövde = nötr kahverengi, çevresinde outline ve ay-kenar ışığı izi YOK (rim maskesi sadece tacı kapsar). Renk rampası taç: (18,70,38) -> (40,122,56) -> (112,180,86) civarı, ışık sağ üstten.
+- Gece/gündüz uyumu + rüzgâr: ağaçlar `M_Tree_Coloured` materyalini (ProjectM/SilhouetteRim, M_Tree_Wind kopyası: normal 0, rim 0.18, wind 0.55, haze 0.06) kullanır. Bu shader TimeOfDay'in global bodyTint/bodyLift/haze değerlerini uygular, kenar ışığını ve tepe sallanmasını kendi verir. Bu yüzden ağaçta ayrıca `~moonrim`, `FenceMoonGlow` ve `TreeSway` KULLANILMAZ (çift ışık/çift sallantı olur). `TreeSway.cs` yedek olarak dosyada duruyor.
+- Sprite ayarları: ppu 80 (ağaç), Single, BottomCenter, FullRect, Uncompressed. Materyal: ağaç `M_Tree_Coloured`; çit/kaya/çadır gibi proplar `M_SpriteLitGray_Near` (ay kenarı için `~moonrim` çocuğu + `FenceMoonGlow`).
+- Derinlik: sorting order < 10 olan nesneler zemin dudağının (y≈-4.9) arkasında kalır; ağaç tabanı bu yüzden order 8'de.

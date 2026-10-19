@@ -1,5 +1,11 @@
 # PROJECT M — TASK HANDOFF
 
+## Ağaç sprite'ları (2026-10-19)
+- `Tree01` sahneye eklendi (Assets/Sprites/Tree: Tree_Sharp kullanımda, Tree_Soft ve Tree_Rim yedek/ay kenarı). Stil ve süreç AI_CONTEXT.md > 'Art pipeline' bölümünde; sahnedeki tüm ağaçlar bu stile çekilecek.
+- Ağaç materyali `M_Tree_Coloured` (SilhouetteRim): gece rengi ve rüzgâr sallantısı diğer ağaçlarla aynı shaderdan gelir. `TreeSway.cs` ve `~moonrim` bu ağaçtan kaldırıldı. Gece görüntüsü doğrulandı; gündüz/akşam saatleri ekranda doğrulanamadı (SetHour görüntüye yansımadı).
+- Ağacın konumu/ölçeği kullanıcı tarafından elle ayarlanıyor; bunlara dokunma.
+- Çadır: `Tent` (kırmızı bez), `TentLife.cs` (sallantı SADECE Play modunda + sarı fener Light2D; sahnede edit modunda hareket etmez). `PlayOnlyWind.cs` kullanılmıyor (silinebilir). Eski `TentSway.cs` sahneden kaldırıldı, dosya duruyor.
+
 ## Current task
 Boss1 kılıç darbesi (saldırı) animasyonu eklendi ve revize edildi: 2026-10-16. Yalnızca `Assets/Scripts/Boss1Rig.cs` değişti. Unity'de DERLEME ve görsel test EDİLMEDİ.
 
