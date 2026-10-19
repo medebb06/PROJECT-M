@@ -22,6 +22,10 @@ public class WaterSurface : MonoBehaviour
     [Range(0.25f, 1f)] public float reflectionResolution = 1f;
     [Tooltip("Bu sorting order ve üstü yansımaz (ön plan çalıları, HUD, yazılar).")]
     public int excludeOrderFrom = 450;
+    [Tooltip("Yansima kamerasinin gorunen alana gore payi (1 = tam ekran, buyudukce kenarlar da yansir).")]
+    [Range(1f, 3f)] public float reflectionMargin = 1.6f;
+    [Tooltip("Yatayda ekstra genislik carpani (ultra genis / tam ekranda kenarlarin bos kalmamasi icin).")]
+    [Range(1f, 3f)] public float reflectionWidthBoost = 1.6f;
     [Tooltip("Yansıma kamerasının en küçük ortho boyutu (ekranın tamamı yansısın diye).")]
     public float minReflectionSize = 12f;
     [Tooltip("Yansımada boş kalan yerlerin rengi. Kapalıysa ana kameranın arka plan rengi.")]
@@ -207,8 +211,8 @@ public class WaterSurface : MonoBehaviour
         // LateUpdate'te okunan boyut yanlış olabiliyor (CameraZoom / Pixel Perfect çizimde değiştiriyor):
         // ana kameranın son çizimdeki gerçek boyutunu kullan, biraz pay bırak.
         float baseSize = mainVisibleSize > 0f ? mainVisibleSize : mainCam.orthographicSize;
-        reflCam.orthographicSize = Mathf.Max(baseSize * 1.15f, minReflectionSize);
-        reflCam.aspect = mainCam.aspect;
+        reflCam.orthographicSize = Mathf.Max(baseSize * reflectionMargin, minReflectionSize);
+        reflCam.aspect = mainCam.aspect * reflectionWidthBoost;
         reflCam.targetTexture = rt;
         reflCam.depth = mainCam.depth - 1f;
         reflCam.clearFlags = CameraClearFlags.SolidColor;
