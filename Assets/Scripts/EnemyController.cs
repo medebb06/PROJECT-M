@@ -1627,12 +1627,15 @@ public class EnemyController : EnemyBase
         if (hitAudioSource == null)
             return;
 
-        if (healthHitClip == null)
+        var cs = CombatFxSettings.Get();
+        AudioClip clip = (cs != null && cs.healthHitSounds != null && cs.healthHitSounds.Length > 0)
+            ? cs.healthHitSounds[Random.Range(0, cs.healthHitSounds.Length)]
+            : healthHitClip;
+
+        if (clip == null)
             return;
 
-        hitAudioSource.PlayOneShot(
-            healthHitClip
-        );
+        hitAudioSource.PlayOneShot(clip);
     }
 
     public override void PlayPostureHitSound()
@@ -1640,12 +1643,15 @@ public class EnemyController : EnemyBase
         if (hitAudioSource == null)
             return;
 
-        if (postureHitClip == null)
+        var cs = CombatFxSettings.Get();
+        AudioClip clip = (cs != null && cs.balanceHitSounds != null && cs.balanceHitSounds.Length > 0)
+            ? cs.balanceHitSounds[Random.Range(0, cs.balanceHitSounds.Length)]
+            : postureHitClip;
+
+        if (clip == null)
             return;
 
-        hitAudioSource.PlayOneShot(
-            postureHitClip
-        );
+        hitAudioSource.PlayOneShot(clip);
     }
 
     // =========================================================
