@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3acbc06ad1982c448eb4f56f85998f4, type: 3}
+  m_Name: CombatFxSettings
+  m_EditorClassIdentifier: Assembly-CSharp::CombatFxSettings
+  healthHitSounds: []
+  balanceHitSounds: []
+  balanceBreakSound: {fileID: 8300000, guid: 5232259a035f39b4e8d6e529068ab720, type: 3}
+  parrySound: {fileID: 8300000, guid: 455e27324f049e04daefb131d64613f3, type: 3}
+  parryVolume: 2
+  blockSound: {fileID: 8300000, guid: b45fce8d1113d5e4c822f35e60840333, type: 3}

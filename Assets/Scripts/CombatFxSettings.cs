@@ -34,6 +34,47 @@ public class CombatFxSettings : ScriptableObject
         return cached;
     }
 
+    private static AudioSource src2d;
+
+    /// <summary>Parry sesi: düşmanın kendi AudioSource'una değil, tek merkezi 2D kaynağa çalınır (mesafe/mixer bağımsız).</summary>
+    public static void PlayParry2D(AudioClip fallbackClip, float fallbackVolume)
+    {
+        CombatFxSettings s = Get();
+        bool central = s != null && s.parrySound != null;
+        AudioClip c = central ? s.parrySound : fallbackClip;
+        float v = central ? s.parryVolume : fallbackVolume;
+        if (c == null) { Debug.LogWarning("CombatFx: parry sesi atanmamış."); return; }
+        if (src2d == null)
+        {
+            GameObject go = new GameObject("CombatFxAudio");
+            Object.DontDestroyOnLoad(go);
+            src2d = go.AddComponent<AudioSource>();
+            src2d.playOnAwake = false;
+            src2d.spatialBlend = 0f;
+        }
+        EnemyHitFeedback.PlayLoud(src2d, c, v);
+    }
+
+    public static void PlayBlock2D()
+    {
+        CombatFxSettings s = Get();
+        if (s == null || s.blockSound == null) return;
+        PlayParry2DClip(s.blockSound, 1f);
+    }
+
+    private static void PlayParry2DClip(AudioClip c, float v)
+    {
+        if (src2d == null)
+        {
+            GameObject go = new GameObject("CombatFxAudio");
+            Object.DontDestroyOnLoad(go);
+            src2d = go.AddComponent<AudioSource>();
+            src2d.playOnAwake = false;
+            src2d.spatialBlend = 0f;
+        }
+        EnemyHitFeedback.PlayLoud(src2d, c, v);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void Reset() { cached = null; loaded = false; }
+    private static void Reset() { cached = null; loaded = false; src2d = null; }
 }

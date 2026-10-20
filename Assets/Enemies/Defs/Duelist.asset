@@ -19,16 +19,21 @@ MonoBehaviour:
   staggerDuration: 2
   balanceHitStun: 0.12
   chaseSpeed: 13
-  standbySpeedMultiplier: 0.7
+  standbySpeedMultiplier: 0.9
   sightRange: 40
   arrivalTolerance: 0.5
   acceleration: 75
+  squashStrength: 1
+  hitStunCooldown: 1
+  reachForgiveness: 1.6
+  leanBackDegrees: 16
+  leanForwardDegrees: 9
   sprintMultiplier: 1.4
   sprintDistance: 12
-  standbyDistance: 10
-  standbySpacing: 5
+  standbyDistance: 7
+  standbySpacing: 3
   attackDecisionDelay: 0.12
-  attackCooldown: 0.6
+  attackCooldown: 1
   balanceHitKnockback: 8
   healthHitKnockback: 12
   blockKnockback: 10
@@ -83,6 +88,9 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    followUp: ShortSlash
+    followUpChance: 0.5
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 
@@ -128,6 +136,57 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    followUp: Cut2
+    followUpChance: 0.6
+    followUpOnly: 0
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: Cut2
+    weight: 1
+    minRange: 0
+    maxRange: 4.5
+    windup: 0.4
+    active: 0.12
+    recovery: 0.8
+    cooldown: 0.5
+    damage: 1
+    unblockable: 0
+    hitReach: 6.5
+    hitHeight: 7
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 1
     animWindup: 
     animAttack: 
     animRecover: 

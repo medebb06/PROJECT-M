@@ -24,6 +24,25 @@ public class EnemyDef : ScriptableObject
     public float arrivalTolerance = 0.2f;
     [Tooltip("Hız değişim ivmesi (birim/sn²). Yüksek = çevik, düşük = ağır/okunur.")]
     public float acceleration = 70f;
+    [Tooltip("Hasar yeme / saldırı öncesi gerilme squash-stretch şiddeti. 0 = kapalı, 1 = normal.")]
+    public float squashStrength = 1f;
+    [Header("Kaçış dash'i (okçu)")]
+    [Tooltip("0 = kapalı. Oyuncu bu mesafeden yakınsa (saldırıda değilken) düşman geriye hızlı dash atar.")]
+    public float escapeDistance = 0f;
+    public float escapeSpeed = 26f;
+    public float escapeDuration = 0.28f;
+    [Tooltip("> 0 ise kaçış kayarak değil ZIPLAYARAK olur (dikey hız). Havadayken yatay hız korunur, yere inince biter; escapeDuration en fazla süre.")]
+    public float escapeJump = 0f;
+    [Tooltip("İki kaçış arası bekleme (sn). Sürekli kaçmasın, arada yakalanabilsin.")]
+    public float escapeCooldown = 3.5f;
+    [Tooltip("Düz vuruşla sersemletildikten sonra bu süre (sn) yeniden sersemletilemez; vuruş spamı düşmanı kilitleyip saldırılarını iptal etmesin. Parry/posture kırılması etkilemez.")]
+    public float hitStunCooldown = 1.0f;
+    [Tooltip("Vuruş anında oyuncu hitReach'ten bu kadar uzakta olsa da isabet eder; ayrıca düşman vuruşta bu mesafeyi ileri adımlayarak kapatır. Oyuncunun küçük geri adımı/atak hareketi ıskalatmasın.")]
+    public float reachForgiveness = 1.6f;
+    [Tooltip("Windup'ta hedeften uzağa geriye eğilme (derece).")]
+    public float leanBackDegrees = 16f;
+    [Tooltip("Saldırı salımında hedefe doğru eğilme (derece).")]
+    public float leanForwardDegrees = 9f;
     [Tooltip("Oyuncu bu mesafeden uzaktaysa koşu hızı bu çarpanla artar (uzaktan hızlı yaklaşma).")]
     public float sprintMultiplier = 1.4f;
     public float sprintDistance = 14f;

@@ -19,16 +19,21 @@ MonoBehaviour:
   staggerDuration: 2.6
   balanceHitStun: 0.12
   chaseSpeed: 8.125
-  standbySpeedMultiplier: 0.7
+  standbySpeedMultiplier: 0.9
   sightRange: 40
   arrivalTolerance: 0.5
   acceleration: 45
+  squashStrength: 1
+  hitStunCooldown: 1
+  reachForgiveness: 1.6
+  leanBackDegrees: 16
+  leanForwardDegrees: 9
   sprintMultiplier: 1.4
   sprintDistance: 12
-  standbyDistance: 12
-  standbySpacing: 6
+  standbyDistance: 8.5
+  standbySpacing: 3.5
   attackDecisionDelay: 0.12
-  attackCooldown: 1
+  attackCooldown: 1.5
   balanceHitKnockback: 3
   healthHitKnockback: 6
   blockKnockback: 10
@@ -83,6 +88,9 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    followUp: Sweep (unblockable)
+    followUpChance: 0.3
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 
@@ -128,6 +136,9 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 

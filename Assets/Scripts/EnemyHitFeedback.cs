@@ -190,11 +190,7 @@ public class EnemyHitFeedback : MonoBehaviour
         Vector2 hitDirection
     )
     {
-        PlayLoud(
-            audioSource,
-            ParrySound,
-            ParryVolume
-        );
+        CombatFxSettings.PlayParry2D(parrySound, parryVolume);
 
         if (CombatVFXManager.Instance != null)
         {

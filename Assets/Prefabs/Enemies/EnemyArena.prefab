@@ -57,6 +57,9 @@ MonoBehaviour:
   - label: Leaper
     prefab: {fileID: 6956973913847538072, guid: 7434d8ef18c2b6a46951d7269f6d54e9, type: 3}
     def: {fileID: 11400000, guid: 55b76c5536841c34b94430c161eb1867, type: 2}
+  - label: Archer
+    prefab: {fileID: 6956973913847538072, guid: b911a6abb501b474cb3dc9cadeaa4d53, type: 3}
+    def: {fileID: 11400000, guid: d922a6ca17189e84d8d4f02625d1626c, type: 2}
   spawnDistance: 7
   groupSpacing: 1.6
   showLabels: 1

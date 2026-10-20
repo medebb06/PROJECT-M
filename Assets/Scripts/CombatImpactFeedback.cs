@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using Unity.Cinemachine;
 
@@ -189,8 +189,9 @@ public class CombatImpactFeedback : MonoBehaviour
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
         // Parry'de zaman sadece DUSMANLAR icin yavaslar (oyuncu normal hizda): cok yavas baslayip
         // (power 2.6) giderek normale hizlanan ramp. Global Time.timeScale degismez.
-        float slowDur = Mathf.Max(parryFreezeTime + parrySlowTime, 0.75f);
-        EnemyTime.RequestRamp(slowDur, 0.05f, 2.6f);
+        // Hafifletildi: eskiden >=0.75 sn ve 0.05 ölçek (çok uzun/ağırdı).
+        float slowDur = Mathf.Clamp(parryFreezeTime + parrySlowTime, 0.28f, 0.38f);
+        EnemyTime.RequestRamp(slowDur, 0.2f, 2f);
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 
@@ -230,10 +231,11 @@ public class CombatImpactFeedback : MonoBehaviour
     {
         // En ağır his: tam donma + ağır çekimden dönüş + güçlü sarsıntı.
         // Posture kirilma: uzun tam donma + belirgin SLOW MOTION (yavas baslar, hizlanarak doner).
-        float kf = Mathf.Max(breakFreeze2, 0.22f), ks = Mathf.Max(breakSlowTime2, 1.0f);
+        // Hafifletildi (eskiden 0.22 sn tam donma + >=1 sn, 0.06 ölçekli yavaşlama): şimdi çok kısa.
+        float kf = 0.04f, ks = 0.12f;
 
         HitStop.Request(kf, 0f, BalanceBreakPriority);
-        HitStop.RequestRamp(kf + ks, 0.06f, 1f, 2.2f, BalanceBreakPriority);
+        HitStop.RequestRamp(kf + ks, 0.5f, 1f, 2f, BalanceBreakPriority);
 
         PlayScreenShake(Mathf.Max(breakShake2, 1.6f));
         PlayPunch(0.3f, 0.18f);

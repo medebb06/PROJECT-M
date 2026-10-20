@@ -30,13 +30,13 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     [Header("Rhythm")]
     [Tooltip("Bir 'vuruş' birimi (saniye). Küçük = hızlı tempo.")]
-    [SerializeField] private float beatInterval = 1.15f;
+    [SerializeField] private float beatInterval = 0.8f;
 
     [Tooltip(
         "Ardışık vuruşlar arasındaki boşluk, beatInterval ile çarpılır. " +
         "Döngüsel okunur. Örn: 1,1,1,2 = üç hızlı vuruş sonra bir nefes. " +
         "Hepsini 1 yaparsan sabit tempo olur.")]
-    [SerializeField] private float[] beatPattern = { 1f, 1f, 1.5f };
+    [SerializeField] private float[] beatPattern = { 1f, 1f, 1.4f };
 
     [Tooltip("Vuruş, planlanan ana bu kadar yakınsa tam ritme oturtulur.")]
     [SerializeField] private float onBeatTolerance = 0.08f;
@@ -54,6 +54,10 @@ public class EnemyAttackCoordinator : MonoBehaviour
     [Header("After Player Hit")]
     [Tooltip("Oyuncu hasar alınca bir sonraki vuruş en az bu kadar sonra gelir.")]
     [SerializeField] private float postHitGrace = 0.6f;
+
+    [Header("Engagement (parry odaklı dövüşte kalabalık eğlenceli değil)")]
+    [Tooltip("Aynı anda oyuncuyla çatışan en fazla düşman. Fazlası uzakta bekler, biri ölünce sıra en yakın bekleyene geçer.")]
+    [SerializeField] private int maxEngaged = 2;
 
     [Header("Debug")]
     [SerializeField] private bool showDebug = false;
@@ -82,6 +86,47 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     private readonly List<EnemyBase> removeBuffer =
         new List<EnemyBase>();
+
+    private readonly List<EnemyBase> engaged = new List<EnemyBase>();
+
+    /// <summary>Düşman çatışmaya girebilir mi? (HER KARE çağrılır). false = uzakta bekle.</summary>
+    public static bool TryEngage(EnemyBase enemy)
+    {
+        if (!Application.isPlaying || enemy == null) return true;
+        return Instance.EngageInternal(enemy);
+    }
+
+    public static void ReleaseEngage(EnemyBase enemy)
+    {
+        if (instance == null || enemy == null) return;
+        instance.engaged.Remove(enemy);
+    }
+
+    private bool EngageInternal(EnemyBase e)
+    {
+        engaged.RemoveAll(x => x == null || x.IsDead || !x.isActiveAndEnabled);
+        if (engaged.Contains(e)) return true;
+        if (e.target == null) return true;
+
+        int free = maxEngaged - engaged.Count;
+        if (free <= 0) return false;
+
+        // Boş yer için en yakın bekleyenler öncelikli.
+        float myD = Mathf.Abs(e.transform.position.x - e.target.position.x);
+        int closer = 0;
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase o = EnemyBase.All[i];
+            if (o == null || o == e || o.IsDead || o.target == null || engaged.Contains(o)) continue;
+            if (!(o is EnemyUnit)) continue;
+            float d = Mathf.Abs(o.transform.position.x - o.target.position.x);
+            if (d < myD) closer++;
+        }
+        if (closer >= free) return false;
+
+        engaged.Add(e);
+        return true;
+    }
 
     private float nextAllowedHitTime;
     private int patternIndex;
@@ -272,8 +317,9 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
         // Kalabalikta ritim seyrelir: 4+ dusmanda ayni anda tek uyari, vuruslar arasi bosluk acilir.
         int crowd = CountCrowd(enemy);
-        crowdScale = Mathf.Clamp(1f + 0.12f * (crowd - 2), 1f, 2f);
-        int limit = crowd >= 2 ? 1 : maxConcurrentAttackers;   // kalabalikta ayni anda TEK saldiri: sirayla, okunabilir
+        // Kalabalıkta pasif kalmasın: aynı anda 2 uyarı serbest (vuruş anları yine nextAllowedHitTime ile ayrılır), tempo en fazla %30 seyrelir.
+        crowdScale = Mathf.Clamp(1f + 0.05f * (crowd - 2), 1f, 1.3f);
+        int limit = maxConcurrentAttackers;   // kalabalikta ayni anda TEK saldiri: sirayla, okunabilir
 
         if (
             !activeAttackers.ContainsKey(enemy) &&
@@ -502,6 +548,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     private void OnDisable()
     {
+        engaged.Clear();
         firstAsk.Clear();
         lastAsk.Clear();
         lastRangeAsk.Clear();

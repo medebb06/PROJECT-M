@@ -33,12 +33,13 @@ public class EnemyArena : MonoBehaviour
 
     private void Update()
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 5; i++)
             if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i < entries.Count) { selected = i; Spawn(i, 1); }
 
-        if (Input.GetKeyDown(KeyCode.Alpha5)) Spawn(selected, 3);
-        if (Input.GetKeyDown(KeyCode.Alpha6)) Spawn(selected, 5);
-        if (Input.GetKeyDown(KeyCode.Alpha7)) Spawn(selected, 8);
+        if (Input.GetKeyDown(KeyCode.Alpha6)) Spawn(selected, 3);
+        if (Input.GetKeyDown(KeyCode.Alpha7)) Spawn(selected, 5);
+        if (Input.GetKeyDown(KeyCode.Alpha8)) Spawn(selected, 8);
+        if (Input.GetKeyDown(KeyCode.Alpha9)) SpawnPair();
         if (Input.GetKeyDown(KeyCode.Tab) && entries.Count > 0) selected = (selected + 1) % entries.Count;
         if (Input.GetKeyDown(KeyCode.K)) KillAll();
         if (Input.GetKeyDown(KeyCode.H)) HealAll();
@@ -66,6 +67,27 @@ public class EnemyArena : MonoBehaviour
         }
     }
 
+    // Ideal karşılaşma: seçili tip YAKIN (sağda), listedeki sonraki tip UZAK (solda).
+    public void SpawnPair()
+    {
+        Transform p = Player;
+        if (p == null || entries.Count == 0) return;
+        SpawnOne(selected, p.position.x + spawnDistance * 0.8f);
+        SpawnOne((selected + 1) % entries.Count, p.position.x - spawnDistance * 2f);
+    }
+
+    private void SpawnOne(int index, float x)
+    {
+        Transform p = Player;
+        if (p == null || index < 0 || index >= entries.Count || entries[index].prefab == null) return;
+        Entry e = entries[index];
+        GameObject go = Instantiate(e.prefab, new Vector3(x, p.position.y, p.position.z), Quaternion.identity);
+        go.name = e.label + "_" + spawned.Count;
+        EnemyUnit u = go.GetComponent<EnemyUnit>();
+        if (u != null && e.def != null) { u.def = e.def; u.ApplyDef(); }
+        spawned.Add(go);
+    }
+
     public void KillAll()
     {
         for (int i = EnemyBase.All.Count - 1; i >= 0; i--)
@@ -91,7 +113,7 @@ public class EnemyArena : MonoBehaviour
     private void OnGUI()
     {
         GUI.Label(new Rect(10, 10, 700, 22),
-            "ARENA  [1-4] doğur  [5/6/7] 3/5/8 adet  [Tab] tip: " +
+            "ARENA  [1-5] doğur  [6/7/8] 3/5/8 adet  [9] yakın+uzak çift  [Tab] tip: " +
             (entries.Count > 0 ? entries[selected].label : "-") +
             "  [K] öldür  [H] doldur  [G] etiket   Aktif: " + EnemyBase.All.Count);
 
