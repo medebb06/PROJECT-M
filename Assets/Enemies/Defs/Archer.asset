@@ -25,9 +25,9 @@ MonoBehaviour:
   acceleration: 75
   squashStrength: 1
   escapeDistance: 10
-  escapeSpeed: 22
+  escapeSpeed: 20
   escapeDuration: 1.2
-  escapeJump: 18
+  escapeJump: 15
   escapeCooldown: 3
   hitStunCooldown: 1
   reachForgiveness: 1.6
