@@ -40,6 +40,13 @@ Shader "ProjectM/SilhouetteRim"
         _MoonFade ("Ayin yakininda saydamlasma", Range(0,1)) = 0
         _MoonFadeRadius ("Saydamlasma yaricapi (birim)", Float) = 5
         _NearRim ("Yakin ay parlamasi (0 = yok)", Range(0,2)) = 0
+
+        [Header(Cloth Sway)]
+        _SwayAmp ("Bez sallama (uv binde, 0 = kapali)", Range(0,12)) = 0
+        _SwaySpeed ("Bez sallama hizi", Range(0,4)) = 1.2
+
+        [Header(Depth Blur)]
+        _Blur ("Blur (ekran pikseli, DepthBlur ayarlar)", Range(0,8)) = 0
     }
 
     SubShader
@@ -89,6 +96,9 @@ Shader "ProjectM/SilhouetteRim"
             half _MoonFade;
             half _MoonFadeRadius;
             half _NearRim;
+            half _Blur;
+            half _SwayAmp;
+            half _SwaySpeed;
         CBUFFER_END
 
         #include "ProjectMWind.hlsl"
@@ -109,6 +119,43 @@ Shader "ProjectM/SilhouetteRim"
 
         // Sprite'ın gerçek doku boyutu (SpriteRenderer her çizimde ayarlar; materyal CBUFFER'ında olmamalı).
         float4 _MainTex_TexelSize;
+
+        // Derinlik bulanıklığı: ekran pikseli yarıçaplı disk blur (premultiplied, kenarlarda kararma yok).
+        half4 PM_BlurSample(float2 uv)
+        {
+            half4 c0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
+            if (_Blur < 0.02h) return c0;
+            float2 px = max(fwidth(uv), float2(1e-6, 1e-6)) * _Blur;
+            half4 acc = half4(c0.rgb * c0.a, c0.a);
+            [unroll] for (int k = 0; k < 16; k++)
+            {
+                float r = sqrt((k + 0.5) / 16.0);
+                float th = k * 2.39996323;
+                half4 s = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + float2(cos(th), sin(th)) * r * px);
+                acc += half4(s.rgb * s.a, s.a);
+            }
+            acc /= 17.0h;
+            return half4(acc.rgb / max(acc.a, 0.001h), acc.a);
+        }
+
+        bool PM_IsCloth(half4 s)
+        {
+            half l = dot(s.rgb, half3(0.299h, 0.587h, 0.114h));
+            return s.a > 0.5h && s.b > s.r * 1.3h + 0.01h && l < 0.16h;
+        }
+
+        // Sadece bez (koyu mavi-yesil) piksellerini sallar; direk, sandik, balta vs. sabit kalir.
+        half4 PM_SwaySample(float2 uv)
+        {
+            half4 o = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
+            if (o.a > 0.5h && !PM_IsCloth(o)) return o;
+            float w = smoothstep(0.12, 0.85, uv.y);
+            float t = _Time.y * _SwaySpeed;
+            float2 d = float2(sin(t + uv.y * 5.0 + uv.x * 7.0) * 0.7 + sin(t * 2.3 + uv.x * 13.0) * 0.3,
+                              cos(t * 0.8 + uv.x * 6.0) * 0.25) * (_SwayAmp * 0.001) * w;
+            half4 s = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + d);
+            return PM_IsCloth(s) ? s : half4(0, 0, 0, 0);
+        }
 
         struct Attributes
         {
@@ -169,7 +216,7 @@ Shader "ProjectM/SilhouetteRim"
                 uv += float2(fx, fy) * _MainTex_TexelSize.xy * _FlutterAmount * i.wind.x * max(_ProjectM_WindStrength, 0);
             }
 
-            half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
+            half4 tex = (_SwayAmp > 0.001h) ? PM_SwaySample(uv) : PM_BlurSample(uv);
             half4 c = tex * i.color;
 
             if (c.a <= 0.001h)
@@ -198,7 +245,7 @@ Shader "ProjectM/SilhouetteRim"
             half a3 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV).a;
 
             half empty = 1.0h - (a1 * 0.5h + a2 * 0.3h + a3 * 0.2h);
-            half rim = saturate(empty) * tex.a;
+            half rim = saturate(empty) * tex.a * (1.0h - saturate(_Blur * 0.35h));
 
             // Işığa doğru eğilince kenar parlar, ışıktan uzaklaşınca söner.
             half towardLight = (half)(i.wind.y * i.wind.x * dir.x);

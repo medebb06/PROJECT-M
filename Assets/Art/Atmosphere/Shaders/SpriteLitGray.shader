@@ -7,6 +7,7 @@ Shader "ProjectM/SpriteLitGray"
         _NormalMap("Normal Map", 2D) = "bump" {}
         [MaterialToggle] _ZWrite("ZWrite", Float) = 0
         _NearRim("Yakin ay parlamasi (0 = yok)", Range(0,2)) = 0
+        _Blur("Blur (ekran pikseli, DepthBlur ayarlar)", Range(0,8)) = 0
 
         // Legacy properties. They're here so that materials using this shader can gracefully fallback to the legacy sprite shader.
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
@@ -60,6 +61,7 @@ Shader "ProjectM/SpriteLitGray"
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
                 half _NearRim;
+                half _Blur;
             CBUFFER_END
 
             Varyings LitVertex(Attributes input)
@@ -77,6 +79,22 @@ Shader "ProjectM/SpriteLitGray"
             half4 LitFragment(Varyings input) : SV_Target
             {
                 half4 pmg_r = CommonLitFragment(input, input.color);
+                if (_Blur > 0.02h)
+                {
+                    float2 pmg_px = max(fwidth(input.uv), float2(1e-6, 1e-6)) * _Blur;
+                    half4 pmg_acc = half4(pmg_r.rgb * pmg_r.a, pmg_r.a);
+                    [unroll] for (int pmg_k = 0; pmg_k < 8; pmg_k++)
+                    {
+                        float pmg_rr = (pmg_k & 1) ? 1.0 : 0.55;
+                        float pmg_th = pmg_k * 0.785398 + 0.3;
+                        Varyings pmg_in2 = input;
+                        pmg_in2.uv = input.uv + float2(cos(pmg_th), sin(pmg_th)) * pmg_rr * pmg_px;
+                        half4 pmg_s = CommonLitFragment(pmg_in2, input.color);
+                        pmg_acc += half4(pmg_s.rgb * pmg_s.a, pmg_s.a);
+                    }
+                    pmg_acc /= 9.0h;
+                    pmg_r = half4(pmg_acc.rgb / max(pmg_acc.a, 0.001h), pmg_acc.a);
+                }
 #if USE_SHAPE_LIGHT_TYPE_0 || USE_SHAPE_LIGHT_TYPE_1 || USE_SHAPE_LIGHT_TYPE_2 || USE_SHAPE_LIGHT_TYPE_3
                 if (_NearRim > 0.001h && _ProjectM_NightRim > 0.001)
                     pmg_r.rgb += _ProjectM_NearRimColor.rgb * PMG_ThinRim(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), input.uv, pmg_r.a, float2(0, 1), 2.0) * _NearRim * _ProjectM_NightRim;
@@ -121,6 +139,7 @@ Shader "ProjectM/SpriteLitGray"
             CBUFFER_START( UnityPerMaterial )
                 half4 _Color;
                 half _NearRim;
+                half _Blur;
             CBUFFER_END
 
             Varyings NormalsRenderingVertex(Attributes input)
@@ -179,6 +198,7 @@ Shader "ProjectM/SpriteLitGray"
             CBUFFER_START(UnityPerMaterial)
                 half4 _Color;
                 half _NearRim;
+                half _Blur;
             CBUFFER_END
 
             Varyings UnlitVertex(Attributes input)

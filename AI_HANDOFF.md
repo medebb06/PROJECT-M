@@ -537,3 +537,11 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 
 ### Zemin çimeni (2026-10-19)
 - ZeminCimen/Back (169 eski şerit) KAPATILDI (SetActive false, silinmedi); yerine ZeminCimen/Row: tek SpriteRenderer, Tiled mod, Assets/Sprites/Grass/Grass_Tile.png (kullanıcının 3D çimen render'ından, dikişsiz tile, ppu 466, FullRect), tek düzlem, scale 1.45, bottom y=-5.08, x -150..~662, M_Grass_Last + eski tint, order 6, WindSway. Betik: _ArtPipeline/grass_tile.py. Çimeni elle tek tek yerleştirme; Row'u uzat/kısalt.
+
+
+## 2026-10-20 — Sahne sanatı: meşale, ev, zemin taşı, tekne, çalılar, parallax, derinlik blur
+- Yeni sprite/materyaller: Torch(+Flame_0..7, TorchFire.cs), House, GroundStone_Tile, Boat, Bush A-D (M_Prop_Coloured_*). Üreticiler: Assets/Sprites/_ArtPipeline/*_gen.py.
+- Işıklar gece/gündüz sabit parlak (TorchFire day=night=3.2, Tent 1.6). Parallax: demirci eşyaları/taş/çimen/ağaç/çadır oranları yeniden ayarlandı (Rebase gerekir).
+- DERİNLİK BLUR: SilhouetteRim.shader ve SpriteLitGray.shader'a `_Blur` (ekran px) eklendi; Assets/Scripts/DepthBlur.cs (sahnede 'DepthBlur' objesi) sorting order'a göre MaterialPropertyBlock ile değer verir (bulut/dağ ~3, gövdeler 2-1.6, çalılar 1-0.35, order>=-15 net). Sağ tık > Apply Depth Blur. Doğrulandı: derleme hatasız, sahne görünümünde uzak katmanlar yumuşak. Doğrulanmadı: Game view / build performansı (SpriteLitGray blur'u 9 lit örnek, sadece dağlarda).
+- Sahne kaydedilmedi; Prop_House sahnede eksik; tekne yerleştirilmedi.
+- DepthBlur.cs artık ay kenar ışığını da sürer (driveRim): rimStops order->şiddet (yakın 1, uzak 0'a düşer), rimWidthScale 0.3 (kalınlık çarpanı), rimStrength. Sadece SilhouetteRim renderer'ları, MaterialPropertyBlock ile. Foreground blur: foregroundStrength.

@@ -33,6 +33,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Blur: 0
     - _CoreShadow: 0
     - _FlutterAmount: 0
     - _FlutterSpeed: 0
@@ -43,10 +44,10 @@ Material:
     - _MoonFadeRadius: 5
     - _MoonRimMin: 0.3
     - _MoonRimRadius: 16
-    - _NearRim: 1
+    - _NearRim: 0
     - _NormalIntensity: 0
     - _NormalPower: 0.5
-    - _RimIntensity: 0.55
+    - _RimIntensity: 0.3
     - _RimTop: 0.45
     - _RimWidth: 4.5
     - _UseMoon: 0
