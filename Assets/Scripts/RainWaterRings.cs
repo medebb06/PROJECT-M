@@ -126,7 +126,7 @@ public class RainWaterRings : MonoBehaviour
         Camera cam = Camera.main;
         if (water == null || cam == null) return;
 
-        float halfH = cam.orthographicSize;
+        float halfH = water.VisibleSize;
         float halfW = halfH * cam.aspect;
         float top = water.WaterY - 0.18f;
         float bottom = cam.transform.position.y - halfH;

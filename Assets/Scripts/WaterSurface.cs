@@ -77,6 +77,8 @@ public class WaterSurface : MonoBehaviour
     private Camera mainCam;
     private Camera reflCam;
     private float mainVisibleSize = -1f;   // ana kameranın GERÇEKTEN çizdiği ortho boyutu (Pixel Perfect / Cinemachine sonrası)
+    /// <summary>Ana kameranın gerçekten çizdiği ortho yarı-yüksekliği (Pixel Perfect / Cinemachine sonrası).</summary>
+    public float VisibleSize => mainVisibleSize > 0f ? mainVisibleSize : (mainCam != null ? mainCam.orthographicSize : 10f);
     private RenderTexture rt;
     private readonly Vector4[] ripples = new Vector4[16];
     private int nextRipple;
@@ -345,7 +347,7 @@ public class WaterSurface : MonoBehaviour
 
         ambientTimer = Random.Range(0.4f, 1.6f) / ambientRate;
 
-        float halfW = mainCam.orthographicSize * mainCam.aspect;
+        float halfW = VisibleSize * mainCam.aspect;
         float x = mainCam.transform.position.x + Random.Range(-halfW, halfW);
         float depth = Mathf.Lerp(0.3f, ambientMaxDepth, Random.value * Random.value);
         Ripple(new Vector2(x, WaterY - depth), ambientStrength * Random.Range(0.5f, 1f));
