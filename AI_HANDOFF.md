@@ -554,3 +554,10 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - FG_RocksBranch (bottom-left, Environments order 100). Old FG_Blades/FG_GrassStrip removed.
 - FG_Leaves: 46 upright leaf pieces from bushesforeground.pdf (Assets/Sprites/Foreground/Leaves/*_v3.png), 3 depth layers, ParallaxEffect + ForegroundSway (Play only) + DepthBlur stops orders 91-100.
 - Verified: game-view screenshot shows leaves upright at bottom. Unverified: sway motion (Play only), cut-edge look at other camera positions. Scene UNSAVED.
+
+
+## Temizlik (2026-10-20)
+- Yedek: D:\Oyun\PROJECT-M_Silinenler (Scripts, Assets, Resources_*). Geri almak icin dosyalari Assets altina geri tasi.
+- Silinen: execute/finisher (PlayerFinisher, EnemyExecuteState, ExecuteMeter, ExecuteCinematic, PlayerExecute*), Archer/Shield/Bomber/Flyer/Posture, RunManager koprusu (Phase1Stubs'ta sadece MetaProgress+CharmUtil kaldi), BossController ailesi, MainMenu, Tutorial*, Endless, Rage*, kullanilmayan sprite/ses/prefab/sahne/screenshot (~342 MB).
+- MainMenu.Active cagrilari false/true ile degistirildi.
+- Sahne kaydedilmemis olabilir: kontrol edip kaydet.

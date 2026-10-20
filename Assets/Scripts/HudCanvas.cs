@@ -160,7 +160,7 @@ public class HudCanvas : MonoBehaviour
             stamp.Add(-1);
         }
 
-        if (!loggedDraw) { loggedDraw = true; Debug.Log("[HudCanvas] ilk cizim: rect " + r + ", renk " + c + ", TopBarPixels " + RunCameraZoom.TopBarPixels + ", MainMenu.Active " + MainMenu.Active); }
+        if (!loggedDraw) { loggedDraw = true; Debug.Log("[HudCanvas] ilk cizim: rect " + r + ", renk " + c + ", TopBarPixels " + RunCameraZoom.TopBarPixels + ", false " + false); }
         stamp[used] = f;
         img.enabled = c.a > 0.003f && r.width > 0.01f && r.height > 0.01f;
         img.color = c;

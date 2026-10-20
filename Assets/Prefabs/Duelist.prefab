@@ -183,7 +183,6 @@ GameObject:
   - component: {fileID: 449339544802574334}
   - component: {fileID: 1683981631884351114}
   - component: {fileID: 6913407035182569219}
-  - component: {fileID: 4106027573664735691}
   - component: {fileID: 2656089177797109659}
   - component: {fileID: 1634934014537030282}
   - component: {fileID: 2707043965123876500}
@@ -430,6 +429,8 @@ MonoBehaviour:
   target: {fileID: 0}
   chaseRange: 10
   enemySprite: {fileID: 7859885541070801493}
+  superArmorOverride: 0
+  suppressFlash: 0
 --- !u!114 &2578526921444576085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -462,6 +463,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9629fd67b2f97a742bf776fbcf967f06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHitFeedback
+  vfxOffset: {x: 0, y: 0, z: 0}
   audioSource: {fileID: 1683981631884351114}
   balanceHitSounds: []
   playOldBalanceHitSound: 0
@@ -473,6 +475,7 @@ MonoBehaviour:
   balanceBreakVFX: {fileID: 0}
   balanceBreakAudioSource: {fileID: 0}
   parrySound: {fileID: 8300000, guid: 455e27324f049e04daefb131d64613f3, type: 3}
+  parryVolume: 2
   parryVFX: {fileID: 0}
   blockSound: {fileID: 8300000, guid: b45fce8d1113d5e4c822f35e60840333, type: 3}
   blockVFX: {fileID: 0}
@@ -644,24 +647,6 @@ MonoBehaviour:
   warnBaseIntensity: 0.6
   warnEndIntensity: 0.9
   commitFlashTime: 0.09
---- !u!114 &4106027573664735691
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3697985245505729534}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3d1bdd621bb81b64b8ae4e7746ea6b26, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FinisherTargetHighlight
-  markerColor: {r: 1, g: 0.1, b: 0.08, a: 1}
-  sizeFactor: 0.55
-  minSize: 0.7
-  maxSize: 2.2
-  blinkRate: 4
-  sortingOrderOffset: -1
 --- !u!95 &2656089177797109659
 Animator:
   serializedVersion: 7

@@ -312,7 +312,6 @@ public class PlayerAbility : MonoBehaviour
         IPlayerState s = player.stateMachine != null ? player.stateMachine.CurrentState : null;
 
         if (
-            s is PlayerExecuteState ||
             s is PlayerHurtState ||
             s is PlayerDeathState ||
             s is PlayerPostureBreakState
@@ -680,7 +679,7 @@ public class PlayerAbility : MonoBehaviour
 
     private static bool IsBoss(EnemyController e)
     {
-        return e != null && e.GetComponent<BossController>() != null;
+        return e != null && e.GetComponent<Boss1Enemy>() != null;
     }
 
     // Oyuncunun baktığı yönde, kutu içindeki düşmanlar.

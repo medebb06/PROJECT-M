@@ -1,17 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemyController : MonoBehaviour
+public class EnemyController : EnemyBase
 {
-    // Sahnedeki tüm aktif düşmanlar (halka slotu doluluk kontrolü için).
-    public static readonly List<EnemyController> All =
-        new List<EnemyController>();
-
-    private static int nextSpawnIndex;
-
-    // Her düşmana benzersiz, artan numara (eşitlik bozmak için).
-    public int SpawnIndex { get; private set; }
-
     [Header("Attack")]
     public float attackRange = 1.5f;
 
@@ -358,7 +349,7 @@ public class EnemyController : MonoBehaviour
     public AudioClip postureHitClip;
     public AudioClip knockbackClip;
 
-    public Transform target;
+    // target: EnemyBase'te
     public float chaseRange = 5f;
     [Header("Facing")]
     [SerializeField] private SpriteRenderer enemySprite;
@@ -371,7 +362,6 @@ public class EnemyController : MonoBehaviour
 
     private Health health;
     private Health targetHealth;
-    private FinisherTargetHighlight finisherHighlight;
     private EnemyAttackTelegraph telegraph;
     private Collider2D bodyCollider;
 
@@ -407,7 +397,7 @@ public class EnemyController : MonoBehaviour
     public bool IsMovementLocked =>
         movementLockTimer > 0f;
 
-    public bool IsStaggered =>
+    public override bool IsStaggered =>
         currentState is EnemyStaggerState;
 
     // AÇIK AN: sersemlemese de saldırısı bitmiş, toparlanan (savunmasız) düşman.
@@ -415,20 +405,19 @@ public class EnemyController : MonoBehaviour
     // EnemyTime cinsinden bitiş; saldırı toparlanması ve boss yorgunluğu doldurur.
     [System.NonSerialized] public float openUntil;
 
-    public bool IsOpen =>
+    public override bool IsOpen =>
         IsStaggered ||
         (
             EnemyTime.Now < openUntil &&
-            !IsDead &&
-            !(currentState is EnemyExecuteState)
+            !IsDead
         );
 
-    public bool IsDead =>
+    public override bool IsDead =>
         health != null &&
         health.IsDead;
 
     // Saldırının kararlı aşamasında mı?
-    public bool IsAttackCommitted =>
+    public override bool IsAttackCommitted =>
         superArmorOverride ||
         (currentState is EnemyAttackState attack &&
         attack.IsCommitted);
@@ -486,9 +475,9 @@ public class EnemyController : MonoBehaviour
         animator.SetTrigger("Attack");
     }
 
-    private void Awake()
+    protected override void Awake()
     {
-        SpawnIndex = nextSpawnIndex++;
+        base.Awake();
 
         if (hitAudioSource == null)
         {
@@ -507,9 +496,7 @@ public class EnemyController : MonoBehaviour
         health =
             GetComponent<Health>();
 
-        finisherHighlight =
-            GetComponent<FinisherTargetHighlight>();
-
+        
         telegraph =
             GetComponent<EnemyAttackTelegraph>();
 
@@ -586,18 +573,17 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    protected override void OnEnable()
     {
-        if (!All.Contains(this))
-            All.Add(this);
+        base.OnEnable();
 
         if (useDepthSorting)
             EnemyDepthSorter.EnsureExists();
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
-        All.Remove(this);
+        base.OnDisable();
 
         SetDepthLevel(0);
     }
@@ -917,7 +903,7 @@ public class EnemyController : MonoBehaviour
         currentState.Enter();
     }
 
-    public void ForceStagger()
+    public override void ForceStagger()
     {
         if (IsStaggered)
             return;
@@ -935,13 +921,13 @@ public class EnemyController : MonoBehaviour
         );
     }
 
-    public void StartAttackRecovery()
+    public override void StartAttackRecovery()
     {
         attackRecoveryTimer =
             attackRecoveryTime;
     }
 
-    public void StartAttackRecovery(float duration)
+    public override void StartAttackRecovery(float duration)
     {
         attackRecoveryTimer =
             Mathf.Max(0f, duration);
@@ -1106,7 +1092,7 @@ public class EnemyController : MonoBehaviour
     {
         for (int i = 0; i < All.Count; i++)
         {
-            EnemyController other = All[i];
+            EnemyController other = All[i] as EnemyController;
 
             if (other == null || other == this || other.IsDead)
                 continue;
@@ -1152,7 +1138,7 @@ public class EnemyController : MonoBehaviour
 
     // +1 = sağa, -1 = sola bakıyor.
     // (FaceTarget: hedef sağdaysa flipX = false, yani sprite sağa bakar.)
-    public float FacingDirection =>
+    public override float FacingDirection =>
         enemySprite != null && enemySprite.flipX
             ? -1f
             : 1f;
@@ -1164,7 +1150,7 @@ public class EnemyController : MonoBehaviour
             : transform.position.y;
 
     // Durum etkileri (zehir vb.) için kısa renk tonu flaşı.
-    public void PlayTintFlash(Color color, float duration)
+    public override void PlayTintFlash(Color color, float duration)
     {
         PlayFlash(color, duration, false);
     }
@@ -1182,7 +1168,7 @@ public class EnemyController : MonoBehaviour
     }
 
     // Parry sonrası: tüm düşmanlar yavaşlar, oyuncu normal kalır.
-    public void PlayParrySlowMotion(bool brokeBalance)
+    public override void PlayParrySlowMotion(bool brokeBalance)
     {
         HitSlowMotion profile =
             brokeBalance
@@ -1231,19 +1217,14 @@ public class EnemyController : MonoBehaviour
 
     public void SetFinisherHighlight(bool highlighted)
     {
-        if (finisherHighlight == null)
-            return;
-
-        finisherHighlight.SetHighlighted(
-            highlighted
-        );
+        
     }
 
     // =========================================================
     // BALANCE HIT
     // =========================================================
 
-    public void ApplyBalanceHit(
+    public override void ApplyBalanceHit(
         Vector2 hitDirection
     )
     {
@@ -1299,7 +1280,7 @@ public class EnemyController : MonoBehaviour
     // ATTACK HIT - OLD COMPATIBILITY METHOD
     // =========================================================
 
-    public void ApplyAttackHit(
+    public override void ApplyAttackHit(
         Vector2 hitDirection,
         bool healthHit
     )
@@ -1315,7 +1296,7 @@ public class EnemyController : MonoBehaviour
     // ATTACK HIT - COMBO VERSION
     // =========================================================
 
-    public void ApplyAttackHit(
+    public override void ApplyAttackHit(
         Vector2 hitDirection,
         bool healthHit,
         int attackStep
@@ -1439,7 +1420,7 @@ public class EnemyController : MonoBehaviour
 
     // Denge (posture) hasarı alınca çağrılır: beyaz flaş.
     // Shader bulunamazsa renk tonuna düşer (eski davranış).
-    public void PlayBalanceDamageFlash()
+    public override void PlayBalanceDamageFlash()
     {
         PlayFlash(
             balanceHitFlashColor,
@@ -1634,7 +1615,7 @@ public class EnemyController : MonoBehaviour
     // AUDIO
     // =========================================================
 
-    public void PlayHealthHitSound()
+    public override void PlayHealthHitSound()
     {
         if (hitAudioSource == null)
             return;
@@ -1647,7 +1628,7 @@ public class EnemyController : MonoBehaviour
         );
     }
 
-    public void PlayPostureHitSound()
+    public override void PlayPostureHitSound()
     {
         if (hitAudioSource == null)
             return;
@@ -1735,7 +1716,7 @@ public class EnemyController : MonoBehaviour
     // BLOCK KNOCKBACK
     // =========================================================
 
-    public void ApplyBlockKnockback(
+    public override void ApplyBlockKnockback(
         Vector2 hitDirection
     )
     {
@@ -1789,20 +1770,7 @@ public class EnemyController : MonoBehaviour
     // EXECUTE
     // =========================================================
 
-    public void Execute(bool force = false)
-    {
-        if (!force && !IsOpen)
-            return;
-
-        Debug.Log(
-            "EXECUTE TARGET: " +
-            gameObject.name
-        );
-
-        ChangeState(
-            new EnemyExecuteState(this)
-        );
-    }
+    
 
     // =========================================================
     // BALANCE BROKEN

@@ -214,7 +214,7 @@ public static class PlayerDamage
         if (enemy.IsStaggered)
         {
             healthAmount =
-                Mathf.Max(1, Mathf.RoundToInt(healthAmount * ExecuteMeter.StaggeredHealthMultiplier));
+                Mathf.Max(1, Mathf.RoundToInt(healthAmount * 2f));
         }
 
         health.TakeDamage(healthAmount);

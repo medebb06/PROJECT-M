@@ -464,7 +464,6 @@ GameObject:
   - component: {fileID: 6246365400100952835}
   - component: {fileID: 745476107488044533}
   - component: {fileID: 4312770384138214666}
-  - component: {fileID: 8577722452449869528}
   - component: {fileID: 2422139590447337524}
   - component: {fileID: 414704846381954979}
   - component: {fileID: 9135974849126324683}
@@ -1232,31 +1231,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &8577722452449869528
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7819838104998345150}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 169b8195ef3a6cd468b82d7f3ab6492e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerFinisher
-  longReach: 9
-  forwardPriority: 1.5
-  staggerOnly: 1
-  lineMinLength: 5
-  lineMaxLength: 18
-  lineColor: {r: 1, g: 0.82, b: 0.3, a: 1}
-  executeKey: 101
-  inputBuffer: 0.25
-  minHold: 0.3
-  segHold: 0.35
-  focusStartScale: 0.04
-  focusEndScale: 0.5
-  rangeSlack: 1.8
 --- !u!114 &2422139590447337524
 MonoBehaviour:
   m_ObjectHideFlags: 0

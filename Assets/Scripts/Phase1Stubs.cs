@@ -5,28 +5,9 @@ using UnityEngine;
 // Silinen Run/Level/Meta/Charm sistemlerine hâlâ bağlı olan oyuncu kodunun derlenmesi için.
 // Faz 2'de (düşmanlar silinip ITarget'a geçilince) bu dosya da silinecek.
 
-public static class LevelProps
-{
-    public static bool HitArea(Vector2 center, Vector2 size) { return false; }
-    public static bool SpikeIn(Vector2 center, Vector2 size) { return false; }
-}
-
 public static class MetaProgress
 {
-    public static float ExecuteFillMultiplier => 1f;
     public static float AbilityCooldownMultiplier => 1f;
-}
-
-public static class RunUI
-{
-    public static bool MenuVisible => false;
-}
-
-public class RunManager
-{
-    public static RunManager Instance => null;
-    public bool IsPaused => false;
-    public void ShowBanner(string text, float seconds) { }
 }
 
 public static class CharmUtil

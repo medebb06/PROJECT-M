@@ -238,7 +238,7 @@ public class EnemyAnimationDriver : MonoBehaviour
 
         if (
             hurtDuringStagger &&
-            (state is EnemyStaggerState || state is EnemyExecuteState)
+            state is EnemyStaggerState
         )
         {
             attackActive = false;

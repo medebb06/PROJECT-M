@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -382,7 +382,6 @@ public class PlayerCombatController : MonoBehaviour
     {
         if (Mathf.Abs(player.moveInput) < 0.1f)
         {
-            ParrySoftTarget.FaceTarget(player);   // soft target: isaretli dusmana don
             return;
         }
 
