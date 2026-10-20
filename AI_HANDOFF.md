@@ -545,3 +545,12 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - DERİNLİK BLUR: SilhouetteRim.shader ve SpriteLitGray.shader'a `_Blur` (ekran px) eklendi; Assets/Scripts/DepthBlur.cs (sahnede 'DepthBlur' objesi) sorting order'a göre MaterialPropertyBlock ile değer verir (bulut/dağ ~3, gövdeler 2-1.6, çalılar 1-0.35, order>=-15 net). Sağ tık > Apply Depth Blur. Doğrulandı: derleme hatasız, sahne görünümünde uzak katmanlar yumuşak. Doğrulanmadı: Game view / build performansı (SpriteLitGray blur'u 9 lit örnek, sadece dağlarda).
 - Sahne kaydedilmedi; Prop_House sahnede eksik; tekne yerleştirilmedi.
 - DepthBlur.cs artık ay kenar ışığını da sürer (driveRim): rimStops order->şiddet (yakın 1, uzak 0'a düşer), rimWidthScale 0.3 (kalınlık çarpanı), rimStrength. Sadece SilhouetteRim renderer'ları, MaterialPropertyBlock ile. Foreground blur: foregroundStrength.
+
+
+## Art session 2 (2026-10-20)
+- Tent: only cloth sways (M_Prop_Coloured _SwayAmp/_SwaySpeed), props static; rim 0.3 on tent/forge props, Tree01 0.1, bushes 0.
+- Ground stone tile simplified/seamless + blur; player feet behind ground stone.
+- More/lower bushes (FG_Bushes, 40 children).
+- FG_RocksBranch (bottom-left, Environments order 100). Old FG_Blades/FG_GrassStrip removed.
+- FG_Leaves: 46 upright leaf pieces from bushesforeground.pdf (Assets/Sprites/Foreground/Leaves/*_v3.png), 3 depth layers, ParallaxEffect + ForegroundSway (Play only) + DepthBlur stops orders 91-100.
+- Verified: game-view screenshot shows leaves upright at bottom. Unverified: sway motion (Play only), cut-edge look at other camera positions. Scene UNSAVED.
