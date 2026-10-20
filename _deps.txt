@@ -1,0 +1,485 @@
+Assets/Resources/RageExec/exec_s.png
+Assets/Sprites/JumpDust/FX052_01_0.prefab
+Assets/Sprites/Boss1/Resources/Boss1/boss1_neck.png
+Assets/Resources/HitClicks/hit_03.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_face.png
+Assets/Sprites/Enemies/Cekirge/Cek_leg1_lo.png
+Assets/Sprites/Props/SpearRack/SpearRack_Soft.png
+Assets/Scripts/PlayerAudio.cs
+Assets/Free Slash VFX/Shaders/Trail.shadergraph
+Assets/Resources/JumpSfx/jump_10.wav
+Assets/Sprites/Demirci_Spine/samuray.png
+Assets/Resources/RageExec/exec_l.png
+Assets/Resources/HitClicks/hurt_07.wav
+Assets/Resources/Rage
+Assets/Sprites/Props/Grindstone/Grindstone_Soft.png
+Assets/Sprites/Trees/BG/BGTrunk_C_Blur.png
+Assets/Resources/HitClicks/hit_13.wav
+Assets/Sprites/Props/Bush/Bush_B_Green.png
+Assets/Resources/HitClicks/step_03.wav
+Packages/com.unity.render-pipelines.core/Runtime/Volume/VolumeProfile.cs
+Packages/com.unity.cinemachine/Runtime/Behaviours/CinemachineBrain.cs
+Assets/Resources/Music/Theme_04.mp3
+Assets/Scripts/EnemyAttackCoordinator.cs
+Assets/Prefabs/Player.prefab
+Assets/Art/Atmosphere/TimeOfDay/sun_disc.png
+Assets/Sprites/Props/Torch/Torch_Soft.png
+Assets/Art/Atmosphere/TimeOfDay/ParticleGlow.shader
+Assets/Resources/HitClicks/hit_08.wav
+Assets/Art/Atmosphere/MoonlitVolumeProfile_BW.asset
+Assets/Sprites/Enemies/Cekirge/Cek_body.png
+Assets/Sprites/Props/Forge/Forge_Soft.png
+Assets/Sprites/Demirci_Spine/SpineSpriteSwap.cs
+Assets/Resources/UI/Knight_Souls.otf
+Packages/com.unity.render-pipelines.universal/Runtime/Overrides/FilmGrain.cs
+Assets/Sprites/PLACEHOLDERS/FGBlade/FGBlade_3.png
+Assets/Resources/RageExec
+Assets/Sprites/Enemies/Cekirge/Cek_arm_l.png
+Assets/Resources/HitClicks/hit_05.wav
+Assets/Free Slash VFX/Textures/Gradient 4.png
+Assets/Sprites/Enemies/Cekirge/Cek_head.png
+Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat
+Assets/Sprites/Props/Toned/Rock_08_T.png
+Assets/Scripts/Enemyanimationdriver.cs
+Assets/Resources/JumpSfx/jump_08.wav
+Assets/Scripts/TentLife.cs
+Assets/Resources/Music/Theme_08.mp3
+Assets/Sprites/Grass/Grass_Tile.png
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legBack.png
+Assets/Resources/HitClicks/fire_05.wav
+Assets/Sprites/Player/Death.anim
+Packages/com.unity.shadergraph/Editor/Importers/ShaderSubGraphImporter.cs
+Assets/Resources/RageExec/exec_a.png
+Packages/com.unity.render-pipelines.universal/Editor/2D/Resources/PixelPerfectCamera.png
+Assets/Resources/HitClicks/ice_2.wav
+Assets/Art/Atmosphere/Materials/M_Rim_Ground.mat
+Assets/Scripts/WaterSurface.cs
+Assets/Sprites/Trees/BG/BGTrunk_A1_Blur.png
+Assets/Sounds/Australian Rainforest Forest Sounds (30 seconds).mp3
+Assets/Sprites/Mountains/Mtn_Far_B_Blur.png
+Assets/Sprites/Player/Land.anim
+Assets/Sprites/Demirci_Spine/samuray_SkeletonData.asset
+Assets/Scripts/EnemyController.cs
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Anvil.mat
+Assets/Resources/JumpSfx/jump_09.wav
+Assets/Sprites/Demirci_Spine/samuray_Material.mat
+Assets/Art/Atmosphere/Materials/M_Additive.mat
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Grindstone.mat
+Assets/Sprites/Props/Toned/Rock_02_T.png
+Assets/Sprites/Enemies/Cekirge/Cek_leg4_lo.png
+Packages/com.unity.inputsystem/InputSystem/Editor/Icons/InputSystemUIInputModule@64.png
+Assets/Sprites/Trees/BG/BGTrunk_A3_Blur.png
+Packages/com.unity.shadergraph/Editor/Importers/ShaderGraphMetadata.cs
+Assets/Free Slash VFX/Demo/Scripts/SlashDecal.cs
+Assets/Scripts/PlayerMovement.cs
+Packages/com.unity.render-pipelines.universal/Runtime/Overrides/Bloom.cs
+Assets/Free Slash VFX/Textures/Noise_GrayScale/T_Lu_Noise_10.png
+Assets/Sprites/Player/dash.png
+Assets/Sprites/Enemies/Cekirge/Cek_leg2_up.png
+Assets/Sprites/Spine/Editor/spine-unity/Editor/GUI/AtlasAsset Icon.png
+Packages/com.unity.render-pipelines.universal/Runtime/Overrides/Tonemapping.cs
+Assets/Resources/HitClicks/fire_06.wav
+Assets/Sprites/Trees/BG/BGTrunk_C1_Blur.png
+Packages/com.unity.inputsystem/InputSystem/Runtime/Actions/InputActionReference.cs
+Assets/Resources/HitClicks/step_02.wav
+Assets/Sprites/Trees/BG/BGTrunk_B1.png
+Assets/Sounds/warning.mp3
+Assets/Resources/HitClicks/hurt_01.wav
+Assets/Sprites/PLACEHOLDERS/Otlar/Adsız_Resim-2_0000_Seçilenden.png
+Assets/Scripts/ContactShadow.cs
+Assets/Sprites/Enemies/Cekirge/Cekirge_Walk.anim
+Assets/Sprites/Enemies/Cekirge/Cek_arm_r.png
+Assets/Scripts/PlayerPosture.cs
+Assets/Free Slash VFX/Textures/Noise Circle_albedo.png
+Assets/Art/Atmosphere/Textures/sky_gradient.png
+Assets/Sprites/Props/Anvil/Anvil_Soft.png
+Packages/com.unity.render-pipelines.universal/Runtime/2D/Lights/Light2D.cs
+Assets/Resources/Rage/RageOrb.prefab
+Assets/Sprites/Tree/Tree_Sharp.png
+Assets/Free Slash VFX/Materials/Variations/Flying var 1.mat
+Assets/Sprites/Enemies/Cekirge/Cek_joint.png
+Assets/Art/Atmosphere/Textures/god_ray.png
+Packages/com.unity.ugui/Runtime/UGUI/EventSystem/EventSystem.cs
+Assets/Sprites/Trees/BG/BGTrunk_A_Blur.png
+Assets/Sprites/Props/Toned/Log_01_T.png
+Assets/Sprites/Ground/GroundStone_Tile.png
+Assets/Scripts/Enemyoverheadbars.cs
+Assets/Sprites/Enemies/Cekirge/Cek_leg2_mid.png
+Assets/Free Slash VFX/Materials/Variations/Slash World Var 2.mat
+Assets/Sprites/Player/Attack1.anim
+Packages/com.unity.shadergraph/Editor/Importers/ShaderSubGraphMetadata.cs
+Assets/Sprites/Boss1/Resources/Boss1/boss1_footR.png
+Assets/Scripts/EnemyBalance.cs
+Assets/Resources/UI/Hoshiko_Satsuki.ttf
+Assets/Resources/HitClicks/fire_07.wav
+Assets/Art/Atmosphere/Materials/M_CharacterRim.mat
+Assets/Scripts/CombatVFXManager.cs
+Assets/Sprites/Player/Idle player.png
+Assets/Resources/SpriteWhiteFlash.shader
+Assets/Scripts/SquashStretch.cs
+Assets/Resources/Music/Theme_01.mp3
+Assets/Sprites/Props/ShieldSword/ShieldSword_Soft.png
+Assets/Resources/HitClicks/fire_11.wav
+Assets/Resources/Rage/RageBolt.prefab
+Assets/Scripts/ForegroundSway.cs
+Assets/Scripts/ForegroundBlurController.cs
+Assets/Scripts/RunCameraZoom.cs
+Assets/Sprites/Props/Torch/Flame_5.png
+Assets/Sprites/Player/Run.anim
+Assets/Free Slash VFX/Materials/Variations/Flying var 3.mat
+Assets/Scripts/TorchFire.cs
+Assets/Resources/JumpSfx/jump_12.wav
+Assets/Resources/Music/Theme_06.mp3
+Packages/com.unity.render-pipelines.universal/Editor/AssetVersion.cs
+Assets/Scripts/ProjectedShadow.cs
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0005_Katman-5_N.png
+Assets/Resources/HitClicks/hurt_03.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_armR_lower.png
+Assets/Free Slash VFX/Demo/Scripts/Projectile.cs
+Assets/Animations/PlayerAnimator.controller
+Assets/Sprites/Trees/BG/BGTrunk_A2_Blur.png
+Assets/Free Slash VFX/Materials/Variations/Crack Decal.mat
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0007_Katman-2_N.png
+Assets/Sprites/PLACEHOLDERS/FGBlade/FGBlade_1.png
+Assets/Free Slash VFX/Shaders/Impact.shadergraph
+Packages/com.unity.render-pipelines.core/Editor/Icons/Processed/d_Volume Icon.asset
+Assets/Resources/HitClicks/hit_14.wav
+Assets/Sprites/Player/Attack4.png
+Assets/Resources/UI/KGPerfectPenmanship.otf
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SpineAtlasAsset.cs
+Assets/Scripts/WindSway.cs
+Assets/Resources/HitClicks/hit_04.wav
+Assets/Scripts/CharacterGrounding.cs
+Assets/Scripts/EnemyAttackAudio.cs
+Assets/Sprites/Enemies/Cekirge/Cek_leg3_lo.png
+Assets/Scripts/NearMoonRim.cs
+Assets/Scripts/CekirgeVisual.cs
+Assets/Resources/HitClicks/ice_4.wav
+Assets/Resources/EnemyWarn
+Assets/Art/Atmosphere/M_Stars.mat
+Assets/Sprites/Spine/Editor/spine-unity/Editor/GUI/SkeletonDataAsset Icon.png
+Assets/Scripts/EnemyAttackTelegraph.cs
+Packages/com.unity.shadergraph/Editor/Data/SubGraph/SubGraphAsset.cs
+Assets/Scripts/FocusBlurDriver.cs
+Assets/Art/Atmosphere/TimeOfDay/Sky.shader
+Assets/Art/Atmosphere/Textures/shore_foam.png
+Assets/Sprites/Props/Torch/Flame_4.png
+Assets/Art/Atmosphere/Textures/light_ray.png
+Assets/Scripts/FirefliesNight.cs
+Assets/Sprites/RonniSkin/Scripts/RonniSkinAnimator.cs
+Assets/Free Slash VFX/Model/Slash/Slash Projectile.fbx
+Assets/Sprites/JumpDust/New Animation.anim
+Assets/Art/Atmosphere/Shaders/ProjectedShadow.shader
+Assets/Sprites/JumpDust/FX052_01.png
+Assets/Resources/HitClicks/fire_10.wav
+Assets/Scripts/CharacterBackdrop.cs
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_ShieldSword.mat
+Assets/Scripts/PlayerStats.cs
+Assets/Sprites/Boss1/M_Boss1.mat
+Assets/Sprites/Enemies/Cekirge/Cekirge_Attack.anim
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0004_Katman-6.png
+Assets/Sprites/Player/Block.anim
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRenderer.cs
+Assets/Art/Atmosphere/Shaders/SpriteAdditive.shader
+Assets/Free Slash VFX/Materials/Variations/Impact Mat 1.mat
+Assets/Scripts/PlayerFinisher.cs
+Assets/Scripts/DepthBlur.cs
+Assets/Art/Atmosphere/Textures/horizon_glow.png
+Assets/Art/Atmosphere/Shaders/SpriteLitGray.shader
+Assets/Sprites/Player/Parry.anim
+Assets/Free Slash VFX/Textures/Crack 2.png
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_GroundStone.mat
+Assets/Sprites/Trees/Toned/Tree_Bonsai_T.png
+Assets/Resources/JumpSfx/jump_02.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_torso_lower.png
+Assets/Art/Atmosphere/Materials/M_ProjectedShadow.mat
+Assets/Scripts/EnemyArchetype.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SkeletonDataAsset.cs
+Assets/Scripts/TrainingDummy.cs
+Packages/com.unity.cinemachine/Runtime/Components/CinemachineFollow.cs
+Assets/Free Slash VFX/Materials/Variations/Impact Mat.mat
+Assets/Sprites/Boss1/Resources/Boss1/boss1_armR_upper.png
+Assets/Sprites/Boss1/Resources/Boss1/boss1_footL.png
+Packages/com.unity.inputsystem/InputSystem/Editor/AssetImporter/InputActionImporter.cs
+Assets/Resources/HitClicks/hurt_08.wav
+Assets/Resources/JumpSfx/jump_11.wav
+Assets/Sprites/Trees/BG/BGTrunk_C2.png
+Assets/Sprites/Trees/BG/BGTrunk_C.png
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0006_Katman-4_N.png
+Packages/com.unity.shadergraph/Editor/Importers/ShaderGraphIndexedData.cs
+Assets/Sprites/Props/Torch/Flame_1.png
+Assets/Sprites/Player/Dash.anim
+Assets/Sprites/Player/Jump.anim
+Assets/Resources/JumpSfx/jump_06.wav
+Assets/Sprites/Enemies/Cekirge/Cek_leg1_up.png
+Assets/Sprites/Props/Torch/Flame_2.png
+Packages/com.unity.cinemachine/Runtime/Behaviours/CinemachineCamera.cs
+Assets/Resources/Music/Theme_09.mp3
+Packages/com.unity.cinemachine/Editor/EditorResources/Icons/Light/CmCamera@256.png
+Assets/Resources/JumpSfx/jump_03.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_handR.png
+Assets/Sprites/Boss1/Resources/Boss1/boss1_torso_upper.png
+Assets/Sprites/Foreground/FG_RocksBranch.png
+Assets/Scripts/WaterSmoke.cs
+Assets/Scripts/PlayerController.cs
+Assets/Art/Atmosphere/Materials/M_SpriteUnlitGray.mat
+Assets/Sprites/Demirci_Spine/samuray.atlas.txt
+Assets/Sprites/Player/Jump.png
+Assets/Sprites/Enemies/Cekirge/Cekirge.controller
+Assets/Resources/Music/Theme_03.mp3
+Assets/Sprites/Player/Land.png
+Assets/Sprites/PLACEHOLDERS/FGBlade/FGBlade_0.png
+Assets/Sprites/Mountains/Mtn_Far_A_Blur.png
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0001_Katman-9.png
+Assets/Art/Atmosphere/Materials/M_Grass_Last.mat
+Assets/Sprites/Trees/BG/BGTrunk_B2.png
+Assets/Scripts/Critfeedback.cs
+Assets/Resources/HitClicks/hit_02.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_head.png
+Assets/Art/Atmosphere/Materials/M_Rim_Cloud.mat
+Assets/Sprites/PLACEHOLDERS/FGBlade/FGBlade_2.png
+Assets/Sprites/JumpDust/FX052_01_0.controller
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0003_Katman-7_N.png
+Assets/Sprites/Enemies/Cekirge/Cekirge_Idle.anim
+Assets/Sprites/JumpDust/FX052_03.png
+Assets/Sprites/JumpDust/FX052_02.png
+Assets/Resources/HitClicks/hit_12.wav
+Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/v2/Square.png
+Assets/Resources/UI
+Assets/Scripts/AtmosphereLight.cs
+Assets/Free Slash VFX/Materials/Variations/Var 1.mat
+Assets/Sprites/Trees/BG/BGTrunk_B1_Blur.png
+Assets/Sprites/Trees/BG/BGTrunk_B.png
+Assets/Sounds/jofae-swing-whoosh-110410 (mp3cut.net) (1).mp3
+Assets/Sounds/freesound_community-running-6358.mp3
+Assets/Resources/HitClicks/hurt_02.wav
+Assets/Sprites/Props/Torch/Flame_0.png
+Packages/com.unity.render-pipelines.core/Runtime/Volume/Volume.cs
+Assets/Scripts/PlayerCombatController.cs
+Assets/Sprites/Player/Attack4.anim
+Assets/Free Slash VFX/Prefabs/Blood.prefab
+Assets/Art/Atmosphere/Materials/M_FG_Blade.mat
+Assets/Sprites/Trees/BG/BGTrunk_C2_Blur.png
+Assets/Resources/HitClicks/fire_08.wav
+Assets/Resources/JumpSfx/jump_01.wav
+Assets/Art/Atmosphere/Materials/M_Dust.mat
+Assets/Scripts/TimeOfDay.cs
+Assets/Sounds/cekirge_attack_sfx.mp3
+Assets/Free Slash VFX/Model/Smoke/SmokeSphere01.fbx
+Assets/Sprites/Trees/BG/BGTrunk_C3.png
+Assets/Prefabs/Boss1.prefab
+Assets/Animations/Idle.anim
+Assets/Sounds/new sounds/Dash.mp3
+Packages/com.unity.render-pipelines.universal/Shaders/2D/Sprite-Unlit-Default.shader
+Assets/Free Slash VFX/Shaders/ParallaxOcclusion.shadergraph
+Assets/Scripts/WorldColorGrade.cs
+Assets/Resources/HitClicks
+Assets/Scripts/SmearLightSpill.cs
+Assets/Art/Atmosphere/Materials/M_FG_RocksBranch.mat
+Assets/Scripts/CloudDrift.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Shaders/Spine-Skeleton.shader
+Assets/Sprites/Trees/BG/BGTrunk_B_Blur.png
+Assets/Sprites/Player/Fall.anim
+Assets/Sprites/Boss1/Resources/Boss1/boss1_armL_upper.png
+Assets/Resources/HitClicks/hit_07.wav
+Assets/Art/Water/Water.shader
+Assets/Sprites/Enemies/Cekirge/Cekirge.prefab
+Packages/com.unity.render-pipelines.universal/Runtime/Overrides/Vignette.cs
+Assets/Sprites/Trees/BG/BGTrunk_C1.png
+Packages/com.unity.render-pipelines.universal/Runtime/Overrides/ColorAdjustments.cs
+Assets/Sprites/Trees/BG/BGTrunk_A2.png
+Assets/Free Slash VFX/Shaders/Slash World.shadergraph
+Assets/Resources/JumpSfx/jump_07.wav
+Assets/Art/Atmosphere/Textures/moon_crescent.png
+Packages/com.unity.render-pipelines.universal/Runtime/Materials/Mesh2D-Lit-Default.mat
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0000_Seçilenden_N.png
+Assets/Sprites/RonniSkin/Scripts/RonniPlayerBridge.cs
+Assets/Free Slash VFX/Shaders/Slash.shadergraph
+Assets/Sprites/Enemies/Cekirge/Cek_glow.png
+Packages/com.unity.inputsystem/InputSystem/Runtime/Actions/InputActionAsset.cs
+Assets/Resources/HitClicks/hurt_05.wav
+Assets/Scripts/ParallaxEffect.cs
+Assets/Resources/Music/Theme_07.mp3
+Assets/Free Slash VFX/Textures/Blue Noise_Blue Noise.png
+Assets/Sprites/Props/Torch/Flame_6.png
+Assets/Sounds/Skyrim Secunda - Piano Cover.mp3
+Assets/Resources/HitClicks/hurt_06.wav
+Assets/Sprites/Player/Attack1_HD.png
+Assets/Resources/JumpSfx/jump_14.wav
+Assets/Scripts/NightLanternGlow.cs
+Assets/Resources/UI/ProjectM_Serif_Regular.ttf
+Assets/Sounds/attack8.mp3
+Assets/Resources/EnemyWarn/warn_01.wav
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0006_Katman-4.png
+Assets/Art/Water/water_white.png
+Assets/Sounds/attack10.mp3
+Assets/Art/Atmosphere/Stars.shader
+Assets/Sprites/Mountains/Fill.png
+Assets/Sprites/PLACEHOLDERS/Otlar/Adsız_Resim-2_0000_Seçilenden_N.png
+Assets/Resources/UI/ProjectM_Serif_Bold.ttf
+Assets/Sprites/Demirci/Çekiçli Sevimli Zanaatkâr.png
+Assets/Free Slash VFX/Textures/Noise_GrayScale/T_Lu_Noise_31.png
+Assets/Free Slash VFX/Model/Slash/Slash .fbx
+Assets/Resources/Rage/BladeImpact.mat
+Assets/Sprites/Tent/Lantern_Glow.png
+Assets/Art/Atmosphere/Materials/M_SpriteLitGray_Near.mat
+Assets/Resources/Endless
+Assets/Free Slash VFX/Textures/Circle Fire_albedo.png
+Assets/Sounds/attack1.mp3
+Assets/Sprites/Demirci/Demirci.controller
+Assets/Resources/JumpSfx/jump_15.wav
+Assets/__live_copy.unity
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0005_Katman-5.png
+Assets/Art/Atmosphere/Shaders/SpriteUnlitGray.shader
+Assets/Scripts/EnemySpawner.cs
+Assets/Scripts/Enemydepthsorter.cs
+Assets/Sprites/Trees/BG/BGTrunk_C3_Blur.png
+Packages/com.unity.render-pipelines.universal/Shaders/2D/Mesh2D-Lit-Default.shader
+Assets/Resources/HitClicks/hit_01.wav
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_SpearRack.mat
+Assets/Sprites/Trees/BG/BGTrunk_A1.png
+Assets/Art/Atmosphere/TimeOfDay/Mist.shader
+Assets/Art/Atmosphere/Materials/M_Sky.mat
+Assets/Free Slash VFX/Materials/Variations/Flying var 2.mat
+Assets/Resources/HitClicks/fire_02.wav
+Assets/Scripts/AtmosphereRestoreData.cs
+Assets/Free Slash VFX/Textures/Crack Tex.png
+Assets/Resources/Music
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legL_lower.png
+Assets/Scripts/CekirgeFx.cs
+Assets/Sprites/Mountains/Mtn_Mid_A_Blur.png
+Assets/Sprites/Enemies/Cekirge/Cek_leg4_up.png
+Assets/Resources/HitClicks/hit_06.wav
+Assets/Scripts/GodRays.cs
+Assets/Sprites/Trees/BG/BGTrunk_B3_Blur.png
+Assets/Sprites/Player/Attack2_HD.png
+Packages/com.unity.shadergraph/Editor/Generation/ShaderGraphVfxAsset.cs
+Assets/Sprites/Props/Bush/Bush_A_FarTeal.png
+Assets/Scripts/Boss1Rig.cs
+Assets/Art/Atmosphere/Materials/M_Tree_Fore.mat
+Assets/Sprites/Enemies/Cekirge/Cekirge_Hurt.anim
+Assets/Sounds/block2.mp3
+Assets/Sprites/Props/Torch/Flame_7.png
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Bush_A_FarTeal.mat
+Assets/Art/Atmosphere/Textures/fog_band.png
+Assets/Resources/HitClicks/hit_09.wav
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonAnimation.cs
+Assets/Resources/HitClicks/ice_1.wav
+Assets/Free Slash VFX/Prefabs/Impact.prefab
+Assets/Art/Atmosphere/Materials/M_Tree_Coloured.mat
+Assets/Sprites/Mountains/Mtn_Near_A_Blur.png
+Assets/Sprites/Tent/Tent_Sharp.png
+Assets/Sprites/Boss1/Resources/Boss1/boss1_sword.png
+Assets/Resources/JumpSfx/jump_04.wav
+Assets/Resources/Endless/Duelist.prefab
+Assets/Scripts/PlayerKnockback.cs
+Assets/Sounds/armor break.mp3
+Packages/com.unity.shadergraph/Editor/Resources/Icons/sg_graph_icon.png
+Assets/Resources/HitClicks/break_01.wav
+Assets/Sounds/10 Minutes of Rain and Thunderstorm Sounds For Focus, Relaxing and Sleep ⛈️ Epidemic ASMR.mp3
+Assets/Resources/HitClicks/fire_12.wav
+Assets/Scripts/PlayerDamageReceiver.cs
+Assets/Sprites/Trees/BG/BGTrunk_A.png
+Assets/Sounds/parry.mp3
+Assets/Scripts/AtmosphereDust.cs
+Packages/com.unity.cinemachine/Runtime/Impulse/CinemachineImpulseSource.cs
+Assets/Scripts/SimpleSpriteVFX.cs
+Assets/Resources/RageExec/exec_p.png
+Assets/Sprites/Props/Bush/Bush_D_DeepGreen.png
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0003_Katman-7.png
+Packages/com.unity.cinemachine/Editor/EditorResources/Icons/Light/CmComponent@256.png
+Assets/Resources/HitClicks/hurt_04.wav
+Assets/Resources/HitClicks/hit_10.wav
+Assets/Sprites/Mountains/Mtn_Near_B_Blur.png
+Assets/Scripts/EnemyHitFeedback.cs
+Assets/Sprites/Enemies/Cekirge/Cek_leg2_lo.png
+Assets/Sprites/Mountains/Mtn_Mid_B_Blur.png
+Assets/Art/Atmosphere/Textures/glow_soft.png
+Assets/Free Slash VFX/Textures/Gradient 2.png
+Assets/Sprites/Props/Torch/Flame_3.png
+Assets/Free Slash VFX/Textures/Impact.png
+Assets/Art/Atmosphere/Materials/M_Torch_Flame.mat
+Assets/Scripts/PlayerDefenseController.cs
+Assets/Prefabs/Cekirge_Enemy.prefab
+Packages/com.unity.render-pipelines.universal/Runtime/2D/PixelPerfectCamera.cs
+Assets/Resources/HitClicks/fire_03.wav
+Assets/Free Slash VFX/Shaders/Flag.shadersubgraph
+Assets/Sounds/whoosh-clean-fast-bosnow-3-3-00-00.mp3
+Packages/com.unity.cinemachine/Runtime/Impulse/CinemachineImpulseListener.cs
+Assets/Art/Water/M_Water_Last.mat
+Assets/Art/Atmosphere/Textures/shadow_soft.png
+Assets/Art/Atmosphere/Materials/M_SpriteLitGray.mat
+Assets/Scripts/MistLayers.cs
+Assets/Scripts/TeleportToMouse.cs
+Assets/Sprites/Demirci/Demirci idle.anim
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legR_upper.png
+Assets/Resources/HitClicks/step_01.wav
+Assets/Free Slash VFX/Shaders/ScrollUV.shadersubgraph
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured.mat
+Assets/Art/Atmosphere/Materials/M_Tree_Wind.mat
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0007_Katman-2.png
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Bush_B_Green.mat
+Assets/Resources/Music/Theme_05.mp3
+Assets/Free Slash VFX/Textures/Noise_GrayScale/T_Lu_Noise_29.png
+Assets/Resources/JumpSfx/jump_05.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legBack_knee.png
+Assets/Sprites/Enemies/Cekirge/Cek_leg3_up.png
+Assets/Resources/JumpSfx/jump_13.wav
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0000_Seçilenden.png
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Torch.mat
+Assets/Sprites/Player/Attack2.anim
+Assets/Scripts/CharacterRim.cs
+Assets/Scripts/RainSystem.cs
+Assets/Resources/HitClicks/hit_11.wav
+Assets/Free Slash VFX/Textures/Noise.png
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0004_Katman-6_N.png
+Assets/Scripts/EnemyMoveset.cs
+Assets/Sprites/Player/Death.png
+Assets/Sprites/Player/Attack4_HD.png
+Assets/Scripts/CombatImpactFeedback.cs
+Packages/com.unity.shadergraph/Editor/Importers/ShaderGraphImporter.cs
+Assets/Sprites/JumpDust/FX052_04.png
+Assets/Resources/HitClicks/fire_01.wav
+Assets/Scripts/CloudLife.cs
+Assets/Free Slash VFX/Textures/Slash Noise_Slash Noise.png
+Packages/com.unity.cinemachine/Editor/EditorResources/Icons/Light/CmExtension@256.png
+Assets/Sprites/Props/Bush/Bush_C_Olive.png
+Assets/Sprites/Player/Attack3.anim
+Assets/Sprites/Trees/BG/BGTrunk_B2_Blur.png
+Assets/Art/Atmosphere/Shaders/SilhouetteRim.shader
+Assets/Sprites/Trees/Toned/Tree_Tall_T.png
+Assets/Sprites/Demirci_Spine/samuray_Atlas.asset
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Bush_C_Olive.mat
+Assets/Free Slash VFX/Textures/Razengan_texture_2.png
+Packages/com.unity.render-pipelines.universal/Runtime/UniversalAdditionalCameraData.cs
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Bush_D_DeepGreen.mat
+Assets/Sprites/Demirci_Spine/samuray.json
+Assets/Resources/HitClicks/ice_3.wav
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legR_lower.png
+Assets/Resources/Music/Theme_10.mp3
+Assets/Scripts/Health.cs
+Assets/Sprites/Boss1/Resources/Boss1/boss1_legL_upper.png
+Assets/Art/Atmosphere/star_white.png
+Assets/Sounds/attack4.wav
+Assets/Art/Atmosphere/Materials/M_Prop_Coloured_Forge.mat
+Assets/Sprites/RonniSkin/Scripts/RonniSkinRig.cs
+Assets/Sprites/PLACEHOLDERS/Bulutlar/Adsız_Resim-3_0001_Katman-9_N.png
+Assets/Scripts/Playerinvincibilityblink.cs
+Packages/com.unity.render-pipelines.universal/Shaders/2D/Sprite-Lit-Default.shader
+Assets/Sprites/Player/Attack3_HD.png
+Assets/Resources/Music/Theme_02.mp3
+Assets/Resources/JumpSfx
+Assets/Art/Atmosphere/Shaders/CharacterRim.shader
+Packages/com.unity.inputsystem/InputSystem/Runtime/Plugins/PlayerInput/DefaultInputActions.inputactions
+Assets/Sprites/Player/Run.png
+Assets/New Physics Material 2D.physicsMaterial2D
+Assets/Sprites/Trees/BG/BGTrunk_B3.png
+Packages/com.unity.inputsystem/InputSystem/Runtime/Plugins/UI/InputSystemUIInputModule.cs
+Assets/Materials/ForegroundGrassBlur.mat
+Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/UniversalMetadata.cs
+Assets/Sprites/Trees/BG/BGTrunk_A3.png
+Assets/Resources/HitClicks/fire_09.wav
+Assets/Art/Water/water_noise.png
+Assets/Resources/HitClicks/fire_04.wav
+Assets/Free Slash VFX/Textures/Voronoi Noise 1_albedo.png
+Assets/Scripts/Enemy.cs

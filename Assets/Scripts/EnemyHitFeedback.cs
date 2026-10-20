@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class EnemyHitFeedback : MonoBehaviour
 {
+    public Vector3 vfxOffset = Vector3.zero; // vurus efekti kaymasi (pivot ayaktaysa govdeye cikar)
+
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
 
@@ -90,7 +92,7 @@ public class EnemyHitFeedback : MonoBehaviour
     public void PlayBalanceHit(Vector2 hitDirection)
     {
         PlayBalanceHit(
-            transform.position,
+            transform.position + vfxOffset,
             hitDirection
         );
     }
@@ -123,7 +125,7 @@ public class EnemyHitFeedback : MonoBehaviour
         if (CombatVFXManager.Instance != null)
         {
             CombatVFXManager.Instance.PlayHealthHit(
-                transform.position,
+                transform.position + vfxOffset,
                 hitDirection
             );
         }

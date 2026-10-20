@@ -1,0 +1,555 @@
+== UNUSED SCRIPTS ==
+Assets/Ronin/RoninAnimator.cs 1741
+Assets/Ronin/RoninSpineVisual.cs 5823
+Assets/Scripts/AutoDestroyByAnimation.cs 264
+Assets/Scripts/BlockBreakDamage.cs 1289
+Assets/Scripts/BossShadow.cs 117
+Assets/Scripts/CekirgeChase.cs 4808
+Assets/Scripts/Combatdebuglogger.cs 2048
+Assets/Scripts/DustA.cs 292
+Assets/Scripts/DustFX.cs 172
+Assets/Scripts/EnemyBomber.cs 6886
+Assets/Scripts/EnemyFlyer.cs 3128
+Assets/Scripts/EnemyPosture.cs 3114
+Assets/Scripts/EnemyShape.cs 6100
+Assets/Scripts/ExecuteReadyIndicator.cs 7109
+Assets/Scripts/FenceMoonGlow.cs 1747
+Assets/Scripts/GroundGlow.cs 2353
+Assets/Scripts/HealthOrbs.cs 8594
+Assets/Scripts/HitType.cs 368
+Assets/Scripts/Parryriposte.cs 5271
+Assets/Scripts/PlayerPostureBar.cs 3156
+Assets/Scripts/PlayOnlyWind.cs 973
+Assets/Scripts/RainWaterRings.cs 6281
+Assets/Scripts/TentSway.cs 1238
+Assets/Scripts/ThemeMusic.cs 2024
+Assets/Scripts/TreeSway.cs 1363
+Assets/Scripts/WeatherDirector.cs 4813
+Assets/Scripts/Claude outputs/MountainBackdrop.cs 93
+Assets/Scripts/Tutorial/TutorialBossGate.cs 1501
+Assets/Scripts/Tutorial/TutorialCheckpoint.cs 978
+Assets/Scripts/Tutorial/TutorialKillZone.cs 904
+Assets/Scripts/Tutorial/TutorialLessonDuelist.cs 11547
+Assets/Free Slash VFX/Demo/Scripts/AttackerController.cs 5947
+Assets/Free Slash VFX/Demo/Scripts/CameraOrbit.cs 2145
+Assets/Free Slash VFX/Demo/Scripts/ElementsShowCase.cs 1439
+Assets/Free Slash VFX/Demo/Scripts/FPSCounter.cs 948
+Assets/Free Slash VFX/Demo/Scripts/ParticleAnimationEvent.cs 678
+Assets/Free Slash VFX/Demo/Scripts/PlayerInput.cs 9742
+Assets/Sprites/Demirci_Spine/Editor/DemirciSpineSetup.cs 2911
+Assets/Sprites/RoninSamuray/Editor/PlayerRoninSetup.cs 3313
+Assets/Sprites/RonniSkin/Editor/RonniEditPreview.cs 172
+Assets/Sprites/RonniSkin/Editor/RonniMenu.cs 1515
+Assets/Sprites/RonniSkin/Scripts/RonniDashTrail.cs 7165
+Assets/Sprites/Spine Examples/Scripts/AttackSpineboy.cs 2840
+Assets/Sprites/Spine Examples/Scripts/DraggableTransform.cs 2380
+Assets/Sprites/Spine Examples/Scripts/FootSoldierExample.cs 3668
+Assets/Sprites/Spine Examples/Scripts/Goblins.cs 2817
+Assets/Sprites/Spine Examples/Scripts/HandleEventWithAudioExample.cs 3441
+Assets/Sprites/Spine Examples/Scripts/HeroEffectsHandlerExample.cs 2140
+Assets/Sprites/Spine Examples/Scripts/HurtFlashEffect.cs 2956
+Assets/Sprites/Spine Examples/Scripts/MaterialPropertyBlockExample.cs 2447
+Assets/Sprites/Spine Examples/Scripts/MaterialReplacementExample.cs 3515
+Assets/Sprites/Spine Examples/Scripts/MixAndMatch.cs 8037
+Assets/Sprites/Spine Examples/Scripts/MixAndMatchGraphic.cs 7490
+Assets/Sprites/Spine Examples/Scripts/RaggedySpineboy.cs 4164
+Assets/Sprites/Spine Examples/Scripts/ReloadSceneOnKeyDown.cs 2061
+Assets/Sprites/Spine Examples/Scripts/RenderTextureFadeoutExample.cs 3495
+Assets/Sprites/Spine Examples/Scripts/Rotator.cs 1970
+Assets/Sprites/Spine Examples/Scripts/RuntimeLoadFromExportsExample.cs 5567
+Assets/Sprites/Spine Examples/Scripts/SpawnFromSkeletonDataExample.cs 3217
+Assets/Sprites/Spine Examples/Scripts/SpawnSkeletonGraphicExample.cs 2972
+Assets/Sprites/Spine Examples/Scripts/Spineboy.cs 3061
+Assets/Sprites/Spine Examples/Scripts/SpineboyBodyTilt.cs 3027
+Assets/Sprites/Spine Examples/Scripts/SpineboyFacialExpression.cs 3474
+Assets/Sprites/Spine Examples/Scripts/SpineboyFootplanter.cs 9089
+Assets/Sprites/Spine Examples/Scripts/SpineboyFreeze.cs 3226
+Assets/Sprites/Spine Examples/Scripts/SpineboyPole.cs 3000
+Assets/Sprites/Spine Examples/Scripts/SpineboyPoleGraphic.cs 3201
+Assets/Sprites/Spine Examples/Scripts/SpineGauge.cs 2529
+Assets/Sprites/Spine/Runtime/spine-csharp/ColorOther.cs 3719
+Assets/Sprites/Spine/Runtime/spine-csharp/ColorUnity.cs 2893
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonBounds.cs 9513
+Assets/Sprites/Spine Examples/Other Examples/Animation Tester/SpineAnimationTesterTool.cs 5747
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/BasicPlatformerController.cs 6252
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/ConstrainedCamera.cs 2356
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/Raptor.cs 2663
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineBeginnerTwo.cs 4474
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineBlinkPlayer.cs 2363
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineboyBeginnerInput.cs 2574
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineboyBeginnerModel.cs 4319
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineboyBeginnerView.cs 5808
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineboyTargetController.cs 2587
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/SpineboyTargetControllerGraphic.cs 2675
+Assets/Sprites/Spine Examples/Scripts/Getting Started Scripts/TransitionDictionaryExample.cs 2927
+Assets/Sprites/Spine Examples/Scripts/Mecanim as Logic/DummyMecanimControllerExample.cs 3427
+Assets/Sprites/Spine Examples/Scripts/Mecanim as Logic/MecanimToAnimationHandleExample.cs 2421
+Assets/Sprites/Spine Examples/Scripts/Mecanim as Logic/SkeletonAnimationHandleExample.cs 7306
+Assets/Sprites/Spine Examples/Scripts/MecanimAnimationMatchModifier/AnimationMatchModifierAsset.cs 11410
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/EquipAssetExample.cs 2000
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/EquipButtonExample.cs 2311
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/EquipsVisualsComponentExample.cs 4258
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/EquipSystemExample.cs 4860
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/MixAndMatchSkinsButtonExample.cs 2239
+Assets/Sprites/Spine Examples/Scripts/Mix and Match Character Customize/MixAndMatchSkinsExample.cs 7728
+Assets/Sprites/Spine Examples/Scripts/Sample Components/BoneLocalOverride.cs 3324
+Assets/Sprites/Spine Examples/Scripts/Sample Components/CombinedSkin.cs 2697
+Assets/Sprites/Spine Examples/Scripts/Sample Components/OutlineSkeletonGraphic.cs 2715
+Assets/Sprites/Spine Examples/Scripts/Sample Components/RenderCombinedMesh.cs 9299
+Assets/Sprites/Spine Examples/Scripts/Sample Components/RenderExistingMesh.cs 7350
+Assets/Sprites/Spine Examples/Scripts/Sample Components/RenderExistingMeshGraphic.cs 8421
+Assets/Sprites/Spine Examples/Scripts/Sample Components/RootMotionDeltaCompensation.cs 2945
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SetRigidbodySolverIterations.cs 2484
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonAnimationFixedTimestep.cs 3952
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonAnimationFixedTimestepThreaded.cs 3969
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonAnimationStaticPoseOptimizer.cs 7034
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonColorInitialize.cs 3246
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonGraphicMirror.cs 4823
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonGraphicPlayAnimationAtEvent.cs 2580
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SlotTintBlackFollower.cs 3305
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SpineEventUnityHandler.cs 3438
+Assets/Sprites/Spine/Editor/spine-unity/Editor/SpineAttributeDrawers.cs 30446
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/EventDataReferenceAsset.cs 2752
+Assets/Sprites/Spine/Runtime/spine-unity/Components/EditorSkeletonPlayer.cs 5658
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonGraphic.cs 64397
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRenderer.Common.cs 30884
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/MathUtilities.cs 3121
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/SkeletonExtensions.cs 20747
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/TimelineExtensions.cs 7456
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Ghost/SkeletonGhost.cs 7237
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Ghost/SkeletonGhostRenderer.cs 4156
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Legacy/AtlasRegionAttacher.cs 3512
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Legacy/SpriteAttacher.cs 7257
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Sample VertexEffects/JitterEffectExample.cs 4119
+Assets/Sprites/Spine Examples/Scripts/Sample Components/Sample VertexEffects/TwoByTwoTransformEffectExample.cs 4721
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonAnimationMulti/SkeletonAnimationMulti.cs 6734
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonRenderTexture/SkeletonGraphicRenderTexture.cs 12622
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonRenderTexture/SkeletonRenderTexture.cs 9224
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonRenderTexture/SkeletonRenderTextureBase.cs 9255
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonRenderTexture/SkeletonRenderTextureFadeout.cs 3571
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/SkeletonRagdoll.cs 16867
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/SkeletonRagdoll2D.cs 18354
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/SkeletonUtilityEyeConstraint.cs 3172
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/SkeletonUtilityGroundConstraint.cs 5488
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/SkeletonUtilityKinematicShadow.cs 5572
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/AnimationReferenceAssetDrawer.cs 10442
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/AnimationReferenceAssetEditor.cs 8682
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/MaterialOverrideSetDrawer.cs 4780
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/SpineAtlasAssetInspector.cs 18959
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/SpineSpriteAtlasAssetInspector.cs 6251
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/BoneFollowerGraphicInspector.cs 9379
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/BoneFollowerInspector.cs 10659
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/BoundingBoxFollowerGraphicInspector.cs 11910
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/BoundingBoxFollowerInspector.cs 11701
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/ISkeletonRendererInspector.cs 25062
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/PointFollowerInspector.cs 7434
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonAnimationInspector.cs 6937
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonGraphicCustomMaterialsInspector.cs 9043
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonGraphicInspector.cs 17855
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonMecanimInspector.cs 9769
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonMecanimRootMotionInspector.cs 3445
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonRendererCustomMaterialsInspector.cs 7421
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonRendererInspector.cs 5853
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonRootMotionBaseInspector.cs 8680
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonRootMotionInspector.cs 3030
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonSubmeshGraphicInspector.cs 2109
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonUtilityBoneInspector.cs 26425
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Components/SkeletonUtilityInspector.cs 7820
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Shaders/SpineShaderWithOutlineGUI.cs 10607
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Shaders/SpineSpriteShaderGUI.cs 47252
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/ApplicationStateHandler.cs 3207
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/SkeletonBakingWindow.cs 7945
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/SkeletonDebugWindow.cs 27874
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/SpriteAtlasImportWindow.cs 7723
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Following/BoneFollower.cs 11189
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Following/BoneFollowerGraphic.cs 9523
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Following/PointFollower.cs 7374
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Internal/SkeletonSubmeshGraphic.cs 3166
+Assets/Sprites/Spine/Runtime/spine-unity/Components/RootMotion/SkeletonMecanimRootMotion.cs 5398
+Assets/Sprites/Spine/Runtime/spine-unity/Components/RootMotion/SkeletonRootMotion.cs 7226
+Assets/Sprites/Spine/Runtime/spine-unity/Components/RootMotion/SkeletonRootMotionBase.cs 34192
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRendererCustomMaterials/SkeletonGraphicCustomMaterials.cs 9778
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRendererCustomMaterials/SkeletonRendererCustomMaterials.cs 8442
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/ActivateBasedOnFlipDirection.cs 5222
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/FollowLocationRigidbody.cs 2392
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/FollowLocationRigidbody2D.cs 2567
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/FollowSkeletonUtilityRootRotation.cs 3915
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/YieldInstructions/WaitForSpineAnimation.cs 4288
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/YieldInstructions/WaitForSpineAnimationComplete.cs 3198
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/YieldInstructions/WaitForSpineAnimationEnd.cs 2861
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/YieldInstructions/WaitForSpineEvent.cs 6597
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/YieldInstructions/WaitForSpineTrackEntryEnd.cs 3216
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/Editor/SkeletonRagdoll2DInspector.cs 1857
+Assets/Sprites/Spine Examples/Scripts/Sample Components/SkeletonUtility Modules/Editor/SkeletonRagdollInspector.cs 2194
+Assets/Sprites/Spine/Editor/spine-unity/Modules/SkeletonRenderSeparator/Editor/SkeletonPartsRendererInspector.cs 2917
+Assets/Sprites/Spine/Editor/spine-unity/Modules/SkeletonRenderSeparator/Editor/SkeletonRenderSeparatorInspector.cs 14604
+== KEPT SCRIPTS ==
+Assets/Scripts/PlayerAudio.cs
+Assets/Scripts/EnemyAttackCoordinator.cs
+Assets/Sprites/Demirci_Spine/SpineSpriteSwap.cs
+Assets/Scripts/Enemyanimationdriver.cs
+Assets/Scripts/FinisherTargetHighlight.cs
+Assets/Scripts/TentLife.cs
+Assets/Scripts/WaterSurface.cs
+Assets/Scripts/EnemyController.cs
+Assets/Scripts/PlayerMovement.cs
+Assets/Scripts/ContactShadow.cs
+Assets/Scripts/PlayerPosture.cs
+Assets/Scripts/Enemyoverheadbars.cs
+Assets/Scripts/EnemyBalance.cs
+Assets/Scripts/CombatVFXManager.cs
+Assets/Scripts/SquashStretch.cs
+Assets/Scripts/ForegroundBlurController.cs
+Assets/Scripts/RunCameraZoom.cs
+Assets/Scripts/ForegroundSway.cs
+Assets/Scripts/TorchFire.cs
+Assets/Scripts/ProjectedShadow.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SpineAtlasAsset.cs
+Assets/Scripts/WindSway.cs
+Assets/Scripts/EnemyAttackAudio.cs
+Assets/Scripts/CharacterGrounding.cs
+Assets/Scripts/CekirgeVisual.cs
+Assets/Scripts/NearMoonRim.cs
+Assets/Scripts/EnemyAttackTelegraph.cs
+Assets/Scripts/FocusBlurDriver.cs
+Assets/Scripts/FirefliesNight.cs
+Assets/Sprites/RonniSkin/Scripts/RonniSkinAnimator.cs
+Assets/Scripts/CharacterBackdrop.cs
+Assets/Scripts/PlayerStats.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRenderer.cs
+Assets/Scripts/PlayerFinisher.cs
+Assets/Scripts/DepthBlur.cs
+Assets/Scripts/EnemyArchetype.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SkeletonDataAsset.cs
+Assets/Scripts/TrainingDummy.cs
+Assets/Scripts/EnemyCapsuleBody.cs
+Assets/Scripts/PlayerController.cs
+Assets/Scripts/WaterSmoke.cs
+Assets/Scripts/Critfeedback.cs
+Assets/Scripts/AtmosphereLight.cs
+Assets/Scripts/PlayerCombatController.cs
+Assets/Scripts/TimeOfDay.cs
+Assets/Scripts/WorldColorGrade.cs
+Assets/Scripts/SmearLightSpill.cs
+Assets/Scripts/CloudDrift.cs
+Assets/Sprites/RonniSkin/Scripts/RonniPlayerBridge.cs
+Assets/Scripts/ParallaxEffect.cs
+Assets/Scripts/NightLanternGlow.cs
+Assets/Scripts/EnemySpawner.cs
+Assets/Scripts/Enemydepthsorter.cs
+Assets/Scripts/AtmosphereRestoreData.cs
+Assets/Scripts/CekirgeFx.cs
+Assets/Scripts/GodRays.cs
+Assets/Scripts/Boss1Rig.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonAnimation.cs
+Assets/Scripts/EnemyBalanceBar.cs
+Assets/Scripts/PlayerKnockback.cs
+Assets/Scripts/PlayerDamageReceiver.cs
+Assets/Scripts/AtmosphereDust.cs
+Assets/Scripts/SimpleSpriteVFX.cs
+Assets/Scripts/EnemyHitFeedback.cs
+Assets/Scripts/PlayerDefenseController.cs
+Assets/Scripts/MistLayers.cs
+Assets/Scripts/TeleportToMouse.cs
+Assets/Scripts/CharacterRim.cs
+Assets/Scripts/RainSystem.cs
+Assets/Scripts/EnemyMoveset.cs
+Assets/Scripts/CombatImpactFeedback.cs
+Assets/Scripts/CloudLife.cs
+Assets/Scripts/Health.cs
+Assets/Sprites/RonniSkin/Scripts/RonniSkinRig.cs
+Assets/Scripts/Playerinvincibilityblink.cs
+Assets/Scripts/Enemy.cs
+Assets/Free Slash VFX/Demo/Scripts/SlashDecal.cs
+Assets/Free Slash VFX/Demo/Scripts/Projectile.cs
+Assets/Editor/AddGroundingToPlayer.cs
+Assets/Editor/AtmosphereBuilder.cs
+Assets/Editor/Boss1Creator.cs
+Assets/Editor/CameraFixTools.cs
+Assets/Editor/CharacterSeparationMenu.cs
+Assets/Editor/CloudLayersBuilder.cs
+Assets/Editor/ForegroundSortingFix.cs
+Assets/Editor/GroundSortingFix.cs
+Assets/Editor/HierarchyOrganizer.cs
+Assets/Editor/MountainCreator.cs
+Assets/Editor/NormalMapGenerator.cs
+Assets/Editor/ParallaxTools.cs
+Assets/Editor/PlayerChildrenReport.cs
+Assets/Editor/PlayerCleanup.cs
+Assets/Editor/PlayerSceneGizmo.cs
+Assets/Editor/PropPlacer.cs
+Assets/Editor/RainSystemMenu.cs
+Assets/Editor/RonniEditPreview.cs
+Assets/Editor/StarsBuilder.cs
+Assets/Editor/TimeOfDayBuilder.cs
+Assets/Editor/TrainingDummyCreator.cs
+Assets/Editor/WaterBuilder.cs
+Assets/Editor/WorldGrayTools.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Animation.cs
+Assets/Scripts/EnemyTime.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SpineInspectorUtility.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Skeleton.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/AnimationState.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/AtlasUtilities.cs
+Assets/Scripts/IEnemyState.cs
+Assets/InputSystem_Actions.cs
+Assets/Scripts/EnemyStaggerState.cs
+Assets/Scripts/EnemyExecuteState.cs
+Assets/Scripts/EnemyHitState.cs
+Assets/Scripts/EnemyAttackState.cs
+Assets/Sprites/Spine/Runtime/spine-unity/SpineAttributes.cs
+Assets/Scripts/CameraZoom.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Slot.cs
+Assets/Scripts/CombatEvents.cs
+Assets/Scripts/Enemydangerindicator.cs
+Assets/Scripts/EnemyIdleState.cs
+Assets/Scripts/WallSlideState.cs
+Assets/Scripts/JumpState.cs
+Assets/Scripts/Phase1Stubs.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Slider.cs
+Assets/Scripts/HealthBarUI.cs
+Assets/Scripts/GameSettings.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Event.cs
+Assets/Scripts/Boss1Enemy.cs
+Assets/Scripts/HideOverheadBars.cs
+Assets/Scripts/PlayerDamage.cs
+Assets/Scripts/CombatCallout.cs
+Assets/Scripts/ParryVFX.cs
+Assets/Scripts/SpriteFxLibrary.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Mesh Generation/MeshGenerator.cs
+Assets/Scripts/CameraShake.cs
+Assets/Scripts/MobileInput.cs
+Assets/Scripts/MainMenu.cs
+Assets/Scripts/GroundShadow.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonGraphic.Common.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SpineBuildProcessor.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Atlas.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/AtlasAssetBase.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/MaterialChecks.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/BuildUtilities.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/OnDemandTextureLoader.cs
+Assets/Scripts/FocusBlurFeature.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Physics.cs
+Assets/Sprites/RonniSkin/Scripts/RonniSpringChain.cs
+Assets/Sprites/RonniSkin/Scripts/RonniClipPlayer.cs
+Assets/Sprites/Spine/Runtime/spine-unity/ISkeletonAnimation.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRenderSeparator/SkeletonRenderSeparator.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Mesh Generation/MeshRendererBuffers.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/MaterialOverrideSet.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/SettingsTriState.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonClipping.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonData.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/SkeletonUpdateSystem.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/ExposedList.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Mesh Generation/SpineMesh.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Base/SkeletonAnimationBase.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonMecanim.cs
+Assets/Scripts/ExecuteMeter.cs
+Assets/Scripts/RageMeter.cs
+Assets/Scripts/PlayerExecuteChargeState.cs
+Assets/Scripts/ExecuteCinematic.cs
+Assets/Scripts/HitStop.cs
+Assets/Scripts/PlayerExecuteFailState.cs
+Assets/Scripts/GroundedState.cs
+Assets/Scripts/AirState.cs
+Assets/Scripts/EnemyArcher.cs
+Assets/Scripts/EnemyShield.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/Preferences.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SkeletonDataCompatibility.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/BlendModeMaterials.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SkeletonDataModifierAsset.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/AnimationStateData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/AttachmentLoader.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/RegionlessAttachmentLoader.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/AtlasAttachmentLoader.cs
+Assets/Sprites/Spine/Runtime/spine-unity/SkeletonDataModifierAssets/BlendModeMaterials/BlendModeMaterialsAsset.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonBinary.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonJson.cs
+Assets/Scripts/Damageinfo.cs
+Assets/Scripts/HitClickAudio.cs
+Assets/Scripts/PlayerPostureBreakState.cs
+Assets/Scripts/PlayerStateMachine.cs
+Assets/Scripts/PlayerInputHandler.cs
+Assets/Scripts/PlayerAnimationController.cs
+Assets/Scripts/PlayerFeedback.cs
+Assets/Scripts/IPlayerState.cs
+Assets/Scripts/LedgeClimbState.cs
+Assets/Scripts/HitSparks.cs
+Assets/Scripts/GameFont.cs
+Assets/Scripts/ICombatState.cs
+Assets/Scripts/AirAttackState.cs
+Assets/Scripts/ParryMark.cs
+Assets/Scripts/AttackState.cs
+Assets/Sprites/RonniSkin/Scripts/SmearGhost.cs
+Assets/Sprites/RonniSkin/Scripts/RonniFirefly.cs
+Assets/Sprites/RonniSkin/Scripts/RonniDashDust.cs
+Assets/Scripts/DashFx.cs
+Assets/Scripts/DashState.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/EditorBridge.cs
+Assets/Scripts/IDamageable.cs
+Assets/Scripts/PlayerHurtState.cs
+Assets/Scripts/PlayerDeathState.cs
+Assets/Scripts/BalanceBreakFx.cs
+Assets/Scripts/IPlayerDefenseState.cs
+Assets/Scripts/PlayerBlockState.cs
+Assets/Scripts/PlayerParryState.cs
+Assets/Scripts/ParryReward.cs
+Assets/Sprites/RonniSkin/Scripts/RonniSoftPart.cs
+Assets/Scripts/MountainBackdrop.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/ColorMono.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Posed.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/BoneData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/Attachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/DrawOrder.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/IkConstraint.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/TransformConstraint.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/Sequence.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Bone.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/BonePose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SlotPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/MathUtils.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/VertexAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/IHasSequence.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/IkConstraintPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/TransformConstraintPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PathConstraintPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PathConstraint.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PhysicsConstraint.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PhysicsConstraintPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PhysicsConstraintData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SliderPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Constraint.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Skin.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SlotData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/ConstraintData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/IUpdate.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/RegionAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/MeshAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/ClippingAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Interpolation.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/TextureRegion.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/AttachmentRegionExtensions.cs
+Assets/Scripts/EnemyChaseState.cs
+Assets/Scripts/EnemyStatus.cs
+Assets/Scripts/PlayerExecuteState.cs
+Assets/Scripts/Enemycomboindicator.cs
+Assets/Scripts/UnblockableCounter.cs
+Assets/Scripts/EnemyDangerLabel.cs
+Assets/Scripts/EnemyProjectile.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/EventData.cs
+Assets/Scripts/WallJumpState.cs
+Assets/Scripts/GroundSlamState.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SliderData.cs
+Assets/Scripts/Boss1Hud.cs
+Assets/Scripts/BossArena.cs
+Assets/Scripts/PlayerPotion.cs
+Assets/Scripts/HitboxUtil.cs
+Assets/Scripts/PlayerWeapon.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/BlendMode.cs
+Assets/Scripts/TutorialMode.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Mesh Generation/SkeletonRendererInstruction.cs
+Assets/Scripts/EndlessMode.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/RuntimeSettings.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Utility/CoroutineIterator.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/DataReloadHandler.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/AssetUtility.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/SpineSpriteAtlasAsset.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/LockFreeWorkerPool.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonRenderSeparator/SkeletonPartsRenderer.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Mesh Generation/DoubleBuffered.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Triangulator.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/LockFreeWorkStealingWorkerPool.cs
+Assets/Scripts/BossController.cs
+Assets/Scripts/HudCanvas.cs
+Assets/Scripts/AfterImage.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/SpinePreferences.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/Icons.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SpineEditorUtilities.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/AnimationReferenceAsset.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/BuildSettings.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/RuntimeSettingsEditor.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Json.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/BoundingBoxAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/PathAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/PointAttachment.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/TransformConstraintData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/SkeletonLoader.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/IkConstraintData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PathConstraintData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/Attachments/AttachmentType.cs
+Assets/Scripts/PlayerAbility.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PosedData.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/IPose.cs
+Assets/Sprites/Spine/Runtime/spine-csharp/PosedActive.cs
+Assets/Scripts/MinimalHealthBar.cs
+Assets/Scripts/WeaponTypes.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/AssetDatabaseAvailabilityDetector.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Asset Types/SkeletonDataAssetInspector.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/BlendModeMaterialsUtility.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/SkeletonBaker.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/WorkflowMismatchDialog.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Windows/ComponentUpgradeWarningDialog.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SkeletonGraphicUtility.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/LockFreeSPSCQueue.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/LockFreeWorkStealingDeque.cs
+Assets/Scripts/BossStats.cs
+Assets/Scripts/BossBrain.cs
+Assets/Scripts/BossSlam.cs
+Assets/Scripts/BossLeap.cs
+Assets/Scripts/BossNova.cs
+Assets/Scripts/BossSkillGate.cs
+Assets/Scripts/BossAura.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/Instantiation.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SpineMaskUtilities.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/SkeletonUtilityBone.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Following/BoundingBoxFollower.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/Following/BoundingBoxFollowerGraphic.cs
+Assets/Scripts/AbilityTypes.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Asset Types/AnimationReferenceAssetContainer.cs
+Assets/Sprites/Spine/Editor/spine-unity/Editor/Utility/SpineHandles.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Threading/CircularArray.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/SkeletonUtility.cs
+Assets/Sprites/Spine/Runtime/spine-unity/Components/SkeletonUtility/SkeletonUtilityConstraint.cs
+== UNUSED NON-SCRIPT ASSETS (by top folder) ==
+DefaultVolumeProfile.asset : 1 files, 0 MB
+InputSystem_Actions.inputactions : 1 files, 0 MB
+ronin_rig.json : 1 files, 0 MB
+UniversalRenderPipelineGlobalSettings.asset : 1 files, 0 MB
+Animations : 5 files, 0 MB
+Prefabs : 2 files, 0 MB
+Ronin : 6 files, 0 MB
+Scenes : 3 files, 9 MB
+Screenshots : 378 files, 222 MB
+Scripts : 4 files, 0 MB
+Sounds : 21 files, 38 MB
+Art/Atmosphere : 51 files, 0 MB
+Art/Water : 1 files, 0 MB
+Free Slash VFX/Materials : 12 files, 0 MB
+Free Slash VFX/Prefabs : 11 files, 6 MB
+Free Slash VFX/Shaders : 2 files, 0 MB
+Free Slash VFX/Textures : 14 files, 1 MB
+Prefabs/Props : 27 files, 0 MB
+Sounds/new sounds : 3 files, 1 MB
+Sprites/Archer : 7 files, 0 MB
+Sprites/Demirci : 1 files, 0 MB
+Sprites/Denemeler : 5 files, 1 MB
+Sprites/Enemy 1 : 1 files, 0 MB
+Sprites/Fence : 33 files, 1 MB
+Sprites/Ground : 1 files, 0 MB
+Sprites/Mountains : 6 files, 0 MB
+Sprites/Player : 4 files, 0 MB
+Sprites/RoninSamuray : 7 files, 1 MB
+Sprites/Spine : 167 files, 0 MB
+Sprites/Spine Examples : 261 files, 20 MB
+Sprites/Tent : 2 files, 0 MB
+Sprites/Tile : 11 files, 0 MB
+Sprites/Tree : 2 files, 0 MB
+Sprites/Trees : 43 files, 7 MB
+Sprites/_ArtPipeline : 8 files, 0 MB
+Free Slash VFX/Demo : 59 files, 14 MB
+Free Slash VFX/Model : 5 files, 0 MB
+Sprites/Foreground : 18 files, 1 MB
+Sprites/PLACEHOLDERS : 62 files, 5 MB
+Sprites/Props : 37 files, 2 MB
+Sprites/RonniSkin : 254 files, 16 MB
+Sprites/Boss1 : 12 files, 0 MB
