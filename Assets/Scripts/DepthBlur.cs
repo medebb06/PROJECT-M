@@ -31,6 +31,9 @@ public class DepthBlur : MonoBehaviour
         new Stop(29, 0f),
         new Stop(30, 1.6f),    // en ön yapraklar
     };
+    [Header("Özel blur (derinlik tablosunu ezer) — örn. çit")]
+    public Transform[] overrideRoots;
+    [Range(0f, 8f)] public float overrideBlur = 3f;
     [Range(0f, 2f)] public float strength = 1f;
     [Tooltip("Ön plan (order > -15) blur çarpanı. 0 = ön plan net.")]
     [Range(0f, 3f)] public float foregroundStrength = 1f;
@@ -71,6 +74,13 @@ public class DepthBlur : MonoBehaviour
         return stops[stops.Length - 1].blur;
     }
 
+    bool IsOverridden(Transform tr)
+    {
+        if (overrideRoots == null) return false;
+        foreach (var r in overrideRoots) if (r != null && tr.IsChildOf(r)) return true;
+        return false;
+    }
+
     [ContextMenu("Apply Depth Blur")]
     public void Apply()
     {
@@ -86,7 +96,9 @@ public class DepthBlur : MonoBehaviour
                 mpb.SetFloat(RimIntId, m.GetFloat(RimIntId) * k * rimStrength);
                 mpb.SetFloat(RimWidId, m.GetFloat(RimWidId) * rimWidthScale * Mathf.Lerp(0.6f, 1f, k));
             }
-            mpb.SetFloat(BlurId, Eval(sr.sortingOrder) * strength * (sr.sortingOrder > -15 ? foregroundStrength : 1f));
+            float bl = Eval(sr.sortingOrder) * strength * (sr.sortingOrder > -15 ? foregroundStrength : 1f);
+            if (IsOverridden(sr.transform)) bl = overrideBlur;
+            mpb.SetFloat(BlurId, bl);
             sr.SetPropertyBlock(mpb);
         }
     }
