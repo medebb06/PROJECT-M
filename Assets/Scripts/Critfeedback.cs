@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -173,7 +173,7 @@ public class CritFeedback : MonoBehaviour
     // =========================================================
 
     private void OnEnemyHit(
-        EnemyController enemy,
+        EnemyBase enemy,
         DamageInfo info,
         HitResult result
     )
@@ -444,7 +444,7 @@ public class CritFeedback : MonoBehaviour
     // =========================================================
 
     private static void GetSorting(
-        EnemyController enemy,
+        EnemyBase enemy,
         out int layer,
         out int order
     )

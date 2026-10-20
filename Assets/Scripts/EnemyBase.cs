@@ -31,6 +31,15 @@ public abstract class EnemyBase : MonoBehaviour
     public abstract void PlayHealthHitSound();
     public abstract void PlayPostureHitSound();
 
+    // Slam'in dengeye vereceği hasar (düşman başına).
+    public virtual int SlamBalanceDamage { get { return 3; } }
+
+    // Kararlı saldırıyı kesip kısa süre hit-stun'a sokar (slam / şok).
+    public virtual void InterruptWithHitStun(float duration) { }
+
+    // Sersemlemiş (stagger) düşmana tek düz vuruşun götüreceği MAX can oranı (infaz). 0 = kapalı.
+    public virtual float StaggerHitHealthFraction { get { return 0f; } }
+
     protected virtual void Awake()
     {
         SpawnIndex = nextSpawnIndex++;

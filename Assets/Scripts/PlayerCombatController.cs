@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -73,8 +73,8 @@ public class PlayerCombatController : MonoBehaviour
     [Tooltip(
         "Her kombo vuruşunun düşman dengesine verdiği hasar. " +
         "Düşmanın EnemyBalance.maxBalance değeriyle birlikte düşün " +
-        "(prefab'da 7). Parry: EnemyController.parryBalanceDamage, " +
-        "Slam: EnemyController.slamBalanceDamage.")]
+        "(prefab'da 7). Parry: EnemyBase.parryBalanceDamage, " +
+        "Slam: EnemyBase.slamBalanceDamage.")]
     [Min(0)] public int attack1BalanceDamage = 1;
     [Min(0)] public int attack2BalanceDamage = 1;
     [Min(0)] public int attack3BalanceDamage = 1;

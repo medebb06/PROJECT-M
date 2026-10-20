@@ -251,7 +251,7 @@ public class EnemyChaseState : IEnemyState
 
         for (int i = 0; i < EnemyController.All.Count; i++)
         {
-            EnemyController other = EnemyController.All[i];
+            EnemyController other = EnemyBase.All[i] as EnemyController;
 
             if (
                 other == null ||

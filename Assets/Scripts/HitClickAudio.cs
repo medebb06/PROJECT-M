@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// KLAVYE TIKI VURUŞ SESLERİ: Resources/HitClicks içindeki klavye basış kayıtlarından rastgele çalar.
@@ -107,7 +107,7 @@ public class HitClickAudio : MonoBehaviour
 
     static HitClickAudio instance;
 
-    /// <summary>Training dummy gibi EnemyController olmayan hedefler için: cana vuruş sesi.</summary>
+    /// <summary>Training dummy gibi EnemyBase olmayan hedefler için: cana vuruş sesi.</summary>
     public static void PlayEnemyHealthHit()
     {
         if (instance != null) instance.PlayHealthHitSound();
@@ -141,7 +141,7 @@ public class HitClickAudio : MonoBehaviour
         else Play(hit, ref lastHit, hitVolume, hitPitch);
     }
 
-    void OnEnemyHit(EnemyController e, DamageInfo d, HitResult r)
+    void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
     {
         // Posture (denge) vuruşu: tahta adım sesi.
         if (r.hit && r.onBalance && r.amount > 0)

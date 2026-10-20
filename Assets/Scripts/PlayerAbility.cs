@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -199,12 +199,12 @@ public class PlayerAbility : MonoBehaviour
     // ŞARJ
     // =========================================================
 
-    private void OnParry(EnemyController enemy, bool brokeBalance)
+    private void OnParry(EnemyBase enemy, bool brokeBalance)
     {
         Charge(parryCharge);
     }
 
-    private void OnKilled(EnemyController enemy)
+    private void OnKilled(EnemyBase enemy)
     {
         Charge(killCharge);
     }
@@ -350,11 +350,11 @@ public class PlayerAbility : MonoBehaviour
 
         float radius = shockRadius * (1f + 0.1f * (Level - 1));
 
-        List<EnemyController> list = CharmUtil.EnemiesInRadius(center, radius);
+        List<EnemyBase> list = CharmUtil.EnemiesInRadius(center, radius);
 
         for (int i = 0; i < list.Count; i++)
         {
-            EnemyController e = list[i];
+            EnemyBase e = list[i];
 
             float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
 
@@ -395,7 +395,7 @@ public class PlayerAbility : MonoBehaviour
 
     private bool UseShadowStep()
     {
-        EnemyController target = FindStepTarget();
+        EnemyBase target = FindStepTarget();
 
         if (target == null)
         {
@@ -470,20 +470,20 @@ public class PlayerAbility : MonoBehaviour
         return true;
     }
 
-    private EnemyController FindStepTarget()
+    private EnemyBase FindStepTarget()
     {
         Vector2 p = player.transform.position;
 
         float range = shadowRange * (1f + 0.1f * (Level - 1));
 
-        List<EnemyController> list = CharmUtil.EnemiesInRadius(p, range);
+        List<EnemyBase> list = CharmUtil.EnemiesInRadius(p, range);
 
-        EnemyController best = null;
+        EnemyBase best = null;
         float bestScore = float.MaxValue;
 
         for (int i = 0; i < list.Count; i++)
         {
-            EnemyController e = list[i];
+            EnemyBase e = list[i];
 
             Vector2 d = (Vector2)e.transform.position - p;
 
@@ -508,7 +508,7 @@ public class PlayerAbility : MonoBehaviour
     }
 
     // Hedefin 'side' yönünde 'behind' kadar ötesinde zemin + boş yer ara.
-    private bool TryFindLanding(EnemyController target, float side, float behind, out Vector3 landing)
+    private bool TryFindLanding(EnemyBase target, float side, float behind, out Vector3 landing)
     {
         landing = Vector3.zero;
 
@@ -560,13 +560,13 @@ public class PlayerAbility : MonoBehaviour
 
         EnemyTime.RequestRamp(frostSlowDuration * (1f + 0.15f * (Level - 1)), frostSlowScale, 2f);
 
-        List<EnemyController> list = EnemiesInFront(frostRange, frostHeight);
+        List<EnemyBase> list = EnemiesInFront(frostRange, frostHeight);
 
         Color c = AbilityInfo.Color(AbilityType.Frost);
 
         for (int i = 0; i < list.Count; i++)
         {
-            EnemyController e = list[i];
+            EnemyBase e = list[i];
 
             HitPercent(e, frostBalancePercent, frostHealthPercent, new Vector2(player.facingDir, 0f));
 
@@ -601,11 +601,11 @@ public class PlayerAbility : MonoBehaviour
     {
         float power = Power;
 
-        List<EnemyController> list = EnemiesInFront(fireRange, fireHeight);
+        List<EnemyBase> list = EnemiesInFront(fireRange, fireHeight);
 
         for (int i = 0; i < list.Count; i++)
         {
-            EnemyController e = list[i];
+            EnemyBase e = list[i];
 
             HitPercent(e, fireHitBalancePercent, fireHitHealthPercent, new Vector2(player.facingDir, 0f));
 
@@ -615,7 +615,7 @@ public class PlayerAbility : MonoBehaviour
             float boss = IsBoss(e) ? bossMultiplier : 1f;
             float staggered = e.IsStaggered ? staggeredBurnMultiplier : 1f;
 
-            EnemyStatus.Get(e).ApplyBurn(
+            EnemyStatus.Get(e as EnemyController)?.ApplyBurn(
                 burnBalancePerSecond * power * boss,
                 burnHealthPerSecond * power * boss * staggered,
                 burnDuration
@@ -632,7 +632,7 @@ public class PlayerAbility : MonoBehaviour
     // YARDIMCILAR
     // =========================================================
 
-    private HitResult HitPercent(EnemyController e, float balancePercent, float healthPercent, Vector2 dir)
+    private HitResult HitPercent(EnemyBase e, float balancePercent, float healthPercent, Vector2 dir)
     {
         if (e == null || e.IsDead)
             return default;
@@ -667,35 +667,35 @@ public class PlayerAbility : MonoBehaviour
 
     // Kararlı saldırıyı keser (boss hariç). Normal vuruşlar artık
     // uyarı boyunca kesemiyor; Şok ve Buz bunun cevabı.
-    private static void BreakArmor(EnemyController e)
+    private static void BreakArmor(EnemyBase e)
     {
         if (e == null || e.IsDead || IsBoss(e) || !e.IsAttackCommitted)
             return;
 
-        e.ChangeState(new EnemyHitState(e, 0.2f));
+        e.InterruptWithHitStun(0.2f);
 
         CombatCallout.PopupAbove(e, "KESİLDİ", new Color(0.8f, 0.9f, 1f), 0.7f);
     }
 
-    private static bool IsBoss(EnemyController e)
+    private static bool IsBoss(EnemyBase e)
     {
         return e != null && e.GetComponent<Boss1Enemy>() != null;
     }
 
     // Oyuncunun baktığı yönde, kutu içindeki düşmanlar.
-    private List<EnemyController> EnemiesInFront(float range, float height)
+    private List<EnemyBase> EnemiesInFront(float range, float height)
     {
-        List<EnemyController> result = new List<EnemyController>();
+        List<EnemyBase> result = new List<EnemyBase>();
 
         float dir = player.facingDir >= 0f ? 1f : -1f;
 
         Vector2 p = player.transform.position;
 
-        EnemyController[] all = EnemyController.All.ToArray();
+        EnemyBase[] all = EnemyBase.All.ToArray();
 
         for (int i = 0; i < all.Length; i++)
         {
-            EnemyController e = all[i];
+            EnemyBase e = all[i];
 
             if (e == null || e.IsDead)
                 continue;

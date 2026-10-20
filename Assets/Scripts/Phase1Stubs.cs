@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 // GEÇİCİ KÖPRÜ DOSYASI (Faz 1).
@@ -12,7 +12,7 @@ public static class MetaProgress
 
 public static class CharmUtil
 {
-    public static bool AddBalancePercent(EnemyController enemy, float percent)
+    public static bool AddBalancePercent(EnemyBase enemy, float percent)
     {
         if (enemy == null || enemy.IsDead || percent <= 0f)
             return false;
@@ -34,21 +34,21 @@ public static class CharmUtil
         return true;
     }
 
-    public static List<EnemyController> EnemiesInRadius(
+    public static List<EnemyBase> EnemiesInRadius(
         Vector2 center,
         float radius,
-        EnemyController exclude = null
+        EnemyBase exclude = null
     )
     {
-        List<EnemyController> result = new List<EnemyController>();
+        List<EnemyBase> result = new List<EnemyBase>();
 
-        EnemyController[] all = EnemyController.All.ToArray();
+        EnemyBase[] all = EnemyBase.All.ToArray();
 
         float sqr = radius * radius;
 
         for (int i = 0; i < all.Length; i++)
         {
-            EnemyController e = all[i];
+            EnemyBase e = all[i];
 
             if (e == null || e == exclude || e.IsDead)
                 continue;

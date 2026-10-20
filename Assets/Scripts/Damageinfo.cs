@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // Hasarın nereden geldiği. Charm'lar buna göre davranabilir
 // (örneğin zehir kritik yapmaz, kritik sadece Attack/Slam'de çalışır).
@@ -37,7 +37,7 @@ public struct DamageInfo
     public bool fromAbove;
 
     // Pipeline tarafından doldurulur.
-    public EnemyController target;
+    public EnemyBase target;
 }
 
 // Pipeline'ın sonucu: tam olarak ne oldu?

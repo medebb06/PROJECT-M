@@ -42,8 +42,8 @@ public class AttackState : ICombatState
     // PREVENT MULTIPLE COLLIDERS
     // =====================================================
 
-    private readonly HashSet<EnemyController> processedEnemies =
-        new HashSet<EnemyController>();
+    private readonly HashSet<EnemyBase> processedEnemies =
+        new HashSet<EnemyBase>();
 
     public AttackState(
         PlayerController player,
@@ -399,8 +399,8 @@ public class AttackState : ICombatState
                 continue;
             }
 
-            EnemyController enemy =
-                h.GetComponentInParent<EnemyController>();
+            EnemyBase enemy =
+                h.GetComponentInParent<EnemyBase>();
 
             if (enemy == null)
                 continue;

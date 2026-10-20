@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -64,24 +64,24 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     // Sıradaki düşmanlar: sıraya giriş numarası (küçük olan öndedir)
     // ve son istek zamanı.
-    private readonly Dictionary<EnemyController, int> firstAsk =
-        new Dictionary<EnemyController, int>();
+    private readonly Dictionary<EnemyBase, int> firstAsk =
+        new Dictionary<EnemyBase, int>();
 
-    private readonly Dictionary<EnemyController, float> lastAsk =
-        new Dictionary<EnemyController, float>();
+    private readonly Dictionary<EnemyBase, float> lastAsk =
+        new Dictionary<EnemyBase, float>();
 
     // Menzilde olup saldırı izni isteyen düşmanların son istek zamanı.
     // Sıradaki düşman menzile takılırsa kuyruğu kilitlemesin diye
     // izin sırası SADECE bunlar arasından belirlenir.
-    private readonly Dictionary<EnemyController, float> lastRangeAsk =
-        new Dictionary<EnemyController, float>();
+    private readonly Dictionary<EnemyBase, float> lastRangeAsk =
+        new Dictionary<EnemyBase, float>();
 
     // Uyarı (wind-up) halindeki düşmanlar -> vuruş zamanı
-    private readonly Dictionary<EnemyController, float> activeAttackers =
-        new Dictionary<EnemyController, float>();
+    private readonly Dictionary<EnemyBase, float> activeAttackers =
+        new Dictionary<EnemyBase, float>();
 
-    private readonly List<EnemyController> removeBuffer =
-        new List<EnemyController>();
+    private readonly List<EnemyBase> removeBuffer =
+        new List<EnemyBase>();
 
     private float nextAllowedHitTime;
     private int patternIndex;
@@ -128,7 +128,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// false ise beklemeye devam eder.
     /// </summary>
     public static bool TryRequestAttack(
-        EnemyController enemy,
+        EnemyBase enemy,
         float windupTime
     )
     {
@@ -147,7 +147,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// Menzilde olmasa bile sıra numarası alır; böylece geride bekleyenler
     /// sıralarını kaybetmez. Saldırı izni için TryRequestAttack kullanılır.
     /// </summary>
-    public static void JoinQueue(EnemyController enemy)
+    public static void JoinQueue(EnemyBase enemy)
     {
         if (!Application.isPlaying || enemy == null)
             return;
@@ -159,7 +159,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// Düşman şu an sırada mı (yakın zamanda JoinQueue / TryRequestAttack
     /// çağırdı mı)?
     /// </summary>
-    public static bool IsQueued(EnemyController enemy)
+    public static bool IsQueued(EnemyBase enemy)
     {
         if (instance == null || enemy == null)
             return false;
@@ -176,7 +176,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// 1, 2, ... = geride kademeli bekler.
     /// Sıraya girmemişse 0.
     /// </summary>
-    public static int GetStandbyRank(EnemyController enemy)
+    public static int GetStandbyRank(EnemyBase enemy)
     {
         if (instance == null || enemy == null)
             return 0;
@@ -188,7 +188,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     /// Düşmanın vuruşu gerçekleşince (veya saldırı iptal olunca) çağrılır.
     /// Birden fazla çağrılması zararsızdır.
     /// </summary>
-    public static void ReleaseAttack(EnemyController enemy)
+    public static void ReleaseAttack(EnemyBase enemy)
     {
         if (instance == null || enemy == null)
             return;
@@ -243,7 +243,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     }
 
     private bool RequestInternal(
-        EnemyController enemy,
+        EnemyBase enemy,
         float windupTime
     )
     {
@@ -345,21 +345,21 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     private float crowdScale = 1f;
 
-    private int CountCrowd(EnemyController enemy)
+    private int CountCrowd(EnemyBase enemy)
     {
         if (enemy == null || enemy.target == null) return 0;
         Vector2 tp = enemy.target.position;
         int n = 0;
-        for (int i = 0; i < EnemyController.All.Count; i++)
+        for (int i = 0; i < EnemyBase.All.Count; i++)
         {
-            var e = EnemyController.All[i];
+            var e = EnemyBase.All[i];
             if (e == null || e.IsDead) continue;
             if (((Vector2)e.transform.position - tp).sqrMagnitude <= 16f * 16f) n++;
         }
         return n;
     }
 
-    private void JoinInternal(EnemyController enemy)
+    private void JoinInternal(EnemyBase enemy)
     {
         float now = EnemyTime.Now;
 
@@ -371,7 +371,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
             firstAsk[enemy] = askCounter++;
     }
 
-    private int RankInternal(EnemyController enemy)
+    private int RankInternal(EnemyBase enemy)
     {
         if (
             enemy.target == null ||
@@ -413,7 +413,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
     }
 
     private static int SideOf(
-        EnemyController enemy,
+        EnemyBase enemy,
         float targetX
     )
     {
@@ -423,10 +423,10 @@ public class EnemyAttackCoordinator : MonoBehaviour
     }
 
     private bool IsFrontOfQueue(
-        EnemyController enemy
+        EnemyBase enemy
     )
     {
-        EnemyController front = null;
+        EnemyBase front = null;
         int frontOrder = int.MaxValue;
 
         foreach (var pair in firstAsk)

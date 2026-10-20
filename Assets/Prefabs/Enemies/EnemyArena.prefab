@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7361015185907911821
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4844427406850440034}
+  - component: {fileID: 2243877206713795939}
+  m_Layer: 0
+  m_Name: EnemyArena
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4844427406850440034
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7361015185907911821}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2243877206713795939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7361015185907911821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0793f7e02a5c98f4b8b92212e0afcf9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyArena
+  entries:
+  - label: Duelist
+    prefab: {fileID: 6956973913847538072, guid: 3413bf4c1aa24ca42954dc33d9cb9a84, type: 3}
+    def: {fileID: 11400000, guid: 15c1092d3d3def54296f1d5de33d7424, type: 2}
+  - label: Quick
+    prefab: {fileID: 6956973913847538072, guid: 3d7dd1b672c88854db19688b99e41be0, type: 3}
+    def: {fileID: 11400000, guid: 138a14c8a781aaa49b3a6a26f236eae6, type: 2}
+  - label: Heavy
+    prefab: {fileID: 6956973913847538072, guid: b924220c146e6e2448cbe0cec749015b, type: 3}
+    def: {fileID: 11400000, guid: 6264ece13467d1548997530c4bcc494e, type: 2}
+  - label: Leaper
+    prefab: {fileID: 6956973913847538072, guid: 7434d8ef18c2b6a46951d7269f6d54e9, type: 3}
+    def: {fileID: 11400000, guid: 55b76c5536841c34b94430c161eb1867, type: 2}
+  spawnDistance: 7
+  groupSpacing: 1.6
+  showLabels: 1

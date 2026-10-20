@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// DÜŞMAN KAPSÜL GÖVDE: pixel-art sprite + animasyon yerine kodla çizilen dikey kapsül.
@@ -127,7 +127,7 @@ public class EnemyCapsuleBody : MonoBehaviour
         CombatEvents.BalanceBroken -= OnBreak;
     }
 
-    private void OnEnemyHit(EnemyController e, DamageInfo d, HitResult r)
+    private void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
     {
         if (e != enemy || enemy == null)
             return;
@@ -141,7 +141,7 @@ public class EnemyCapsuleBody : MonoBehaviour
             wobbleVel += Vector2.down * 3f;
     }
 
-    private void OnParry(EnemyController e, bool broke)
+    private void OnParry(EnemyBase e, bool broke)
     {
         if (e != enemy || enemy == null)
             return;
@@ -161,7 +161,7 @@ public class EnemyCapsuleBody : MonoBehaviour
         if (CameraShake.Instance != null && parryShake > 0f) CameraShake.Instance.Shake(parryShake * boost);
     }
 
-    private void OnBreak(EnemyController e)
+    private void OnBreak(EnemyBase e)
     {
         if (e != enemy || enemy == null)
             return;

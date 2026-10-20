@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Basarili parry odulu (kalabalikta parry oynanabilsin diye):
@@ -27,7 +27,7 @@ public class ParryReward : MonoBehaviour
     void OnEnable() { CombatEvents.ParrySucceeded += OnParry; }
     void OnDisable() { CombatEvents.ParrySucceeded -= OnParry; }
 
-    void OnParry(EnemyController parried, bool brokeBalance)
+    void OnParry(EnemyBase parried, bool brokeBalance)
     {
         if (player == null) player = FindFirstObjectByType<PlayerController>();
         if (player == null) return;
@@ -36,9 +36,9 @@ public class ParryReward : MonoBehaviour
 
         Vector2 pp = player.transform.position;
 
-        for (int i = 0; i < EnemyController.All.Count; i++)
+        for (int i = 0; i < EnemyBase.All.Count; i++)
         {
-            var e = EnemyController.All[i];
+            var e = EnemyBase.All[i];
             if (e == null || e == parried || e.IsDead) continue;
 
             Vector2 d = (Vector2)e.transform.position - pp;

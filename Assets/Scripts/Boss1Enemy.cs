@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -1119,7 +1119,7 @@ public class Boss1Enemy : MonoBehaviour
         CombatEvents.ParrySucceeded -= OnParry;
     }
 
-    void OnPlayerBlocked(EnemyController e, bool postureBroken)
+    void OnPlayerBlocked(EnemyBase e, bool postureBroken)
     {
         if (e == enemy && postureBroken && postureBreakMercy > 0f) mercyPending = true;
         if (!blockKnockback || e != enemy || enemy == null || enemy.target == null) return;
@@ -1568,7 +1568,7 @@ public class Boss1Enemy : MonoBehaviour
 
     internal float RoarForPhase2() { return PlayRoar(); }
 
-    void OnEnemyHit(EnemyController e, DamageInfo info, HitResult result)
+    void OnEnemyHit(EnemyBase e, DamageInfo info, HitResult result)
     {
         if (e != enemy)
             return;
@@ -1639,7 +1639,7 @@ public class Boss1Enemy : MonoBehaviour
         }
     }
 
-    void OnParry(EnemyController e, bool brokeBalance)
+    void OnParry(EnemyBase e, bool brokeBalance)
     {
         if (e != enemy)
             return;

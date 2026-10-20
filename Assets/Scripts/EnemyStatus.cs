@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Düşman üzerindeki DURUM ETKİLERİ (zehir) ve charm'ların düşmana özel
@@ -66,6 +66,9 @@ public class EnemyStatus : MonoBehaviour
 
     public static EnemyStatus Get(EnemyController enemy)
     {
+        if (enemy == null)
+            return null;
+
         EnemyStatus status =
             enemy.GetComponent<EnemyStatus>();
 

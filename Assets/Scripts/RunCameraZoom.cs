@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Cinemachine;
 
 /// <summary>
@@ -111,7 +111,7 @@ public class RunCameraZoom : MonoBehaviour
     private float pulse, pulseVel, pulsePeak, pulseHold;   // parry zoom'u (yaklaşma)
     private float crowd, crowdVel, crowdTarget, nextCrowdScan;
     private readonly Collider2D[] crowdBuf = new Collider2D[32];
-    private readonly EnemyController[] crowdSeen = new EnemyController[32];
+    private readonly EnemyBase[] crowdSeen = new EnemyBase[32];
     private ContactFilter2D crowdFilter; private bool crowdFilterInit;
 
     private void OnEnable()
@@ -119,7 +119,7 @@ public class RunCameraZoom : MonoBehaviour
         CombatEvents.ParrySucceeded += OnParry;
     }
 
-    private void OnParry(EnemyController e, bool brokeBalance)
+    private void OnParry(EnemyBase e, bool brokeBalance)
     {
         if (!eventZoom)
             return;
@@ -349,7 +349,7 @@ public class RunCameraZoom : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                EnemyController en = crowdBuf[i] != null ? crowdBuf[i].GetComponentInParent<EnemyController>() : null;
+                EnemyBase en = crowdBuf[i] != null ? crowdBuf[i].GetComponentInParent<EnemyBase>() : null;
 
                 if (en == null)
                     continue;

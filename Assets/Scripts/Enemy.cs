@@ -6,7 +6,7 @@ public class Enemy : MonoBehaviour, IDamageable
     [Header("Invulnerability")]
     [SerializeField] private float invulnerabilityDuration = 0.06f;
 
-    private EnemyController controller;
+    private EnemyBase controller;
     private Health health;
     private EnemyBalance balance;
     private EnemyHitFeedback hitFeedback;
@@ -16,7 +16,7 @@ public class Enemy : MonoBehaviour, IDamageable
     void Awake()
     {
         controller =
-            GetComponent<EnemyController>();
+            GetComponent<EnemyBase>();
 
         health =
             GetComponent<Health>();

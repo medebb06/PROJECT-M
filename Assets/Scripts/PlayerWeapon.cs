@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -125,11 +125,11 @@ public class PlayerWeapon : MonoBehaviour
 
     private void GreatswordShock(Vector2 center)
     {
-        List<EnemyController> list = CharmUtil.EnemiesInRadius(center, greatswordShockRadius);
+        List<EnemyBase> list = CharmUtil.EnemiesInRadius(center, greatswordShockRadius);
 
         for (int i = 0; i < list.Count; i++)
         {
-            EnemyController e = list[i];
+            EnemyBase e = list[i];
 
             CharmUtil.AddBalancePercent(e, greatswordShockBalance);
 

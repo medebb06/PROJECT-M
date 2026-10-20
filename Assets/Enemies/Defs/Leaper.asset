@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f966bd504315784f828e9044029868c, type: 3}
+  m_Name: Leaper
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
+  displayName: Leaper
+  maxHealth: 200
+  maxBalance: 80
+  superArmor: 0
+  staggerDuration: 1.8
+  balanceHitStun: 0.12
+  chaseSpeed: 14.299999
+  standbySpeedMultiplier: 0.7
+  sightRange: 40
+  arrivalTolerance: 0.5
+  acceleration: 75
+  sprintMultiplier: 1.4
+  sprintDistance: 12
+  standbyDistance: 10
+  standbySpacing: 4.5
+  attackDecisionDelay: 0.12
+  attackCooldown: 0.5
+  balanceHitKnockback: 8
+  healthHitKnockback: 12
+  blockKnockback: 10
+  knockbackDeceleration: 40
+  hitChipHealthRatio: 0.5
+  staggerHitHealthFraction: 1
+  passThroughPlayer: 1
+  knockbackScale: 0.35
+  parryBalanceDamage: 50
+  parryPostureFraction: 0.5
+  blockPostureDamage: 25
+  attacks:
+  - name: Leap
+    weight: 1
+    minRange: 5
+    maxRange: 19.6
+    windup: 0.51000005
+    active: 0.35
+    recovery: 0.8
+    cooldown: 0.6
+    damage: 1
+    unblockable: 0
+    hitReach: 6.5
+    hitHeight: 7
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 11
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    animWindup: 
+    animAttack: 
+    animRecover: 

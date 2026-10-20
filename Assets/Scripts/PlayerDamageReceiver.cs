@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // Vurulunca uygulanan slow-mo profili.
 // Ağır başlar, zamanla normal hıza döner:
@@ -192,7 +192,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         float knockbackVerticalForce,
         float knockbackDuration,
         float knockbackDeceleration = -1f,
-        EnemyController source = null,
+        EnemyBase source = null,
         PlayerHitKind kind = PlayerHitKind.Other,
         bool ignoreDashIFrames = false
     )

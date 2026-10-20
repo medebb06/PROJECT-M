@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Oyuncu savunması: parry (bas) ve block (basılı tut).
@@ -311,7 +311,7 @@ public class PlayerDefenseController : MonoBehaviour
     // PARRY SONUCU
     // =========================================================
 
-    private void OnParrySucceeded(EnemyController enemy, bool brokeBalance)
+    private void OnParrySucceeded(EnemyBase enemy, bool brokeBalance)
     {
         lastSuccessTime = Time.time;
         counterConsumed = false;

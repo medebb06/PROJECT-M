@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -82,11 +82,11 @@ public class EnemyDepthSorter : MonoBehaviour
     {
         entries.Clear();
 
-        List<EnemyController> all = EnemyController.All;
+        List<EnemyBase> all = EnemyBase.All;
 
         for (int i = 0; i < all.Count; i++)
         {
-            EnemyController enemy = all[i];
+            EnemyController enemy = all[i] as EnemyController;
 
             if (
                 enemy == null ||

@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f966bd504315784f828e9044029868c, type: 3}
+  m_Name: Heavy
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
+  displayName: Heavy
+  maxHealth: 600
+  maxBalance: 200
+  superArmor: 1
+  staggerDuration: 2.6
+  balanceHitStun: 0.12
+  chaseSpeed: 8.125
+  standbySpeedMultiplier: 0.7
+  sightRange: 40
+  arrivalTolerance: 0.5
+  acceleration: 45
+  sprintMultiplier: 1.4
+  sprintDistance: 12
+  standbyDistance: 12
+  standbySpacing: 6
+  attackDecisionDelay: 0.12
+  attackCooldown: 1
+  balanceHitKnockback: 3
+  healthHitKnockback: 6
+  blockKnockback: 10
+  knockbackDeceleration: 40
+  hitChipHealthRatio: 0.5
+  staggerHitHealthFraction: 0.5
+  passThroughPlayer: 1
+  knockbackScale: 0.35
+  parryBalanceDamage: 50
+  parryPostureFraction: 0.5
+  blockPostureDamage: 25
+  attacks:
+  - name: Overhead
+    weight: 2
+    minRange: 0
+    maxRange: 9
+    windup: 0.9
+    active: 0.2
+    recovery: 1.1
+    cooldown: 0.8
+    damage: 2
+    unblockable: 0
+    hitReach: 10
+    hitHeight: 7
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: Sweep (unblockable)
+    weight: 0.7
+    minRange: 0
+    maxRange: 10
+    windup: 1.1
+    active: 0.25
+    recovery: 1.2
+    cooldown: 1
+    damage: 2
+    unblockable: 1
+    hitReach: 12
+    hitHeight: 3.5
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    animWindup: 
+    animAttack: 
+    animRecover: 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,7 +31,7 @@ public class AirAttackState : ICombatState
     private bool ended;
     private float direction;
 
-    private readonly HashSet<EnemyController> processed = new HashSet<EnemyController>();
+    private readonly HashSet<EnemyBase> processed = new HashSet<EnemyBase>();
 
     public bool Down => down;
 
@@ -185,7 +185,7 @@ public class AirAttackState : ICombatState
                 continue;
             }
 
-            EnemyController enemy = h.GetComponentInParent<EnemyController>();
+            EnemyBase enemy = h.GetComponentInParent<EnemyBase>();
 
             if (enemy == null || enemy.IsDead || !processed.Add(enemy))
                 continue;

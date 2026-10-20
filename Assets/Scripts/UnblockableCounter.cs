@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -29,7 +29,7 @@ public class UnblockableCounter : MonoBehaviour
     }
 
     // İstatistik / charm'lar için.
-    public static event Action<EnemyController, CounterKind> CounterLanded;
+    public static event Action<EnemyBase, CounterKind> CounterLanded;
 
     [Header("Kusursuz Kaçış (yakalamaya dash)")]
     public bool enableDashCounter = true;
@@ -77,7 +77,7 @@ public class UnblockableCounter : MonoBehaviour
 
     public float shakeForce = 0.6f;
 
-    private EnemyController enemy;
+    private EnemyBase enemy;
     private EnemyBalance balance;
     private CinemachineImpulseSource impulse;
 
@@ -97,7 +97,7 @@ public class UnblockableCounter : MonoBehaviour
 
     private void Awake()
     {
-        enemy = GetComponent<EnemyController>();
+        enemy = GetComponent<EnemyBase>();
         balance = GetComponent<EnemyBalance>();
     }
 
@@ -192,7 +192,7 @@ public class UnblockableCounter : MonoBehaviour
     }
 
     private void OnEnemyHit(
-        EnemyController hitEnemy,
+        EnemyBase hitEnemy,
         DamageInfo info,
         HitResult result
     )

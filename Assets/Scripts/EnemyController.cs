@@ -412,6 +412,13 @@ public class EnemyController : EnemyBase
             !IsDead
         );
 
+    public override int SlamBalanceDamage { get { return slamBalanceDamage; } }
+
+    public override void InterruptWithHitStun(float duration)
+    {
+        ChangeState(new EnemyHitState(this, duration));
+    }
+
     public override bool IsDead =>
         health != null &&
         health.IsDead;

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -75,10 +75,10 @@ public class HudCanvas : MonoBehaviour
             if (pc != null)
             {
                 Vector3 pp = pc.transform.position;
-                var enemies = FindObjectsOfType<EnemyController>();
+                var enemies = FindObjectsOfType<EnemyBase>();
                 for (int i = 0; i < enemies.Length; i++)
                 {
-                    EnemyController e = enemies[i];
+                    EnemyBase e = enemies[i];
                     if (e == null || !e.gameObject.activeInHierarchy) continue;
                     Health eh = e.GetComponent<Health>();
                     if (eh != null && eh.CurrentHealth <= 0) continue;

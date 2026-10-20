@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 public class GroundSlamState : IPlayerState
@@ -7,14 +7,14 @@ public class GroundSlamState : IPlayerState
     private PlayerStateMachine sm;
 
     // Yaricap icindeki canli dusmanlar (eski CharmUtil.EnemiesInRadius).
-    private static List<EnemyController> EnemiesInRadius(Vector2 center, float radius)
+    private static List<EnemyBase> EnemiesInRadius(Vector2 center, float radius)
     {
-        List<EnemyController> result = new List<EnemyController>();
+        List<EnemyBase> result = new List<EnemyBase>();
         float sqr = radius * radius;
 
-        for (int i = 0; i < EnemyController.All.Count; i++)
+        for (int i = 0; i < EnemyBase.All.Count; i++)
         {
-            EnemyController e = EnemyController.All[i];
+            EnemyBase e = EnemyBase.All[i];
 
             if (e == null || e.IsDead)
                 continue;
@@ -195,7 +195,7 @@ public class GroundSlamState : IPlayerState
         // DÜŞMANLAR (yarıçap içi, katmandan bağımsız)
         // =====================================================
 
-        List<EnemyController> enemies =
+        List<EnemyBase> enemies =
             EnemiesInRadius(feet + Vector2.up * 0.5f, radius);
 
         for (int i = 0; i < enemies.Count; i++)
@@ -217,7 +217,7 @@ public class GroundSlamState : IPlayerState
 
         foreach (Collider2D hit in hits)
         {
-            if (hit == null || hit.GetComponentInParent<EnemyController>() != null)
+            if (hit == null || hit.GetComponentInParent<EnemyBase>() != null)
                 continue;
 
             Health health =
@@ -256,7 +256,7 @@ public class GroundSlamState : IPlayerState
     // - Denge kırıksa (stagger): HEALTH hasarı
     // =========================================================
 
-    void DamageEnemy(EnemyController enemy, float power, float radius)
+    void DamageEnemy(EnemyBase enemy, float power, float radius)
     {
         if (enemy == null || enemy.IsDead)
             return;
@@ -273,7 +273,7 @@ public class GroundSlamState : IPlayerState
 
         EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
 
-        int balanceDamage = enemy.slamBalanceDamage;
+        int balanceDamage = enemy.SlamBalanceDamage;
 
         // Boss: bar zaten büyük; yüzde tabanlı hasar çok vurmasın, sabit hasar.
         bool isBoss = enemy.GetComponent<Boss1Enemy>() != null;
@@ -306,7 +306,7 @@ public class GroundSlamState : IPlayerState
 
         // Slam zırhı deler: kararlı saldırıyı keser (boss hariç).
         if (!boss && enemy.IsAttackCommitted)
-            enemy.ChangeState(new EnemyHitState(enemy, 0.25f));
+            enemy.InterruptWithHitStun(0.25f);
 
         // GERİ İTME + havaya kaldırma (merkeze yakın daha güçlü).
         Rigidbody2D rb = enemy.GetComponent<Rigidbody2D>();

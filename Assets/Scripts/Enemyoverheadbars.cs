@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -85,10 +85,10 @@ public class EnemyOverheadBars : MonoBehaviour
 
     private static EnemyOverheadBars instance;
 
-    private readonly Dictionary<EnemyController, Entry> entries =
-        new Dictionary<EnemyController, Entry>();
+    private readonly Dictionary<EnemyBase, Entry> entries =
+        new Dictionary<EnemyBase, Entry>();
 
-    private readonly List<EnemyController> stale = new List<EnemyController>();
+    private readonly List<EnemyBase> stale = new List<EnemyBase>();
 
     [RuntimeInitializeOnLoadMethod(
         RuntimeInitializeLoadType.SubsystemRegistration
@@ -165,9 +165,9 @@ public class EnemyOverheadBars : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
         float now = Time.unscaledTime;
 
-        for (int i = 0; i < EnemyController.All.Count; i++)
+        for (int i = 0; i < EnemyBase.All.Count; i++)
         {
-            EnemyController enemy = EnemyController.All[i];
+            EnemyBase enemy = EnemyBase.All[i];
 
             if (enemy == null)
                 continue;
@@ -216,7 +216,7 @@ public class EnemyOverheadBars : MonoBehaviour
         // Yok olan düşmanları temizle.
         stale.Clear();
 
-        foreach (KeyValuePair<EnemyController, Entry> pair in entries)
+        foreach (KeyValuePair<EnemyBase, Entry> pair in entries)
         {
             if (pair.Key == null)
                 stale.Add(pair.Key);
@@ -263,9 +263,9 @@ public class EnemyOverheadBars : MonoBehaviour
 
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
 
-        for (int i = 0; i < EnemyController.All.Count; i++)
+        for (int i = 0; i < EnemyBase.All.Count; i++)
         {
-            EnemyController enemy = EnemyController.All[i];
+            EnemyBase enemy = EnemyBase.All[i];
 
             if (enemy == null || enemy.IsDead || !enemy.isActiveAndEnabled)
                 continue;
@@ -299,7 +299,7 @@ public class EnemyOverheadBars : MonoBehaviour
         return c;
     }
 
-    private void DrawBars(Camera cam, EnemyController enemy, Entry e, float scale, float alpha)
+    private void DrawBars(Camera cam, EnemyBase enemy, Entry e, float scale, float alpha)
     {
         Vector3 top = enemy.transform.position;
 
@@ -376,7 +376,7 @@ public class EnemyOverheadBars : MonoBehaviour
     // YARDIMCILAR
     // =========================================================
 
-    private Entry GetEntry(EnemyController enemy, float now)
+    private Entry GetEntry(EnemyBase enemy, float now)
     {
         if (entries.TryGetValue(enemy, out Entry e))
             return e;
@@ -407,7 +407,7 @@ public class EnemyOverheadBars : MonoBehaviour
         return Mathf.Clamp01((float)e.health.CurrentHealth / e.health.MaxHealth);
     }
 
-    private static SpriteRenderer FindMainRenderer(EnemyController enemy)
+    private static SpriteRenderer FindMainRenderer(EnemyBase enemy)
     {
         SpriteRenderer[] renderers = enemy.GetComponentsInChildren<SpriteRenderer>();
 
@@ -423,7 +423,7 @@ public class EnemyOverheadBars : MonoBehaviour
     }
 
     // Prefab'daki eski world-space Slider çubuklarını kapat.
-    private static void HideOldBars(EnemyController enemy, Entry e)
+    private static void HideOldBars(EnemyBase enemy, Entry e)
     {
         e.oldBarsHidden = true;
 
@@ -440,7 +440,7 @@ public class EnemyOverheadBars : MonoBehaviour
             HideBarObject(enemy, healthBars[i]);
     }
 
-    private static void HideBarObject(EnemyController enemy, Component bar)
+    private static void HideBarObject(EnemyBase enemy, Component bar)
     {
         if (bar == null)
             return;

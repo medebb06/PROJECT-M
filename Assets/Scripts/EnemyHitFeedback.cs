@@ -1,4 +1,4 @@
-
+﻿
 using UnityEngine;
 
 public class EnemyHitFeedback : MonoBehaviour
@@ -38,11 +38,14 @@ public class EnemyHitFeedback : MonoBehaviour
     [SerializeField] private GameObject blockVFX;
 
     // Dışarıdan (ör. TrainingDummy) aynı sesleri kullanmak için.
-    public AudioClip[] BalanceHitSounds => balanceHitSounds;
-    public AudioClip[] HealthHitSounds => healthHitSounds;
-    public AudioClip BalanceBreakSound => balanceBreakSound;
-    public AudioClip ParrySound => parrySound;
-    public float ParryVolume => parryVolume;
+    // Merkezi ayar (Resources/CombatFxSettings) doluysa o kullanilir; yoksa prefab'daki klip.
+    private static AudioClip[] Pick(AudioClip[] central, AudioClip[] local) { return central != null && central.Length > 0 ? central : local; }
+    private static AudioClip Pick(AudioClip central, AudioClip local) { return central != null ? central : local; }
+    public AudioClip[] BalanceHitSounds { get { var s = CombatFxSettings.Get(); return Pick(s != null ? s.balanceHitSounds : null, balanceHitSounds); } }
+    public AudioClip[] HealthHitSounds { get { var s = CombatFxSettings.Get(); return Pick(s != null ? s.healthHitSounds : null, healthHitSounds); } }
+    public AudioClip BalanceBreakSound { get { var s = CombatFxSettings.Get(); return Pick(s != null ? s.balanceBreakSound : null, balanceBreakSound); } }
+    public AudioClip ParrySound { get { var s = CombatFxSettings.Get(); return Pick(s != null ? s.parrySound : null, parrySound); } }
+    public float ParryVolume { get { var s = CombatFxSettings.Get(); return s != null && s.parrySound != null ? s.parryVolume : parryVolume; } }
 
     // Klibi 'volume' seviyesinde cal: 1'in ustu icin ayni klip katman katman calinir (PlayOneShot olcegi 1'i asmaz).
     public static void PlayLoud(AudioSource src, AudioClip clip, float volume)
@@ -103,7 +106,7 @@ public class EnemyHitFeedback : MonoBehaviour
     {
         // Posture vuruş sesi artık HitClickAudio (adım sesleri) tarafından çalınıyor.
         if (playOldBalanceHitSound)
-            PlayRandomSound(balanceHitSounds);
+            PlayRandomSound(BalanceHitSounds);
 
         if (CombatVFXManager.Instance != null)
         {
@@ -120,7 +123,7 @@ public class EnemyHitFeedback : MonoBehaviour
 
     public void PlayHealthHit(Vector2 hitDirection)
     {
-        PlayRandomSound(healthHitSounds);
+        PlayRandomSound(HealthHitSounds);
 
         if (CombatVFXManager.Instance != null)
         {
@@ -189,8 +192,8 @@ public class EnemyHitFeedback : MonoBehaviour
     {
         PlayLoud(
             audioSource,
-            parrySound,
-            parryVolume
+            ParrySound,
+            ParryVolume
         );
 
         if (CombatVFXManager.Instance != null)
@@ -211,9 +214,10 @@ public class EnemyHitFeedback : MonoBehaviour
         Vector2 hitDirection
     )
     {
-        PlaySound(
-            blockSound
-        );
+        {
+            var cs = CombatFxSettings.Get();
+            PlaySound(cs != null && cs.blockSound != null ? cs.blockSound : blockSound);
+        }
 
         if (CombatVFXManager.Instance != null)
         {

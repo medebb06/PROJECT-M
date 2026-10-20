@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Oyuncunun düşmana verdiği TÜM hasarın geçtiği tek nokta.
@@ -49,7 +49,7 @@ public static class PlayerDamage
     }
 
     public static HitResult HitEnemy(
-        EnemyController enemy,
+        EnemyBase enemy,
         DamageInfo info
     )
     {
@@ -215,6 +215,18 @@ public static class PlayerDamage
         {
             healthAmount =
                 Mathf.Max(1, Mathf.RoundToInt(healthAmount * 2f));
+
+            // İnfaz: tek düz vuruş MAX canın belirli oranını götürür (düşman tanımından).
+            float execFrac = enemy.StaggerHitHealthFraction;
+            if (execFrac > 0f)
+            {
+                int execAmount = Mathf.CeilToInt(health.MaxHealth * execFrac);
+                if (execAmount > healthAmount)
+                {
+                    healthAmount = execAmount;
+                    CombatCallout.PopupAbove(enemy, "İNFAZ!", new Color(1f, 0.85f, 0.3f), 0.9f);
+                }
+            }
         }
 
         health.TakeDamage(healthAmount);
@@ -284,7 +296,7 @@ public static class PlayerDamage
     }
 
     private static void Finish(
-        EnemyController enemy,
+        EnemyBase enemy,
         DamageInfo info,
         HitResult result,
         PlayerStats stats

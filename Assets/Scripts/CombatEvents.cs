@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 // Oyuncuya gelen hasarın türü (istatistik / ölüm nedeni için).
@@ -18,7 +18,7 @@ public struct PlayerDamageReport
     public int maxHealth;
     public bool lethal;             // bu vuruş öldürdü mü
     public PlayerHitKind kind;
-    public EnemyController source;  // vuran düşman (yoksa null)
+    public EnemyBase source;  // vuran düşman (yoksa null)
     public Vector2 direction;
 }
 
@@ -35,20 +35,20 @@ public struct PlayerDamageReport
 public static class CombatEvents
 {
     // Oyuncu bir düşmana vurdu (pipeline'dan geçti).
-    public static event Action<EnemyController, DamageInfo, HitResult> EnemyHit;
+    public static event Action<EnemyBase, DamageInfo, HitResult> EnemyHit;
 
     // Düşman öldü (kaynak ne olursa olsun: vuruş, slam, execute, zehir).
-    public static event Action<EnemyController> EnemyKilled;
+    public static event Action<EnemyBase> EnemyKilled;
 
     // Düşmanın dengesi kırıldı (stagger başladı).
-    public static event Action<EnemyController> BalanceBroken;
+    public static event Action<EnemyBase> BalanceBroken;
 
     // Başarılı parry. bool: parry dengeyi kırdı mı.
-    public static event Action<EnemyController, bool> ParrySucceeded;
+    public static event Action<EnemyBase, bool> ParrySucceeded;
 
     // Oyuncu bir saldırıdan kaçtı (dash VEYA hasar sonrası korumalı dönem).
     // bool: saldırı engellenemez miydi.
-    public static event Action<EnemyController, bool> Dodged;
+    public static event Action<EnemyBase, bool> Dodged;
 
     // Oyuncu hasar aldı. int: can hasarı, Vector2: vuruş yönü.
     // (Eski olay; ayrıntı için PlayerDamaged kullan.)
@@ -58,15 +58,15 @@ public static class CombatEvents
     public static event Action<PlayerDamageReport> PlayerDamaged;
 
     // Oyuncu bir vuruşu block'ladı. bool: bu block posture'ı kırdı mı.
-    public static event Action<EnemyController, bool> PlayerBlocked;
+    public static event Action<EnemyBase, bool> PlayerBlocked;
 
     // Düşman saldırısı vuruş anında oyuncuya ulaşamadı (menzil/yön/zıplama).
     // bool: engellenemez miydi.
-    public static event Action<EnemyController, bool> AttackMissed;
+    public static event Action<EnemyBase, bool> AttackMissed;
 
     // Düşman saldırısı vuruş anından ÖNCE kesildi (oyuncu vurdu, denge
     // kırıldı, zehir...). bool: engellenemez miydi.
-    public static event Action<EnemyController, bool> AttackInterrupted;
+    public static event Action<EnemyBase, bool> AttackInterrupted;
 
     // Oyuncu dash attı.
     public static event Action PlayerDashed;
@@ -96,7 +96,7 @@ public static class CombatEvents
     // ---------------------------------------------------------
 
     public static void RaiseEnemyHit(
-        EnemyController enemy,
+        EnemyBase enemy,
         DamageInfo info,
         HitResult result
     )
@@ -104,22 +104,22 @@ public static class CombatEvents
         Invoke(EnemyHit, d => d(enemy, info, result));
     }
 
-    public static void RaiseEnemyKilled(EnemyController enemy)
+    public static void RaiseEnemyKilled(EnemyBase enemy)
     {
         Invoke(EnemyKilled, d => d(enemy));
     }
 
-    public static void RaiseBalanceBroken(EnemyController enemy)
+    public static void RaiseBalanceBroken(EnemyBase enemy)
     {
         Invoke(BalanceBroken, d => d(enemy));
     }
 
-    public static void RaiseParry(EnemyController enemy, bool brokeBalance)
+    public static void RaiseParry(EnemyBase enemy, bool brokeBalance)
     {
         Invoke(ParrySucceeded, d => d(enemy, brokeBalance));
     }
 
-    public static void RaiseDodge(EnemyController enemy, bool unblockable)
+    public static void RaiseDodge(EnemyBase enemy, bool unblockable)
     {
         Invoke(Dodged, d => d(enemy, unblockable));
     }
@@ -135,7 +135,7 @@ public static class CombatEvents
     }
 
     public static void RaisePlayerBlocked(
-        EnemyController enemy,
+        EnemyBase enemy,
         bool postureBroken
     )
     {
@@ -143,7 +143,7 @@ public static class CombatEvents
     }
 
     public static void RaiseAttackMissed(
-        EnemyController enemy,
+        EnemyBase enemy,
         bool unblockable
     )
     {
@@ -151,7 +151,7 @@ public static class CombatEvents
     }
 
     public static void RaiseAttackInterrupted(
-        EnemyController enemy,
+        EnemyBase enemy,
         bool unblockable
     )
     {
