@@ -513,6 +513,9 @@ public class EnemyUnit : EnemyBase
         AttackDef a = def.attacks[i];
         if (a.followUpOnly) return false;
         if (a.projectileSpeed > 0f && a.requireOnScreen && !OnScreen()) return false;
+        // Uzun bekleme sureli ozel saldirilar (Heavy Slam, Leaper DiveSlam) bekleme dolmadan asla secilmez;
+        // aksi halde menzildeki tek saldiri bu oldugu icin 'hepsi beklemede' yedegi onu spamlar.
+        if (ignoreCd && attackCd[i] > 0f && a.cooldown >= 3f) return false;
         if ((!ignoreCd && attackCd[i] > 0f) || dist < a.minRange || dist > a.maxRange) return false;
         // Yakın dövüş saldırıları (minRange 0) önce ortak yakın menzile girmeyi bekler;
         // böylece tüm saldırılar seçilebilir (en uzun menzilli olan hep kazanmaz).

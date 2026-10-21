@@ -6,7 +6,8 @@ public enum AbilityType
     Shockwave,   // Şok Dalgası: çevredeki herkese denge + itme (sürülere karşı)
     ShadowStep,  // Gölge Adım: en yakın düşmanın arkasına ışınlan + denge vuruşu
     Frost,       // Buz Nefesi: düşman zamanı yavaşlar, öndekiler kesilir + denge
-    Fire         // Alev Dalgası: öndekileri yakar (sersemlemişe çift)
+    Fire,        // Alev Dalgası: öndekileri yakar (sersemlemişe çift)
+    WindStore    // Rüzgâr Birikimi: vuruşlar düşmanda çizgi biriktirir, Q patlatır
 }
 
 /// <summary>
@@ -22,7 +23,8 @@ public static class AbilityInfo
         AbilityType.Shockwave,
         AbilityType.ShadowStep,
         AbilityType.Frost,
-        AbilityType.Fire
+        AbilityType.Fire,
+        AbilityType.WindStore
     };
 
     public static string Name(AbilityType type)
@@ -33,6 +35,7 @@ public static class AbilityInfo
             case AbilityType.ShadowStep: return "Gölge Adım";
             case AbilityType.Frost: return "Buz Nefesi";
             case AbilityType.Fire: return "Alev Dalgası";
+            case AbilityType.WindStore: return "Rüzgâr Birikimi";
             default: return type.ToString();
         }
     }
@@ -46,6 +49,7 @@ public static class AbilityInfo
             case AbilityType.ShadowStep: return "GÖL";
             case AbilityType.Frost: return "BUZ";
             case AbilityType.Fire: return "ALV";
+            case AbilityType.WindStore: return "RÜZ";
             default: return "?";
         }
     }
@@ -62,6 +66,8 @@ public static class AbilityInfo
                 return "Düşmanların ZAMANI yavaşlar; öndekiler kesilir ve denge kaybeder.";
             case AbilityType.Fire:
                 return "Öndeki düşmanları yakar (denge, sonra can). Sersemlemiş düşmana çift yanık.";
+            case AbilityType.WindStore:
+                return "Vuruşlar ve parry düşmanda rüzgâr çizgisi biriktirir. Kılıcı kınına sok: biriken yük kadar hasar. Hasar alırsan yük yarıya iner.";
             default:
                 return "";
         }
@@ -80,6 +86,7 @@ public static class AbilityInfo
             case AbilityType.ShadowStep: return new Color(0.7f, 0.45f, 1f);
             case AbilityType.Frost: return new Color(0.45f, 0.9f, 1f);
             case AbilityType.Fire: return new Color(1f, 0.55f, 0.2f);
+            case AbilityType.WindStore: return new Color(0.6f, 0.86f, 1f);
             default: return UnityEngine.Color.white;
         }
     }
@@ -93,6 +100,7 @@ public static class AbilityInfo
             case AbilityType.ShadowStep: return 6f;
             case AbilityType.Frost: return 13f;
             case AbilityType.Fire: return 9f;
+            case AbilityType.WindStore: return 4f;
             default: return 10f;
         }
     }

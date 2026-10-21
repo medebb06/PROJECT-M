@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -58,7 +58,7 @@ public class GameFontApplier : MonoBehaviour
     void Update()
     {
         if (Time.unscaledTime < next) return;
-        next = Time.unscaledTime + 0.5f;
+        next = Time.unscaledTime + 2f;
 
         Font f = GameFont.Get();
         if (f == null) return;

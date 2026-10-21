@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Bulutlar: (1) gunun saatine gore renk (sabah pembe, ogle beyaz, aksam turuncu, gece mavi-gri),
@@ -50,10 +50,11 @@ public class CloudLife : MonoBehaviour
         new Stop(24f,   new Color(0.62f, 0.70f, 0.95f), 0.80f),
     };
 
+    private float nextTodFind;
+
     private void LateUpdate()
     {
-        if (tod == null)
-            tod = FindObjectOfType<TimeOfDay>();
+        if (tod == null && Time.unscaledTime >= nextTodFind) { nextTodFind = Time.unscaledTime + 1f; tod = FindObjectOfType<TimeOfDay>(); }
 
         if (tintByTime && tod != null)
             { Tint(Mathf.Repeat(tod.hour, 24f)); TintMountains(Mathf.Repeat(tod.hour, 24f)); }

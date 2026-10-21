@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// ODAK BULANIKLIGI surucusu: oyuncu ve demirci net, gerisi hafif bulanik.
@@ -25,6 +25,8 @@ public class FocusBlurDriver : MonoBehaviour
     private void OnEnable() { FocusBlurFeature.Active = true; }
     private void OnDisable() { FocusBlurFeature.Active = false; }
 
+    private float nextNpcFind;
+
     private void LateUpdate()
     {
         FocusBlurFeature.Active = enabledBlur && Application.isPlaying;
@@ -40,8 +42,9 @@ public class FocusBlurDriver : MonoBehaviour
             var pc = FindFirstObjectByType<PlayerController>();
             if (pc != null) target0 = pc.transform;
         }
-        if (target1 == null)
+        if (target1 == null && Time.unscaledTime >= nextNpcFind)
         {
+            nextNpcFind = Time.unscaledTime + 1f;
             var npc = GameObject.Find("[NPC]");
             if (npc != null) target1 = npc.transform;
         }

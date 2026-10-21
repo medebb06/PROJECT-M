@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.VFX;
 
 public class CombatVFXManager : MonoBehaviour
@@ -37,7 +37,7 @@ public class CombatVFXManager : MonoBehaviour
 
         Instance = this;
 
-        Debug.Log("COMBAT VFX MANAGER AWAKE");
+        
     }
 
     public void PlayHealthHit(Vector3 position, Vector2 direction)
@@ -75,10 +75,10 @@ public class CombatVFXManager : MonoBehaviour
 
         if (proceduralParryVFX)
         {
-            ParryVFX.Play(position, direction, vfxSortingLayer, vfxSortingOrder + 20);
+            BalanceBreakFx.PlayParry(position);
 
-            if (!alsoPlayParryPrefab)
-                return;
+            // Parry artik denge-kirilma efektinin beyaz hali; eski prefab (Impact) ayrica oynamaz.
+            return;
         }
 
         if (parryVFX == null)
@@ -118,13 +118,11 @@ public class CombatVFXManager : MonoBehaviour
         SpawnVFX(balanceBreakVFX, position, direction);
     }
 
-    private void SpawnVFX(
-        GameObject prefab,
-        Vector3 position,
-        Vector2 direction)
-    {
-        Debug.Log("VFX MANAGER: INSTANTIATE -> " + prefab.name);
+    private readonly System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>> pools =
+        new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>>();
 
+    private void SpawnVFX(GameObject prefab, Vector3 position, Vector2 direction)
+    {
         Quaternion rotation = Quaternion.identity;
 
         if (direction.sqrMagnitude > 0.001f)
@@ -133,133 +131,139 @@ public class CombatVFXManager : MonoBehaviour
             rotation = Quaternion.Euler(0f, 0f, angle);
         }
 
-        GameObject vfx = Instantiate(prefab, position, rotation);
+        System.Collections.Generic.Stack<PooledVfx> stack;
 
-        if (vfx == null)
+        if (!pools.TryGetValue(prefab, out stack))
         {
-            Debug.LogError("VFX MANAGER: INSTANTIATE BAŞARISIZ!");
-            return;
+            stack = new System.Collections.Generic.Stack<PooledVfx>();
+            pools[prefab] = stack;
         }
 
-        Debug.Log("VFX MANAGER: VFX OLUŞTU -> " + vfx.name);
+        PooledVfx fx = null;
 
-        // --------------------------------------------------
-        // PARTICLE SYSTEM RENDER ORDER
-        // --------------------------------------------------
+        while (fx == null && stack.Count > 0)
+            fx = stack.Pop();
 
-        ParticleSystemRenderer[] particleRenderers =
-            vfx.GetComponentsInChildren<ParticleSystemRenderer>(true);
-
-        Debug.Log(
-            "VFX MANAGER: PARTICLE RENDERER SAYISI -> " +
-            particleRenderers.Length
-        );
-
-        foreach (ParticleSystemRenderer renderer in particleRenderers)
+        if (fx == null)
         {
-            if (renderer == null)
-                continue;
+            GameObject vfx = Instantiate(prefab, position, rotation);
 
-            renderer.sortingLayerName = vfxSortingLayer;
-            renderer.sortingOrder = vfxSortingOrder;
+            if (vfx == null)
+            {
+                Debug.LogError("VFX MANAGER: INSTANTIATE BAŞARISIZ!");
+                return;
+            }
 
-            Debug.Log(
-                "VFX RENDER SET -> Layer: " +
-                renderer.sortingLayerName +
-                " | Order: " +
-                renderer.sortingOrder
-            );
+            fx = vfx.GetComponent<PooledVfx>();
+
+            if (fx == null)
+                fx = vfx.AddComponent<PooledVfx>();
+
+            fx.Setup(this, prefab, vfxSortingLayer, vfxSortingOrder);
+        }
+        else
+        {
+            fx.transform.SetPositionAndRotation(position, rotation);
+            fx.gameObject.SetActive(true);
         }
 
-        // --------------------------------------------------
-        // VISUAL EFFECT GRAPH
-        // --------------------------------------------------
-
-        VisualEffect[] visualEffects =
-            vfx.GetComponentsInChildren<VisualEffect>(true);
-
-        Debug.Log(
-            "VFX MANAGER: VISUAL EFFECT SAYISI -> " +
-            visualEffects.Length
-        );
-
-        foreach (VisualEffect visualEffect in visualEffects)
-        {
-            if (visualEffect == null)
-                continue;
-
-            visualEffect.Play();
-        }
-
-        // --------------------------------------------------
-        // PARTICLE SYSTEM
-        // --------------------------------------------------
-
-        ParticleSystem[] particleSystems =
-            vfx.GetComponentsInChildren<ParticleSystem>(true);
-
-        Debug.Log(
-            "VFX MANAGER: PARTICLE SYSTEM SAYISI -> " +
-            particleSystems.Length
-        );
-
-        foreach (ParticleSystem particleSystem in particleSystems)
-        {
-            if (particleSystem == null)
-                continue;
-
-            particleSystem.Play(true);
-        }
-
-        DestroyVFXWhenFinished(
-            vfx,
-            particleSystems,
-            visualEffects
-        );
+        fx.Restart();
     }
 
-    private void DestroyVFXWhenFinished(
-        GameObject vfx,
-        ParticleSystem[] particleSystems,
-        VisualEffect[] visualEffects)
+    internal void Release(PooledVfx fx)
     {
-        if (vfx == null)
+        if (fx == null)
             return;
 
-        float longestLifetime = 0f;
+        System.Collections.Generic.Stack<PooledVfx> stack;
 
-        foreach (ParticleSystem particleSystem in particleSystems)
+        if (fx.Key != null && pools.TryGetValue(fx.Key, out stack))
         {
-            if (particleSystem == null)
-                continue;
+            fx.gameObject.SetActive(false);
+            stack.Push(fx);
+        }
+        else
+        {
+            Destroy(fx.gameObject);
+        }
+    }
+}
 
-            var main = particleSystem.main;
+/// <summary>Havuzdaki vuruş efekti: oynar, süre dolunca kapanıp havuza döner (Destroy yok).</summary>
+public class PooledVfx : MonoBehaviour
+{
+    public GameObject Key;
 
+    private CombatVFXManager owner;
+    private ParticleSystem[] systems;
+    private VisualEffect[] effects;
+    private float life = 2.2f;
+    private float releaseAt;
+
+    public void Setup(CombatVFXManager manager, GameObject key, string sortingLayer, int sortingOrder)
+    {
+        owner = manager;
+        Key = key;
+
+        ParticleSystemRenderer[] rs = GetComponentsInChildren<ParticleSystemRenderer>(true);
+
+        for (int i = 0; i < rs.Length; i++)
+        {
+            if (rs[i] == null) continue;
+            rs[i].sortingLayerName = sortingLayer;
+            rs[i].sortingOrder = sortingOrder;
+        }
+
+        systems = GetComponentsInChildren<ParticleSystem>(true);
+        effects = GetComponentsInChildren<VisualEffect>(true);
+
+        float longest = 0f;
+
+        for (int i = 0; i < systems.Length; i++)
+        {
+            if (systems[i] == null) continue;
+
+            var main = systems[i].main;
             float lifetime = main.duration;
 
-            if (main.startLifetime.mode ==
-                ParticleSystemCurveMode.Constant)
-            {
+            if (main.startLifetime.mode == ParticleSystemCurveMode.Constant)
                 lifetime += main.startLifetime.constant;
-            }
             else
-            {
                 lifetime += 2f;
-            }
 
-            if (lifetime > longestLifetime)
-                longestLifetime = lifetime;
+            if (lifetime > longest) longest = lifetime;
         }
 
-        if (visualEffects.Length > 0)
+        if (effects.Length > 0 && longest < 2f) longest = 2f;
+        if (longest <= 0f) longest = 2f;
+
+        life = longest + 0.2f;
+    }
+
+    public void Restart()
+    {
+        for (int i = 0; i < systems.Length; i++)
         {
-            if (longestLifetime < 2f)
-                longestLifetime = 2f;
+            if (systems[i] == null) continue;
+            systems[i].Clear(true);
+            systems[i].Play(true);
         }
 
-        if (longestLifetime <= 0f)
-            longestLifetime = 2f;
+        for (int i = 0; i < effects.Length; i++)
+        {
+            if (effects[i] == null) continue;
+            effects[i].Reinit();
+            effects[i].Play();
+        }
 
-        Destroy(vfx, longestLifetime + 0.2f);
+        releaseAt = Time.time + life;
+    }
+
+    private void Update()
+    {
+        if (Time.time < releaseAt) return;
+
+        if (owner != null) owner.Release(this);
+        else Destroy(gameObject);
     }
 }

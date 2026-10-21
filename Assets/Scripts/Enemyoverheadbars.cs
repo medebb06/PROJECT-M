@@ -140,7 +140,7 @@ public class EnemyOverheadBars : MonoBehaviour
             if (instance == null || !instance.isActiveAndEnabled)
                 return 0f;
 
-            Camera cam = Camera.main;
+            Camera cam = GameCamera.Get();
 
             if (cam == null || !cam.orthographic || Screen.height <= 0)
                 return instance.worldOffset + 0.2f;
@@ -248,7 +248,7 @@ public class EnemyOverheadBars : MonoBehaviour
         if (Event.current.type != EventType.Repaint)
             return;
 
-        Camera cam = Camera.main;
+        Camera cam = GameCamera.Get();
 
         if (cam == null)
             return;

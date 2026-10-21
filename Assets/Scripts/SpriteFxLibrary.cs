@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -115,7 +115,9 @@ public class SpriteFxLibrary : MonoBehaviour
 
     private void Spawn(Entry e, Vector3 pos, Vector2 dir, Transform follow)
     {
-        GameObject go = new GameObject("Fx_" + e.id);
+        SpriteFxPlayer p = SpriteFxPlayer.Take();
+        GameObject go = p.gameObject;
+        go.transform.rotation = Quaternion.identity;
 
         float flipSign = 1f;
 
@@ -137,14 +139,14 @@ public class SpriteFxLibrary : MonoBehaviour
         go.transform.position = pos + off;
         go.transform.localScale = new Vector3(e.scale * flipSign, e.scale, 1f);
 
-        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        SpriteRenderer sr = p.Renderer;
         sr.sprite = e.frames[0];
         sr.color = e.tint;
         sr.sortingLayerName = sortingLayer;
         sr.sortingOrder = baseSortingOrder + e.sortingOrderOffset;
         sr.sharedMaterial = GetMaterial(e.additive);
 
-        SpriteFxPlayer p = go.AddComponent<SpriteFxPlayer>();
+        // (havuzdan alindi)
         p.Init(sr, e.frames, e.fps, follow, off);
     }
 
@@ -189,9 +191,41 @@ public class SpriteFxPlayer : MonoBehaviour
     private Transform follow;
     private Vector3 followOffset;
 
+    private static readonly System.Collections.Generic.Stack<SpriteFxPlayer> pool = new System.Collections.Generic.Stack<SpriteFxPlayer>();
+
+    public SpriteRenderer Renderer { get { return sr; } }
+
+    public static SpriteFxPlayer Take()
+    {
+        while (pool.Count > 0)
+        {
+            SpriteFxPlayer q = pool.Pop();
+
+            if (q != null)
+            {
+                q.gameObject.SetActive(true);
+                return q;
+            }
+        }
+
+        GameObject go = new GameObject("Fx");
+        SpriteRenderer r = go.AddComponent<SpriteRenderer>();
+        SpriteFxPlayer np = go.AddComponent<SpriteFxPlayer>();
+        np.sr = r;
+        return np;
+    }
+
+    private void Finish()
+    {
+        follow = null;
+        gameObject.SetActive(false);
+        pool.Push(this);
+    }
+
     public void Init(SpriteRenderer renderer, Sprite[] f, float framesPerSecond, Transform followTarget, Vector3 offset)
     {
         sr = renderer;
+        t = 0f;
         frames = f;
         fps = Mathf.Max(1f, framesPerSecond);
         follow = followTarget;
@@ -202,7 +236,7 @@ public class SpriteFxPlayer : MonoBehaviour
     {
         if (sr == null || frames == null || frames.Length == 0)
         {
-            Destroy(gameObject);
+            Finish();
             return;
         }
 
@@ -212,7 +246,7 @@ public class SpriteFxPlayer : MonoBehaviour
 
         if (i >= frames.Length)
         {
-            Destroy(gameObject);
+            Finish();
             return;
         }
 

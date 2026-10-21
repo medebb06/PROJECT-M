@@ -62,6 +62,8 @@ public class HudCanvas : MonoBehaviour
         return inst;
     }
 
+    private PlayerController cachedPc;
+
     void Update()
     {
         if (group == null) return;
@@ -71,12 +73,13 @@ public class HudCanvas : MonoBehaviour
         if (Time.unscaledTime >= nextScan)
         {
             nextScan = Time.unscaledTime + 0.25f;
-            PlayerController pc = FindObjectOfType<PlayerController>();
+            if (cachedPc == null) cachedPc = FindObjectOfType<PlayerController>();
+            PlayerController pc = cachedPc;
             if (pc != null)
             {
                 Vector3 pp = pc.transform.position;
-                var enemies = FindObjectsOfType<EnemyBase>();
-                for (int i = 0; i < enemies.Length; i++)
+                var enemies = EnemyBase.All;
+                for (int i = 0; i < enemies.Count; i++)
                 {
                     EnemyBase e = enemies[i];
                     if (e == null || !e.gameObject.activeInHierarchy) continue;

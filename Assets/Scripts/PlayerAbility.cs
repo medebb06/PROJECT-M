@@ -71,6 +71,13 @@ public class PlayerAbility : MonoBehaviour
     public float burnDuration = 4f;
     public float staggeredBurnMultiplier = 2f;
 
+    [Header("Rüzgâr Birikimi")]
+    [Tooltip("Düşmanın üstündeki her rüzgâr çizgisi = bu kadar max denge yüzdesi.")]
+    [Range(0f, 0.2f)] public float windBalancePerStack = 0.06f;
+    [Range(0f, 0.1f)] public float windHealthPerStack = 0.015f;
+    [Tooltip("Kılıcı kınına sokma süresi (sn). Bu sürede kilitli ve savunmasızsın; vurulursan bozulur.")]
+    public float windSheathTime = 0.75f;
+
     // ---------------------------------------------------------
     // DURUM
     // ---------------------------------------------------------
@@ -153,6 +160,8 @@ public class PlayerAbility : MonoBehaviour
         Type = type;
         Level = Mathf.Clamp(level, 1, AbilityInfo.MaxLevel);
 
+        SyncWindCharge();
+
         CooldownTotal = ComputeCooldown();
         CooldownLeft = 0f;
         LastReadyTime = Time.unscaledTime;
@@ -175,6 +184,21 @@ public class PlayerAbility : MonoBehaviour
         HasAbility = false;
         Level = 0;
         CooldownLeft = 0f;
+
+        SyncWindCharge();
+    }
+
+    // Rüzgâr Birikimi sadece donatılıyken yük biriktirir.
+    private void SyncWindCharge()
+    {
+        WindCharge wc = GetComponent<WindCharge>();
+
+        bool need = HasAbility && Type == AbilityType.WindStore;
+
+        if (need && wc == null)
+            gameObject.AddComponent<WindCharge>();
+        else if (!need && wc != null)
+            Destroy(wc);
     }
 
     public void Refill()
@@ -335,6 +359,7 @@ public class PlayerAbility : MonoBehaviour
             case AbilityType.ShadowStep: return UseShadowStep();
             case AbilityType.Frost: return UseFrost();
             case AbilityType.Fire: return UseFire();
+            case AbilityType.WindStore: return UseWindStore();
         }
 
         return false;
@@ -626,6 +651,161 @@ public class PlayerAbility : MonoBehaviour
         Shake(0.3f);
 
         return true;
+    }
+
+    // =========================================================
+    // RÜZGÂR BİRİKİMİ
+    // =========================================================
+
+    private bool UseWindStore()
+    {
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || wc.Total <= 0)
+        {
+            CombatCallout.Popup(
+                player.transform.position + Vector3.up * 2.4f,
+                "YÜK YOK",
+                new Color(0.75f, 0.75f, 0.8f),
+                0.7f
+            );
+
+            return false;
+        }
+
+        if (windSheathing)
+            return false;
+
+        StartCoroutine(WindSheath(wc));
+
+        return true;
+    }
+
+    private bool windSheathing;
+
+    // Kınına sokma: kilitli + savunmasız. Vurulursan bozulur (patlama yok).
+    private IEnumerator WindSheath(WindCharge wc)
+    {
+        windSheathing = true;
+
+        bool interrupted = false;
+
+        Action<PlayerDamageReport> onHurt = r =>
+        {
+            if (r.amount > 0 && r.kind != PlayerHitKind.BlockCost)
+                interrupted = true;
+        };
+
+        CombatEvents.PlayerDamaged += onHurt;
+
+        Color c = AbilityInfo.Color(AbilityType.WindStore);
+
+        CombatCallout.Popup(
+            player.transform.position + Vector3.up * 2.4f,
+            "KINA...",
+            c,
+            windSheathTime
+        );
+
+        float t = 0f;
+
+        try
+        {
+            while (t < windSheathTime)
+            {
+                if (interrupted || player == null || (health != null && health.IsDead))
+                    break;
+
+                t += Time.deltaTime;
+
+                player.inputLocked = true;
+                player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+
+                if (player.rb != null)
+                    player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+
+                if (wc != null)
+                    wc.SetGlow(t / windSheathTime);
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            CombatEvents.PlayerDamaged -= onHurt;
+            windSheathing = false;
+
+            if (wc != null)
+                wc.SetGlow(0f);
+        }
+
+        if (interrupted)
+        {
+            if (player != null)
+            {
+                CombatCallout.Popup(
+                    player.transform.position + Vector3.up * 2.4f,
+                    "KIN BOZULDU",
+                    new Color(1f, 0.5f, 0.5f),
+                    0.8f
+                );
+            }
+
+            yield break;
+        }
+
+        if (player == null || wc == null)
+            yield break;
+
+        player.inputLockTimer = 0f;
+        player.inputLocked = false;
+
+        wc.PlaySnap();
+
+        DetonateWind(wc);
+    }
+
+    private void DetonateWind(WindCharge wc)
+    {
+        Color c = AbilityInfo.Color(AbilityType.WindStore);
+
+        List<KeyValuePair<EnemyBase, int>> list = wc.Consume();
+
+        int total = 0;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i].Key;
+            int stacks = list[i].Value;
+
+            if (e == null || e.IsDead)
+                continue;
+
+            total += stacks;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+
+            if (dir == 0f)
+                dir = 1f;
+
+            wc.PlayBurst(e, stacks);
+
+            HitPercent(e, windBalancePerStack * stacks, windHealthPerStack * stacks, new Vector2(dir, 0f));
+
+            if (e == null || e.IsDead)
+                continue;
+
+            e.PlayTintFlash(c, 0.25f);
+
+            CombatCallout.PopupAbove(e, stacks.ToString(), c, 0.7f);
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.2f);
+
+        wc.PlayWave();
+
+        Shake(Mathf.Clamp(0.6f + total * 0.06f, 0.6f, 1.4f));
+        HitStop.Request(0.09f + Mathf.Min(0.1f, total * 0.012f), 0.05f);
     }
 
     // =========================================================

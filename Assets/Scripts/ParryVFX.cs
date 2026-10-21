@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// PARRY ÇATIŞMA EFEKTİ (kodla çizilir, sprite/prefab gerekmez).
@@ -46,10 +46,8 @@ public class ParryVFX : MonoBehaviour
         if (!Application.isPlaying)
             return;
 
-        GameObject root = new GameObject("ParryVFX");
-        root.transform.position = position;
-
-        ParryVFX fx = root.AddComponent<ParryVFX>();
+        ParryVFX fx = Take();
+        fx.transform.position = position;
         fx.Build(direction, sortingLayer, sortingOrder, scale);
     }
 
@@ -109,20 +107,22 @@ public class ParryVFX : MonoBehaviour
     )
     {
         scale = Mathf.Max(0.1f, s);
+        age = 0f;
+        gameObject.SetActive(true);
 
         EnsureAssets();
 
-        ring = MakeRenderer("Ring", ringSprite, sortingLayer, sortingOrder);
-        star = MakeRenderer("Star", starSprite, sortingLayer, sortingOrder + 2);
+        ring = Reuse(ring, "Ring", ringSprite, sortingLayer, sortingOrder);
+        star = Reuse(star, "Star", starSprite, sortingLayer, sortingOrder + 2);
 
-        sparks = new SpriteRenderer[SparkCount];
-        sparkDirs = new Vector2[SparkCount];
-        sparkReach = new float[SparkCount];
-        sparkLength = new float[SparkCount];
+        if (sparks == null) sparks = new SpriteRenderer[SparkCount];
+        if (sparkDirs == null) sparkDirs = new Vector2[SparkCount];
+        if (sparkReach == null) sparkReach = new float[SparkCount];
+        if (sparkLength == null) sparkLength = new float[SparkCount];
 
         for (int i = 0; i < SparkCount; i++)
         {
-            sparks[i] = MakeRenderer("Spark" + i, lineSprite, sortingLayer, sortingOrder + 1);
+            sparks[i] = Reuse(sparks[i], "Spark" + i, lineSprite, sortingLayer, sortingOrder + 1);
 
             // 8 çizgi yukarı doğru yelpaze (-84..+84 derece), 2 çizgi yatay.
             float angle;
@@ -142,6 +142,35 @@ public class ParryVFX : MonoBehaviour
         }
 
         Apply(0f);
+    }
+
+    private static readonly System.Collections.Generic.Stack<ParryVFX> pool = new System.Collections.Generic.Stack<ParryVFX>();
+
+    private static ParryVFX Take()
+    {
+        while (pool.Count > 0)
+        {
+            ParryVFX q = pool.Pop();
+            if (q != null) return q;
+        }
+
+        return new GameObject("ParryVFX").AddComponent<ParryVFX>();
+    }
+
+    private void Release()
+    {
+        gameObject.SetActive(false);
+        pool.Push(this);
+    }
+
+    private SpriteRenderer Reuse(SpriteRenderer r, string objName, Sprite sprite, string sortingLayer, int sortingOrder)
+    {
+        if (r == null)
+            return MakeRenderer(objName, sprite, sortingLayer, sortingOrder);
+
+        r.sortingLayerName = sortingLayer;
+        r.sortingOrder = sortingOrder;
+        return r;
     }
 
     private SpriteRenderer MakeRenderer(
@@ -173,7 +202,7 @@ public class ParryVFX : MonoBehaviour
         Apply(Mathf.Clamp01(age / Duration));
 
         if (age >= Duration)
-            Destroy(gameObject);
+            Release();
     }
 
     private static float OutQuad(float t)
