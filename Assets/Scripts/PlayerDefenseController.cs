@@ -311,10 +311,18 @@ public class PlayerDefenseController : MonoBehaviour
     // PARRY SONUCU
     // =========================================================
 
+    [Header("Parry ödülü")]
+    [Tooltip("Başarılı parry oyuncunun posture'ından bu oranda geri verir (MaxPosture x oran).")]
+    [Range(0f, 1f)] [SerializeField] private float parryPostureRecoverFraction = 0.25f;
+
     private void OnParrySucceeded(EnemyBase enemy, bool brokeBalance)
     {
         lastSuccessTime = Time.time;
         counterConsumed = false;
+
+        PlayerPosture myPosture = GetComponent<PlayerPosture>();
+        if (myPosture != null && myPosture.MaxPosture > 0 && parryPostureRecoverFraction > 0f)
+            myPosture.RecoverPosture(Mathf.Max(1, Mathf.CeilToInt(myPosture.MaxPosture * parryPostureRecoverFraction)));
 
         // Parry işini yaptı: pencere kısa payla kapanır, oyuncu hemen
         // saldırabilir / hareket edebilir.

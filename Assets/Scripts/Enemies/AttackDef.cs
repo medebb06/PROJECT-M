@@ -52,6 +52,26 @@ public class AttackDef
     [Tooltip("Düşman ekranda değilse bu saldırı seçilmez.")]
     public bool requireOnScreen = true;
 
+    [Header("Özel mekanikler")]
+    [Tooltip("Windup başında düşman kaybolur, oyuncunun ARKASINA ışınlanır ve orada sabit durup odaklanır (windup'ın kalanı); sonra vurur.")]
+    public bool teleportBehind = false;
+    [Tooltip("Işınlanma sonrası oyuncunun arkasında durulacak mesafe.")]
+    public float teleportGap = 2.4f;
+    [Tooltip("Windup başında görünmez kalma süresi; bitince ışınlanır.")]
+    public float teleportVanish = 0.3f;
+    [Tooltip("Tek windup'ta art arda kaç vuruş (1 = normal). Her vuruş AYRI parry ister.")]
+    [Min(1)] public int hits = 1;
+    [Tooltip("Çoklu vuruşta vuruşlar arası süre (sn).")]
+    public float hitInterval = 0.28f;
+    [Tooltip("0 = oyuncunun standart sabit vuruş yüzdesi. >0 = bu saldırı oyuncunun MAX canının bu oranını götürür (0.4 = %40, ağır vuruş).")]
+    [Range(0f, 1f)] public float hitPercent = 0f;
+    [Tooltip("Bu saldırıdan sonraki nefeste düşman GERİ ÇEKİLMEZ, yerinde sabit bekler.")]
+    public bool breathHold = false;
+    [Tooltip("Bu saldırı bitince seri biter ve düşman nefese geçer.")]
+    public bool endsBurst = false;
+    [Tooltip("Düşman oyuncuyu ilk gördüğünde (ilk saldırı kararında) bunu öncelikle kullanır.")]
+    public bool opener = false;
+
     [Header("Devam saldırısı (kombo)")]
     [Tooltip("Bu saldırı isabet/ıska ile biterse (parry veya blok değil) bu isimdeki saldırı şansla ardından gelir; yine tam uyarılıdır.")]
     public string followUp = "";

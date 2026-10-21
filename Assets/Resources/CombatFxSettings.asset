@@ -18,3 +18,7 @@ MonoBehaviour:
   parrySound: {fileID: 8300000, guid: 455e27324f049e04daefb131d64613f3, type: 3}
   parryVolume: 2
   blockSound: {fileID: 8300000, guid: b45fce8d1113d5e4c822f35e60840333, type: 3}
+  enemyBlockSound: {fileID: 0}
+  enemyBlockVolume: 0.5
+  enemyBlockPitch: {x: 0.72, y: 0.82}
+  enemyBlockVolumeJitter: 0.1

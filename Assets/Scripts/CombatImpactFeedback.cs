@@ -184,6 +184,9 @@ public class CombatImpactFeedback : MonoBehaviour
     // PARRY
     // =========================================================
 
+    // Çok vuruşlu düşman serisinde ara parry'ler yavaş çekim istemez (EnemyUnit ayarlar, tek seferlik).
+    public static bool SuppressNextParrySlow;
+
     public void PlayParryImpact()
     {
         // Tam donma + ardından normale yavaşça dönen ağır çekim.
@@ -191,7 +194,8 @@ public class CombatImpactFeedback : MonoBehaviour
         // (power 2.6) giderek normale hizlanan ramp. Global Time.timeScale degismez.
         // Hafifletildi: eskiden >=0.75 sn ve 0.05 ölçek (çok uzun/ağırdı).
         float slowDur = Mathf.Clamp(parryFreezeTime + parrySlowTime, 0.28f, 0.38f);
-        EnemyTime.RequestRamp(slowDur, 0.2f, 2f);
+        if (SuppressNextParrySlow) SuppressNextParrySlow = false;
+        else EnemyTime.RequestRamp(slowDur, 0.2f, 2f);
 
         PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
 

@@ -167,6 +167,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     /// <summary>Boss1'in isabetleri: max canin bu orani (0 = FixedHitPercent kullan).</summary>
     public static float BossHitPercent = 0f;
 
+    // Düşman saldırısı bu tek vuruş için max canın yüzdesini (ağır vuruş) belirler; TakeDamage tüketir.
+    [System.NonSerialized] public float hitPercentOverrideOnce;
+
     public void TakeDamage(int damage, Vector2 hitDirection)
     {
         TakeDamage(
@@ -245,6 +248,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
             // Her isabetli vurus oyuncunun MAX canının sabit yuzdesi kadar vurur.
             float hitPct = FixedHitPercent;
+            if (hitPercentOverrideOnce > 0f) hitPct = hitPercentOverrideOnce;
+            hitPercentOverrideOnce = 0f;
 
             if (BossHitPercent > 0f && source != null && source.GetComponent<Boss1Enemy>() != null)
                 hitPct = Mathf.Max(hitPct, BossHitPercent);

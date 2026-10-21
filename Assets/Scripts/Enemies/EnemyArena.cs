@@ -33,8 +33,12 @@ public class EnemyArena : MonoBehaviour
 
     private void Update()
     {
+        // 1-5: o tipi sağda doğur | Shift+tuş: SOLDA | Ctrl+tuş: UZAKTA (2x mesafe)
+        bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
         for (int i = 0; i < 5; i++)
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i < entries.Count) { selected = i; Spawn(i, 1); }
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i) && i < entries.Count) { selected = i; Spawn(i, 1, shift ? -1f : 1f, ctrl ? 2f : 1f); }
+        if (Input.GetKeyDown(KeyCode.Y)) SetRain(!rainOn);
 
         if (Input.GetKeyDown(KeyCode.Alpha6)) Spawn(selected, 3);
         if (Input.GetKeyDown(KeyCode.Alpha7)) Spawn(selected, 5);
@@ -46,7 +50,23 @@ public class EnemyArena : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.G)) showLabels = !showLabels;
     }
 
-    public void Spawn(int index, int count)
+    [Tooltip("Arena açılınca sahnedeki yağmuru (RainSystem) kapat. Y tuşu ile açılıp kapanır.")]
+    public bool disableRain = true;
+    private bool rainOn = true;
+
+    private void Start()
+    {
+        if (disableRain) SetRain(false);
+    }
+
+    private void SetRain(bool on)
+    {
+        rainOn = on;
+        foreach (GameObject go in Resources.FindObjectsOfTypeAll<GameObject>())
+            if (go.name == "RainSystem" && go.scene.IsValid()) go.SetActive(on);
+    }
+
+    public void Spawn(int index, int count, float firstSide = 1f, float distMul = 1f)
     {
         Transform p = Player;
         if (p == null || index < 0 || index >= entries.Count || entries[index].prefab == null) return;
@@ -55,9 +75,9 @@ public class EnemyArena : MonoBehaviour
         // Oyuncunun baktığı yönün önüne; kalabalıkta iki yana açılarak.
         for (int n = 0; n < count; n++)
         {
-            float side = (n % 2 == 0) ? 1f : -1f;
+            float side = (n % 2 == 0) ? firstSide : -firstSide;
             float step = (n / 2) * groupSpacing;
-            float x = p.position.x + side * (spawnDistance + step);
+            float x = p.position.x + side * (spawnDistance * distMul + step);
             Vector3 pos = new Vector3(x, p.position.y, p.position.z);
             GameObject go = Instantiate(e.prefab, pos, Quaternion.identity);
             go.name = e.label + "_" + spawned.Count;
@@ -112,10 +132,12 @@ public class EnemyArena : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Label(new Rect(10, 10, 700, 22),
-            "ARENA  [1-5] doğur  [6/7/8] 3/5/8 adet  [9] yakın+uzak çift  [Tab] tip: " +
+        string keys = "";
+        for (int i = 0; i < entries.Count && i < 5; i++) keys += (i + 1) + "=" + entries[i].label + "  ";
+        GUI.Label(new Rect(10, 10, 1100, 22),
+            "ARENA  " + keys + "| Shift=sol  Ctrl=uzak | [6/7/8] 3/5/8 adet  [9] çift  [Tab] tip: " +
             (entries.Count > 0 ? entries[selected].label : "-") +
-            "  [K] öldür  [H] doldur  [G] etiket   Aktif: " + EnemyBase.All.Count);
+            "  [K] öldür  [H] doldur  [G] etiket  [Y] yağmur   Aktif: " + EnemyBase.All.Count);
 
         PlayerPosture pp = FindFirstObjectByType<PlayerPosture>();
         if (pp != null)

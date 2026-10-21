@@ -29,7 +29,22 @@ MonoBehaviour:
   escapeDuration: 0.28
   escapeJump: 0
   escapeCooldown: 3.5
-  hitStunCooldown: 1
+  hitStunCooldown: 0.6
+  blockPlainHits: 0
+  clashWindupFraction: 0.7
+  clashPostureFraction: 0.4
+  clashStun: 0.35
+  clashCooldown: 0.6
+  burstMin: 2
+  burstMax: 3
+  breathMin: 1
+  breathMax: 1.6
+  breathDistance: 6
+  breathMoveSpeed: 0.75
+  pressureDelay: 0.4
+  pressureStep: 0.12
+  pressureMax: 1
+  pressureGroupDelay: 0.3
   reachForgiveness: 1.6
   leanBackDegrees: 16
   leanForwardDegrees: 9
@@ -52,9 +67,9 @@ MonoBehaviour:
   blockPostureDamage: 25
   attacks:
   - name: LungeSlash
-    weight: 1.5
-    minRange: 4.5
-    maxRange: 13.3
+    weight: 0.01
+    minRange: 0
+    maxRange: 4
     windup: 0.46750003
     active: 0.2
     recovery: 0.7
@@ -98,16 +113,25 @@ MonoBehaviour:
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
-    followUp: ShortSlash
-    followUpChance: 0.5
-    followUpOnly: 0
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
+    followUp: 
+    followUpChance: 0.7
+    followUpOnly: 1
     animWindup: 
     animAttack: 
     animRecover: 
   - name: ShortSlash
-    weight: 1
+    weight: 0.01
     minRange: 0
-    maxRange: 4.5
+    maxRange: 4
     windup: 0.5
     active: 0.12
     recovery: 0.6
@@ -151,9 +175,18 @@ MonoBehaviour:
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
-    followUp: Cut2
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
+    followUp: 
     followUpChance: 0.6
-    followUpOnly: 0
+    followUpOnly: 1
     animWindup: 
     animAttack: 
     animRecover: 
@@ -204,9 +237,80 @@ MonoBehaviour:
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
     followUp: 
     followUpChance: 0
     followUpOnly: 1
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: TwinStrike
+    weight: 1
+    minRange: 0
+    maxRange: 3.5
+    windup: 0.6
+    active: 0.12
+    recovery: 0.8
+    cooldown: 0.5
+    damage: 1
+    unblockable: 0
+    hitReach: 6.5
+    hitHeight: 7
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 0.5
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 0
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 2
+    hitInterval: 0.25
+    hitPercent: 0
+    breathHold: 1
+    endsBurst: 1
+    opener: 0
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 

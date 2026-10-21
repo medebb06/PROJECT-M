@@ -37,6 +37,36 @@ public class EnemyDef : ScriptableObject
     public float escapeCooldown = 3.5f;
     [Tooltip("Düz vuruşla sersemletildikten sonra bu süre (sn) yeniden sersemletilemez; vuruş spamı düşmanı kilitleyip saldırılarını iptal etmesin. Parry/posture kırılması etkilemez.")]
     public float hitStunCooldown = 1.0f;
+    [Tooltip("Sekiro tarzı: düz vuruşları bloklar (parry sesi + kıvılcım, can gitmez, sersemlemez) posture kırılana kadar.")]
+    public bool blockPlainHits = true;
+
+    [Header("Çatışma (clash): oyuncunun saldırısı düşmanın saldırısıyla çarpışır")]
+    [Tooltip("Windup'ın bu oranından sonra (ve Active'de, vuruş çözülmeden) gelen oyuncu saldırısı düşman saldırısıyla çatışır.")]
+    [Range(0.3f, 1f)] public float clashWindupFraction = 0.7f;
+    [Tooltip("Çatışmada düşman posture'ına gelen oran (MaxBalance x oran). Parry'den hafif.")]
+    [Range(0f, 1f)] public float clashPostureFraction = 0.4f;
+    public float clashStun = 0.35f;
+    [Tooltip("Aynı düşmanla art arda çatışma kilidi (sn).")]
+    public float clashCooldown = 0.6f;
+
+    [Header("Seri / Nefes (saldırı ritmi)")]
+    [Tooltip("Bir seride en az/en çok kaç saldırı (zincir vuruşları dahil). 0 = seri sistemi kapalı.")]
+    public int burstMin = 0;
+    public int burstMax = 0;
+    [Tooltip("Seri bitince nefes süresi aralığı (sn). Nefeste düşman saldırı kararı vermez, geri çekilir.")]
+    public float breathMin = 0f;
+    public float breathMax = 0f;
+    [Tooltip("Nefeste oyuncudan en az bu kadar uzaklaşır.")]
+    public float breathDistance = 6f;
+    [Range(0.2f, 1.5f)] public float breathMoveSpeed = 0.75f;
+
+    [Header("Tempo baskısı: isabet alan düşman saldırı kararını geciktirir")]
+    public float pressureDelay = 0.4f;
+    [Tooltip("Üst üste isabet başına eklenen gecikme.")]
+    public float pressureStep = 0.12f;
+    public float pressureMax = 1.0f;
+    [Tooltip("Gruptaki diğer düşmanların sıradaki vuruşuna eklenen gecikme.")]
+    public float pressureGroupDelay = 0.3f;
     [Tooltip("Vuruş anında oyuncu hitReach'ten bu kadar uzakta olsa da isabet eder; ayrıca düşman vuruşta bu mesafeyi ileri adımlayarak kapatır. Oyuncunun küçük geri adımı/atak hareketi ıskalatmasın.")]
     public float reachForgiveness = 1.6f;
     [Tooltip("Windup'ta hedeften uzağa geriye eğilme (derece).")]

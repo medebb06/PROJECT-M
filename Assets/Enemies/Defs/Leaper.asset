@@ -29,7 +29,22 @@ MonoBehaviour:
   escapeDuration: 0.28
   escapeJump: 0
   escapeCooldown: 3.5
-  hitStunCooldown: 1
+  hitStunCooldown: 0.6
+  blockPlainHits: 0
+  clashWindupFraction: 0.7
+  clashPostureFraction: 0.4
+  clashStun: 0.35
+  clashCooldown: 0.6
+  burstMin: 1
+  burstMax: 2
+  breathMin: 1
+  breathMax: 1.6
+  breathDistance: 6
+  breathMoveSpeed: 0.75
+  pressureDelay: 0.4
+  pressureStep: 0.12
+  pressureMax: 1
+  pressureGroupDelay: 0.3
   reachForgiveness: 1.6
   leanBackDegrees: 16
   leanForwardDegrees: 9
@@ -53,12 +68,12 @@ MonoBehaviour:
   attacks:
   - name: Leap
     weight: 1
-    minRange: 5
-    maxRange: 19.6
+    minRange: 1.5
+    maxRange: 6
     windup: 0.51000005
     active: 0.35
     recovery: 0.8
-    cooldown: 0.6
+    cooldown: 0.2
     damage: 1
     unblockable: 0
     hitReach: 6.5
@@ -67,7 +82,7 @@ MonoBehaviour:
     knockbackVertical: 2
     knockbackDuration: 0.4
     parryBalanceMultiplier: 1
-    lungeDistance: 11
+    lungeDistance: 3
     lungeCurve:
       serializedVersion: 2
       m_Curve:
@@ -92,12 +107,21 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 2
+    lungeStopGap: 1.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
     followUp: 
     followUpChance: 0
     followUpOnly: 0

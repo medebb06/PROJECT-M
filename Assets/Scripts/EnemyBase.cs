@@ -39,6 +39,10 @@ public abstract class EnemyBase : MonoBehaviour
 
     // Sersemlemiş (stagger) düşmana tek düz vuruşun götüreceği MAX can oranı (infaz). 0 = kapalı.
     public virtual float StaggerHitHealthFraction { get { return 0f; } }
+    // true: düz vuruşlar posture'a gider, düşman bloklar (can gitmez, tepki yok).
+    public virtual bool BlocksPlainHits { get { return false; } }
+    // Oyuncunun saldırısı düşmanın saldırısıyla çarpışırsa (clash): true => düşman saldırısı iptal, hasar yok.
+    public virtual bool TryClash(Vector2 hitDirection) { return false; }
 
     protected virtual void Awake()
     {

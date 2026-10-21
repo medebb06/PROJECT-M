@@ -29,7 +29,22 @@ MonoBehaviour:
   escapeDuration: 1.2
   escapeJump: 15
   escapeCooldown: 3
-  hitStunCooldown: 1
+  hitStunCooldown: 0.6
+  blockPlainHits: 0
+  clashWindupFraction: 0.7
+  clashPostureFraction: 0.4
+  clashStun: 0.35
+  clashCooldown: 0.6
+  burstMin: 1
+  burstMax: 2
+  breathMin: 0.9
+  breathMax: 1.5
+  breathDistance: 6
+  breathMoveSpeed: 0.75
+  pressureDelay: 0.4
+  pressureStep: 0.12
+  pressureMax: 1
+  pressureGroupDelay: 0.3
   reachForgiveness: 1.6
   leanBackDegrees: 16
   leanForwardDegrees: 9
@@ -52,7 +67,7 @@ MonoBehaviour:
   blockPostureDamage: 25
   attacks:
   - name: Shot
-    weight: 3
+    weight: 6
     minRange: 6
     maxRange: 24
     windup: 0.8
@@ -98,6 +113,15 @@ MonoBehaviour:
     projectileLife: 1.8
     projectileRadius: 0.35
     requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
     followUp: 
     followUpChance: 0
     followUpOnly: 0
@@ -105,7 +129,7 @@ MonoBehaviour:
     animAttack: 
     animRecover: 
   - name: Slap
-    weight: 2
+    weight: 0.01
     minRange: 0
     maxRange: 4
     windup: 0.4
@@ -151,9 +175,18 @@ MonoBehaviour:
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
     followUp: 
     followUpChance: 0
-    followUpOnly: 0
+    followUpOnly: 1
     animWindup: 
     animAttack: 
     animRecover: 

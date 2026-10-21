@@ -78,6 +78,7 @@ public class EnemyUnit : EnemyBase
     public override bool IsOpen { get { return state == UnitState.Stagger || (state == UnitState.Recover && !IsDead); } }
     public override float FacingDirection { get { return facing; } }
     public override int SlamBalanceDamage { get { return 3; } }
+    public override bool BlocksPlainHits { get { return def != null && def.blockPlainHits && state != UnitState.Stagger; } }
     public override float StaggerHitHealthFraction { get { return def != null ? def.staggerHitHealthFraction : 0f; } }
 
     // =========================================================
@@ -129,6 +130,7 @@ public class EnemyUnit : EnemyBase
             balance.SetMaxBalance(def.maxBalance);
             balance.chipRatioOverride = def.hitChipHealthRatio;
         }
+        RollBurst();
         attackCd = new float[def.attacks.Count];
         rangedMax = 0f;
         for (int i = 0; i < def.attacks.Count; i++)
@@ -174,6 +176,7 @@ public class EnemyUnit : EnemyBase
         stateTime += dt;
 
         if (attackCooldownTimer > 0f) attackCooldownTimer -= dt;
+        if (breathTimer > 0f) breathTimer -= dt;
         if (escapeCd > 0f) escapeCd -= dt;
         if (attackCd != null)
             for (int i = 0; i < attackCd.Length; i++)
@@ -199,6 +202,7 @@ public class EnemyUnit : EnemyBase
     {
         UpdateMarker();
         UpdateSquash();
+        UpdateLean();
         if (bodySprite == null) return;
         if (flashTimer > 0f)
         {
@@ -209,6 +213,89 @@ public class EnemyUnit : EnemyBase
         else if (state == UnitState.Stagger)
         {
             bodySprite.color = new Color(1f, 0.85f, 0.35f, baseColor.a);
+        }
+    }
+
+    // Çok vuruşlu saldırılarda her vuruş öncesi geriye bükülme (okunurluk): vuruşta öne snap, sonra tekrar geri.
+    private float leanAngle;
+    private const float LeanBack = 22f, LeanFwd = -10f;
+    private void UpdateLean()
+    {
+        SetupLean();
+        Transform lt = leanPivot != null ? leanPivot : visualRoot;
+        if (lt == null) return;
+        float target = 0f; float speed = 160f;
+        if (current != null && current.hits > 1)
+        {
+            if (state == UnitState.Windup)
+            {
+                target = LeanBack * Mathf.Clamp01(stateTime / Mathf.Max(0.05f, current.windup));
+                speed = 400f;
+            }
+            else if (state == UnitState.Active)
+            {
+                if (!hitDone) { target = LeanBack; speed = 400f; }
+                else if (extraHitsDone < current.hits - 1)
+                {
+                    // Gerçek zamanla: vuruştan hemen sonra öne, sonra ilk vuruştaki kadar geriye bükül (yavaş çekimden bağımsız).
+                    float since = Time.unscaledTime - leanHitRealTime;
+                    float k = Mathf.Clamp01((since - 0.04f) / 0.08f);
+                    target = Mathf.Lerp(LeanFwd, LeanBack, k);
+                    speed = 1500f;
+                }
+                else { target = LeanFwd; speed = 600f; }
+            }
+        }
+        leanAngle = Mathf.MoveTowards(leanAngle, target, speed * Time.unscaledDeltaTime);
+        // Pivot (ayak) yön çevrilmez: geriye = bakışın tersi.
+        lt.localRotation = Quaternion.Euler(0f, 0f, leanPivot != null ? leanAngle * facing : leanAngle);
+        MirrorLeanGfx();
+    }
+
+    // Gövde sprite'ı kök objede (fizik gövdesi) olduğu için döndürülemez. Ayakta bir pivot + kopya sprite kurulur;
+    // kök renderer gizlenir (forceRenderingOff) ama renk/flash/görünürlük ondan aynalanır. Kılıç (visualRoot) pivota taşınır.
+    private Transform leanPivot, leanUnscale;
+    private SpriteRenderer leanGfx;
+    private void SetupLean()
+    {
+        if (leanPivot != null || bodySprite == null || bodySprite.transform != transform || bodySprite.sprite == null) return;
+        Vector3 s = transform.localScale;
+        if (Mathf.Abs(s.x) < 0.0001f || Mathf.Abs(s.y) < 0.0001f) return;
+        float bottomLocal = bodySprite.sprite.bounds.min.y; // kök yerel biriminde
+        leanUnscale = new GameObject("LeanUnscale").transform;
+        leanUnscale.SetParent(transform, false);
+        leanUnscale.localPosition = new Vector3(0f, bottomLocal, 0f);
+        leanUnscale.localScale = new Vector3(1f / s.x, 1f / s.y, 1f);
+        var piv = new GameObject("LeanPivot").transform;
+        piv.SetParent(leanUnscale, false);
+        var gfx = new GameObject("BodyLeanGfx").transform;
+        gfx.SetParent(piv, false);
+        gfx.localScale = new Vector3(s.x, s.y, 1f);
+        gfx.localPosition = new Vector3(0f, -bottomLocal * s.y, 0f);
+        leanGfx = gfx.gameObject.AddComponent<SpriteRenderer>();
+        leanGfx.sprite = bodySprite.sprite;
+        leanGfx.sharedMaterial = bodySprite.sharedMaterial;
+        leanGfx.sortingLayerID = bodySprite.sortingLayerID;
+        leanGfx.sortingOrder = bodySprite.sortingOrder;
+        bodySprite.forceRenderingOff = true;
+        if (visualRoot != null) visualRoot.SetParent(piv, true);
+        leanPivot = piv;
+        MirrorLeanGfx();
+    }
+
+    private void MirrorLeanGfx()
+    {
+        if (leanGfx == null || bodySprite == null) return;
+        leanGfx.enabled = bodySprite.enabled;
+        leanGfx.color = bodySprite.color;
+        leanGfx.flipX = bodySprite.flipX;
+        if (leanGfx.sprite != bodySprite.sprite) leanGfx.sprite = bodySprite.sprite;
+        // Kök ölçeği (squash) değişince pivotun ters ölçeği güncellenir.
+        Vector3 s = transform.localScale;
+        if (Mathf.Abs(s.x) > 0.0001f && Mathf.Abs(s.y) > 0.0001f)
+        {
+            leanUnscale.localScale = new Vector3(1f / s.x, 1f / s.y, 1f);
+            leanGfx.transform.localScale = new Vector3(s.x, s.y, 1f);
         }
     }
 
@@ -268,6 +355,9 @@ public class EnemyUnit : EnemyBase
             return;
         }
 
+        // NEFES: seri bitti, düşman bir süre saldırı kararı vermez; geri çekilir / mesafe açar.
+        if (breathTimer > 0f) { BreathMove(dist, dx); return; }
+
         bool ready = attackCooldownTimer <= 0f;
 
         if (!ready)
@@ -296,6 +386,9 @@ public class EnemyUnit : EnemyBase
         if (pick == null)
         {
             if (rangedMax > 0f) { KeepRange(dist, dx); decisionTimer = 0f; return; }
+            // Hiçbir saldırısı bu kadar yakında kullanılamıyorsa (ör. Leaper) önce mesafe aç.
+            float tooClose = TooCloseThreshold();
+            if (dist < tooClose) { Move(-Mathf.Sign(dx == 0f ? facing : dx) * def.chaseSpeed); decisionTimer = 0f; return; }
             // Menzile gir.
             float want = ApproachRange();
             if (dist > want) Move(Mathf.Sign(dx) * def.chaseSpeed * (dist > def.sprintDistance ? def.sprintMultiplier : 1f));
@@ -375,6 +468,12 @@ public class EnemyUnit : EnemyBase
 
     private AttackDef PickAttack(float dist)
     {
+        // Oyuncuyu ilk gördüğünde açılış saldırısı (varsa) öncelikli.
+        if (!openerUsed)
+        {
+            for (int i = 0; i < def.attacks.Count; i++)
+                if (def.attacks[i].opener && AttackUsable(i, dist, true)) { openerUsed = true; return def.attacks[i]; }
+        }
         float total = 0f;
         bool ignoreCd = false;
         for (int i = 0; i < def.attacks.Count; i++)
@@ -417,6 +516,20 @@ public class EnemyUnit : EnemyBase
         for (int i = 0; i < def.attacks.Count; i++)
             if (!def.attacks[i].followUpOnly && def.attacks[i].minRange <= 0f) best = Mathf.Min(best, def.attacks[i].maxRange * 0.9f);
         return best == float.MaxValue ? def.standbyDistance : best;
+    }
+
+    // Yakın menzilli (minRange 0) saldırısı olmayan düşmanın en kısa minRange'i; bunun altında saldırı yok, geri açılmalı.
+    private float TooCloseThreshold()
+    {
+        float best = float.MaxValue;
+        for (int i = 0; i < def.attacks.Count; i++)
+        {
+            AttackDef a = def.attacks[i];
+            if (a.followUpOnly) continue;
+            if (a.minRange <= 0f) return 0f;
+            best = Mathf.Min(best, a.minRange);
+        }
+        return best == float.MaxValue ? 0f : best * 0.9f;
     }
 
     private float ApproachRange()
@@ -473,6 +586,8 @@ public class EnemyUnit : EnemyBase
     private void StartAttack(AttackDef a)
     {
         current = a;
+        burstCount++;
+        if (a.endsBurst && burstTarget > 0) burstCount = burstTarget;
         cueFired = committedFired = hitDone = false;
         contactDefended = false;
         activeInit = false;
@@ -483,16 +598,71 @@ public class EnemyUnit : EnemyBase
         if (telegraph != null) telegraph.StartWarning(a.unblockable, a.windup);
         if (a.unblockable) PlayTintFlash(Color.white, 0.15f);
         SetState(UnitState.Windup);
+        if (a.teleportBehind) BeginVanish();
+    }
+
+    // ---- Işınlanma (Quick suikastı): kaybol, oyuncunun arkasına çık, sabit durup odaklan.
+    private bool teleportPending, bodyHidden;
+
+    private void SetBodyVisible(bool v)
+    {
+        bodyHidden = !v;
+        if (visualRoot != null) { foreach (Renderer r in visualRoot.GetComponentsInChildren<Renderer>(true)) r.enabled = v; }
+        if (bodySprite != null) bodySprite.enabled = v;
+    }
+
+    private void BeginVanish()
+    {
+        teleportPending = true;
+        HardStop();
+        SetBodyVisible(false);
+    }
+
+    private void DoTeleport()
+    {
+        teleportPending = false;
+        PlayerController pc = target.GetComponent<PlayerController>();
+        float pf = (pc != null && pc.facingDir < 0f) ? -1f : 1f;
+        float gap = current.teleportGap;
+        float side = -pf;   // oyuncunun arkası
+        float x = TeleportX(side, gap);
+        if (Mathf.Abs(x - target.position.x) < 1.3f) x = TeleportX(-side, gap);   // arkada yer yoksa önüne çık
+        Vector3 p = transform.position;
+        p.x = x;
+        transform.position = p;
+        rb.position = new Vector2(x, rb.position.y);
+        rb.linearVelocity = Vector2.zero;
+        FaceTarget();
+        SetBodyVisible(true);
+        PlayTintFlash(Color.white, 0.2f);
+        SquashPunch(new Vector2(1.25f, 0.8f), 0.15f, 1f);
+    }
+
+    private float TeleportX(float side, float gap)
+    {
+        Vector2 o = new Vector2(target.position.x, transform.position.y + 1f);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(o, new Vector2(side, 0f), gap + 0.5f);
+        float best = gap;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider2D c = hits[i].collider;
+            if (c == null || c.isTrigger || c.transform.IsChildOf(transform) || c.transform.IsChildOf(target)) continue;
+            if (c.GetComponentInParent<EnemyBase>() != null || c.GetComponentInParent<PlayerController>() != null) continue;
+            best = Mathf.Min(best, Mathf.Max(0f, hits[i].distance - 0.5f));
+        }
+        return target.position.x + side * best;
     }
 
     private void TickWindup(float dt)
     {
+        if (teleportPending && stateTime >= current.teleportVanish) DoTeleport();
+        if (teleportPending) { HardStop(); return; }
         // Engellenemez saldırıda yön BAŞTAN kilitli: arkasına geçersen dönüp vurmaz.
         bool facingLocked = current.unblockable || current.projectileSpeed > 0f || (lockFacingWhileAttacking && committedFired);
         if (!facingLocked) FaceTarget();
 
         // Kararlı aşamaya kadar, oyuncu ÖNÜNDEyse menzili koru.
-        if (!committedFired && !current.unblockable && current.projectileSpeed <= 0f && current.lungeDistance <= 0f && current.hitReach > 0f)
+        if (!committedFired && !current.unblockable && current.projectileSpeed <= 0f && current.lungeDistance <= 0f && current.hitReach > 0f && !current.teleportBehind)
         {
             float dxw = DxToTarget;
             if (dxw * facing > 0f && Mathf.Abs(dxw) > current.hitReach * 0.6f) Move(facing * def.chaseSpeed * 0.9f);
@@ -538,17 +708,37 @@ public class EnemyUnit : EnemyBase
             lungeStrike = current.lungeDistance > 0f && lungeTravel > 0.5f;
             // Uzun atılma biraz daha uzun sürer (en çok ~45 birim/sn): ışınlanma gibi görünmesin.
             activeDur = lungeStrike ? Mathf.Max(current.active, lungeTravel / 45f) : current.active;
+            firstHitAt = Mathf.Min(activeDur, Mathf.Max(0.07f, activeDur * 0.5f));
+            extraHitsDone = 0;
+            // Çoklu vuruş (tak-tak): her vuruş ayrı parry ister.
+            if (!lungeStrike && current.projectileSpeed <= 0f && current.hits > 1)
+                activeDur = firstHitAt + (current.hits - 1) * current.hitInterval + 0.05f;
 
             // Atılmasız saldırı: salım görünsün diye vuruş kısa süre SONRA gelir. Atılmalı saldırı: önce kayar, VARINCA vurur.
             hitDone = false;
             if (current.projectileSpeed > 0f) { SpawnProjectile(); hitDone = true; lungeStrike = false; }
         }
 
-        if (!hitDone && !lungeStrike && stateTime >= Mathf.Min(activeDur, Mathf.Max(0.07f, activeDur * 0.5f)))
+        if (!hitDone && !lungeStrike && stateTime >= firstHitAt)
         {
             hitDone = true;
             ResolveHit();
             if (state != UnitState.Active) return;
+        }
+
+        // Sonraki vuruşlar (hits > 1): her biri ayrı çözülür.
+        if (hitDone && !lungeStrike && current.projectileSpeed <= 0f && extraHitsDone < current.hits - 1
+            && stateTime >= firstHitAt + (extraHitsDone + 1) * current.hitInterval)
+        {
+            extraHitsDone++;
+            SquashPunch(new Vector2(1.15f, 0.88f), 0.1f, 1f);
+            // Parry sonrası oyuncu geride/arkada kaldıysa bile sıradaki vuruş gelsin: dön + menzile adım at.
+            FaceTarget();
+            float gapN = Mathf.Abs(DxToTarget) - current.hitReach * 0.8f;
+            if (gapN > 0f && gapN < 5f) transform.position += new Vector3(Mathf.Sign(DxToTarget) * gapN, 0f, 0f);
+            ResolveHit();
+            if (state != UnitState.Active) return;
+            if (pendingStagger && !MultiHitCommitted) { ForceStagger(); return; }
         }
 
         // Lunge
@@ -583,13 +773,23 @@ public class EnemyUnit : EnemyBase
 
     private bool activeInit;
     private float activeDur;
+    private float firstHitAt;
+    private int extraHitsDone;
+    private bool openerUsed;
     private bool lungeStrike;
 
     private float SafeDt() { return Mathf.Max(0.0001f, EnemyTime.DeltaTime); }
 
+    private float leanHitRealTime;
+    private bool lastHitParried;
+
     private void ResolveHit()
     {
         EnemyAttackCoordinator.ReleaseAttack(this);
+        leanHitRealTime = Time.unscaledTime;
+        // Çok vuruşlu seride önceki vuruş parry'lendiyse parry ödülünün dokunulmazlığı sıradaki vuruşu yutmasın: her vuruş ayrı parry ister.
+        bool chainHit = current != null && current.hits > 1 && extraHitsDone > 0 && lastHitParried;
+        lastHitParried = false;
         if (telegraph != null) telegraph.StopWarning();
 
         PlayerController player = target.GetComponent<PlayerController>();
@@ -598,7 +798,7 @@ public class EnemyUnit : EnemyBase
         bool unblockable = current.unblockable;
 
         // Kaçış
-        if (player.isInvincible)
+        if (player.isInvincible && !(chainHit && !player.isDashing))
         {
             CombatEvents.RaiseDodge(this, unblockable);
             return;
@@ -617,7 +817,7 @@ public class EnemyUnit : EnemyBase
 
         Vector2 dir = new Vector2(Mathf.Sign(dx == 0f ? facing : dx), 0f);
 
-        ResolveContact(dir, unblockable, current, false, transform.position);
+        lastHitParried = ResolveContact(dir, unblockable, current, false, transform.position) == 1;
     }
 
     // Ortak temas çözümü (yakın dövüş + mermi). Dönüş: 0 hasar | 1 parry | 2 blok.
@@ -629,6 +829,8 @@ public class EnemyUnit : EnemyBase
 
         if (defense != null && defense.CanParry())
         {
+            // Seri devam ediyorsa (sıradaki vuruş var) parry yavaş çekimi YOK: ikinci vuruş ve bükülme tam hızda gelsin.
+            if (current != null && current.hits > 1 && extraHitsDone < current.hits - 1) CombatImpactFeedback.SuppressNextParrySlow = true;
             defense.PlayParryFeedback();
             if (!projectile)
             {
@@ -687,6 +889,7 @@ public class EnemyUnit : EnemyBase
         PlayerDamageReceiver rec = target.GetComponent<PlayerDamageReceiver>();
         if (rec == null) { Debug.LogError("EnemyUnit: Player üzerinde PlayerDamageReceiver yok!"); return; }
 
+        rec.hitPercentOverrideOnce = atk.hitPercent;
         rec.TakeDamage(
             atk.damage,
             dir,
@@ -697,6 +900,7 @@ public class EnemyUnit : EnemyBase
             this,
             unblockable ? PlayerHitKind.Unblockable : PlayerHitKind.Normal,
             false);
+        rec.hitPercentOverrideOnce = 0f;
         EnemyAttackCoordinator.NotifyPlayerHit();
     }
 
@@ -759,6 +963,7 @@ public class EnemyUnit : EnemyBase
 
         state = s;
         stateTime = 0f;
+        if (s != UnitState.Windup) { teleportPending = false; if (bodyHidden) SetBodyVisible(true); }
 
         if (s == UnitState.Recover)
         {
@@ -782,10 +987,42 @@ public class EnemyUnit : EnemyBase
 
     private bool contactDefended;
 
+    // ---- Seri / nefes ----
+    private int burstCount, burstTarget;
+    private float breathTimer;
+    private bool breathHolding;
+
+    private void RollBurst()
+    {
+        burstCount = 0;
+        burstTarget = (def != null && def.burstMax > 0) ? Random.Range(Mathf.Max(1, def.burstMin), def.burstMax + 1) : 0;
+    }
+
+    private bool BurstOver() { return burstTarget > 0 && burstCount >= burstTarget; }
+
+    private void StartBreath()
+    {
+        if (def.breathMax <= 0f) { RollBurst(); return; }
+        breathTimer = Random.Range(Mathf.Min(def.breathMin, def.breathMax), def.breathMax);
+        breathHolding = current != null && current.breathHold;
+        RollBurst();
+    }
+
+    private void BreathMove(float dist, float dx)
+    {
+        planned = null;
+        decisionTimer = 0f;
+        if (breathHolding) { Stop(); return; }   // bu saldırıdan sonra geri çekilme yok, sabit bekle
+        if (rangedMax > 0f) { KeepRange(dist, dx); return; }
+        float want = Mathf.Max(def.breathDistance, CloseRange() + 1f);
+        if (dist < want) Move(-Mathf.Sign(dx == 0f ? facing : dx) * def.chaseSpeed * def.breathMoveSpeed);
+        else Stop();
+    }
+
     private void EndRecover()
     {
         if (!dead && current != null && !string.IsNullOrEmpty(current.followUp) && !contactDefended
-            && Random.value < current.followUpChance)
+            && !BurstOver() && Random.value < current.followUpChance)
         {
             AttackDef fu = null;
             for (int i = 0; i < def.attacks.Count; i++)
@@ -801,6 +1038,7 @@ public class EnemyUnit : EnemyBase
                 }
             }
         }
+        if (BurstOver()) StartBreath();
         SetState(UnitState.Chase);
     }
 
@@ -819,6 +1057,63 @@ public class EnemyUnit : EnemyBase
     }
 
     private float hurtImmuneUntil;
+    // Karar verilmemiş (erken) windup her zaman bölünebilir: hasar yeme kilidi (hitStunCooldown) bunu engellemez.
+    private bool EarlyWindup { get { return state == UnitState.Windup && !committedFired; } }
+
+    // ---- Tempo baskısı: isabet alan düşman bir süre saldırı kararı vermez (ritmi oyuncu kurar).
+    private int pressureStreak;
+    private float lastPressureTime = -99f;
+
+    private void ApplyPressure()
+    {
+        if (def == null || def.pressureDelay <= 0f) return;
+        if (Time.time - lastPressureTime > 1.3f) pressureStreak = 0;
+        lastPressureTime = Time.time;
+        pressureStreak++;
+        float d = Mathf.Min(def.pressureMax, def.pressureDelay + def.pressureStep * (pressureStreak - 1));
+        if (state != UnitState.Windup && state != UnitState.Active) attackCooldownTimer = Mathf.Max(attackCooldownTimer, d);
+        if (def.pressureGroupDelay > 0f) EnemyAttackCoordinator.DelayNextHit(def.pressureGroupDelay);
+    }
+
+    // ---- Çatışma: oyuncunun saldırısı düşmanın karar verilmiş saldırısına denk gelirse ikisi çarpışır.
+    private float clashImmuneUntil;
+
+    public override bool TryClash(Vector2 hitDirection)
+    {
+        if (IsDead || def == null || current == null || state == UnitState.Stagger) return false;
+        if (MultiHitCommitted) return false;
+        if (Time.time < clashImmuneUntil || current.unblockable) return false;
+        bool inActive = state == UnitState.Active && !hitDone;
+        float pw = current.windup <= 0f ? 1f : Mathf.Clamp01(stateTime / current.windup);
+        bool lateWindup = state == UnitState.Windup && pw >= def.clashWindupFraction;
+        if (!inActive && !lateWindup) return false;
+
+        clashImmuneUntil = Time.time + def.clashCooldown;
+        lungeCancelled = true;
+        contactDefended = true;
+        CancelAttack();
+        HardStop();
+        if (hitFeedback != null) hitFeedback.PlayParry(hitDirection);
+        PlayBalanceDamageFlash();
+        SquashPunch(new Vector2(1.2f, 0.84f), 0.12f, 1f);
+        bool broke = false;
+        if (balance != null)
+        {
+            int dmg = Mathf.Max(1, Mathf.RoundToInt(balance.MaxBalance * def.clashPostureFraction));
+            balance.AddBalanceDamage(dmg, false);
+            broke = balance.IsBroken;
+        }
+        if (state != UnitState.Stagger)
+        {
+            Knock(hitDirection, def.blockKnockback);
+            EnterHurt(def.clashStun);
+        }
+        CombatCallout.PopupAbove(this, "ÇATIŞMA!", new Color(1f, 0.95f, 0.6f), 0.9f);
+        EnemyAttackCoordinator.DelayNextHit(0.5f);
+        PlayParrySlowMotion(broke);
+        CombatEvents.RaiseParry(this, broke);
+        return true;
+    }
 
     // Düz vuruş sersemletmesi: ardından hitStunCooldown boyunca yeniden sersemletilemez (spam kilidi yok).
     private void EnterHurtGuarded(float duration)
@@ -827,8 +1122,13 @@ public class EnemyUnit : EnemyBase
         EnterHurt(duration);
     }
 
+    // Çok vuruşlu saldırı başlamışsa (ilk vuruş atıldı, sıradakiler bekliyor) sersemletme/iptal yok: her vuruş ayrı parry ister.
+    private bool MultiHitCommitted { get { return state == UnitState.Active && current != null && current.hits > 1 && hitDone && extraHitsDone < current.hits - 1; } }
+
     private void EnterHurt(float duration)
     {
+        if (MultiHitCommitted) return;
+        RollBurst();
         escapeTimer = 0f;
         CancelAttack();
         hurtDuration = duration;
@@ -875,10 +1175,19 @@ public class EnemyUnit : EnemyBase
     public override void ApplyBalanceHit(Vector2 hitDirection)
     {
         if (IsDead) return;
+        ApplyPressure();
+        if (BlocksPlainHits)
+        {
+            // Düşman vuruşu BLOKLADI: kıvılcım, hafif geri itme, tepki/sersemleme yok.
+            if (CombatVFXManager.Instance != null) CombatVFXManager.Instance.PlayBlock(ParryVFX.ContactPoint(transform), hitDirection);
+            SquashPunch(new Vector2(1.06f, 0.95f), 0.08f, 0.4f);
+            if (state != UnitState.Windup && state != UnitState.Active) Knock(hitDirection, def.blockKnockback);
+            return;
+        }
         SquashPunch(new Vector2(1.14f, 0.88f), 0.12f, AbsorbsHit() ? 0.4f : 1f);
         if (AbsorbsHit()) { PlayBalanceDamageFlash(); return; }
         PlayBalanceDamageFlash();
-        if (state != UnitState.Stagger && Time.time >= hurtImmuneUntil)
+        if (state != UnitState.Stagger && (Time.time >= hurtImmuneUntil || EarlyWindup))
         {
             Knock(hitDirection, def.balanceHitKnockback);
             EnterHurtGuarded(def.balanceHitStun);
@@ -893,6 +1202,7 @@ public class EnemyUnit : EnemyBase
     public override void ApplyAttackHit(Vector2 hitDirection, bool healthHit, int attackStep)
     {
         if (IsDead) return;
+        ApplyPressure();
         SquashPunch(healthHit ? new Vector2(1.26f, 0.78f) : new Vector2(1.14f, 0.88f), healthHit ? 0.16f : 0.12f, AbsorbsHit() ? 0.4f : 1f);
         if (state == UnitState.Stagger)
         {
@@ -906,7 +1216,7 @@ public class EnemyUnit : EnemyBase
         if (!healthHit) PlayBalanceDamageFlash();
         else PlayTintFlash(new Color(1f, 0.35f, 0.3f, 1f), 0.08f);
         // Denge kırıldıysa ForceStagger OnBalanceBroken yoluyla gelir; burada sadece sersemlet.
-        if (state != UnitState.Stagger && state != UnitState.Hurt && Time.time >= hurtImmuneUntil) EnterHurtGuarded(def.balanceHitStun);
+        if (state != UnitState.Stagger && state != UnitState.Hurt && (Time.time >= hurtImmuneUntil || EarlyWindup)) EnterHurtGuarded(def.balanceHitStun);
     }
 
     public override void ApplyBlockKnockback(Vector2 hitDirection)
@@ -916,9 +1226,15 @@ public class EnemyUnit : EnemyBase
         rb.linearVelocity = new Vector2(-d * def.blockKnockback * def.knockbackScale, rb.linearVelocity.y);
     }
 
+    private bool pendingStagger;
+
     public override void ForceStagger()
     {
         if (IsDead || state == UnitState.Stagger) return;
+        // Çok vuruşlu saldırı sürerken posture kırılsa bile son vuruş atılır; sersemleme ondan sonra.
+        if (MultiHitCommitted) { pendingStagger = true; return; }
+        pendingStagger = false;
+        RollBurst();
         CancelAttack();
         PlayTintFlash(new Color(1f, 0.85f, 0.35f, 1f), 0.15f);
         SetState(UnitState.Stagger);
@@ -927,6 +1243,7 @@ public class EnemyUnit : EnemyBase
     public override void InterruptWithHitStun(float duration)
     {
         if (IsDead || state == UnitState.Stagger) return;
+        if (MultiHitCommitted) return;
         EnterHurt(duration);
     }
 

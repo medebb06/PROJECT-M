@@ -63,6 +63,14 @@ public static class PlayerDamage
         if (health != null && health.IsDead)
             return result;
 
+        // ÇATIŞMA: oyuncu saldırısı düşmanın karar verilmiş saldırısına denk geldi => saldırı iptal, hasar yok.
+        if (info.source == DamageSource.Attack && enemy.TryClash(info.direction.sqrMagnitude > 0.0001f ? info.direction : Vector2.right))
+        {
+            result.hit = true;
+            result.onBalance = true;
+            return result;
+        }
+
         EnemyBalance balance = enemy.GetComponent<EnemyBalance>();
         EnemyHitFeedback feedback = enemy.GetComponent<EnemyHitFeedback>();
 
@@ -147,7 +155,7 @@ public static class PlayerDamage
                 }
             }
 
-            if (feedback != null)
+            if (feedback != null && !enemy.BlocksPlainHits)
             {
                 feedback.PlayBalanceHit(
                     info.hitPosition,

@@ -291,6 +291,13 @@ public class AttackState : ICombatState
             hasHit = true;
         }
 
+        // Vuruş sonrası yön tuşu toparlanmayı iptal eder (yapışkan hissi azalsın).
+        if (hasHit && n >= moveCancelPointNow() && Mathf.Abs(player.moveInput) > 0.3f && player.IsGrounded())
+        {
+            Exit();
+            return;
+        }
+
         // =====================================================
         // END
         // =====================================================
@@ -300,6 +307,14 @@ public class AttackState : ICombatState
             Exit();
         }
     }
+
+    private float moveCancelPointNow()
+    {
+        if (combatRef == null) combatRef = player.GetComponent<PlayerCombatController>();
+        return combatRef != null ? Mathf.Max(combatRef.moveCancelPoint, hitTime + 0.05f) : 1f;
+    }
+
+    private PlayerCombatController combatRef;
 
     public void Exit()
     {
@@ -451,6 +466,10 @@ public class AttackState : ICombatState
             // Stat'lar, kritik ve CombatEvents buradan geçer.
             // Denge kırık değilse denge, kırıksa can hasarı verir.
             // =================================================
+
+            bool wasStaggered = enemy.IsStaggered;
+            if (combat.counterHit && !wasStaggered)
+                CombatCallout.PopupAbove(enemy, "KARŞILIK!", new Color(0.55f, 0.9f, 1f), 0.9f);
 
             PlayerDamage.HitEnemy(
                 enemy,

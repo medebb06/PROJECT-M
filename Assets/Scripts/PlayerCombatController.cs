@@ -105,6 +105,19 @@ public class PlayerCombatController : MonoBehaviour
         "çarpar.")]
     [Min(1)] public int attackHealthDamage = 1;
 
+    [Header("Akış: mıknatıs / riposte / hareketle iptal")]
+    [Tooltip("Saldırı başlarken önündeki düşman bu mesafe içindeyse ona doğru kayar (havaya vurma bitsin).")]
+    public float magnetRange = 3.2f;
+    [Tooltip("Normal saldırıda mıknatısın en fazla kaydıracağı mesafe.")]
+    public float magnetMaxDistance = 2.6f;
+    [Tooltip("Düşmanın önünde durulacak mesafe (vuruş kutusunun içinde kalsın).")]
+    public float magnetStopGap = 1.1f;
+    [Tooltip("Parry sonrası ilk saldırı (riposte): bu mesafedeki düşmana atılır; sersemlemiş düşman öncelikli.")]
+    public float riposteRange = 9f;
+    public float riposteMaxDistance = 8f;
+    [Tooltip("Vuruştan sonra, saldırının bu oranından itibaren yön tuşu saldırının toparlanmasını iptal eder (yapışkanlık azalır).")]
+    [Range(0.3f, 1f)] public float moveCancelPoint = 0.72f;
+
     [Header("Attack Move (Feel)")]
     public float attackMoveDistance = 0.25f;
     public float attackMoveSpeed = 6f;
@@ -542,7 +555,7 @@ public class PlayerCombatController : MonoBehaviour
                 break;
         }
 
-        float lunge = 1f;
+        float lunge = ComputeMagnetLunge();
 
         attackStartTime = Time.time;
         attackDurationNow = attackDuration;
@@ -567,6 +580,32 @@ public class PlayerCombatController : MonoBehaviour
         );
 
         currentState.Enter();
+    }
+
+    // Önündeki düşmana doğru saldırı kayması. Riposte'ta (parry sonrası) uzun atılma, sersemlemiş düşman öncelikli.
+    private float ComputeMagnetLunge()
+    {
+        if (attackMoveDistance <= 0.001f) return 1f;
+        float dir = player.facingDir >= 0f ? 1f : -1f;
+        float range = counterHit ? riposteRange : magnetRange;
+        float maxDist = counterHit ? riposteMaxDistance : magnetMaxDistance;
+        EnemyBase best = null;
+        float bestScore = float.MaxValue;
+        float bestDx = 0f;
+        Vector3 pp = player.transform.position;
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase e = EnemyBase.All[i];
+            if (e == null || e.IsDead) continue;
+            float dx = (e.transform.position.x - pp.x) * dir;
+            if (dx < 0.2f || dx > range) continue;
+            if (Mathf.Abs(e.transform.position.y - pp.y) > 3f) continue;
+            float score = dx - (counterHit && e.IsStaggered ? 100f : 0f);
+            if (score < bestScore) { bestScore = score; best = e; bestDx = dx; }
+        }
+        if (best == null) return 1f;
+        float dist = Mathf.Clamp(bestDx - magnetStopGap, attackMoveDistance, Mathf.Max(attackMoveDistance, maxDist));
+        return dist / attackMoveDistance;
     }
 
     void OnAttackEnd()
