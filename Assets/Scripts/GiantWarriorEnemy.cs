@@ -22,9 +22,9 @@ public class GiantWarriorEnemy : MonoBehaviour
 {
     [Header("Can / denge")]
     [Tooltip("Boss'un cani. Normal dusman ~300. Duz vurus cana ~1 hasar verir; asil kayip denge KIRILINCA (%15 can) ve infazla gelir.")]
-    [Min(1)] public int maxHealth = 3000;
+    [Min(1)] public int maxHealth = 2400;
     [Tooltip("Denge (posture) cubugu. Parry denge doldurur; dolunca boss sersemler (infaz firsati).")]
-    [Min(1)] public int maxBalance = 240;
+    [Min(1)] public int maxBalance = 400;
     [Tooltip("Parry'nin boss dengesine hasari (oyun bunu x0.5 ve cana gore x0.6-1.6 ile olcekler: ~18 = denge ~13 parry, can azaldikca daha az).")]
     [Min(1)] public int parryBalanceDamage = 60;
     [Tooltip("Denge kirilinca boss'un sersemleme suresi (sn).")]
@@ -421,8 +421,11 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Range(0f, 5f)] public float chargeChancePerSecond = 2f;
     [Tooltip("Odaklanma (uyarı) süresi.")]
     [Min(0.2f)] public float chargeFocusTime = 1.1f;
-    [Min(0f)] public float chargeStartSpeed = 4f;
-    [Min(1f)] public float chargeAcceleration = 55f;
+    [Min(0f)] public float chargeStartSpeed = 1f;
+    [Tooltip("Başlangıç hızından en yüksek hıza çıkış süresi (sn).")]
+    [Min(0.1f)] public float chargeRampTime = 1.3f;
+    [Tooltip("İvme eğrisi: büyük = daha yavaş başlar, sonda çok sert hızlanır (1 = düz).")]
+    [Range(1f, 4f)] public float chargeRampPower = 2.4f;
     [Min(1f)] public float chargeMaxSpeed = 60f;
     [Tooltip("Koşarken oyuncuya çarpma yüksekliği (zeminden). Oyuncunun ayağı bunun üstündeyse (zıplamışsa) geçer.")]
     [Min(0.5f)] public float chargeHitHeight = 3.5f;
@@ -492,8 +495,8 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Min(10f)] public float waveHopTargetDistance = 34f;
     [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
     [Min(5f)] public float waveHopMaxDistance = 20f;
-    [Tooltip("Geri zıplama inişi kamera kenarına en az bu kadar uzak kalsın (ekrandan çıkmasın).")]
-    [Min(0f)] public float waveHopScreenMargin = 9f;
+    [Tooltip("Geri zıplama sonrası boss oyuncudan en fazla bu kadar uzakta olsun (kamera oyuncuyu izler: ekranda kalır).")]
+    [Min(8f)] public float waveHopMaxFromPlayer = 28f;
     [Min(0.2f)] public float waveHopTime = 0.6f;
     [Min(0f)] public float waveHopHeight = 8f;
     [Tooltip("Ziplamadan once cokme (sn).")]
@@ -529,17 +532,17 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Range(0.1f, 1f)] public float potionWindowBelowHealth = 0.75f;
     float potionWindowPending;
     float heavyHitUntil;
-    [Tooltip("Faz 1 olumcul darbe: max canin bu orani kadar can goturur (tamamini degil).")]
-    [Range(0.05f, 1f)] public float deadlyBlowPercent = 0.34f;
-    [Tooltip("Faz 2 olumcul darbe: max canin bu orani kadar can goturur; cani bundan azsa boss olur.")]
-    [Range(0.05f, 1f)] public float phase2DeadlyBlowPercent = 0.5f;
+    [Tooltip("Faz 1 olumcul darbe (posture kırıkken ilk vuruş): max canın bu oranı. 1 = Sekiro gibi o fazın can barını bitirir.")]
+    [Range(0.05f, 1f)] public float deadlyBlowPercent = 1f;
+    [Tooltip("Faz 2 olumcul darbe: max canın bu oranı; 1 = boss ölür.")]
+    [Range(0.05f, 1f)] public float phase2DeadlyBlowPercent = 1f;
     [Header("Can ile oldurme (kacip vurarak)")]
     [Tooltip("Posture cubugunun tamami dolacak kadar duz vurus, max canin bu orani kadar can goturur. 0 = duz vurus can gotürmez.")]
     [Range(0f, 1f)] public float hitChipHealthRatio = 0.5f;
     [Tooltip("true: eski davranis, can %50'nin altina inince de faz 2 baslar. false: faz 2 sadece can cubugu sifirlaninca / olumcul darbede.")]
     public bool phase2AtHalfHealth = false;
     [Tooltip("Faz 2'de posture (denge) cubugu bu kadar katina cikar; olumcul darbe icin daha zor kirilsin.")]
-    [Range(1f, 3f)] public float phase2PostureScale = 1.8f;
+    [Range(1f, 3f)] public float phase2PostureScale = 1.3f;
     [Tooltip("Olumcul darbeden sonra can cubugunun (kukreme sirasinda) tamamen dolma suresi (sn, gercek zaman).")]
     [Min(0.5f)] public float phase2RefillTime = 2.2f;
 
@@ -615,8 +618,10 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Tooltip("Dongudeki siradaki yetenek 'beklenir'; baska ozel yetenek secilmez. Beklenen yetenek bu kadar sn gerceklesmezse atlanir.")]
     [Min(2f)] public float patternPatience = 9f;
     // Faz 1 dongusu (Melee = duz vurus).
-    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Combo, Skill.Sweep, Skill.Charge, Skill.Wave, Skill.Melee, Skill.Combo, Skill.Leap };   // dalga 8'de 1, hücum 8'de 1
-    static readonly Skill[] Pattern2 = { Skill.Combo, Skill.Sweep, Skill.Charge, Skill.Wave, Skill.Combo, Skill.Melee, Skill.Leap, Skill.Charge };   // dalga 8'de 1, hücum 8'de 2
+    // Mantıklı sıra (ifadeler): YAKIN BASKI (vuruş/kombo/süpürme) -> MESAFE AÇ (geri zıpla + dalga) -> UZAKTAN (hücum) -> MESAFE KAPAT (zıplama) -> tekrar.
+    // Koşulu tutmayan yetenek atlanır (bkz. SkillValid): örn. oyuncu duvara sıkışıksa hücum yok.
+    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Charge, Skill.Leap, Skill.Melee, Skill.Combo };
+    static readonly Skill[] Pattern2 = { Skill.Combo, Skill.Sweep, Skill.Melee, Skill.Wave, Skill.Charge, Skill.Leap, Skill.Combo, Skill.Charge };
     bool phase2;
     int patIdx;
     float expectedSince;
@@ -627,6 +632,62 @@ public class GiantWarriorEnemy : MonoBehaviour
 
     // Dongu aciksa sadece sirasi gelen ozel yetenek secilebilir.
     bool SkillBlocked(Skill s) { return skillRotation && s != Expected; }
+
+    [Header("Mantıklı seçim (bağlam)")]
+    [Tooltip("Hücum için oyuncuyla en az bu mesafe (koşu payı).")]
+    [Min(0f)] public float chargeMinDistance = 12f;
+    [Tooltip("Hücum için oyuncunun ARKASINDA (koşu yönünde) duvara kadar en az bu kadar boşluk. Sıkışmış oyuncuya hücum yok.")]
+    [Min(0f)] public float chargeMinPlayerRoom = 16f;
+    [Tooltip("Zıplama saldırısı için oyuncuyla en az bu mesafe (yakındaysa vuruş/kombo yeter).")]
+    [Min(0f)] public float leapMinSelectDistance = 10f;
+
+    // Oyuncunun, bossun tersi yönünde (koşu yönünde) duvara/alan kenarına kadar boşluğu.
+    internal float PlayerRoomBehind()
+    {
+        if (enemy == null || enemy.target == null) return 999f;
+        Vector2 pp = enemy.target.position;
+        float dir = Mathf.Sign(pp.x - transform.position.x + 0.0001f);
+        float room = 999f;
+        if (arena != null) room = dir > 0f ? arena.maxX - pp.x : pp.x - arena.minX;
+        RaycastHit2D[] hs = Physics2D.RaycastAll(pp + new Vector2(0f, 1f), new Vector2(dir, 0f), Mathf.Min(room, 200f));
+        for (int i = 0; i < hs.Length; i++)
+        {
+            Collider2D c = hs[i].collider;
+            if (c == null || c.isTrigger || c.transform.IsChildOf(enemy.target) || c.transform.IsChildOf(transform)) continue;
+            if (c.attachedRigidbody != null && c.attachedRigidbody.bodyType != RigidbodyType2D.Static) continue;
+            room = Mathf.Min(room, hs[i].distance);
+        }
+        return room;
+    }
+
+    // Yetenek şu an MANTIKLI mı?
+    bool SkillValid(Skill s)
+    {
+        if (enemy == null || enemy.target == null) return true;
+        float dx = Mathf.Abs(enemy.target.position.x - transform.position.x);
+        switch (s)
+        {
+            case Skill.Charge:
+                return chargeEnabled && dx >= chargeMinDistance && PlayerRoomBehind() >= chargeMinPlayerRoom && lastSkill != Skill.Charge;
+            case Skill.Leap:
+                return leapEnabled && dx >= leapMinSelectDistance && lastSkill != Skill.Leap;
+            case Skill.Wave:
+                return waveEnabled && dx <= waveMaxDistance && lastSkill != Skill.Wave;
+            default:
+                return true;   // yakın vuruşlar: kovalayıp yapar
+        }
+    }
+
+    // Sırası gelen yetenek şu an anlamsızsa sıradaki ilk mantıklıya geç.
+    void EnsureValidExpected()
+    {
+        Skill[] p = CurPattern;
+        for (int k = 0; k < p.Length && !SkillValid(Expected); k++)
+        {
+            patIdx++;
+            expectedSince = Time.time;
+        }
+    }
 
     void AdvancePattern()
     {
@@ -855,6 +916,9 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Min(0f)] public float postureRecoveryDelay = 2f;
     [Tooltip("Toparlanma hizi (puan/sn). Oyunun normal degeri 20.")]
     [Min(0f)] public float postureRecoverySpeed = 10f;
+    [Tooltip("Canı azaldıkça posture daha yavaş toparlanır (Sekiro): can 0'a yakınken hız bu kata iner.")]
+    [Range(0.1f, 1f)] public float postureRecoveryLowHealthMult = 0.3f;
+    EnemyBalance balCache;
 
     [Header("Parry")]
     [Tooltip("Parry carpisma efektinin buyuklugu (1 = normal dusman).")]
@@ -1416,17 +1480,17 @@ public class GiantWarriorEnemy : MonoBehaviour
         if (skillRotation)
         {
             Skill ex = Expected;
-            if (ex == Skill.Leap && leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime)
+            if (ex == Skill.Leap && leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime && SkillValid(Skill.Leap))
             {
                 pendingLeap = true;
                 return;
             }
-            if (ex == Skill.Wave && waveEnabled && !waveActive && !pendingWave && Time.time >= nextWaveTime)
+            if (ex == Skill.Wave && waveEnabled && !waveActive && !pendingWave && Time.time >= nextWaveTime && SkillValid(Skill.Wave))
             {
                 pendingWave = true;
                 return;
             }
-            if (ex == Skill.Charge && chargeEnabled && !chargeActive && !pendingCharge && Time.time >= nextChargeTime)
+            if (ex == Skill.Charge && chargeEnabled && !chargeActive && !pendingCharge && Time.time >= nextChargeTime && SkillValid(Skill.Charge))
             {
                 pendingCharge = true;
                 return;
@@ -1800,6 +1864,11 @@ public class GiantWarriorEnemy : MonoBehaviour
         if (!enemy.enabled && !(health != null && health.IsDead))
             enemy.enabled = true;
 
+        // Can azaldıkça posture yavaş toparlanır: canı düşürmek, kırmayı kolaylaştırır.
+        if (balCache == null) balCache = GetComponent<EnemyBalance>();
+        if (balCache != null && health != null && health.MaxHealth > 0)
+            balCache.SetRecovery(postureRecoveryDelay, postureRecoverySpeed * Mathf.Lerp(postureRecoveryLowHealthMult, 1f, (float)health.CurrentHealth / health.MaxHealth));
+
         // Faz 2: can esigin altina inince (saldirmiyorken) ofkelen.
         if (!phase2 && !phase2Pending && health != null && !health.IsDead && health.CurrentHealth <= 1)
             StartCoroutine(DeadlyBlowPhase2(Mathf.Max(0.4f, heavyHitUntil - Time.unscaledTime)));   // can cubugu bitti -> faz 2
@@ -1808,6 +1877,10 @@ public class GiantWarriorEnemy : MonoBehaviour
             BeginPhase2();
 
         // Siradaki yetenek uzun suredir gerceklesemiyorsa (mesafe vb.) atla: dongu kilitlenmesin.
+        // Seçim anında (kovalarken) bağlam kontrolü: anlamsız yetenek atlanır.
+        if (skillRotation && enemy.CurrentState is EnemyChaseState && !waveActive && !leapActive && !chargeActive)
+            EnsureValidExpected();
+
         if (skillRotation && Time.time > expectedSince + patternPatience && enemy.CurrentState is EnemyChaseState)
             AdvancePattern();
 
@@ -1957,7 +2030,7 @@ public class GiantWarriorEnemy : MonoBehaviour
                 enemy.ChangeState(new GiantWarriorWaveState(this, enemy));   // yakin: once geri zipla
         }
 
-        if (chargeEnabled && !leapActive && !waveActive && !chargeActive && !SkillBlocked(Skill.Charge) && !InMercy && Time.time >= nextChargeTime
+        if (chargeEnabled && !leapActive && !waveActive && !chargeActive && !SkillBlocked(Skill.Charge) && !InMercy && Time.time >= nextChargeTime && SkillValid(Skill.Charge)
             && enemy.CurrentState is EnemyChaseState && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead
             && Random.value < chargeChancePerSecond * Time.deltaTime)
             enemy.ChangeState(new GiantWarriorChargeState(this, enemy));
@@ -2390,14 +2463,8 @@ public class GiantWarriorEnemy : MonoBehaviour
             }
             if (safe < want)
                 want = Mathf.Max(0f, safe - 3f);   // kenardan 3 birim pay
-            // EKRAN: inişte boss kameranın görüş alanında kalsın.
-            Camera cam = Camera.main;
-            if (cam != null && cam.orthographic)
-            {
-                float half = cam.orthographicSize * cam.aspect - o.waveHopScreenMargin;
-                float room = hopDir > 0f ? (cam.transform.position.x + half) - o.transform.position.x : o.transform.position.x - (cam.transform.position.x - half);
-                want = Mathf.Min(want, Mathf.Max(0f, room));
-            }
+            // GÖRÜNÜRLÜK: inişte oyuncudan en fazla waveHopMaxFromPlayer uzakta (ekranda kalsın).
+            want = Mathf.Min(want, Mathf.Max(0f, o.waveHopMaxFromPlayer - adx));
             if (want >= 6f)
             {
                 float gy2;
@@ -2660,7 +2727,8 @@ public class GiantWarriorEnemy : MonoBehaviour
 
             if (ph == Ph.Run)
             {
-                speed = Mathf.Min(o.chargeMaxSpeed, speed + o.chargeAcceleration * dt);
+                float k = Mathf.Clamp01(phT / o.chargeRampTime);
+                speed = Mathf.Lerp(o.chargeStartSpeed, o.chargeMaxSpeed, Mathf.Pow(k, o.chargeRampPower));   // yavaş başla, giderek sert hızlan
                 float x = o.transform.position.x;
                 float remain = (endX - x) * dir;
                 if (rb != null) rb.linearVelocity = new Vector2(dir * speed * EnemyTime.Scale, rb.linearVelocity.y);
