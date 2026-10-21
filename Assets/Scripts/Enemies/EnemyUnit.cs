@@ -135,6 +135,9 @@ public class EnemyUnit : EnemyBase
         rangedMax = 0f;
         for (int i = 0; i < def.attacks.Count; i++)
             if (def.attacks[i].projectileSpeed > 0f) rangedMax = Mathf.Max(rangedMax, def.attacks[i].maxRange);
+        // Yakın dövüş saldırısı da varsa (boss) okçu gibi mesafe koruma yok.
+        for (int i = 0; i < def.attacks.Count; i++)
+            if (!def.attacks[i].followUpOnly && def.attacks[i].projectileSpeed <= 0f) { rangedMax = 0f; break; }
     }
 
     public void ResetVitals()
@@ -723,7 +726,7 @@ public class EnemyUnit : EnemyBase
             extraHitsDone = 0;
             // Çoklu vuruş (tak-tak): her vuruş ayrı parry ister.
             if (!lungeStrike && current.projectileSpeed <= 0f && current.hits > 1)
-                activeDur = firstHitAt + (current.hits - 1) * current.hitInterval + 0.05f;
+                activeDur = firstHitAt + (current.hits - 1) * current.hitInterval + current.finalHitDelay + 0.05f;
 
             // Atılmasız saldırı: salım görünsün diye vuruş kısa süre SONRA gelir. Atılmalı saldırı: önce kayar, VARINCA vurur.
             hitDone = false;
@@ -741,7 +744,8 @@ public class EnemyUnit : EnemyBase
 
         // Sonraki vuruşlar (hits > 1): her biri ayrı çözülür.
         if (hitDone && !lungeStrike && current.projectileSpeed <= 0f && extraHitsDone < current.hits - 1
-            && stateTime >= firstHitAt + (extraHitsDone + 1) * current.hitInterval)
+            && stateTime >= firstHitAt + (extraHitsDone + 1) * current.hitInterval
+                + (extraHitsDone + 1 == current.hits - 1 ? current.finalHitDelay : 0f))
         {
             extraHitsDone++;
             SquashPunch(new Vector2(1.15f, 0.88f), 0.1f, 1f);
@@ -1034,8 +1038,9 @@ public class EnemyUnit : EnemyBase
 
     private void EndRecover()
     {
+        bool chained = current != null && current.followUpChance >= 1f;   // zorunlu zincir (dalga 1-2-3) tek hamle sayılır
         if (!dead && current != null && !string.IsNullOrEmpty(current.followUp) && !contactDefended
-            && !BurstOver() && Random.value < current.followUpChance)
+            && (chained || !BurstOver()) && Random.value < current.followUpChance)
         {
             AttackDef fu = null;
             for (int i = 0; i < def.attacks.Count; i++)
@@ -1044,9 +1049,10 @@ public class EnemyUnit : EnemyBase
             if (fu != null)
             {
                 float dist = Mathf.Abs(DxToTarget);
-                if (dist <= fu.maxRange + 1.5f && EnemyAttackCoordinator.TryRequestAttack(this, fu.windup))
+                if ((chained || dist <= fu.maxRange + 1.5f) && (EnemyAttackCoordinator.TryRequestAttack(this, fu.windup) || chained))
                 {
                     StartAttack(fu);
+                    if (chained) burstCount--;
                     return;
                 }
             }
@@ -1332,6 +1338,25 @@ public class EnemyUnit : EnemyBase
         if (IsDead || state == UnitState.Stagger) return;
         if (MultiHitCommitted || ArmorActive) return;
         EnterHurt(duration);
+    }
+
+    // Boss faz geçişi: saldırıyı kes, yeni def'e geç (can korunur), kısa kükreme duraklaması.
+    public void PhaseShift(EnemyDef nd, float pause)
+    {
+        if (dead || nd == null) return;
+        CancelAttack();
+        EnemyAttackCoordinator.ReleaseAttack(this);
+        if (telegraph != null) telegraph.StopWarning();
+        def = nd;
+        attackCd = new float[nd.attacks.Count];   // yeni def'te saldırı sayısı farklı olabilir
+        if (balance != null) balance.SetMaxBalance(nd.maxBalance);
+        RollBurst();   // yarıda kesilen seri yüzünden 'nefes' beklemesinde takılmasın
+        breathTimer = 0f;
+        HardStop();
+        SetState(UnitState.Idle);
+        attackCooldownTimer = Mathf.Max(0f, pause);
+        PlayTintFlash(new Color(1f, 0.25f, 0.2f), pause * 0.6f);
+        SquashPunch(new Vector2(1.3f, 0.75f), 0.25f, 1f);
     }
 
     public override void StartAttackRecovery()

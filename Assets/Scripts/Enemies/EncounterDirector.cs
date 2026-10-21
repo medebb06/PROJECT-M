@@ -153,6 +153,7 @@ public class EncounterDirector : MonoBehaviour
 
     private void OnGUI()
     {
+        if (encounters.Count == 0) return;   // serbest test: kendi koyduğun düşmanlar
         GUIStyle st = new GUIStyle(GUI.skin.label);
         st.fontSize = 18;
         st.alignment = TextAnchor.UpperCenter;

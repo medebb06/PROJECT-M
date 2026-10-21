@@ -715,11 +715,11 @@ public class EnemyAttackState : IEnemyState
                     float pushDur = 0.35f;
 
                     // Hizli seri (4+ vurus) SON vurusu: block / parry / hasar fark etmez oyuncuyu
-                    // yavasca, uzun kaydirir ("cok guclu darbe" hissi). Boss1 kendi itmesini yapar.
+                    // yavasca, uzun kaydirir ("cok guclu darbe" hissi). GiantWarrior kendi itmesini yapar.
                     bool finalOfSeries =
                         move != null && move.hits != null && move.hits.Count >= 4 &&
                         stepIndex == move.hits.Count - 1 &&
-                        enemy.GetComponent<Boss1Enemy>() == null;
+                        enemy.GetComponent<GiantWarriorEnemy>() == null;
 
                     if (finalOfSeries && !enemyStaggered)
                     {

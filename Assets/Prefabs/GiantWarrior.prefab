@@ -454,7 +454,7 @@ GameObject:
   - component: {fileID: 5440770065246651661}
   - component: {fileID: 4880328015783240516}
   m_Layer: 10
-  m_Name: Boss1
+  m_Name: GiantWarrior
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

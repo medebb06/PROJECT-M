@@ -2,7 +2,7 @@ using UnityEngine;
 
 // BOSS ARENASI: boss uyanip dovus basladiginda alanin iki ucunda KAPILAR (duvarlar) yukselir.
 // Dovus boyunca ne oyuncu ne boss alandan cikabilir; dalgalar da alan disina gitmez.
-// Boss olunce (ya da oyuncu olunce) kapilar iner. Boss1Enemy calisirken kendisi olusturur;
+// Boss olunce (ya da oyuncu olunce) kapilar iner. GiantWarriorEnemy calisirken kendisi olusturur;
 // sahnede elle kurulum GEREKMEZ.
 public class BossArena : MonoBehaviour
 {
@@ -12,7 +12,7 @@ public class BossArena : MonoBehaviour
 
     public bool Closed { get; private set; }
 
-    Boss1Enemy boss;
+    GiantWarriorEnemy boss;
     Health bossHealth;
     PlayerController player;
     Rigidbody2D bossRb;
@@ -26,7 +26,7 @@ public class BossArena : MonoBehaviour
 
     static Sprite white;
 
-    public void Init(Boss1Enemy b, float min, float max, float startY)
+    public void Init(GiantWarriorEnemy b, float min, float max, float startY)
     {
         boss = b;
         minX = min;

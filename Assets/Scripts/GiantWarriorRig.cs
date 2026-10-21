@@ -13,12 +13,12 @@ using UnityEngine.Rendering;
 /// Yuruyus: Rigidbody2D hizindan surulur (hiz yoksa yurumez). 2 bacak sirayla adim atar, sol kol/el (legBack + legBack_knee) bastona gibi yere dayanip karsi fazda sallanir,
 /// ayaklar yere SABIT basar (IK), her adimda govde coker + kamera sarsilir.
 ///
-/// Gercek dusman: 'makeEnemy' aciksa Boss1Enemy otomatik eklenir (EnemyController, Health, EnemyBalance...).
-/// Resources/Boss1/boss1_rig.json + katman PNG'lerini okur.
+/// Gercek dusman: 'makeEnemy' aciksa GiantWarriorEnemy otomatik eklenir (EnemyController, Health, EnemyBalance...).
+/// Resources/GiantWarrior/giantwarrior_rig.json + katman PNG'lerini okur.
 /// </summary>
 [DefaultExecutionOrder(-50)]
 [DisallowMultipleComponent]
-public class Boss1Rig : MonoBehaviour
+public class GiantWarriorRig : MonoBehaviour
 {
     [Serializable] class BoneDef { public string name; public string parent; public float px; public float py; }
     [Serializable] class LayerDef { public string name; public string file; public float x, y, w, h; public int order; public string bone; }
@@ -27,7 +27,7 @@ public class Boss1Rig : MonoBehaviour
     [Header("Gorunum")]
     [Tooltip("1 = PSD boyutu. Boss'u buyutup kucultur.")]
     public float scale = 1f;
-    [Tooltip("Sadece Boss1Enemy YOKKEN kullanilir: isaretliyse saga bakar. (Dusman olarak oynarken yon oyuncuya gore otomatik.)")]
+    [Tooltip("Sadece GiantWarriorEnemy YOKKEN kullanilir: isaretliyse saga bakar. (Dusman olarak oynarken yon oyuncuya gore otomatik.)")]
     public bool flipX = false;
     public Color tint = Color.white;
     public Material material;
@@ -35,7 +35,7 @@ public class Boss1Rig : MonoBehaviour
     public int sortingOrder = 4;
 
     [Header("Gercek dusman")]
-    [Tooltip("Acik: oyun basinca Boss1Enemy otomatik eklenir -> boss oyuncuyu kovalar, vurur, parry edilir, hasar alir. " +
+    [Tooltip("Acik: oyun basinca GiantWarriorEnemy otomatik eklenir -> boss oyuncuyu kovalar, vurur, parry edilir, hasar alir. " +
              "Kapali: eski 'sadece animasyon' hali.")]
     public bool makeEnemy = true;
 
@@ -217,7 +217,7 @@ public class Boss1Rig : MonoBehaviour
     public float ContactTime { get { return windupTime + tensionTime + strikeTime; } }
     public float AttackDuration { get { return windupTime + tensionTime + strikeTime + holdTime + recoverTime; } }
 
-    // ---- Disaridan (Boss1Enemy) verilen durum ----
+    // ---- Disaridan (GiantWarriorEnemy) verilen durum ----
     /// <summary>Yon kaynagi: SpriteRenderer.flipX == true -> SOLA bakar (rig dogal olarak sola bakar). Bos = 'flipX' alani.</summary>
     [NonSerialized] public SpriteRenderer facingSource;
     /// <summary>false ise yurume animasyonu oynamaz (saldiri/sersem/vurulma sirasinda).</summary>
@@ -248,7 +248,7 @@ public class Boss1Rig : MonoBehaviour
     float openGlowW;
     static Sprite openGlowSprite;
 
-    // Kilic bicaginin dis cizgisi (sword kemigi uzayi, birim). boss1_sword.png'den turetildi.
+    // Kilic bicaginin dis cizgisi (sword kemigi uzayi, birim). giantwarrior_sword.png'den turetildi.
     static readonly Vector2[] BladeHull =
     {
         new Vector2(0.95f, 1.26f), new Vector2(5.89f, 4.86f), new Vector2(6.52f, 4.95f),
@@ -306,7 +306,7 @@ public class Boss1Rig : MonoBehaviour
     [Range(0f, 0.3f)] public float flashTime = 0.09f;
     float sq, sqVel, flashTimer;
 
-    [Header("Ziplama saldirisi (Boss1Enemy yonetir)")]
+    [Header("Ziplama saldirisi (GiantWarriorEnemy yonetir)")]
     [Tooltip("Cokme/uzama (SetBaseSquash) siddeti: 1 = govde %35 ezilir/uzar.")]
     [Range(0f, 0.7f)] public float leapSquashAmount = 0.12f;
     float sqBase, sqBaseTarget, sqBaseSpeed = 5f;
@@ -324,8 +324,8 @@ public class Boss1Rig : MonoBehaviour
     void Awake()
     {
         EnsureBuilt();
-        if (makeEnemy && Application.isPlaying && GetComponent<Boss1Enemy>() == null)
-            gameObject.AddComponent<Boss1Enemy>();
+        if (makeEnemy && Application.isPlaying && GetComponent<GiantWarriorEnemy>() == null)
+            gameObject.AddComponent<GiantWarriorEnemy>();
     }
 
     /// <summary>Gorseli (kemikler + katmanlar) hazirlar. Birden fazla cagrilabilir.</summary>
@@ -350,8 +350,8 @@ public class Boss1Rig : MonoBehaviour
             else DestroyImmediate(old.gameObject);
         }
 
-        TextAsset json = Resources.Load<TextAsset>("Boss1/boss1_rig");
-        if (json == null) { Debug.LogError("Boss1Rig: Resources/Boss1/boss1_rig.json bulunamadi."); return; }
+        TextAsset json = Resources.Load<TextAsset>("GiantWarrior/giantwarrior_rig");
+        if (json == null) { Debug.LogError("GiantWarriorRig: Resources/GiantWarrior/giantwarrior_rig.json bulunamadi."); return; }
         RigDef rig = JsonUtility.FromJson<RigDef>(json.text);
 
         GameObject v = new GameObject("~boss");
@@ -385,8 +385,8 @@ public class Boss1Rig : MonoBehaviour
         swordSrs.Clear();
         foreach (LayerDef l in rig.layers)
         {
-            Sprite sp = Resources.Load<Sprite>("Boss1/" + l.file);
-            if (sp == null) { Debug.LogWarning("Boss1Rig: sprite yok: " + l.file); continue; }
+            Sprite sp = Resources.Load<Sprite>("GiantWarrior/" + l.file);
+            if (sp == null) { Debug.LogWarning("GiantWarriorRig: sprite yok: " + l.file); continue; }
             GameObject go = new GameObject(l.name);
             Transform bone = bones[l.bone];
             go.transform.SetParent(bone, false);
@@ -411,7 +411,7 @@ public class Boss1Rig : MonoBehaviour
     {
         Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
         if (sh == null) sh = Shader.Find("Sprites/Default");
-        return new Material(sh) { name = "Boss1_Runtime" };
+        return new Material(sh) { name = "GiantWarrior_Runtime" };
     }
 
     void Cache()
@@ -539,7 +539,7 @@ public class Boss1Rig : MonoBehaviour
         }
         if (swordSrs.Count == 0 || swordSrs[0] == null || swordSrs[0].sprite == null)
         {
-            Debug.LogWarning("Boss1Rig: kilic sprite'i bulunamadi, kirmizi kaplama yapilamadi (duz boyama kullanilacak).");
+            Debug.LogWarning("GiantWarriorRig: kilic sprite'i bulunamadi, kirmizi kaplama yapilamadi (duz boyama kullanilacak).");
             return;
         }
         metalBuilt = true;
@@ -601,11 +601,11 @@ public class Boss1Rig : MonoBehaviour
         Vector2 hpv = new Vector2((sp.pivot.x + pad) / hw, (sp.pivot.y + pad) / hh);
         Sprite halo = Sprite.Create(ht, new Rect(0, 0, hw, hh), hpv, sp.pixelsPerUnit, 0, SpriteMeshType.FullRect);
 
-        Shader add = Shader.Find("ProjectM/Boss1SpriteAdditive");
+        Shader add = Shader.Find("ProjectM/GiantWarriorSpriteAdditive");
         Material addMat = null;
         if (add != null)
         {
-            addMat = new Material(add) { name = "Boss1_SwordGlow" };
+            addMat = new Material(add) { name = "GiantWarrior_SwordGlow" };
             addMat.SetFloat("_Intensity", 7f);   // Impact materyalinin HDR parlakligina (~8.6) yakin: bloom verir
         }
 
@@ -613,7 +613,7 @@ public class Boss1Rig : MonoBehaviour
         metalSr = MakeOverlay("SwordMetalRed", baseSr, core, baseSr.sortingOrder + 2, 1f, null);
         coreSr = MakeOverlay("SwordCoreGlow", baseSr, core, baseSr.sortingOrder + 3, 1f, addMat);
         haloSr.enabled = false; metalSr.enabled = false; coreSr.enabled = false;
-        Debug.Log("[Boss1] kilic kirmizi kaplamasi hazir: sprite=" + sp.name + " " + rw + "x" + rh + " ppu=" + sp.pixelsPerUnit + " additiveShader=" + (add != null));
+        Debug.Log("[GiantWarrior] kilic kirmizi kaplamasi hazir: sprite=" + sp.name + " " + rw + "x" + rh + " ppu=" + sp.pixelsPerUnit + " additiveShader=" + (add != null));
     }
 
     static float[] BoxBlur(float[] a, int w, int h, int rad, bool horiz)
@@ -967,7 +967,7 @@ public class Boss1Rig : MonoBehaviour
         openGlowSr = go.AddComponent<SpriteRenderer>();
         openGlowSr.sprite = openGlowSprite;
         Shader sh = Shader.Find("Sprites/Default");
-        if (sh != null) openGlowSr.sharedMaterial = new Material(sh) { name = "Boss1_OpenGlow" };
+        if (sh != null) openGlowSr.sharedMaterial = new Material(sh) { name = "GiantWarrior_OpenGlow" };
         openGlowSr.enabled = false;
     }
 

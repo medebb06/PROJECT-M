@@ -429,7 +429,7 @@ public class EnemyController : EnemyBase
         (currentState is EnemyAttackState attack &&
         attack.IsCommitted);
 
-    // Ozel saldiri state'leri (Boss1 ziplama) icin: true iken vurulmak savurmaz / state'i bozmaz.
+    // Ozel saldiri state'leri (GiantWarrior ziplama) icin: true iken vurulmak savurmaz / state'i bozmaz.
     public bool superArmorOverride;
 
     // Hedef (oyuncu) öldü mü?
@@ -457,7 +457,7 @@ public class EnemyController : EnemyBase
     public IEnemyState CurrentState =>
         currentState;
 
-    // Saldırı animasyonu istendiğinde (Animator olmasa da) haber verir. Kodla çizilen boss'lar (Boss1) buna bağlanır.
+    // Saldırı animasyonu istendiğinde (Animator olmasa da) haber verir. Kodla çizilen boss'lar (GiantWarrior) buna bağlanır.
     public event System.Action AttackAnimationRequested;
 
     // Opsiyonel: false dondukce vurus hasari cozulmez (animasyonu kendi cizen boss'lar icin).

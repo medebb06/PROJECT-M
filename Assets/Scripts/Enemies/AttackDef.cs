@@ -63,6 +63,8 @@ public class AttackDef
     [Min(1)] public int hits = 1;
     [Tooltip("Çoklu vuruşta vuruşlar arası süre (sn).")]
     public float hitInterval = 0.28f;
+    [Tooltip("Çoklu vuruşta SON vuruşun ekstra gecikmesi (aldatmaca: tak-tak-tak ... TAK).")]
+    public float finalHitDelay = 0f;
     [Tooltip("0 = oyuncunun standart sabit vuruş yüzdesi. >0 = bu saldırı oyuncunun MAX canının bu oranını götürür (0.4 = %40, ağır vuruş).")]
     [Range(0f, 1f)] public float hitPercent = 0f;
     [Tooltip("Bu saldırıdan sonraki nefeste düşman GERİ ÇEKİLMEZ, yerinde sabit bekler.")]

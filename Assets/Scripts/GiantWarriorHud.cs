@@ -1,11 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// Boss1 arayuzu: oyuncunun sol alttaki sade cizgisiyle (MinimalHealthBar) ayni stil, ekranin UST ORTASINDA.
+/// GiantWarrior arayuzu: oyuncunun sol alttaki sade cizgisiyle (MinimalHealthBar) ayni stil, ekranin UST ORTASINDA.
 /// Ust cizgi = can (dusunce soluk iz kalir), altindaki ince cizgi = posture (denge). Denge kirilinca posture cizgisi tam parlar.
-/// Boss1Enemy runtime'da olusturur; sahne/prefab kurulumu gerekmez.
+/// GiantWarriorEnemy runtime'da olusturur; sahne/prefab kurulumu gerekmez.
 /// </summary>
-public class Boss1Hud : MonoBehaviour
+public class GiantWarriorHud : MonoBehaviour
 {
     [Header("Yerlesim (1080p'ye gore piksel; ekranla olceklenir)")]
     public float width = 640f;
@@ -49,10 +49,10 @@ public class Boss1Hud : MonoBehaviour
     float post;
     float alpha = 1f;
 
-    public static Boss1Hud Create(Health h, EnemyBalance b)
+    public static GiantWarriorHud Create(Health h, EnemyBalance b)
     {
-        GameObject go = new GameObject("Boss1HUD");
-        Boss1Hud hud = go.AddComponent<Boss1Hud>();
+        GameObject go = new GameObject("GiantWarriorHUD");
+        GiantWarriorHud hud = go.AddComponent<GiantWarriorHud>();
         hud.health = h;
         hud.balance = b;
         return hud;

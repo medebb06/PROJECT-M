@@ -270,8 +270,8 @@ public class EnemyOverheadBars : MonoBehaviour
             if (enemy == null || enemy.IsDead || !enemy.isActiveAndEnabled)
                 continue;
 
-            // Boss1'in kendi (ekranin ustundeki) cubugu var: bas ustu cubuk cizilmez.
-            if (enemy.GetComponent<Boss1Enemy>() != null)
+            // GiantWarrior'in kendi (ekranin ustundeki) cubugu var: bas ustu cubuk cizilmez.
+            if (enemy.GetComponent<GiantWarriorEnemy>() != null)
                 continue;
 
             if (!entries.TryGetValue(enemy, out Entry e))

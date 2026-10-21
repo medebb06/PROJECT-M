@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Boss1'i GERCEK bir dusmana cevirir: oyuncuyu kovalar, kilicla vurur, oyuncu parry/block yapabilir,
+/// GiantWarrior'i GERCEK bir dusmana cevirir: oyuncuyu kovalar, kilicla vurur, oyuncu parry/block yapabilir,
 /// oyuncu boss'a hasar verir (denge -> sersemleme -> can).
 ///
 /// Mevcut dusman sistemini AYNEN kullanir (yeni bir savas sistemi yazmaz):
 ///   EnemyController (durumlar: Idle/Chase/Attack/Hit/Stagger/Execute) + Health + EnemyBalance.
-/// Bu script sadece onlari kurar, boss'a gore ayarlar ve Boss1Rig animasyonuna baglar:
-///   - Saldiri uyarisi = Boss1Rig'in gerilme animasyonu; hasar anı = kilicin yere vurdugu an.
-///   - Parry / vurus / sersemleme / olum -> Boss1Rig tepkileri.
+/// Bu script sadece onlari kurar, boss'a gore ayarlar ve GiantWarriorRig animasyonuna baglar:
+///   - Saldiri uyarisi = GiantWarriorRig'in gerilme animasyonu; hasar anı = kilicin yere vurdugu an.
+///   - Parry / vurus / sersemleme / olum -> GiantWarriorRig tepkileri.
 ///
-/// KURULUM: Gerekmez. Boss1Rig.makeEnemy acikken (varsayilan) oyun baslayinca otomatik eklenir.
-/// Degerleri Inspector'dan ayarlamak istersen Boss1 objesine bu script'i elle ekle (Add Component > Boss1Enemy).
+/// KURULUM: Gerekmez. GiantWarriorRig.makeEnemy acikken (varsayilan) oyun baslayinca otomatik eklenir.
+/// Degerleri Inspector'dan ayarlamak istersen GiantWarrior objesine bu script'i elle ekle (Add Component > GiantWarriorEnemy).
 /// </summary>
 [DefaultExecutionOrder(-80)]
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Boss1Rig))]
-public class Boss1Enemy : MonoBehaviour
+[RequireComponent(typeof(GiantWarriorRig))]
+public class GiantWarriorEnemy : MonoBehaviour
 {
     [Header("Can / denge")]
     [Tooltip("Boss'un cani. Normal dusman ~300. Duz vurus cana ~1 hasar verir; asil kayip denge KIRILINCA (%15 can) ve infazla gelir.")]
@@ -80,18 +80,18 @@ public class Boss1Enemy : MonoBehaviour
     [Min(0f)] public float hurtboxExtraUp = 2f;
 
     EnemyController enemy;
-    Boss1Rig rig;
+    GiantWarriorRig rig;
     Health health;
     Rigidbody2D rb;
     SpriteRenderer facingProxy;
     float startY;
-    Boss1Hud hud;
+    GiantWarriorHud hud;
 
     void Awake()
     {
         nextLeapTime = Time.time + leapFirstDelay;
         nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
-        rig = GetComponent<Boss1Rig>();
+        rig = GetComponent<GiantWarriorRig>();
         rig.EnsureBuilt();                       // katmanlar var olsun (Health/EnemyController sprite'lari toplar)
 
         // 1) Antrenman kuklasi: oyuncunun vurusunu yutar, asla olmez. Boss artik gercek -> kaldir.
@@ -130,7 +130,7 @@ public class Boss1Enemy : MonoBehaviour
         health.MinHealth = 1;   // faz 1: can 0'a inmez, cubuk bitince faz 2 baslar   // 0 = kirilma hasar vermez (Sekiro gibi: sadece acar)
 
         // 4) Yon gostergesi: EnemyController yonu bir SpriteRenderer.flipX'ten okur/yazar.
-        //    Gorunmez bir yardimci SpriteRenderer kullaniyoruz; Boss1Rig bunu okuyup aynalar.
+        //    Gorunmez bir yardimci SpriteRenderer kullaniyoruz; GiantWarriorRig bunu okuyup aynalar.
         GameObject proxyGo = new GameObject("FacingProxy");
         proxyGo.transform.SetParent(transform, false);
         facingProxy = proxyGo.AddComponent<SpriteRenderer>();
@@ -150,7 +150,7 @@ public class Boss1Enemy : MonoBehaviour
 
         EnemyHitFeedback fb = GetComponent<EnemyHitFeedback>();
         parryFallback = fb == null || fb.ParrySound == null;
-        Debug.Log("[Boss1] Ses kopyasi: kaynak=" + (GetSoundTemplate() != null ? GetSoundTemplate().name : "YOK") +
+        Debug.Log("[GiantWarrior] Ses kopyasi: kaynak=" + (GetSoundTemplate() != null ? GetSoundTemplate().name : "YOK") +
                   " hitFeedback=" + (fb != null) + " parrySound=" + (fb != null && fb.ParrySound != null) +
                   " attackAudio=" + (GetComponent<EnemyAttackAudio>() != null) +
                   " vfxManager=" + (CombatVFXManager.Instance != null));
@@ -164,23 +164,23 @@ public class Boss1Enemy : MonoBehaviour
         enemy.AttackHitGate = rig.ReadyToHit;
 
         if (roarClips == null || roarClips.Length == 0)
-            roarClips = Resources.LoadAll<AudioClip>("Boss1/Sfx");
+            roarClips = Resources.LoadAll<AudioClip>("GiantWarrior/Sfx");
         rig.AttackHit += OnStrikeLanded;    // kilic inmeden hasar yok
 
         if (showHud)
-            hud = Boss1Hud.Create(health, balance);
+            hud = GiantWarriorHud.Create(health, balance);
     }
 
     // ---------------------------------------------------------------------
     // SES / EFEKT: parry, blok, vurus, uyari sesleri normal dusmandaki bilesenlerde durur.
-    // Boss1 kodla kuruldugu icin bunlari bir ornek dusmandan (Duelist prefab) kopyalariz.
+    // GiantWarrior kodla kuruldugu icin bunlari bir ornek dusmandan (Duelist prefab) kopyalariz.
     // ---------------------------------------------------------------------
     [Header("Ses")]
     [Tooltip("Ses/efekt bilesenleri (EnemyHitFeedback, EnemyAttackAudio) buradan kopyalanir. Bos ise Resources/Endless/Duelist.")]
     public GameObject soundSource;
 
     [Header("Kukreme sesleri")]
-    [Tooltip("Bos ise Resources/Boss1/Sfx altindaki tum klipler kullanilir. Her darbede rastgele biri calinir.")]
+    [Tooltip("Bos ise Resources/GiantWarrior/Sfx altindaki tum klipler kullanilir. Her darbede rastgele biri calinir.")]
     public AudioClip[] roarClips;
     [Range(0f, 1f)] public float roarVolume = 0.5f;
     [Range(0f, 0.15f)] public float roarPitchVariance = 0.04f;
@@ -201,7 +201,7 @@ public class Boss1Enemy : MonoBehaviour
             float dirX = enemy.FacingDirection >= 0f ? 1f : -1f;
             if (sht == MoveHitType.Sweep && sst.MoveName == SweepName)
             {
-                Boss1Shock.Spawn(transform.position + new Vector3(dirX * 4f, 0f, 0f), dirX, attackReach * sweepReachMultiplier, sweepColor);
+                GiantWarriorShock.Spawn(transform.position + new Vector3(dirX * 4f, 0f, 0f), dirX, attackReach * sweepReachMultiplier, sweepColor);
                 rig.SetSwordTint(sweepColor, 0f, 3f);
             }
             else if (sst.MoveName == FakeName)
@@ -247,7 +247,7 @@ public class Boss1Enemy : MonoBehaviour
         lastRoar = i;
 
         // Bagimsiz 2D kaynak: boss yok edilse bile ses sonuna kadar calar.
-        GameObject go = new GameObject("Boss1Roar");
+        GameObject go = new GameObject("GiantWarriorRoar");
         AudioSource src = go.AddComponent<AudioSource>();
         src.spatialBlend = 0f;
         src.playOnAwake = false;
@@ -543,7 +543,7 @@ public class Boss1Enemy : MonoBehaviour
     void PlayOpenWarn()
     {
         if (openWarnSound == null) return;
-        GameObject go = new GameObject("Boss1_OpenWarnSfx");
+        GameObject go = new GameObject("GiantWarrior_OpenWarnSfx");
         AudioSource a = go.AddComponent<AudioSource>();
         a.clip = openWarnSound;
         a.volume = openWarnVolume;
@@ -611,8 +611,8 @@ public class Boss1Enemy : MonoBehaviour
 
     void TrackSkill(IEnemyState st)
     {
-        if (st is Boss1WaveState) NoteSkill(Skill.Wave);
-        else if (st is Boss1LeapState) NoteSkill(Skill.Leap);
+        if (st is GiantWarriorWaveState) NoteSkill(Skill.Wave);
+        else if (st is GiantWarriorLeapState) NoteSkill(Skill.Leap);
         else
         {
             EnemyAttackState a = st as EnemyAttackState;
@@ -660,8 +660,8 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Duz vurus sirasi geldiginde aldatmaca secilme sansi.")]
     [Range(0f, 1f)] public float fakeChance = 0.45f;
 
-    const string SweepName = "Boss1 Supurme";
-    const string FakeName = "Boss1 Aldatmaca";
+    const string SweepName = "GiantWarrior Supurme";
+    const string FakeName = "GiantWarrior Aldatmaca";
 
     [Header("Faz 2 (ofke)")]
     [Tooltip("Can bu oranin altina inince boss ofkelenir: daha hizli, 5 dalga, farkli dongu.")]
@@ -720,7 +720,7 @@ public class Boss1Enemy : MonoBehaviour
     [Range(0.5f, 2.5f)] public float comboLastDamage = 1.3f;
     [Tooltip("3. vurusu parry'lemenin boss dengesine carpani.")]
     [Range(1f, 4f)] public float comboFinalParryReward = 1.5f;
-    [Tooltip("Bos ise Resources/Boss1/Vfx/Boss1SwordImpact (Free Slash VFX > Impact kopyasi).")]
+    [Tooltip("Bos ise Resources/GiantWarrior/Vfx/GiantWarriorSwordImpact (Free Slash VFX > Impact kopyasi).")]
     public GameObject comboVfxPrefab;
     [Tooltip("Acik: kilica ek olarak Impact parcacik efekti (kivilcim) baglanir. Kapali: yalniz duz kirmizi bicak.")]
     public bool comboUseParticles = false;
@@ -740,7 +740,7 @@ public class Boss1Enemy : MonoBehaviour
     [Tooltip("Oyuncu bu kadar BLOK atinca posture'u kirilir (2 = iki blok). Parry yapmak zorunda.")]
     [Range(1, 6)] public int blocksToBreakPosture = 2;
 
-    const string ComboName = "Boss1 Uclu Kombo";
+    const string ComboName = "GiantWarrior Uclu Kombo";
     EnemyMoveset moveset;
     PlayerPosture playerPosture;
     GameObject comboVfx;
@@ -766,7 +766,7 @@ public class Boss1Enemy : MonoBehaviour
         if (!deathRoared && health != null && health.IsDead)
         {
             deathRoared = true;
-            if (deathSlowScale < 0.999f) Boss1SlowMo.Run(deathSlowScale, deathSlowHold, deathSlowRelease);
+            if (deathSlowScale < 0.999f) GiantWarriorSlowMo.Run(deathSlowScale, deathSlowHold, deathSlowRelease);
             seenRoared = true;
             PlayRoar();
             return;
@@ -882,7 +882,7 @@ public class Boss1Enemy : MonoBehaviour
         GameObject src = GetSoundTemplate();
         if (src == null)
         {
-            Debug.LogWarning("[Boss1] Ses kaynagi bulunamadi (Resources/Endless/Duelist yok). Sound Source alanina bir dusman prefab'i ver.");
+            Debug.LogWarning("[GiantWarrior] Ses kaynagi bulunamadi (Resources/Endless/Duelist yok). Sound Source alanina bir dusman prefab'i ver.");
             return;
         }
 
@@ -1257,20 +1257,20 @@ public class Boss1Enemy : MonoBehaviour
 
         if (comboUseParticles && comboVfx == null)
         {
-            GameObject prefab = comboVfxPrefab != null ? comboVfxPrefab : Resources.Load<GameObject>("Boss1/Vfx/Boss1SwordImpact");
+            GameObject prefab = comboVfxPrefab != null ? comboVfxPrefab : Resources.Load<GameObject>("GiantWarrior/Vfx/GiantWarriorSwordImpact");
             Transform sword = rig.SwordBone;
             if (prefab == null || sword == null)
             {
                 if (!comboVfxWarned)
                 {
                     comboVfxWarned = true;
-                    Debug.LogWarning("Boss1Enemy: kombo VFX'i yok (Resources/Boss1/Vfx/Boss1SwordImpact.prefab) ya da kilic kemigi bulunamadi.");
+                    Debug.LogWarning("GiantWarriorEnemy: kombo VFX'i yok (Resources/GiantWarrior/Vfx/GiantWarriorSwordImpact.prefab) ya da kilic kemigi bulunamadi.");
                 }
                 return;
             }
 
             comboVfx = Instantiate(prefab, sword);
-            comboVfx.name = "Boss1ComboVfx";
+            comboVfx.name = "GiantWarriorComboVfx";
             Transform t = comboVfx.transform;
             t.localPosition = rig.SwordBladeCenter;
             t.localRotation = Quaternion.identity;
@@ -1401,8 +1401,8 @@ public class Boss1Enemy : MonoBehaviour
         if (st != null && (st.MoveName == SweepName || st.MoveName == FakeName))
         {
             MoveHitType ht = st.CurrentHitType;
-            Boss1Rig.AttackStyle sty = Boss1Rig.AttackStyle.Fake;
-            if (ht == MoveHitType.Sweep) { rig.SetSwordTint(sweepColor, 1f, 0.9f); sty = Boss1Rig.AttackStyle.Sweep; }
+            GiantWarriorRig.AttackStyle sty = GiantWarriorRig.AttackStyle.Fake;
+            if (ht == MoveHitType.Sweep) { rig.SetSwordTint(sweepColor, 1f, 0.9f); sty = GiantWarriorRig.AttackStyle.Sweep; }
             rig.PlayAttack(Mathf.Max(0.3f, st.RemainingWindup), true, sty);
             return;
         }
@@ -1446,7 +1446,7 @@ public class Boss1Enemy : MonoBehaviour
             float env = Mathf.Exp(-t * 55f);
             d[i] = (Mathf.Sin(2f * Mathf.PI * 1250f * t) * 0.7f + Mathf.Sin(2f * Mathf.PI * 2500f * t) * 0.3f) * env;
         }
-        AudioClip c = AudioClip.Create("Boss1Cue", n, 1, rate, false);
+        AudioClip c = AudioClip.Create("GiantWarriorCue", n, 1, rate, false);
         c.SetData(d, 0);
         return c;
     }
@@ -1530,7 +1530,7 @@ public class Boss1Enemy : MonoBehaviour
         BuildComboMoveset();   // faz 2 uyari sureleri ile yeniden kur
         nextWaveTime = Time.time + 1f;
 
-        enemy.ChangeState(new Boss1RoarState(this, enemy));
+        enemy.ChangeState(new GiantWarriorRoarState(this, enemy));
     }
 
     AudioClip thudClip;
@@ -1553,7 +1553,7 @@ public class Boss1Enemy : MonoBehaviour
                 lp += (Random.value * 2f - 1f - lp) * 0.08f;
                 d[i] = (Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(85f, 42f, Mathf.Clamp01(t * 6f)) * t) * 0.85f + lp * 0.9f) * env;
             }
-            thudClip = AudioClip.Create("Boss1Thud", n, 1, rate, false);
+            thudClip = AudioClip.Create("GiantWarriorThud", n, 1, rate, false);
             thudClip.SetData(d, 0);
         }
         if (thudSrc == null)
@@ -1651,7 +1651,7 @@ public class Boss1Enemy : MonoBehaviour
 
         // EnemyHitFeedback.PlayParry bu olaydan hemen ONCE cagrildi; efekt olustuysa tekrar uretme.
         bool vfxMade = FindObjectsByType<ParryVFX>(FindObjectsSortMode.None).Length > 0;
-        Debug.Log("[Boss1] Parry olayi: sesYedegi=" + parryFallback + " efektVar=" + vfxMade +
+        Debug.Log("[GiantWarrior] Parry olayi: sesYedegi=" + parryFallback + " efektVar=" + vfxMade +
                   " vfxManager=" + (CombatVFXManager.Instance != null));
 
         if (parryFallback || !vfxMade)
@@ -1689,7 +1689,7 @@ public class Boss1Enemy : MonoBehaviour
                 fakeFlag = fake;
                 if (s == Skill.Wave) nextWaveTime = Time.time;
                 if (s == Skill.Leap) nextLeapTime = Time.time;
-                Debug.Log("[Boss1 TEST] siradaki yetenek: " + s + (fake ? " (aldatmaca)" : ""));
+                Debug.Log("[GiantWarrior TEST] siradaki yetenek: " + s + (fake ? " (aldatmaca)" : ""));
                 return;
             }
         }
@@ -1710,8 +1710,8 @@ public class Boss1Enemy : MonoBehaviour
         // L: son istenen yetenegi kilitle (her seferinde ayni yetenek) / kilidi ac.
         if (kb.lKey.wasPressedThisFrame)
         {
-            if (testLock != Skill.None) { testLock = Skill.None; Debug.Log("[Boss1 TEST] kilit KAPALI"); }
-            else { testLock = Expected; Debug.Log("[Boss1 TEST] kilit ACIK: hep " + testLock); }
+            if (testLock != Skill.None) { testLock = Skill.None; Debug.Log("[GiantWarrior TEST] kilit KAPALI"); }
+            else { testLock = Expected; Debug.Log("[GiantWarrior TEST] kilit ACIK: hep " + testLock); }
         }
         if (testLock != Skill.None && Expected != testLock)
             ForceSkill(testLock, false);
@@ -1719,7 +1719,7 @@ public class Boss1Enemy : MonoBehaviour
         if (kb.gKey.wasPressedThisFrame)
         {
             testGod = !testGod;
-            Debug.Log("[Boss1 TEST] olumsuz mod " + (testGod ? "ACIK" : "KAPALI"));
+            Debug.Log("[GiantWarrior TEST] olumsuz mod " + (testGod ? "ACIK" : "KAPALI"));
         }
         if (testGod && playerCtl != null)
         {
@@ -1776,7 +1776,7 @@ public class Boss1Enemy : MonoBehaviour
 
         // Iksir penceresi: bitirici kombo / ezmeden sonra, oyuncu yaralı ve iksiri varsa boss kisa sure saldirmaz.
         if (potionWindowPending > 0f && !enemy.IsStaggered && !enemy.IsDead && !leapActive && !waveActive
-            && !(enemy.CurrentState is EnemyAttackState) && !(enemy.CurrentState is Boss1RoarState))
+            && !(enemy.CurrentState is EnemyAttackState) && !(enemy.CurrentState is GiantWarriorRoarState))
         {
             float potionW = potionWindowPending;
             potionWindowPending = 0f;
@@ -1804,7 +1804,7 @@ public class Boss1Enemy : MonoBehaviour
             mercyUntil = Time.time + postureBreakMercy;
             pendingLeap = false;
             if (!leapActive && !enemy.IsStaggered && !enemy.IsDead
-                && (enemy.CurrentState is EnemyAttackState || enemy.CurrentState is Boss1WaveState))
+                && (enemy.CurrentState is EnemyAttackState || enemy.CurrentState is GiantWarriorWaveState))
                 enemy.ChangeState(new EnemyChaseState(enemy));
             enemy.StartAttackRecovery(postureBreakMercy);
             nextWaveTime = Mathf.Max(nextWaveTime, Time.time + postureBreakMercy);
@@ -1816,7 +1816,7 @@ public class Boss1Enemy : MonoBehaviour
         {
             pendingWave = false;
             if (enemy.CurrentState is EnemyAttackState && !leapActive && !waveActive && !enemy.IsStaggered && !enemy.IsDead)
-                enemy.ChangeState(new Boss1WaveState(this, enemy));
+                enemy.ChangeState(new GiantWarriorWaveState(this, enemy));
             else
                 rig.PlayAttack();
         }
@@ -1825,7 +1825,7 @@ public class Boss1Enemy : MonoBehaviour
         {
             pendingLeap = false;
             if (enemy.CurrentState is EnemyAttackState && !leapActive && !enemy.IsStaggered && !enemy.IsDead)
-                enemy.ChangeState(new Boss1LeapState(this, enemy));
+                enemy.ChangeState(new GiantWarriorLeapState(this, enemy));
             else
                 rig.PlayAttack();
         }
@@ -1902,9 +1902,9 @@ public class Boss1Enemy : MonoBehaviour
             float wBoost = 1f + Mathf.Min(4, skillsSinceWave) * waveStaleBoost;   // uzun suredir dalga yok: daha sik
             if (SkillBlocked(Skill.Wave)) { }
             else if (wx >= waveMinDistance && wx <= waveMaxDistance && Random.value < waveChancePerSecond * wBoost * Time.deltaTime)
-                enemy.ChangeState(new Boss1WaveState(this, enemy));
+                enemy.ChangeState(new GiantWarriorWaveState(this, enemy));
             else if (waveBackHop && wx < waveMinDistance && !InMercy && Random.value < waveCloseChancePerSecond * wBoost * Time.deltaTime)
-                enemy.ChangeState(new Boss1WaveState(this, enemy));   // yakin: once geri zipla
+                enemy.ChangeState(new GiantWarriorWaveState(this, enemy));   // yakin: once geri zipla
         }
 
         if (leapEnabled && !leapActive && !SkillBlocked(Skill.Leap) && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState
@@ -1912,7 +1912,7 @@ public class Boss1Enemy : MonoBehaviour
         {
             float lx = Mathf.Abs(enemy.target.position.x - transform.position.x);
             if (lx >= leapMinDistance && lx <= leapMaxDistance && Random.value < leapChancePerSecond * Time.deltaTime)
-                enemy.ChangeState(new Boss1LeapState(this, enemy));
+                enemy.ChangeState(new GiantWarriorLeapState(this, enemy));
         }
 
         bool attacking = enemy.CurrentState is EnemyAttackState;
@@ -1937,18 +1937,18 @@ public class Boss1Enemy : MonoBehaviour
         {
             rb.position = new Vector2(rb.position.x, startY);
             rb.linearVelocity = Vector2.zero;
-            Debug.LogWarning("Boss1Enemy: boss zeminden dustu, baslangic yuksekligine geri alindi. Altinda Collider var mi?");
+            Debug.LogWarning("GiantWarriorEnemy: boss zeminden dustu, baslangic yuksekligine geri alindi. Altinda Collider var mi?");
         }
     }
 
     // =====================================================================
-    // Boss1LeapState: Crouch -> Rise -> Air (isaret) -> Fall -> Land
+    // GiantWarriorLeapState: Crouch -> Rise -> Air (isaret) -> Fall -> Land
     // =====================================================================
-    internal sealed class Boss1LeapState : IEnemyState
+    internal sealed class GiantWarriorLeapState : IEnemyState
     {
         enum Ph { Crouch, Rise, Air, Fall, Gap, Land }
 
-        readonly Boss1Enemy o;
+        readonly GiantWarriorEnemy o;
         readonly EnemyController e;
         Ph ph;
         float t, groundY, apexY, markerX;
@@ -1961,7 +1961,7 @@ public class Boss1Enemy : MonoBehaviour
         SpriteRenderer marker;
         static Sprite markerSprite;
 
-        public Boss1LeapState(Boss1Enemy owner, EnemyController enemy) { o = owner; e = enemy; }
+        public GiantWarriorLeapState(GiantWarriorEnemy owner, EnemyController enemy) { o = owner; e = enemy; }
 
         public void Enter()
         {
@@ -2184,7 +2184,7 @@ public class Boss1Enemy : MonoBehaviour
             if (marker == null)
             {
                 if (markerSprite == null) markerSprite = BuildMarkerSprite();
-                GameObject go = new GameObject("Boss1LeapMarker");
+                GameObject go = new GameObject("GiantWarriorLeapMarker");
                 marker = go.AddComponent<SpriteRenderer>();
                 marker.sprite = markerSprite;
                 marker.sortingLayerName = "Default";
@@ -2255,13 +2255,13 @@ public class Boss1Enemy : MonoBehaviour
     }
 
     // =====================================================================
-    // Boss1WaveState: odaklan (kilic yavas kalkar) -> RITIMLI dalgalar (her darbede bir dalga)
+    // GiantWarriorWaveState: odaklan (kilic yavas kalkar) -> RITIMLI dalgalar (her darbede bir dalga)
     // =====================================================================
-    internal sealed class Boss1WaveState : IEnemyState
+    internal sealed class GiantWarriorWaveState : IEnemyState
     {
         enum Ph { Crouch, Hop, Focus }
 
-        readonly Boss1Enemy o;
+        readonly GiantWarriorEnemy o;
         readonly EnemyController e;
         Rigidbody2D rb;
         Ph ph;
@@ -2271,7 +2271,7 @@ public class Boss1Enemy : MonoBehaviour
         Collider2D[] cols;
         bool[] colWas;
 
-        public Boss1WaveState(Boss1Enemy owner, EnemyController enemy) { o = owner; e = enemy; }
+        public GiantWarriorWaveState(GiantWarriorEnemy owner, EnemyController enemy) { o = owner; e = enemy; }
 
         public void Enter()
         {
@@ -2419,7 +2419,7 @@ public class Boss1Enemy : MonoBehaviour
                 fwd = Mathf.Clamp(gap - o.waveSpeed * 0.3f, 0f, fwd);
             }
             RunCameraZoom.AddShake(2.2f);
-            Boss1Wave.Spawn(o, e, new Vector2(bp.x + dir * fwd, bp.y), dir);
+            GiantWarriorWave.Spawn(o, e, new Vector2(bp.x + dir * fwd, bp.y), dir);
             fired++;
             if (fired < o.waveCount) needNext = true;
         }
@@ -2499,15 +2499,15 @@ public class Boss1Enemy : MonoBehaviour
     }
 
     // =====================================================================
-    // Boss1RoarState: faz 2 kukremesi. Boss kisa sure hareketsiz kalir (oyuncu icin firsat).
+    // GiantWarriorRoarState: faz 2 kukremesi. Boss kisa sure hareketsiz kalir (oyuncu icin firsat).
     // =====================================================================
-    internal sealed class Boss1RoarState : IEnemyState
+    internal sealed class GiantWarriorRoarState : IEnemyState
     {
-        readonly Boss1Enemy o;
+        readonly GiantWarriorEnemy o;
         readonly EnemyController e;
         float t, dur;
 
-        public Boss1RoarState(Boss1Enemy owner, EnemyController enemy) { o = owner; e = enemy; }
+        public GiantWarriorRoarState(GiantWarriorEnemy owner, EnemyController enemy) { o = owner; e = enemy; }
 
         public void Enter()
         {
@@ -2543,12 +2543,12 @@ public class Boss1Enemy : MonoBehaviour
 }
 
 /// <summary>
-/// Boss1'in dalgasi: yerde ilerleyen yarim ay. Oyuncuya degince parry / blok / hasar cozulur.
+/// GiantWarrior'in dalgasi: yerde ilerleyen yarim ay. Oyuncuya degince parry / blok / hasar cozulur.
 /// Dash (i-frame) icinden gecer, ziplayarak ustunden asilir.
 /// </summary>
-public class Boss1Wave : MonoBehaviour
+public class GiantWarriorWave : MonoBehaviour
 {
-    Boss1Enemy o;
+    GiantWarriorEnemy o;
     EnemyController e;
     float dir, life, groundY;
     bool resolved;
@@ -2556,11 +2556,11 @@ public class Boss1Wave : MonoBehaviour
     bool reflected;
     static Sprite spr, sprReflect;
 
-    public static Boss1Wave Spawn(Boss1Enemy owner, EnemyController enemy, Vector2 pos, float direction)
+    public static GiantWarriorWave Spawn(GiantWarriorEnemy owner, EnemyController enemy, Vector2 pos, float direction)
     {
-        GameObject go = new GameObject("Boss1Wave");
+        GameObject go = new GameObject("GiantWarriorWave");
         go.transform.position = new Vector3(pos.x, pos.y, 0f);
-        Boss1Wave w = go.AddComponent<Boss1Wave>();
+        GiantWarriorWave w = go.AddComponent<GiantWarriorWave>();
         w.o = owner; w.e = enemy; w.dir = direction >= 0f ? 1f : -1f; w.groundY = pos.y;
 
         if (spr == null) spr = BuildSprite(new Color(0.85f, 0.02f, 0.02f), new Color(1f, 0.82f, 0.55f));
@@ -2734,7 +2734,7 @@ public class Boss1Wave : MonoBehaviour
         tex.SetPixels32(px);
         tex.Apply();
         Sprite sp = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0f), H, 0, SpriteMeshType.FullRect);
-        sp.name = "Boss1WaveSprite";
+        sp.name = "GiantWarriorWaveSprite";
         return sp;
     }
 }
@@ -2742,18 +2742,18 @@ public class Boss1Wave : MonoBehaviour
 /// <summary>
 /// Boss olum yavas cekimi: boss yok edilse bile calisir (bagimsiz nesne). Duraklatma menusu acikken zamana dokunmaz.
 /// </summary>
-public class Boss1SlowMo : MonoBehaviour
+public class GiantWarriorSlowMo : MonoBehaviour
 {
-    static Boss1SlowMo inst;
+    static GiantWarriorSlowMo inst;
     float baseFixed;
 
     public static void Run(float scale, float hold, float release)
     {
         if (inst == null)
         {
-            GameObject go = new GameObject("Boss1SlowMo");
+            GameObject go = new GameObject("GiantWarriorSlowMo");
             DontDestroyOnLoad(go);
-            inst = go.AddComponent<Boss1SlowMo>();
+            inst = go.AddComponent<GiantWarriorSlowMo>();
             inst.baseFixed = Time.fixedDeltaTime;
         }
         inst.StopAllCoroutines();
@@ -2789,10 +2789,10 @@ public class Boss1SlowMo : MonoBehaviour
 }
 
 /// <summary>
-/// Boss1 Supurme gorseli: boss'tan yerde hizla yayilan alcak sok dalgasi (ustunden ZIPLA).
+/// GiantWarrior Supurme gorseli: boss'tan yerde hizla yayilan alcak sok dalgasi (ustunden ZIPLA).
 /// Hasari EnemyAttackState verir; bu sadece okunur bir isaret.
 /// </summary>
-public class Boss1Shock : MonoBehaviour
+public class GiantWarriorShock : MonoBehaviour
 {
     static Sprite spr;
 
@@ -2800,7 +2800,7 @@ public class Boss1Shock : MonoBehaviour
     float t, life = 0.34f, len;
     Color col;
 
-    public static Boss1Shock Spawn(Vector3 pos, float dir, float length, Color color)
+    public static GiantWarriorShock Spawn(Vector3 pos, float dir, float length, Color color)
     {
         if (spr == null)
         {
@@ -2824,9 +2824,9 @@ public class Boss1Shock : MonoBehaviour
             spr = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0f, 0.5f), 16f);
         }
 
-        GameObject go = new GameObject("Boss1Shock");
+        GameObject go = new GameObject("GiantWarriorShock");
         go.transform.position = pos + new Vector3(0f, 1.1f, 0f);
-        Boss1Shock s = go.AddComponent<Boss1Shock>();
+        GiantWarriorShock s = go.AddComponent<GiantWarriorShock>();
         s.sr = go.AddComponent<SpriteRenderer>();
         s.sr.sprite = spr;
         s.sr.sortingLayerName = "Default";

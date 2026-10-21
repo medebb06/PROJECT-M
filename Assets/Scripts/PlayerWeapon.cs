@@ -138,7 +138,7 @@ public class PlayerWeapon : MonoBehaviour
 
             Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
 
-            if (rb != null && e.GetComponent<Boss1Enemy>() == null)
+            if (rb != null && e.GetComponent<GiantWarriorEnemy>() == null)
             {
                 float side = Mathf.Sign(e.transform.position.x - center.x);
                 rb.linearVelocity = new Vector2(side * 8f * EnemyTime.Scale, 3f);

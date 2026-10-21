@@ -679,7 +679,7 @@ public class PlayerAbility : MonoBehaviour
 
     private static bool IsBoss(EnemyBase e)
     {
-        return e != null && e.GetComponent<Boss1Enemy>() != null;
+        return e != null && e.GetComponent<GiantWarriorEnemy>() != null;
     }
 
     // Oyuncunun baktığı yönde, kutu içindeki düşmanlar.

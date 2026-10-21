@@ -216,7 +216,7 @@ public class EnemyStatus : MonoBehaviour
         burnTimeLeft -= dt;
 
         // Yanik ayni anda hem postura hem cana islet (boss'ta yarisi).
-        float mul = enemy.GetComponent<Boss1Enemy>() != null ? 0.5f : 1f;
+        float mul = enemy.GetComponent<GiantWarriorEnemy>() != null ? 0.5f : 1f;
         bool ticked = false;
 
         if (balance != null && !balance.IsBroken)

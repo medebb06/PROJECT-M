@@ -4,17 +4,17 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Tools > Boss > Create Boss 1 : oyuncunun sagina, zemine oturan, vurulabilir Boss 1 kurar.
-public static class Boss1Creator
+// Tools > Boss > Create Giant Warrior : oyuncunun sagina, zemine oturan, vurulabilir Boss 1 kurar.
+public static class GiantWarriorCreator
 {
-    [MenuItem("Tools/Boss/Create Boss 1")]
+    [MenuItem("Tools/Boss/Create Giant Warrior")]
     public static void Create()
     {
         int enemyLayer = LayerMask.NameToLayer("Enemy");
         if (enemyLayer < 0) { Debug.LogError("'Enemy' layer'i yok."); return; }
 
-        GameObject root = new GameObject("Boss1");
-        Undo.RegisterCreatedObjectUndo(root, "Create Boss 1");
+        GameObject root = new GameObject("GiantWarrior");
+        Undo.RegisterCreatedObjectUndo(root, "Create Giant Warrior");
 
         Vector3 pos = Vector3.zero;
         PlayerController player = Object.FindAnyObjectByType<PlayerController>();
@@ -49,23 +49,23 @@ public static class Boss1Creator
             if (dummy.balanceHitSounds != null && dummy.balanceHitSounds.Length > 0) break;
         }
 
-        Boss1Rig rig = root.AddComponent<Boss1Rig>();
+        GiantWarriorRig rig = root.AddComponent<GiantWarriorRig>();
         rig.material = GetOrCreateMaterial();
         rig.Rebuild();
 
         Selection.activeGameObject = root;
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-        Debug.Log("Boss1 olusturuldu. Boyut/nefes ayarlari Boss1Rig'de; 'Yeniden Kur' context menusu gorseli yeniler.");
+        Debug.Log("GiantWarrior olusturuldu. Boyut/nefes ayarlari GiantWarriorRig'de; 'Yeniden Kur' context menusu gorseli yeniler.");
     }
 
     static Material GetOrCreateMaterial()
     {
-        const string path = "Assets/Sprites/Boss1/M_Boss1.mat";
+        const string path = "Assets/Sprites/GiantWarrior/M_GiantWarrior.mat";
         Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (m != null) return m;
         Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
         if (sh == null) sh = Shader.Find("Sprites/Default");
-        m = new Material(sh) { name = "M_Boss1" };
+        m = new Material(sh) { name = "M_GiantWarrior" };
         AssetDatabase.CreateAsset(m, path);
         return m;
     }

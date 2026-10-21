@@ -4929,7 +4929,7 @@ GameObject:
   - component: {fileID: 5885339532838503758}
   - component: {fileID: 3324306232079634031}
   m_Layer: 0
-  m_Name: Impact
+  m_Name: GiantWarriorSwordImpact
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -43,7 +43,7 @@
  "layers": [
   {
    "name": "armR_upper",
-   "file": "boss1_armR_upper",
+   "file": "giantwarrior_armR_upper",
    "x": 413,
    "y": 619,
    "w": 339,
@@ -53,7 +53,7 @@
   },
   {
    "name": "armR_lower",
-   "file": "boss1_armR_lower",
+   "file": "giantwarrior_armR_lower",
    "x": 349,
    "y": 795,
    "w": 175,
@@ -63,7 +63,7 @@
   },
   {
    "name": "legR_lower",
-   "file": "boss1_legR_lower",
+   "file": "giantwarrior_legR_lower",
    "x": 642,
    "y": 992,
    "w": 123,
@@ -73,7 +73,7 @@
   },
   {
    "name": "legR_upper",
-   "file": "boss1_legR_upper",
+   "file": "giantwarrior_legR_upper",
    "x": 663,
    "y": 879,
    "w": 237,
@@ -83,7 +83,7 @@
   },
   {
    "name": "legL_upper",
-   "file": "boss1_legL_upper",
+   "file": "giantwarrior_legL_upper",
    "x": 832,
    "y": 870,
    "w": 203,
@@ -93,7 +93,7 @@
   },
   {
    "name": "legL_lower",
-   "file": "boss1_legL_lower",
+   "file": "giantwarrior_legL_lower",
    "x": 916,
    "y": 1006,
    "w": 139,
@@ -103,7 +103,7 @@
   },
   {
    "name": "sword",
-   "file": "boss1_sword",
+   "file": "giantwarrior_sword",
    "x": 156,
    "y": 327,
    "w": 938,
@@ -113,7 +113,7 @@
   },
   {
    "name": "handR",
-   "file": "boss1_handR",
+   "file": "giantwarrior_handR",
    "x": 294,
    "y": 761,
    "w": 148,
@@ -123,7 +123,7 @@
   },
   {
    "name": "neck",
-   "file": "boss1_neck",
+   "file": "giantwarrior_neck",
    "x": 538,
    "y": 637,
    "w": 212,
@@ -133,7 +133,7 @@
   },
   {
    "name": "torso_upper",
-   "file": "boss1_torso_upper",
+   "file": "giantwarrior_torso_upper",
    "x": 604,
    "y": 600,
    "w": 332,
@@ -143,7 +143,7 @@
   },
   {
    "name": "armL_upper",
-   "file": "boss1_armL_upper",
+   "file": "giantwarrior_armL_upper",
    "x": 685,
    "y": 593,
    "w": 255,
@@ -153,7 +153,7 @@
   },
   {
    "name": "torso_lower",
-   "file": "boss1_torso_lower",
+   "file": "giantwarrior_torso_lower",
    "x": 746,
    "y": 758,
    "w": 211,
@@ -163,7 +163,7 @@
   },
   {
    "name": "legBack_knee",
-   "file": "boss1_legBack_knee",
+   "file": "giantwarrior_legBack_knee",
    "x": 785,
    "y": 1111,
    "w": 156,
@@ -173,7 +173,7 @@
   },
   {
    "name": "legBack",
-   "file": "boss1_legBack",
+   "file": "giantwarrior_legBack",
    "x": 776,
    "y": 723,
    "w": 204,
@@ -183,7 +183,7 @@
   },
   {
    "name": "head",
-   "file": "boss1_head",
+   "file": "giantwarrior_head",
    "x": 470,
    "y": 680,
    "w": 192,
@@ -193,7 +193,7 @@
   },
   {
    "name": "face",
-   "file": "boss1_face",
+   "file": "giantwarrior_face",
    "x": 460,
    "y": 713,
    "w": 106,
@@ -203,7 +203,7 @@
   },
   {
    "name": "footR",
-   "file": "boss1_footR",
+   "file": "giantwarrior_footR",
    "x": 634,
    "y": 1133,
    "w": 146,
@@ -213,7 +213,7 @@
   },
   {
    "name": "footL",
-   "file": "boss1_footL",
+   "file": "giantwarrior_footL",
    "x": 924,
    "y": 1136,
    "w": 146,

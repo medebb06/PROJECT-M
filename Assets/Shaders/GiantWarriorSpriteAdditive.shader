@@ -1,5 +1,5 @@
-// Boss1 kilic parlamasi icin additive sprite shader (SpriteRenderer rengi ve alfasi ile calisir).
-Shader "ProjectM/Boss1SpriteAdditive"
+// GiantWarrior kilic parlamasi icin additive sprite shader (SpriteRenderer rengi ve alfasi ile calisir).
+Shader "ProjectM/GiantWarriorSpriteAdditive"
 {
     Properties
     {
