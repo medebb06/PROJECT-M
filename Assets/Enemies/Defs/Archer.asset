@@ -122,6 +122,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
@@ -131,6 +132,10 @@ MonoBehaviour:
     slamJump: 0
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0
@@ -190,6 +195,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
@@ -199,10 +205,160 @@ MonoBehaviour:
     slamJump: 0
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 1
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: GroundShot
+    weight: 3
+    minRange: 7
+    maxRange: 22
+    windup: 0.9
+    active: 0.12
+    recovery: 0.7
+    cooldown: 1.2
+    damage: 1
+    unblockable: 0
+    hitReach: 16
+    hitHeight: 0.4
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 22
+    projectileHeight: 0.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    finalHitDelay: 0
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 0
+    opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 0
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: QuickShot
+    weight: 2
+    minRange: 8
+    maxRange: 24
+    windup: 0.45
+    active: 0.12
+    recovery: 0.9
+    cooldown: 1.5
+    damage: 1
+    unblockable: 0
+    hitReach: 16
+    hitHeight: 0.4
+    knockbackForce: 5
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 45
+    projectileHeight: 2.6
+    projectileLife: 1.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    finalHitDelay: 0
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 1
+    opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 
