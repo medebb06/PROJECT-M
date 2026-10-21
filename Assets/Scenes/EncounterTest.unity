@@ -2256,7 +2256,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9045930727589892200, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: dashCooldownScale
-      value: 0.7
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 9135974849126324683, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Size.x

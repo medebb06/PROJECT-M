@@ -513,7 +513,7 @@ MonoBehaviour:
   airControl: 0.8
   jumpForce: 17
   jumpForceOverride: 18
-  jumpBufferTime: 0.15
+  jumpBufferTime: 0.2
   coyoteTime: 0.12
   jumpCutMultiplier: 2
   jumpCutVelocityMultiplier: 0.3
@@ -632,8 +632,8 @@ MonoBehaviour:
   dashTime: 0.15
   dashCooldown: 0.4
   dashBufferTime: 0.15
-  dashCancelPoint: 0.7
-  dashCooldownScale: 0.5
+  dashCancelPoint: 0.35
+  dashCooldownScale: 0.4
   minInputBuffer: 0.3
   hurtDashCancelAfter: 0.5
   slamLandLock: 0.05
@@ -826,6 +826,12 @@ MonoBehaviour:
   attack3BalanceDamage: 5
   attack4BalanceDamage: 7
   attackHealthDamage: 10
+  magnetRange: 3.2
+  magnetMaxDistance: 2.6
+  magnetStopGap: 1.1
+  riposteRange: 9
+  riposteMaxDistance: 8
+  moveCancelPoint: 0.5
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
   attackMoveCurve:
@@ -1084,6 +1090,7 @@ MonoBehaviour:
   showDebug: 0
   postParryRecovery: 0.12
   counterBonusBalance: 1
+  parryPostureRecoverFraction: 0.25
   blockChipHealthRatio: 0.12
 --- !u!114 &6246365400100952835
 MonoBehaviour:

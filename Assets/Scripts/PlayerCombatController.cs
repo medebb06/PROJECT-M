@@ -329,10 +329,14 @@ public class PlayerCombatController : MonoBehaviour
     private bool ParryRecovering =>
         defenseController != null && defenseController.InParryRecovery;
 
+    private float nextAttackAllowedTime;
+
     private bool CanStartAttack()
     {
         return
             !ParryRecovering &&
+            (Time.time >= nextAttackAllowedTime ||
+             (defenseController != null && defenseController.RecentlyParried)) &&
             player.IsGrounded() &&
             player.canControl &&
             player.canAttack &&
@@ -560,6 +564,10 @@ public class PlayerCombatController : MonoBehaviour
         attackStartTime = Time.time;
         attackDurationNow = attackDuration;
         attackHitTimeNow = hitTime;
+
+        // Sabit saldırı ritmi: saldırı nasıl biterse bitsin (yön iptali, dash, zıplama),
+        // sonraki yer vuruşu en erken normal kombo iptal anında başlar.
+        nextAttackAllowedTime = Time.time + attackDuration * Mathf.Max(comboCancelPoint, hitTime);
 
         // =====================================================
         // CREATE ATTACK STATE
