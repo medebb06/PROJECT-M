@@ -28,7 +28,18 @@ public class PlayerAbility : MonoBehaviour
     public static event Action<AbilityType> Used;
 
     [Header("Giriş")]
+    [Tooltip("Q: KIN. Her zaman aktif; düşmanlardaki biriken yükü patlatır.")]
     public KeyCode key = KeyCode.Q;
+
+    [Tooltip("Seçilen özel yetenek (Atılım Kesiği...). Kın yükü biriktirir.")]
+    public KeyCode specialKey = KeyCode.E;
+
+    [Header("Geçici test")]
+    [Tooltip("true: tüm bekleme süreleri 0 (denge ayarı yapılana kadar).")]
+    public bool zeroCooldowns = true;
+
+    [Tooltip("Kın patlatma arası en az bekleme (sn).")]
+    public float kinCooldown = 0f;
 
     [Header("Şarj (bekleme kısaltma, sn)")]
     public float parryCharge = 2.5f;
@@ -77,6 +88,23 @@ public class PlayerAbility : MonoBehaviour
     [Range(0f, 0.1f)] public float windHealthPerStack = 0.015f;
     [Tooltip("Kılıcı kınına sokma süresi (sn). Bu sürede kilitli ve savunmasızsın; vurulursan bozulur.")]
     public float windSheathTime = 0.75f;
+
+    [Header("Atılım Kesiği")]
+    public float dashRange = 20f;
+    [Tooltip("Atılım süresi (sn). Başlangıç ışınlanır gibi çok hızlı, sonra yavaşlayarak durur.")]
+    public float dashDuration = 0.5f;
+    [Tooltip("Süzülme: büyük = yolun çoğu ilk anda alınır, kalanı uzun süre yavaşlayarak süzülür.")]
+    [Range(2f, 8f)] public float dashGlide = 5f;
+    [Tooltip("Atılımın ilk bu kadar saniyesi (ışınlanma kısmı) kilitli; sonrası süzülme: başka girdiler (saldırı, parry, dash, zıplama, Q/E) süzülmeyi böler, hareket süzülmeyle birlikte çalışır.")]
+    public float dashLockTime = 0.1f;
+
+    [Header("Girdi tamponu")]
+    [Tooltip("Kilitliyken basılan Q/E bu süre boyunca hatırlanır, açılınca çalışır (sn).")]
+    public float inputBuffer = 0.4f;
+    [Tooltip("Atılış sırasında + biraz sonrasına dokunulmazlık (sn).")]
+    public float dashInvulnerable = 0.4f;
+    [Tooltip("Geçilen her düşmana eklenen Kın yükü.")]
+    public int dashChargePerEnemy = 2;
 
     // ---------------------------------------------------------
     // DURUM
@@ -130,6 +158,8 @@ public class PlayerAbility : MonoBehaviour
         player = GetComponent<PlayerController>();
         health = GetComponent<Health>();
         combat = GetComponent<PlayerCombatController>();
+
+        SyncWindCharge();
     }
 
     private void OnDestroy()
@@ -188,17 +218,16 @@ public class PlayerAbility : MonoBehaviour
         SyncWindCharge();
     }
 
-    // Rüzgâr Birikimi sadece donatılıyken yük biriktirir.
+    // Kın (WindCharge) her zaman oyuncuda olur.
     private void SyncWindCharge()
     {
+        // Kın her zaman aktif: WindCharge oyuncuda hep var.
         WindCharge wc = GetComponent<WindCharge>();
 
-        bool need = HasAbility && Type == AbilityType.WindStore;
+        if (wc == null)
+            wc = gameObject.AddComponent<WindCharge>();
 
-        if (need && wc == null)
-            gameObject.AddComponent<WindCharge>();
-        else if (!need && wc != null)
-            Destroy(wc);
+        wc.stacking = true;
     }
 
     public void Refill()
@@ -211,6 +240,9 @@ public class PlayerAbility : MonoBehaviour
 
     private float ComputeCooldown()
     {
+        if (zeroCooldowns)
+            return 0f;
+
         float cd =
             AbilityInfo.BaseCooldown(Type) *
             (1f - 0.1f * (Mathf.Max(1, Level) - 1)) *
@@ -259,7 +291,7 @@ public class PlayerAbility : MonoBehaviour
 
         if (player != null)
         {
-            CombatCallout.Popup(
+            NoCallout.Popup(
                 player.transform.position + Vector3.up * 2.4f,
                 AbilityInfo.Name(Type).ToUpperInvariant() + " HAZIR",
                 AbilityInfo.Color(Type),
@@ -274,10 +306,10 @@ public class PlayerAbility : MonoBehaviour
 
     private void Update()
     {
-        if (!HasAbility || player == null)
+        if (player == null)
             return;
 
-        if (CooldownLeft > 0f)
+        if (HasAbility && CooldownLeft > 0f)
         {
             // Ölçekli zaman: menüde / duraklamada akmaz.
             CooldownLeft -= Time.deltaTime;
@@ -289,9 +321,82 @@ public class PlayerAbility : MonoBehaviour
             }
         }
 
-        if (!MobileInput.GetKeyDown(key))
+        // Girdi tamponu: kilitliyken / başka eylem sürerken basılan Q/E kaybolmasın.
+        if (MobileInput.GetKeyDown(key))
+            bufferedKin = Time.unscaledTime;
+
+        if (HasAbility && MobileInput.GetKeyDown(specialKey))
+            bufferedSpecial = Time.unscaledTime;
+
+        if (bufferedKin > 0f)
+        {
+            if (Time.unscaledTime - bufferedKin > inputBuffer)
+            {
+                bufferedKin = -1f;
+            }
+            else if (CanAct() && !windSheathing && Time.time >= kinReadyAt)
+            {
+                bufferedKin = -1f;
+                TryKin();
+            }
+        }
+
+        if (bufferedSpecial > 0f)
+        {
+            if (Time.unscaledTime - bufferedSpecial > inputBuffer || !HasAbility)
+            {
+                bufferedSpecial = -1f;
+            }
+            else if (CanAct() && !dashSlashing)
+            {
+                bufferedSpecial = -1f;
+                TrySpecial();
+            }
+        }
+    }
+
+    private float bufferedKin = -1f;
+    private float bufferedSpecial = -1f;
+
+    private float kinReadyAt;
+
+    // Q: Kın. Her zaman aktif; düşmanlardaki yükü patlatır.
+    private void TryKin()
+    {
+        if (!CanAct() || windSheathing || Time.time < kinReadyAt)
             return;
 
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || wc.Total <= 0)
+        {
+            if (Time.unscaledTime >= nextWarn)
+            {
+                nextWarn = Time.unscaledTime + 0.8f;
+
+                NoCallout.Popup(
+                    player.transform.position + Vector3.up * 2.4f,
+                    "YÜK YOK",
+                    new Color(0.75f, 0.75f, 0.8f),
+                    0.7f
+                );
+            }
+
+            return;
+        }
+
+        // Saldırı ortasında basılırsa saldırı iptal (yetenek öncelikli).
+        if (combat != null && combat.IsAttacking)
+            combat.CancelAttack();
+
+        kinReadyAt = Time.time + kinCooldown;
+
+        StartCoroutine(WindSheath(wc));
+    }
+
+    // Özel yetenek tuşu (Atılım Kesiği...).
+    private void TrySpecial()
+    {
         if (!CanAct())
             return;
 
@@ -301,7 +406,7 @@ public class PlayerAbility : MonoBehaviour
             {
                 nextWarn = Time.unscaledTime + 0.8f;
 
-                CombatCallout.Popup(
+                NoCallout.Popup(
                     player.transform.position + Vector3.up * 2.4f,
                     "YETENEK " + Mathf.CeilToInt(CooldownLeft) + " SN",
                     new Color(0.75f, 0.75f, 0.8f),
@@ -360,6 +465,7 @@ public class PlayerAbility : MonoBehaviour
             case AbilityType.Frost: return UseFrost();
             case AbilityType.Fire: return UseFire();
             case AbilityType.WindStore: return UseWindStore();
+            case AbilityType.DashSlash: return UseDashSlash();
         }
 
         return false;
@@ -424,7 +530,7 @@ public class PlayerAbility : MonoBehaviour
 
         if (target == null)
         {
-            CombatCallout.Popup(
+            NoCallout.Popup(
                 player.transform.position + Vector3.up * 2.4f,
                 "HEDEF YOK",
                 new Color(0.75f, 0.75f, 0.8f),
@@ -445,7 +551,7 @@ public class PlayerAbility : MonoBehaviour
             !TryFindLanding(target, side, shadowBehind * 0.6f, out landing)
         )
         {
-            CombatCallout.Popup(
+            NoCallout.Popup(
                 player.transform.position + Vector3.up * 2.4f,
                 "YER YOK",
                 new Color(0.75f, 0.75f, 0.8f),
@@ -482,7 +588,7 @@ public class PlayerAbility : MonoBehaviour
 
         HitPercent(target, shadowBalancePercent, shadowHealthPercent, new Vector2(face, 0f));
 
-        CombatCallout.Popup(
+        NoCallout.Popup(
             target.transform.position + Vector3.up * 2.2f,
             "ARKADA!",
             AbilityInfo.Color(AbilityType.ShadowStep),
@@ -606,7 +712,7 @@ public class PlayerAbility : MonoBehaviour
 
         SpawnBox(frostRange, frostHeight, c, 0.35f);
 
-        CombatCallout.Popup(
+        NoCallout.Popup(
             player.transform.position + Vector3.up * 2.4f,
             "ZAMAN DONDU",
             c,
@@ -663,7 +769,7 @@ public class PlayerAbility : MonoBehaviour
 
         if (wc == null || wc.Total <= 0)
         {
-            CombatCallout.Popup(
+            NoCallout.Popup(
                 player.transform.position + Vector3.up * 2.4f,
                 "YÜK YOK",
                 new Color(0.75f, 0.75f, 0.8f),
@@ -700,7 +806,7 @@ public class PlayerAbility : MonoBehaviour
 
         Color c = AbilityInfo.Color(AbilityType.WindStore);
 
-        CombatCallout.Popup(
+        NoCallout.Popup(
             player.transform.position + Vector3.up * 2.4f,
             "KINA...",
             c,
@@ -743,7 +849,7 @@ public class PlayerAbility : MonoBehaviour
         {
             if (player != null)
             {
-                CombatCallout.Popup(
+                NoCallout.Popup(
                     player.transform.position + Vector3.up * 2.4f,
                     "KIN BOZULDU",
                     new Color(1f, 0.5f, 0.5f),
@@ -797,15 +903,199 @@ public class PlayerAbility : MonoBehaviour
 
             e.PlayTintFlash(c, 0.25f);
 
-            CombatCallout.PopupAbove(e, stacks.ToString(), c, 0.7f);
+            NoCallout.PopupAbove(e, stacks.ToString(), c, 0.7f);
         }
 
         player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.2f);
 
         wc.PlayWave();
 
+        CombatFlow.AddLink();
+
         Shake(Mathf.Clamp(0.6f + total * 0.06f, 0.6f, 1.4f));
         HitStop.Request(0.09f + Mathf.Min(0.1f, total * 0.012f), 0.05f);
+    }
+
+    // =========================================================
+    // ATILIM KESİĞİ
+    // İleri atıl (düşmanların içinden geçersin, dokunulmazsın), geçtiklerin
+    // işaretlenir; kısa gecikmeyle kesilirler. Gecikmede hasar alırsan
+    // işaretler dağılır (WindCharge yarıya indirir = tek işaret silinir).
+    // =========================================================
+
+    private bool dashSlashing;
+
+    private bool UseDashSlash()
+    {
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || player.rb == null || dashSlashing)
+            return false;
+
+        StartCoroutine(DashSlashRoutine(wc));
+
+        return true;
+    }
+
+    private bool DashInterrupted()
+    {
+        return
+            MobileInput.GetMouseButtonDown(0) ||
+            MobileInput.GetMouseButtonDown(1) ||
+            MobileInput.GetKeyDown(KeyCode.Space) ||
+            MobileInput.GetKeyDown(KeyCode.LeftShift) ||
+            MobileInput.GetKeyDown(key) ||
+            MobileInput.GetKeyDown(specialKey);
+    }
+
+    private bool DashBlocked(Vector3 next)
+    {
+        if (player.col == null || player.Movement == null)
+            return false;
+
+        Bounds b = player.col.bounds;
+
+        Vector2 center = (Vector2)b.center + (Vector2)(next - player.transform.position) + Vector2.up * 0.12f;
+        Vector2 size = new Vector2(b.size.x * 0.8f, b.size.y * 0.8f);
+
+        LayerMask solid = player.Movement.groundMask | player.Movement.wallMask;
+
+        return Physics2D.OverlapBox(center, size, 0f, solid) != null;
+    }
+
+    private IEnumerator DashSlashRoutine(WindCharge wc)
+    {
+        dashSlashing = true;
+
+        Color c = AbilityInfo.Color(AbilityType.DashSlash);
+
+        float dir = player.facingDir >= 0f ? 1f : -1f;
+        float range = dashRange * (1f + 0.1f * (Level - 1));
+        float travelled = 0f;
+        float nextImage = 0f;
+
+        Vector3 start = player.transform.position;
+
+        HashSet<EnemyBase> passed = new HashSet<EnemyBase>();
+
+        bool lockedNow = true;
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, dashInvulnerable);
+
+        try
+        {
+            float elapsed = 0f;
+
+            while (travelled < range - 0.001f)
+            {
+                if (player == null || (health != null && health.IsDead))
+                    break;
+
+                lockedNow = elapsed < dashLockTime;
+
+                // Süzülme kısmında başka girdiler atılımı böler (kontrol hemen oyuncuya döner).
+                if (!lockedNow && (windSheathing || DashInterrupted()))
+                    break;
+
+                if (lockedNow)
+                {
+                    player.inputLocked = true;
+                    player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                }
+
+                // Ease-out (üstel yavaşlama): ilk karede çok uzağa fırlar, sona doğru süzülerek durur.
+                elapsed += Time.deltaTime;
+
+                float k = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, dashDuration));
+                float eased = 1f - Mathf.Pow(1f - k, dashGlide);
+
+                float budget = Mathf.Max(0f, range * eased - travelled);
+
+                bool blocked = false;
+
+                // Alt adımlar: hızlı atılımda ince duvarı / düşmanı atlamasın.
+                while (budget > 0.0001f)
+                {
+                    float sub = Mathf.Min(0.5f, budget);
+
+                    Vector3 pos = player.transform.position;
+                    Vector3 next = pos + new Vector3(dir * sub, 0f, 0f);
+
+                    if (DashBlocked(next))
+                    {
+                        blocked = true;
+                        break;
+                    }
+
+                    if (lockedNow)
+                    {
+                        player.inputLocked = true;
+                        player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                        player.rb.linearVelocity = Vector2.zero;
+                    }
+
+                    player.rb.position = next;
+                    player.transform.position = next;
+
+                    travelled += sub;
+                    budget -= sub;
+
+                    EnemyBase[] all = EnemyBase.All.ToArray();
+
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        EnemyBase e = all[i];
+
+                        if (e == null || e.IsDead || passed.Contains(e))
+                            continue;
+
+                        Vector3 ep = e.transform.position;
+
+                        if (Mathf.Abs(ep.y - next.y) > 3.5f)
+                            continue;
+
+                        if ((ep.x - pos.x) * dir >= -0.5f && (next.x - ep.x) * dir >= -0.5f)
+                        {
+                            passed.Add(e);
+                            wc.AddCharge(e, dashChargePerEnemy);
+
+                            NoCallout.PopupAbove(e, "+" + dashChargePerEnemy, c, 0.5f);
+                        }
+                    }
+
+                    if (Time.time >= nextImage)
+                    {
+                        nextImage = Time.time + 0.03f;
+                        SpawnAfterImage(pos, new Color(c.r, c.g, c.b, 0.55f));
+                    }
+                }
+
+                if (blocked)
+                    break;
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            // Sadece kendi koyduğumuz kilidi aç (Kın kilidine dokunma).
+            if (player != null && lockedNow && !windSheathing)
+            {
+                player.inputLockTimer = 0f;
+                player.inputLocked = false;
+            }
+
+            dashSlashing = false;
+        }
+
+        if (player == null || wc == null)
+            yield break;
+
+        wc.PlayDashTrail(start, player.transform.position);
+        Shake(0.35f);
+
+        if (passed.Count > 0)
+            CombatFlow.AddLink();
     }
 
     // =========================================================
@@ -854,7 +1144,7 @@ public class PlayerAbility : MonoBehaviour
 
         e.InterruptWithHitStun(0.2f);
 
-        CombatCallout.PopupAbove(e, "KESİLDİ", new Color(0.8f, 0.9f, 1f), 0.7f);
+        NoCallout.PopupAbove(e, "KESİLDİ", new Color(0.8f, 0.9f, 1f), 0.7f);
     }
 
     private static bool IsBoss(EnemyBase e)
@@ -949,7 +1239,7 @@ public class PlayerAbility : MonoBehaviour
     }
 
     // Işınlanmadan önceki yerde mor gölge.
-    private void SpawnAfterImage(Vector3 at)
+    private void SpawnAfterImage(Vector3 at, Color? tint = null)
     {
         if (player.playerSprite == null || player.playerSprite.sprite == null)
             return;
@@ -964,7 +1254,7 @@ public class PlayerAbility : MonoBehaviour
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = player.playerSprite.sprite;
         sr.flipX = player.playerSprite.flipX;
-        sr.color = new Color(0.6f, 0.35f, 1f, 0.7f);
+        sr.color = tint ?? new Color(0.6f, 0.35f, 1f, 0.7f);
         sr.sortingLayerID = player.playerSprite.sortingLayerID;
         sr.sortingOrder = player.playerSprite.sortingOrder - 1;
 

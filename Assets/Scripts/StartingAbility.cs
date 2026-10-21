@@ -10,7 +10,7 @@ using UnityEngine;
 public class StartingAbility : MonoBehaviour
 {
     public static bool active = true;
-    public static AbilityType type = AbilityType.WindStore;
+    public static AbilityType type = AbilityType.DashSlash;
 
     private static StartingAbility instance;
 
@@ -21,7 +21,7 @@ public class StartingAbility : MonoBehaviour
     {
         instance = null;
         active = true;
-        type = AbilityType.WindStore;
+        type = AbilityType.DashSlash;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,7 +37,10 @@ public class StartingAbility : MonoBehaviour
 
     private void Update()
     {
-        if (!active || Time.unscaledTime < nextCheck)
+        if (!active)
+            return;
+
+        if (Time.unscaledTime < nextCheck)
             return;
 
         nextCheck = Time.unscaledTime + 0.5f;
@@ -49,10 +52,16 @@ public class StartingAbility : MonoBehaviour
 
         PlayerAbility ability = PlayerAbility.Ensure(player.gameObject);
 
-        bool wind = type == AbilityType.WindStore;
+        bool needsWind = type == AbilityType.WindStore || type == AbilityType.DashSlash;
 
-        if (ability.HasAbility && (!wind || player.GetComponent<WindCharge>() != null))
+        if (
+            ability.HasAbility &&
+            ability.Type == type &&
+            (!needsWind || player.GetComponent<WindCharge>() != null)
+        )
+        {
             return;
+        }
 
         ability.Equip(type);
 

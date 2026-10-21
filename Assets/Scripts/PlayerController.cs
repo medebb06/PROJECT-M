@@ -614,9 +614,14 @@ public class PlayerController : MonoBehaviour
     // değilse baktığın yöne. Yön değişirse sprite da döner.
     public float GetDashDirection()
     {
-        if (Mathf.Abs(moveInput) > 0.1f)
+        // CANLI yön: moveInput kilitliyken (saldırı / iniş / sersemleme) 0'a sıfırlanıyor ve
+        // dash eski baktığın yöne gidiyordu. Tuşu doğrudan oku.
+        float live = MobileInput.GetAxisRaw("Horizontal");
+        float input = Mathf.Abs(live) > 0.1f ? live : moveInput;
+
+        if (Mathf.Abs(input) > 0.1f)
         {
-            facingDir = Mathf.Sign(moveInput);
+            facingDir = Mathf.Sign(input);
 
             if (playerSprite != null)
                 playerSprite.flipX = facingDir < 0f;

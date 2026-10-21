@@ -23,6 +23,9 @@ public class WindCharge : MonoBehaviour
 
     public static WindCharge Instance { get; private set; }
 
+    /// <summary>false: vuruş / parry yük biriktirmez (Atılım Kesiği sadece işaret koyar).</summary>
+    public bool stacking = true;
+
     private readonly Dictionary<EnemyBase, int> stacks = new Dictionary<EnemyBase, int>();
     private readonly List<EnemyBase> scratch = new List<EnemyBase>();
 
@@ -100,6 +103,9 @@ public class WindCharge : MonoBehaviour
 
     private void OnEnemyHit(EnemyBase enemy, DamageInfo info, HitResult result)
     {
+        if (!stacking)
+            return;
+
         if (enemy == null || !result.hit || result.killed)
             return;
 
@@ -112,6 +118,9 @@ public class WindCharge : MonoBehaviour
 
     private void OnParry(EnemyBase enemy, bool brokeBalance)
     {
+        if (!stacking)
+            return;
+
         Add(enemy, 3);
     }
 
@@ -147,6 +156,18 @@ public class WindCharge : MonoBehaviour
         }
 
         scratch.Clear();
+    }
+
+    /// <summary>Özel saldırılar (Atılım Kesiği...) düşmana Kın yükü ekler.</summary>
+    public void AddCharge(EnemyBase enemy, int amount)
+    {
+        Add(enemy, amount);
+    }
+
+    public void ClearStacks()
+    {
+        stacks.Clear();
+        glow = 0f;
     }
 
     private void Add(EnemyBase enemy, int amount)
@@ -510,6 +531,34 @@ public class WindCharge : MonoBehaviour
             PlayerAbility.Instance.SpawnRingFx(center, Mathf.Max(size.x * 0.9f, 1.8f), new Color(0.7f, 0.92f, 1f, 0.9f));
 
         SpawnFlash(center, Mathf.Max(size.x, size.y) * 0.9f);
+    }
+
+    /// <summary>Atılım izi: başlangıçtan bitişe uzun rüzgâr çizgileri + varışta parlama.</summary>
+    public void PlayDashTrail(Vector3 from, Vector3 to)
+    {
+        float dir = to.x >= from.x ? 1f : -1f;
+        float len = Mathf.Abs(to.x - from.x);
+
+        Vector3 mid = (from + to) * 0.5f + Vector3.up * 0.9f;
+
+        for (int i = 0; i < 4; i++)
+        {
+            float y = (i - 1.5f) * 0.55f + (Random.value - 0.5f) * 0.2f;
+
+            SpawnStreak(
+                mid + new Vector3(0f, y, 0f),
+                mid + new Vector3(dir * len * 0.1f, y, 0f),
+                dir > 0f ? 0f : 180f,
+                new Vector3(Mathf.Max(1f, len * 0.9f), 0.8f, 1f),
+                new Vector3(Mathf.Max(1f, len * 1.0f), 0.25f, 1f),
+                Color.Lerp(PipColor, Color.white, 0.35f),
+                0.3f,
+                0.9f,
+                i * 0.015f
+            );
+        }
+
+        SpawnFlash(to + Vector3.up * 0.9f, 2.6f);
     }
 
     /// <summary>Oyuncudan iki yana yayılan büyük rüzgâr dalgası.</summary>

@@ -82,6 +82,8 @@ public class DashState : IPlayerState
         total = timer;
         cancelIntent = false;
         endedByCancel = false;
+        redirected = false;
+        blendTimer = 0f;
 
         dir = player.GetDashDirection();
 
@@ -173,9 +175,40 @@ public class DashState : IPlayerState
         player.isAttackLocked = false;
     }
 
+    // Dash'in ilk bu kadarında ters yön tuşuna basılırsa dash anında o yöne döner (yön değiştirme tepkisi).
+    private const float RedirectWindow = 0.7f;
+    private bool redirected;
+    private float blendTimer;   // yön değişiminden sonra hız yumuşak geçiş süresi
+
     public void Update()
     {
         timer -= Time.deltaTime;
+
+        float live = MobileInput.GetAxisRaw("Horizontal");
+
+        if (
+            Mathf.Abs(live) > 0.1f &&
+            Mathf.Sign(live) != dir &&
+            !redirected &&
+            total > 0f &&
+            (1f - timer / total) < RedirectWindow
+        )
+        {
+            dir = Mathf.Sign(live);
+            player.facingDir = dir;
+
+            // Ters yöne dönünce dash YENİDEN başlar (tam mesafe): aksi halde kalan kuyruk
+            // sağ gidişi yarım yamalak geri alır ve oyuncu olduğu yerde kalır.
+            if (!redirected)
+            {
+                redirected = true;
+                timer = total;
+                blendTimer = 0.18f;
+            }
+
+            if (player.playerSprite != null)
+                player.playerSprite.flipX = dir < 0f;
+        }
 
         // Zıplama / saldırı / parry isteği dash sırasında hatırlanır; dash'in son kısmında
         // (yavaş kuyruk) varsa dash erken biter ve istek hemen çalışır.
@@ -226,7 +259,18 @@ public class DashState : IPlayerState
         float m = DashDecayPower;
         float curve = (m + 1f) * Mathf.Pow(1f - p, m) * Mathf.SmoothStep(0f, 1f, p / 0.04f);
 
-        vel.x = dir * speed * curve;
+        float targetVx = dir * speed * curve;
+
+        if (blendTimer > 0f)
+        {
+            // Yön değişiminde hız anında ters dönmesin: sıfırdan geçerek yumuşakça yeni yöne otursun (tek akıcı dönüş, iki ayrı dash değil).
+            blendTimer -= Time.fixedDeltaTime;
+            vel.x = Mathf.MoveTowards(vel.x, targetVx, speed * 22f * Time.fixedDeltaTime);
+        }
+        else
+        {
+            vel.x = targetVx;
+        }
 
         // Havadaysa: ilk kisim duz, sonra yumusakca asagi suzul; hiz Exit'te korunur (dogal dusus).
         float fall = 0f;

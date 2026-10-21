@@ -38,6 +38,7 @@ public class CombatCallout : MonoBehaviour
     }
 
     private static CombatCallout instance;
+    private static PlayerController callerPlayer;
     private static Font font;
 
     private readonly List<Item> active = new List<Item>();
@@ -111,6 +112,8 @@ public class CombatCallout : MonoBehaviour
         int sortingOrder = 600
     )
     {
+        return;   // Tüm yazılar kapalı (hasar sayacı DamageCounter'da).
+#pragma warning disable 0162
         if (!Application.isPlaying || string.IsNullOrEmpty(label))
             return;
 
@@ -126,6 +129,7 @@ public class CombatCallout : MonoBehaviour
         float extraHeight = 0.35f
     )
     {
+        return;
         if (target == null)
             return;
 
@@ -163,6 +167,21 @@ public class CombatCallout : MonoBehaviour
         int order
     )
     {
+        // Yazı oyuncunun ve ön plan sanatının (ör. "Environments" katmanı) ÜSTÜNDE çıksın:
+        // Default katmanındaki yazı o katmandaki her şeyin arkasında kalıyordu.
+        if (callerPlayer == null)
+            callerPlayer = FindFirstObjectByType<PlayerController>();
+
+        if (callerPlayer != null && callerPlayer.playerSprite != null)
+        {
+            SpriteRenderer ps = callerPlayer.playerSprite;
+
+            if (SortingLayer.GetLayerValueFromID(ps.sortingLayerID) > SortingLayer.GetLayerValueFromID(layer))
+                layer = ps.sortingLayerID;
+
+            order = Mathf.Max(order, ps.sortingOrder + 600);
+        }
+
         Item item = new Item
         {
             color = color,
@@ -182,7 +201,86 @@ public class CombatCallout : MonoBehaviour
         item.text =
             CreateText(item.obj.transform, label, color, textSize, layer, order + 1);
 
+        // Yazı OnGUI'de (ekran uzayı) çizilir: sıralama katmanı / ön plan sanatı onu gizleyemez.
+        item.text.GetComponent<MeshRenderer>().enabled = false;
+        item.shadow.GetComponent<MeshRenderer>().enabled = false;
+
         active.Add(item);
+    }
+
+    private GUIStyle guiStyle;
+
+    private void OnGUI()
+    {
+        if (Event.current.type != EventType.Repaint || active.Count == 0)
+            return;
+
+        Camera cam = GameCamera.Get();
+
+        if (cam == null)
+            return;
+
+        if (guiStyle == null)
+        {
+            guiStyle = new GUIStyle(GUI.skin.label);
+            guiStyle.alignment = TextAnchor.MiddleCenter;
+            guiStyle.fontStyle = FontStyle.Bold;
+            guiStyle.wordWrap = false;
+            guiStyle.clipping = TextClipping.Overflow;
+
+            Font f = GetFont();
+
+            if (f != null)
+                guiStyle.font = f;
+        }
+
+        GUI.depth = -50;
+
+        float gs = GameSettings.GuiScale(0.7f);
+
+        Matrix4x4 oldMatrix = GUI.matrix;
+        Color oldColor = GUI.color;
+
+        GUI.matrix = Matrix4x4.Scale(new Vector3(gs, gs, 1f));
+
+        for (int i = 0; i < active.Count; i++)
+        {
+            Item item = active[i];
+
+            if (item.obj == null || item.text == null)
+                continue;
+
+            Vector3 sp = cam.WorldToScreenPoint(item.obj.transform.position);
+
+            if (sp.z < 0f)
+                continue;
+
+            float t = Mathf.Clamp01(item.age / Mathf.Max(0.01f, item.life));
+            float pop = t < 0.12f ? Mathf.Lerp(1.7f, 1f, t / 0.12f) : 1f;
+
+            guiStyle.fontSize = Mathf.Max(8, Mathf.RoundToInt(28f * Mathf.Clamp(item.scale, 0.6f, 1.6f) * pop));
+
+            float x = sp.x / gs;
+            float y = (Screen.height - sp.y) / gs;
+
+            Rect r = new Rect(x - 250f, y - 30f, 500f, 60f);
+
+            Color sh = item.shadow.color;
+            guiStyle.normal.textColor = sh;
+
+            string label = item.text.text;
+
+            GUI.Label(new Rect(r.x + 2f, r.y + 2f, r.width, r.height), label, guiStyle);
+            GUI.Label(new Rect(r.x - 1f, r.y + 2f, r.width, r.height), label, guiStyle);
+            GUI.Label(new Rect(r.x + 2f, r.y - 1f, r.width, r.height), label, guiStyle);
+
+            guiStyle.normal.textColor = item.text.color;
+
+            GUI.Label(r, label, guiStyle);
+        }
+
+        GUI.matrix = oldMatrix;
+        GUI.color = oldColor;
     }
 
     private void LateUpdate()

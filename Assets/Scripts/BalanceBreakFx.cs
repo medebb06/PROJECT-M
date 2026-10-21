@@ -83,7 +83,7 @@ public class BalanceBreakFx : MonoBehaviour
 
         if (!string.IsNullOrEmpty(label))
         {
-            CombatCallout.Popup(
+            NoCallout.Popup(
                 position + new Vector3(0f, 2.2f, 0f),
                 label,
                 new Color(1f, 0.6f, 0.15f),

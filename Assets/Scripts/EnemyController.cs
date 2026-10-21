@@ -1624,18 +1624,8 @@ public class EnemyController : EnemyBase
 
     public override void PlayHealthHitSound()
     {
-        if (hitAudioSource == null)
-            return;
-
-        var cs = CombatFxSettings.Get();
-        AudioClip clip = (cs != null && cs.healthHitSounds != null && cs.healthHitSounds.Length > 0)
-            ? cs.healthHitSounds[Random.Range(0, cs.healthHitSounds.Length)]
-            : healthHitClip;
-
-        if (clip == null)
-            return;
-
-        hitAudioSource.PlayOneShot(clip);
+        // Cana vuruş sesi = eski armora (posture) vuruş sesi.
+        PlayPostureHitSound();
     }
 
     public override void PlayPostureHitSound()

@@ -80,6 +80,7 @@ public class EnemyUnit : EnemyBase
     public override int SlamBalanceDamage { get { return 3; } }
     public override bool BlocksPlainHits { get { return def != null && def.blockPlainHits && state != UnitState.Stagger; } }
     public override float StaggerHitHealthFraction { get { return def != null ? def.staggerHitHealthFraction : 0f; } }
+    public override bool UsesPosture { get { return def == null || def.usesPosture; } }
 
     // =========================================================
     // YAŞAM DÖNGÜSÜ
@@ -447,8 +448,7 @@ public class EnemyUnit : EnemyBase
     private void KeepRange(float dist, float dx)
     {
         if (!OnScreen() || dist > rangedMax * 0.85f) Move(Mathf.Sign(dx) * def.chaseSpeed * (dist > def.sprintDistance ? def.sprintMultiplier : 1f));
-        else if (dist < rangedMax * 0.5f) Move(-Mathf.Sign(dx) * def.chaseSpeed);   // rahat atış mesafesine doğru yavaşça açıl
-        else Stop();
+        else Stop();   // okçu yürüyerek kaçmaz: yakınsa kaçış dash'i (cooldownlu) devreye girer
     }
 
     private bool OnScreen()
@@ -463,7 +463,7 @@ public class EnemyUnit : EnemyBase
     {
         float dx = DxToTarget;
         float comfy = Mathf.Max(def.standbyDistance * 0.6f, 1.2f);
-        if (dist < comfy) Move(-Mathf.Sign(dx) * def.chaseSpeed * def.standbySpeedMultiplier);
+        if (dist < Mathf.Min(comfy, 0.9f)) Move(-Mathf.Sign(dx) * def.chaseSpeed * def.standbySpeedMultiplier);
         else Stop();
     }
 
@@ -868,7 +868,11 @@ public class EnemyUnit : EnemyBase
             {
                 if (hitFeedback != null) hitFeedback.PlayParry(dir);
                 // Parry posture barının sabit bir oranını doldurur; can götürmez.
-                if (balance != null)
+                if (!UsesPosture)
+                {
+                    ForceStagger();   // sıradan düşman: parry = sersemleme, bir sonraki vuruş infaz
+                }
+                else if (balance != null)
                 {
                     int dmg = Mathf.Max(1, Mathf.RoundToInt(balance.MaxBalance * def.parryPostureFraction * Mathf.Max(0f, atk.parryBalanceMultiplier)));
                     balance.AddBalanceDamage(dmg, false);
@@ -876,7 +880,7 @@ public class EnemyUnit : EnemyBase
                 PlayBalanceDamageFlash();
                 lungeCancelled = true;
                 contactDefended = true;
-                bool broke = balance != null && balance.IsBroken;
+                bool broke = !UsesPosture ? true : (balance != null && balance.IsBroken);
                 PlayParrySlowMotion(broke);
                 CombatEvents.RaiseParry(this, broke);
             }
@@ -963,6 +967,7 @@ public class EnemyUnit : EnemyBase
     public void ReceiveReflected(Vector2 dir)
     {
         if (IsDead) return;
+        if (!UsesPosture) { ForceStagger(); return; }
         if (balance != null)
         {
             int dmg = Mathf.Max(1, Mathf.RoundToInt(balance.MaxBalance * def.parryPostureFraction));
@@ -1047,8 +1052,7 @@ public class EnemyUnit : EnemyBase
         if (breathHolding) { Stop(); return; }   // bu saldırıdan sonra geri çekilme yok, sabit bekle
         if (rangedMax > 0f) { KeepRange(dist, dx); return; }
         float want = Mathf.Max(def.breathDistance, CloseRange() + 1f);
-        if (dist < want) Move(-Mathf.Sign(dx == 0f ? facing : dx) * def.chaseSpeed * def.breathMoveSpeed);
-        else Stop();
+        Stop();   // nefes alırken yürüyerek geri çekilme yok, yerinde dur
     }
 
     private void EndRecover()
@@ -1100,13 +1104,14 @@ public class EnemyUnit : EnemyBase
 
     private void ApplyPressure()
     {
+        return;   // Tempo baskısı kapalı: vurmak düşmanın saldırı kararını geciktirmesin.
         if (def == null || def.pressureDelay <= 0f) return;
         if (Time.time - lastPressureTime > 1.3f) pressureStreak = 0;
         lastPressureTime = Time.time;
         pressureStreak++;
-        float d = Mathf.Min(def.pressureMax, def.pressureDelay + def.pressureStep * (pressureStreak - 1));
+        float d = Mathf.Min(Mathf.Min(0.6f, def.pressureMax), def.pressureDelay + def.pressureStep * (pressureStreak - 1));
         if (state != UnitState.Windup && state != UnitState.Active) attackCooldownTimer = Mathf.Max(attackCooldownTimer, d);
-        if (def.pressureGroupDelay > 0f) EnemyAttackCoordinator.DelayNextHit(def.pressureGroupDelay);
+        // Grup gecikmesi kaldırıldı: bir düşmanı dövmek diğerlerini susturmasın.
     }
 
     // ---- Çatışma: oyuncunun saldırısı düşmanın karar verilmiş saldırısına denk gelirse ikisi çarpışır.
@@ -1295,7 +1300,7 @@ public class EnemyUnit : EnemyBase
         SquashPunch(new Vector2(1.14f, 0.88f), 0.12f, AbsorbsHit() ? 0.4f : 1f);
         if (AbsorbsHit()) { PlayBalanceDamageFlash(); return; }
         PlayBalanceDamageFlash();
-        if (state != UnitState.Stagger && (Time.time >= hurtImmuneUntil || EarlyWindup))
+        if (state != UnitState.Stagger && Time.time >= hurtImmuneUntil)
         {
             Knock(hitDirection, def.balanceHitKnockback);
             EnterHurtGuarded(def.balanceHitStun);
@@ -1324,7 +1329,7 @@ public class EnemyUnit : EnemyBase
         if (!healthHit) PlayBalanceDamageFlash();
         else PlayTintFlash(new Color(1f, 0.35f, 0.3f, 1f), 0.08f);
         // Denge kırıldıysa ForceStagger OnBalanceBroken yoluyla gelir; burada sadece sersemlet.
-        if (state != UnitState.Stagger && state != UnitState.Hurt && (Time.time >= hurtImmuneUntil || EarlyWindup)) EnterHurtGuarded(def.balanceHitStun);
+        if (state != UnitState.Stagger && state != UnitState.Hurt && Time.time >= hurtImmuneUntil) EnterHurtGuarded(def.balanceHitStun);
     }
 
     public override void ApplyBlockKnockback(Vector2 hitDirection)
@@ -1468,7 +1473,8 @@ public class EnemyUnit : EnemyBase
 
     public override void PlayHealthHitSound()
     {
-        PlayRandom(hitFeedback != null ? hitFeedback.HealthHitSounds : null);
+        // Cana vuruş sesi = eski armora (posture) vuruş sesi.
+        PlayPostureHitSound();
     }
 
     public override void PlayPostureHitSound()

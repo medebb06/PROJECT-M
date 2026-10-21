@@ -81,6 +81,7 @@ public class EnemyOverheadBars : MonoBehaviour
         public float createdAt;
         public float lastHitTime = -999f;
         public bool oldBarsHidden;
+        public bool noPosture;
     }
 
     private static EnemyOverheadBars instance;
@@ -347,6 +348,10 @@ public class EnemyOverheadBars : MonoBehaviour
 
         y += healthHeight + 2f;
 
+        // Sıradan düşmanda denge çubuğu yok.
+        if (e.noPosture)
+            return;
+
         // -------- DENGE --------
         float bal = e.balance != null ? e.balance.BalancePercent : 0f;
         bool broken = e.balance != null && e.balance.IsBroken;
@@ -386,7 +391,8 @@ public class EnemyOverheadBars : MonoBehaviour
             health = enemy.GetComponent<Health>(),
             balance = enemy.GetComponent<EnemyBalance>(),
             sprite = FindMainRenderer(enemy),
-            createdAt = now
+            createdAt = now,
+            noPosture = !enemy.UsesPosture
         };
 
         e.lastHealth = HealthPercent(e);

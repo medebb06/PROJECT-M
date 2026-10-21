@@ -101,6 +101,10 @@ public class EnemyDef : ScriptableObject
     public float blockKnockback = 3f;
     public float knockbackDeceleration = 25f;
 
+    [Header("Posture kullanımı")]
+    [Tooltip("Kapalı: posture barı yok, düz vuruş doğrudan can götürür; parry düşmanı sersemletir (infaz fırsatı). Elite / boss için açık bırak.")]
+    public bool usesPosture = true;
+
     [Header("Posture / can (boss gibi)")]
     [Tooltip("Düz vuruşlarla posture bar dolarken MAX canın bu oranı kadar can da gider (boss: 0.5). 0 = posture can götürmez.")]
     [Range(0f, 1f)] public float hitChipHealthRatio = 0.5f;

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Quick
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Quick
-  maxHealth: 120
+  maxHealth: 70
   maxBalance: 70
   superArmor: 0
   staggerDuration: 1.6
@@ -29,6 +29,10 @@ MonoBehaviour:
   escapeDuration: 0.28
   escapeJump: 0
   escapeCooldown: 3.5
+  escapeTrap: 0
+  trapDelay: 2
+  trapRadius: 3.5
+  trapHitPercent: 0.3
   hitStunCooldown: 0.6
   blockPlainHits: 0
   clashWindupFraction: 0.7
@@ -58,6 +62,7 @@ MonoBehaviour:
   healthHitKnockback: 12
   blockKnockback: 10
   knockbackDeceleration: 40
+  usesPosture: 0
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
   passThroughPlayer: 0
@@ -70,7 +75,7 @@ MonoBehaviour:
     weight: 0.01
     minRange: 0
     maxRange: 4
-    windup: 0.3
+    windup: 0.42
     active: 0.1
     recovery: 0.4
     cooldown: 0.5
@@ -118,10 +123,21 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
     followUp: 
     followUpChance: 0.6
     followUpOnly: 1
@@ -132,7 +148,7 @@ MonoBehaviour:
     weight: 0.01
     minRange: 0
     maxRange: 4
-    windup: 0.3825
+    windup: 0.42
     active: 0.22
     recovery: 0.65
     cooldown: 0.5
@@ -180,10 +196,21 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
     followUp: 
     followUpChance: 0.5
     followUpOnly: 1
@@ -194,7 +221,7 @@ MonoBehaviour:
     weight: 2
     minRange: 0
     maxRange: 6.5
-    windup: 0.26
+    windup: 0.42
     active: 0.1
     recovery: 0.45
     cooldown: 0.5
@@ -242,10 +269,21 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 1
@@ -304,10 +342,21 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0.4
     breathHold: 0
     endsBurst: 1
     opener: 1
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 0
@@ -366,10 +415,21 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 1
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 0

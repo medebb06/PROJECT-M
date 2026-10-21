@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1297650401731555932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2036770996261106437}
+  - component: {fileID: 830420792504919217}
+  m_Layer: 0
+  m_Name: HordeMode
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2036770996261106437
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297650401731555932}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &830420792504919217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297650401731555932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a9737e3b2a9a8d4caeb341298dff187, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HordeMode
+  entries:
+  - label: Duelist
+    prefab: {fileID: 6956973913847538072, guid: 3413bf4c1aa24ca42954dc33d9cb9a84, type: 3}
+    weight: 4
+  - label: Quick
+    prefab: {fileID: 6956973913847538072, guid: 3d7dd1b672c88854db19688b99e41be0, type: 3}
+    weight: 3
+  - label: Leaper
+    prefab: {fileID: 6956973913847538072, guid: 7434d8ef18c2b6a46951d7269f6d54e9, type: 3}
+    weight: 3
+  - label: Archer
+    prefab: {fileID: 6956973913847538072, guid: b911a6abb501b474cb3dc9cadeaa4d53, type: 3}
+    weight: 2
+  - label: Heavy
+    prefab: {fileID: 6956973913847538072, guid: b924220c146e6e2448cbe0cec749015b, type: 3}
+    weight: 1
+  running: 1
+  startAlive: 4
+  maxAliveCap: 10
+  rampSeconds: 90
+  startInterval: 1.6
+  endInterval: 0.7
+  spawnDistance: 16
+  spawnJitter: 4
+  healOnKill: 8

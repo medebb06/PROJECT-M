@@ -26,10 +26,13 @@ public static class PlayerDamage
     // Silah (PlayerWeapon koyar): sadece normal vuruşlar (kombo + havada).
     // Düz vuruşların CAN hasarı: posture barının tamamını vuruşlarla doldurmak,
     // düşmanın MAX canının bu oranını götürür (parry'den dolan posture can götürmez).
-    public static float PostureToHealthRatio = 0f;
+    public static float PostureToHealthRatio = 0.5f;
 
     /// <summary>Kombonun 4. (son) vuruşunun denge ve can hasarı çarpanı.</summary>
     public static float FinalHitDamageMultiplier = 1.6f;
+
+    /// <summary>Düz vuruşların (kombo, havada, slam) CAN hasarı çarpanı.</summary>
+    public static float HealthDamageBoost = 1.4f;
 
     // Düz vuruşların (kombo, havada, slam) denge hasarı çarpanı. Kesirli: 2 → ortalama vuruş başına 2.
     public static float NormalHitBalanceBoost = 2f;
@@ -44,7 +47,7 @@ public static class PlayerDamage
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        PostureToHealthRatio = 0f;
+        PostureToHealthRatio = 0.5f;
         FinalHitDamageMultiplier = 1.6f;
         NormalHitBalanceBoost = 2f;
         AttackBalanceMultiplier = 1f;
@@ -80,6 +83,21 @@ public static class PlayerDamage
 
         info.target = enemy;
 
+        // AKIŞ: zincir / karşılık çarpanı (sadece düz vuruş ve slam).
+        if (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
+        {
+            float flow = CombatFlow.OnPlayerHit(enemy);
+
+            if (flow > 1.001f)
+            {
+                if (info.balanceDamage > 0)
+                    info.balanceDamage = Mathf.Max(info.balanceDamage + 1, Mathf.RoundToInt(info.balanceDamage * flow));
+
+                if (info.healthDamage > 0)
+                    info.healthDamage = Mathf.Max(info.healthDamage + 1, Mathf.RoundToInt(info.healthDamage * flow));
+            }
+        }
+
         PlayerStats stats = PlayerStats.Current;
 
         // -----------------------------------------------------
@@ -105,7 +123,7 @@ public static class PlayerDamage
         // DENGE KATMANI
         // =====================================================
 
-        if (balance != null && !balance.IsBroken)
+        if (balance != null && !balance.IsBroken && enemy.UsesPosture)
         {
             float sourceMultiplier =
                 info.source == DamageSource.Attack || info.source == DamageSource.Slam
@@ -215,11 +233,12 @@ public static class PlayerDamage
                 StatType.HealthDamage,
                 info.healthDamage,
                 critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
+                * ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) ? HealthDamageBoost : 1f)
                 * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
                 stats
             );
 
-        if (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
+        if ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) && enemy.UsesPosture)
             healthAmount = Mathf.Max(1, Mathf.RoundToInt(healthAmount * SpamHealthMult));
 
         // Sersemlemiş düşman daha çabuk ölür (infaz barı boşken de bitirilebilsin).

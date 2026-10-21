@@ -128,8 +128,7 @@ public class HitClickAudio : MonoBehaviour
 
     void PlayHealthHitSound()
     {
-        if (!enableHit) return;
-        PlayHit();
+        if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
     }
 
     void PlayHit()
@@ -150,10 +149,9 @@ public class HitClickAudio : MonoBehaviour
             return;
         }
 
-        if (!enableHit) return;
-        // Sadece CANA vurunca çalsın; posture (denge) vuruşunda çalmasın.
+        // Sadece CANA vurunca çalsın. Ses: eski armora (posture) vuruş sesi.
         if (!r.hit || r.onBalance || r.amount <= 0) return;
-        PlayHit();
+        if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
     }
 
     void OnPlayerDamaged(PlayerDamageReport rep)

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Heavy
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Heavy
-  maxHealth: 600
+  maxHealth: 320
   maxBalance: 200
   superArmor: 1
   staggerDuration: 2.6
@@ -62,8 +62,9 @@ MonoBehaviour:
   healthHitKnockback: 6
   blockKnockback: 10
   knockbackDeceleration: 40
+  usesPosture: 0
   hitChipHealthRatio: 0.5
-  staggerHitHealthFraction: 0.5
+  staggerHitHealthFraction: 0.4
   passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
@@ -122,6 +123,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0.35
     breathHold: 0
     endsBurst: 0
@@ -194,6 +196,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0
     breathHold: 0
     endsBurst: 0
@@ -266,6 +269,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 3
     hitInterval: 0.6
+    finalHitDelay: 0
     hitPercent: 0.2
     breathHold: 0
     endsBurst: 1
@@ -338,6 +342,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
+    finalHitDelay: 0
     hitPercent: 0.4
     breathHold: 0
     endsBurst: 1

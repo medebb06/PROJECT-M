@@ -7,7 +7,8 @@ public enum AbilityType
     ShadowStep,  // Gölge Adım: en yakın düşmanın arkasına ışınlan + denge vuruşu
     Frost,       // Buz Nefesi: düşman zamanı yavaşlar, öndekiler kesilir + denge
     Fire,        // Alev Dalgası: öndekileri yakar (sersemlemişe çift)
-    WindStore    // Rüzgâr Birikimi: vuruşlar düşmanda çizgi biriktirir, Q patlatır
+    WindStore,   // Rüzgâr Birikimi: vuruşlar düşmanda çizgi biriktirir, Q patlatır
+    DashSlash    // Atılım Kesiği: düşmanların içinden atıl, işaretle, kısa gecikmeyle kes
 }
 
 /// <summary>
@@ -24,7 +25,8 @@ public static class AbilityInfo
         AbilityType.ShadowStep,
         AbilityType.Frost,
         AbilityType.Fire,
-        AbilityType.WindStore
+        AbilityType.WindStore,
+        AbilityType.DashSlash
     };
 
     public static string Name(AbilityType type)
@@ -36,6 +38,7 @@ public static class AbilityInfo
             case AbilityType.Frost: return "Buz Nefesi";
             case AbilityType.Fire: return "Alev Dalgası";
             case AbilityType.WindStore: return "Rüzgâr Birikimi";
+            case AbilityType.DashSlash: return "Atılım Kesiği";
             default: return type.ToString();
         }
     }
@@ -50,6 +53,7 @@ public static class AbilityInfo
             case AbilityType.Frost: return "BUZ";
             case AbilityType.Fire: return "ALV";
             case AbilityType.WindStore: return "RÜZ";
+            case AbilityType.DashSlash: return "ATL";
             default: return "?";
         }
     }
@@ -68,6 +72,8 @@ public static class AbilityInfo
                 return "Öndeki düşmanları yakar (denge, sonra can). Sersemlemiş düşmana çift yanık.";
             case AbilityType.WindStore:
                 return "Vuruşlar ve parry düşmanda rüzgâr çizgisi biriktirir. Kılıcı kınına sok: biriken yük kadar hasar. Hasar alırsan yük yarıya iner.";
+            case AbilityType.DashSlash:
+                return "Çok uzağa atıl; düşmanların içinden geçerken dokunulmazsın. Geçtiğin her düşmana Kın yükü biner (Q ile patlatılır).";
             default:
                 return "";
         }
@@ -87,6 +93,7 @@ public static class AbilityInfo
             case AbilityType.Frost: return new Color(0.45f, 0.9f, 1f);
             case AbilityType.Fire: return new Color(1f, 0.55f, 0.2f);
             case AbilityType.WindStore: return new Color(0.6f, 0.86f, 1f);
+            case AbilityType.DashSlash: return new Color(0.55f, 1f, 0.9f);
             default: return UnityEngine.Color.white;
         }
     }
@@ -101,6 +108,7 @@ public static class AbilityInfo
             case AbilityType.Frost: return 13f;
             case AbilityType.Fire: return 9f;
             case AbilityType.WindStore: return 4f;
+            case AbilityType.DashSlash: return 6f;
             default: return 10f;
         }
     }

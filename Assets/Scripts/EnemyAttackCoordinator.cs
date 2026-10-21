@@ -57,7 +57,7 @@ public class EnemyAttackCoordinator : MonoBehaviour
 
     [Header("Engagement (parry odaklı dövüşte kalabalık eğlenceli değil)")]
     [Tooltip("Aynı anda oyuncuyla çatışan en fazla düşman. Fazlası uzakta bekler, biri ölünce sıra en yakın bekleyene geçer.")]
-    [SerializeField] private int maxEngaged = 2;
+    [SerializeField] private int maxEngaged = 3;
 
     [Header("Debug")]
     [SerializeField] private bool showDebug = false;
