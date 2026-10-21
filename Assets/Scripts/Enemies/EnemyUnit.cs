@@ -201,6 +201,7 @@ public class EnemyUnit : EnemyBase
     private void LateUpdate()
     {
         UpdateMarker();
+        UpdateAlertStar();
         UpdateSquash();
         UpdateLean();
         if (bodySprite == null) return;
@@ -1427,9 +1428,60 @@ public class EnemyUnit : EnemyBase
         markIcon.color = cue ? Color.white : new Color(1f, 0.85f, 0.1f, 1f);
     }
 
+    // ---- Uyarı yıldızı: kombo (çok vuruşlu) = mavi, engellenemez = kırmızı. Kafanın üstünde döner + büyüyüp küçülür.
+    private static Sprite alertBlue, alertRed;
+    private static bool alertLoaded;
+    private SpriteRenderer alertStar, alertSword;
+    private const float AlertSize = 3.5f;
+    private void UpdateAlertStar()
+    {
+        if (!alertLoaded)
+        {
+            alertLoaded = true;
+            alertBlue = Resources.Load<Sprite>("EnemyAlerts/alert_combo_blue");
+            alertRed = Resources.Load<Sprite>("EnemyAlerts/alert_unblockable_red");
+        }
+        bool combo = current != null && current.hits > 1;
+        bool unbl = current != null && current.unblockable;
+        bool phase = state == UnitState.Windup || (combo && state == UnitState.Active && (!hitDone || MultiHitCommitted));
+        Sprite spr = unbl ? alertRed : (combo ? alertBlue : null);
+        bool show = !dead && !bodyHidden && phase && spr != null;
+        if (!show) { if (alertStar != null && alertStar.enabled) alertStar.enabled = false; return; }
+        if (alertStar == null)
+        {
+            var go = new GameObject("AlertStar");
+            alertStar = go.AddComponent<SpriteRenderer>();
+            alertStar.sortingOrder = 500;
+        }
+        if (unbl && markIcon != null) markIcon.gameObject.SetActive(false); // eski sarı ikon yerine kırmızı yıldız
+        alertStar.sprite = spr;
+        alertStar.enabled = true;
+        Collider2D c = GetComponent<Collider2D>();
+        Vector3 pos = transform.position;
+        float top = c != null ? c.bounds.max.y : pos.y + 4f;
+        float tt = Time.unscaledTime;
+        float s = AlertSize * (1f + 0.25f * Mathf.Sin(tt * 14f));
+        // Kılıcın sapında (tuttuğu yer, gövdenin içindeki siyah uç); kılıç yoksa kafanın üstü.
+        Vector3 at = new Vector3(pos.x, top + 2f, pos.z);
+        if (visualRoot != null)
+        {
+            if (alertSword == null) { foreach (SpriteRenderer r in visualRoot.GetComponentsInChildren<SpriteRenderer>(true)) { alertSword = r; break; } }
+            if (alertSword != null)
+            {
+                Vector3 e1 = alertSword.transform.TransformPoint(new Vector3(-0.5f, 0f, 0f));
+                Vector3 e2 = alertSword.transform.TransformPoint(new Vector3(0.5f, 0f, 0f));
+                at = Mathf.Abs(e1.x - pos.x) < Mathf.Abs(e2.x - pos.x) ? e1 : e2;
+            }
+        }
+        alertStar.transform.position = new Vector3(at.x, at.y, pos.z - 0.1f);
+        alertStar.transform.localScale = new Vector3(s, s, 1f);
+        alertStar.transform.rotation = Quaternion.Euler(0f, 0f, -tt * 240f);
+    }
+
     private void OnDestroy()
     {
         if (markRoot != null) Destroy(markRoot);
+        if (alertStar != null) Destroy(alertStar.gameObject);
     }
 
     // =========================================================
