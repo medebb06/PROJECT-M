@@ -545,6 +545,18 @@ public class EnemyUnit : EnemyBase
 
     private float ApproachRange()
     {
+        // Yakin menzilli (minRange 0) saldirisi yoksa (Leaper): saldiri penceresinin ICINE kadar yaklas.
+        // (Eski davranis standbyDistance'ta duruyordu: maxRange'in disinda takilip hic saldirmiyordu.)
+        bool hasClose = false;
+        float bestMax = float.MaxValue;
+        for (int i = 0; i < def.attacks.Count; i++)
+        {
+            AttackDef a = def.attacks[i];
+            if (a.followUpOnly) continue;
+            if (a.minRange <= 0f) hasClose = true;
+            bestMax = Mathf.Min(bestMax, a.maxRange * 0.9f);
+        }
+        if (!hasClose && bestMax < float.MaxValue) return Mathf.Max(bestMax, 0.1f);
         return CloseRange();
     }
 
