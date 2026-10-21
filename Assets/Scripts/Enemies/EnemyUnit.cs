@@ -349,7 +349,12 @@ public class EnemyUnit : EnemyBase
             escapeTimer = def.escapeDuration;
             escapeCd = def.escapeCooldown;
             escapeAir = false;
-            if (def.escapeTrap) EnemyTrap.Spawn(transform.position, def.trapDelay, def.trapRadius, def.trapHitPercent, this);
+            // Tuzak her 2 kaçıştan birinde (1., 3., 5. ...).
+            if (def.escapeTrap)
+            {
+                if ((escapeCount++ & 1) == 0)
+                    EnemyTrap.Spawn(transform.position, def.trapDelay, def.trapRadius, def.trapHitPercent, this);
+            }
             if (def.escapeJump > 0f) rb.linearVelocity = new Vector2(escapeDir * def.escapeSpeed * EnemyTime.Scale, def.escapeJump);
             planned = null;
             PlayTintFlash(Color.white, 0.1f);
@@ -416,6 +421,7 @@ public class EnemyUnit : EnemyBase
 
     private float rangedMax;
     private float escapeTimer, escapeCd, escapeDir;
+    private int escapeCount;
     private bool escapeAir;
 
     private bool GroundedBelow()

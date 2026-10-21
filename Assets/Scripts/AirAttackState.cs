@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// HAVADA SALDIRI (PlayerCombatController başlatır).
 ///
-///   Yan vuruş  : önde kısa vuruş. Düşüş yavaşlar (havada asılı kalma hissi).
+///   Yan vuruş  : önde kısa vuruş. Düşüş normal devam eder.
 ///                İnişe kadar en fazla 'maxAirAttacks' kez.
 ///   AŞAĞI vuruş (↓ + saldırı) : ayağın altına vurur. Düşmana (ya da düşman
 ///                mermisine) değerse ZIPLATIR (pogo), dash beklemesi sıfırlanır
@@ -97,17 +97,7 @@ public class AirAttackState : ICombatState
 
         float n = Mathf.Clamp01(t / duration);
 
-        // Yan vuruşta düşüş yavaşlar.
-        if (!down && player.rb != null)
-        {
-            Vector2 v = player.rb.linearVelocity;
-
-            if (v.y < -combat.airAttackMaxFallSpeed)
-            {
-                v.y = -combat.airAttackMaxFallSpeed;
-                player.rb.linearVelocity = v;
-            }
-        }
+        // Havada saldırı yerçekimini/düşüşü değiştirmez (normal düşüş).
 
         if (!hasHit && n >= hitTime)
         {
