@@ -60,7 +60,7 @@ MonoBehaviour:
   knockbackDeceleration: 40
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
-  passThroughPlayer: 1
+  passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
   parryPostureFraction: 1

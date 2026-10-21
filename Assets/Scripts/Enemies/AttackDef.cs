@@ -72,6 +72,20 @@ public class AttackDef
     [Tooltip("Düşman oyuncuyu ilk gördüğünde (ilk saldırı kararında) bunu öncelikle kullanır.")]
     public bool opener = false;
 
+    [Header("Ağır saldırı (Heavy)")]
+    [Tooltip("Windup + aktif sırasında oyuncu vuruşu sersemletmez / çatışma olmaz (posture kırılması yine sersemletir).")]
+    public bool armored = false;
+    [Tooltip("Uyarı yıldızı sarı olsun (parry'lenebilir ağır vuruş).")]
+    public bool alertYellow = false;
+    [Tooltip("Zıplayıp yere vurur: windup'ta iniş noktası yerde işaretlenir, havada gider, inince iki yana şok dalgası çıkar (zıplayarak/dash ile kaçılır, parry yok).")]
+    public bool slamJump = false;
+    [Tooltip("Şok dalgasının iniş noktasından iki yana menzili.")]
+    public float slamRange = 7f;
+    [Tooltip("Havada kalma süresi (sn).")]
+    public float slamAirTime = 0.6f;
+    [Tooltip("İniş noktası oyuncunun bu kadar önünde (düşman tarafında).")]
+    public float slamGap = 2.5f;
+
     [Header("Devam saldırısı (kombo)")]
     [Tooltip("Bu saldırı isabet/ıska ile biterse (parry veya blok değil) bu isimdeki saldırı şansla ardından gelir; yine tam uyarılıdır.")]
     public string followUp = "";

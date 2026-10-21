@@ -60,28 +60,28 @@ MonoBehaviour:
   knockbackDeceleration: 40
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 0.5
-  passThroughPlayer: 1
+  passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
   parryPostureFraction: 0.8
   blockPostureDamage: 25
   attacks:
   - name: Overhead
-    weight: 0.01
+    weight: 4
     minRange: 0
-    maxRange: 4
-    windup: 0.9
-    active: 0.2
-    recovery: 1.1
-    cooldown: 0.8
+    maxRange: 5
+    windup: 1
+    active: 0.15
+    recovery: 1.2
+    cooldown: 1
     damage: 2
     unblockable: 0
-    hitReach: 10
-    hitHeight: 7
-    knockbackForce: 5
+    hitReach: 6
+    hitHeight: 4
+    knockbackForce: 10
     knockbackVertical: 2
     knockbackDuration: 0.4
-    parryBalanceMultiplier: 1
+    parryBalanceMultiplier: 1.25
     lungeDistance: 0
     lungeCurve:
       serializedVersion: 2
@@ -118,18 +118,24 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
-    hitPercent: 0
+    hitPercent: 0.35
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 1
+    alertYellow: 1
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
     followUp: 
     followUpChance: 0.3
-    followUpOnly: 1
+    followUpOnly: 0
     animWindup: 
     animAttack: 
     animRecover: 
   - name: Sweep (unblockable)
-    weight: 5
+    weight: 0.01
     minRange: 0
     maxRange: 4.5
     windup: 1.1
@@ -184,8 +190,150 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
+    followUpOnly: 1
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: Crush3
+    weight: 8
+    minRange: 0
+    maxRange: 5
+    windup: 0.9
+    active: 0.15
+    recovery: 1.4
+    cooldown: 1
+    damage: 2
+    unblockable: 0
+    hitReach: 5
+    hitHeight: 4
+    knockbackForce: 6
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 0.45
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 3
+    hitInterval: 0.6
+    hitPercent: 0.2
+    breathHold: 0
+    endsBurst: 1
+    opener: 0
+    armored: 1
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
+    followUp: 
+    followUpChance: 0.3
+    followUpOnly: 0
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: Slam
+    weight: 1.5
+    minRange: 6
+    maxRange: 14
+    windup: 1.1
+    active: 0.2
+    recovery: 1.5
+    cooldown: 8
+    damage: 2
+    unblockable: 1
+    hitReach: 7
+    hitHeight: 3
+    knockbackForce: 12
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1.25
+    lungeDistance: 0
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0.3
+    breathHold: 0
+    endsBurst: 1
+    opener: 0
+    armored: 1
+    alertYellow: 0
+    slamJump: 1
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
+    followUp: 
+    followUpChance: 0.3
     followUpOnly: 0
     animWindup: 
     animAttack: 

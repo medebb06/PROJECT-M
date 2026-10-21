@@ -349,6 +349,7 @@ public class EnemyUnit : EnemyBase
             escapeTimer = def.escapeDuration;
             escapeCd = def.escapeCooldown;
             escapeAir = false;
+            if (def.escapeTrap) EnemyTrap.Spawn(transform.position, def.trapDelay, def.trapRadius, def.trapHitPercent, this);
             if (def.escapeJump > 0f) rb.linearVelocity = new Vector2(escapeDir * def.escapeSpeed * EnemyTime.Scale, def.escapeJump);
             planned = null;
             PlayTintFlash(Color.white, 0.1f);
@@ -656,6 +657,9 @@ public class EnemyUnit : EnemyBase
 
     private void TickWindup(float dt)
     {
+        // Yer şoku: iniş noktası windup'ın ilk anında belirlenir ve bir daha DEĞİŞMEZ (uyarı alanı = gerçek iniş yeri).
+        if (current.slamJump && stateTime < 0.04f)
+            slamTargetX = target.position.x - Mathf.Sign(DxToTarget == 0f ? facing : DxToTarget) * current.slamGap;
         if (teleportPending && stateTime >= current.teleportVanish) DoTeleport();
         if (teleportPending) { HardStop(); return; }
         // Engellenemez saldırıda yön BAŞTAN kilitli: arkasına geçersen dönüp vurmaz.
@@ -718,7 +722,9 @@ public class EnemyUnit : EnemyBase
             // Atılmasız saldırı: salım görünsün diye vuruş kısa süre SONRA gelir. Atılmalı saldırı: önce kayar, VARINCA vurur.
             hitDone = false;
             if (current.projectileSpeed > 0f) { SpawnProjectile(); hitDone = true; lungeStrike = false; }
+            if (current.slamJump) { lungeStrike = false; hitDone = true; BeginSlam(); }
         }
+        if (current.slamJump) { TickSlam(); return; }
 
         if (!hitDone && !lungeStrike && stateTime >= firstHitAt)
         {
@@ -1082,7 +1088,7 @@ public class EnemyUnit : EnemyBase
     public override bool TryClash(Vector2 hitDirection)
     {
         if (IsDead || def == null || current == null || state == UnitState.Stagger) return false;
-        if (MultiHitCommitted) return false;
+        if (MultiHitCommitted || ArmorActive) return false;
         if (Time.time < clashImmuneUntil || current.unblockable) return false;
         bool inActive = state == UnitState.Active && !hitDone;
         float pw = current.windup <= 0f ? 1f : Mathf.Clamp01(stateTime / current.windup);
@@ -1125,10 +1131,69 @@ public class EnemyUnit : EnemyBase
 
     // Çok vuruşlu saldırı başlamışsa (ilk vuruş atıldı, sıradakiler bekliyor) sersemletme/iptal yok: her vuruş ayrı parry ister.
     private bool MultiHitCommitted { get { return state == UnitState.Active && current != null && current.hits > 1 && hitDone && extraHitsDone < current.hits - 1; } }
+    private bool ArmorActive { get { return current != null && current.armored && (state == UnitState.Windup || state == UnitState.Active); } }
+
+    // ---- Yer şoku (slamJump)
+    private float slamTargetX, slamStartY, slamVx;
+    private bool slamLanded;
+    private void BeginSlam()
+    {
+        slamLanded = false;
+        slamStartY = transform.position.y;
+        float T = Mathf.Max(0.2f, current.slamAirTime);
+        float g = Mathf.Abs(Physics2D.gravity.y * rb.gravityScale);
+        slamVx = (slamTargetX - transform.position.x) / T;
+        rb.linearVelocity = new Vector2(slamVx, 0.5f * g * T);
+        activeDur = T + 1f;
+    }
+
+    private void TickSlam()
+    {
+        if (slamLanded) return;
+        bool timeUp = stateTime >= current.slamAirTime;
+        bool onGround = stateTime > 0.15f && rb.linearVelocity.y <= 0.1f && transform.position.y <= slamStartY + 0.1f;
+        if (!timeUp && !onGround) { rb.linearVelocity = new Vector2(slamVx, rb.linearVelocity.y); return; }
+        slamLanded = true;
+        HardStop();
+        hitDone = true;
+        EnemyAttackCoordinator.ReleaseAttack(this);
+        if (telegraph != null) telegraph.StopWarning();
+        float lx = transform.position.x;
+        PlayerController pc = target != null ? target.GetComponent<PlayerController>() : null;
+        if (pc != null)
+        {
+            float dx = target.position.x - lx;
+            if (pc.isInvincible || !pc.IsGrounded()) CombatEvents.RaiseDodge(this, true);
+            else if (Mathf.Abs(dx) <= current.slamRange) DealHit(new Vector2(Mathf.Sign(dx == 0f ? facing : dx), 0f), true, current);
+            else CombatEvents.RaiseAttackMissed(this, true);
+        }
+        SquashPunch(new Vector2(1.35f, 0.72f), 0.18f, 1f);
+        StartCoroutine(SlamWaveFx(lx, transform.position.y, current.slamRange));
+        SetState(UnitState.Recover);
+    }
+
+    private System.Collections.IEnumerator SlamWaveFx(float x, float y, float range)
+    {
+        var go = new GameObject("SlamWave");
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = markZone != null ? markZone.sprite : null;
+        sr.sortingOrder = 400;
+        float t = 0f;
+        while (t < 0.3f && go != null)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / 0.3f);
+            go.transform.position = new Vector3(x, y + 0.3f, 0f);
+            go.transform.localScale = new Vector3(2f * range * k, Mathf.Lerp(1.2f, 0.2f, k), 1f);
+            sr.color = new Color(1f, 0.55f, 0.15f, 0.8f * (1f - k));
+            yield return null;
+        }
+        if (go != null) Destroy(go);
+    }
 
     private void EnterHurt(float duration)
     {
-        if (MultiHitCommitted) return;
+        if (MultiHitCommitted || ArmorActive) return;
         RollBurst();
         escapeTimer = 0f;
         CancelAttack();
@@ -1244,7 +1309,7 @@ public class EnemyUnit : EnemyBase
     public override void InterruptWithHitStun(float duration)
     {
         if (IsDead || state == UnitState.Stagger) return;
-        if (MultiHitCommitted) return;
+        if (MultiHitCommitted || ArmorActive) return;
         EnterHurt(duration);
     }
 
@@ -1398,9 +1463,12 @@ public class EnemyUnit : EnemyBase
         }
     }
 
+    // Uzun atılmalı (uzaktan çizgisel dash) saldırı mı?
+    private static bool IsLineDash(AttackDef a) { return a != null && a.lungeDistance >= 6f && a.projectileSpeed <= 0f; }
+
     private void UpdateMarker()
     {
-        bool show = !dead && state == UnitState.Windup && current != null && (current.unblockable || current.projectileSpeed > 0f);
+        bool show = !dead && state == UnitState.Windup && current != null && (current.unblockable || current.projectileSpeed > 0f || IsLineDash(current));
         if (!show)
         {
             if (markRoot != null && markRoot.activeSelf) markRoot.SetActive(false);
@@ -1421,6 +1489,24 @@ public class EnemyUnit : EnemyBase
         markZone.transform.localScale = new Vector3(current.hitReach, zoneH, 1f);
         markZone.color = cue ? new Color(1f, 1f, 1f, 0.55f) : (isShot ? new Color(1f, 0.85f, 0.4f, Mathf.Lerp(0.15f, 0.5f, p)) : new Color(1f, 0.15f, 0.1f, Mathf.Lerp(0.12f, 0.4f, p)));
         markIcon.gameObject.SetActive(!isShot);
+        if (current.slamJump)
+        {
+            markZone.transform.position = new Vector3(slamTargetX, pos.y + 0.3f, pos.z);
+            markZone.transform.localScale = new Vector3(current.slamRange * 2f, 0.6f, 1f);
+            markZone.color = cue ? new Color(1f, 1f, 1f, 0.7f) : new Color(1f, 0.3f, 0.1f, Mathf.Lerp(0.15f, 0.55f, p));
+            markIcon.gameObject.SetActive(false);
+        }
+        if (IsLineDash(current) && !current.unblockable)
+        {
+            // Uzaktan çizgisel dash: düşmandan oyuncuya ince bir çizgi (odaklanma süresince kalınlaşır).
+            float dxl = DxToTarget;
+            float len = Mathf.Max(0.5f, Mathf.Abs(dxl));
+            float ly = pos.y + Mathf.Min(2.4f, current.hitHeight * 0.5f);
+            markZone.transform.position = new Vector3(pos.x + Mathf.Sign(dxl) * len * 0.5f, ly, pos.z);
+            markZone.transform.localScale = new Vector3(len, Mathf.Lerp(0.08f, 0.3f, p), 1f);
+            markZone.color = cue ? new Color(1f, 1f, 1f, 0.8f) : new Color(1f, 0.25f, 0.2f, Mathf.Lerp(0.25f, 0.7f, p));
+            markIcon.gameObject.SetActive(false);
+        }
 
         Collider2D c = GetComponent<Collider2D>();
         float top = c != null ? c.bounds.max.y : pos.y + 4f;
@@ -1429,7 +1515,7 @@ public class EnemyUnit : EnemyBase
     }
 
     // ---- Uyarı yıldızı: kombo (çok vuruşlu) = mavi, engellenemez = kırmızı. Kafanın üstünde döner + büyüyüp küçülür.
-    private static Sprite alertBlue, alertRed;
+    private static Sprite alertBlue, alertRed, alertYellow;
     private static bool alertLoaded;
     private SpriteRenderer alertStar, alertSword;
     private const float AlertSize = 3.5f;
@@ -1440,11 +1526,12 @@ public class EnemyUnit : EnemyBase
             alertLoaded = true;
             alertBlue = Resources.Load<Sprite>("EnemyAlerts/alert_combo_blue");
             alertRed = Resources.Load<Sprite>("EnemyAlerts/alert_unblockable_red");
+            alertYellow = Resources.Load<Sprite>("EnemyAlerts/alert_yellow");
         }
         bool combo = current != null && current.hits > 1;
         bool unbl = current != null && current.unblockable;
         bool phase = state == UnitState.Windup || (combo && state == UnitState.Active && (!hitDone || MultiHitCommitted));
-        Sprite spr = unbl ? alertRed : (combo ? alertBlue : null);
+        Sprite spr = unbl ? alertRed : (combo ? alertBlue : (current != null && current.alertYellow ? alertYellow : null));
         bool show = !dead && !bodyHidden && phase && spr != null;
         if (!show) { if (alertStar != null && alertStar.enabled) alertStar.enabled = false; return; }
         if (alertStar == null)

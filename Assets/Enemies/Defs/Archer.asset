@@ -26,9 +26,13 @@ MonoBehaviour:
   squashStrength: 1
   escapeDistance: 10
   escapeSpeed: 20
-  escapeDuration: 1.2
-  escapeJump: 15
+  escapeDuration: 0.4
+  escapeJump: 5
   escapeCooldown: 3
+  escapeTrap: 1
+  trapDelay: 2
+  trapRadius: 3.5
+  trapHitPercent: 0.3
   hitStunCooldown: 0.6
   blockPlainHits: 0
   clashWindupFraction: 0.7
@@ -60,7 +64,7 @@ MonoBehaviour:
   knockbackDeceleration: 40
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
-  passThroughPlayer: 1
+  passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
   parryPostureFraction: 1
@@ -122,6 +126,12 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 0
@@ -184,6 +194,12 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    armored: 0
+    alertYellow: 0
+    slamJump: 0
+    slamRange: 7
+    slamAirTime: 0.6
+    slamGap: 2.5
     followUp: 
     followUpChance: 0
     followUpOnly: 1

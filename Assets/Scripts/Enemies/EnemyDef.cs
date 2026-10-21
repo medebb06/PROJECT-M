@@ -35,6 +35,14 @@ public class EnemyDef : ScriptableObject
     public float escapeJump = 0f;
     [Tooltip("İki kaçış arası bekleme (sn). Sürekli kaçmasın, arada yakalanabilsin.")]
     public float escapeCooldown = 3.5f;
+    [Tooltip("Kaçışa başlarken bulunduğu yere tuzak bırakır.")]
+    public bool escapeTrap = false;
+    [Tooltip("Tuzak kaç sn sonra patlar.")]
+    public float trapDelay = 2f;
+    [Tooltip("Patlama menzili (iki yana, birim).")]
+    public float trapRadius = 3.5f;
+    [Tooltip("Patlama oyuncunun MAX canının bu oranını götürür.")]
+    [Range(0f, 1f)] public float trapHitPercent = 0.3f;
     [Tooltip("Düz vuruşla sersemletildikten sonra bu süre (sn) yeniden sersemletilemez; vuruş spamı düşmanı kilitleyip saldırılarını iptal etmesin. Parry/posture kırılması etkilemez.")]
     public float hitStunCooldown = 1.0f;
     [Tooltip("Sekiro tarzı: düz vuruşları bloklar (parry sesi + kıvılcım, can gitmez, sersemlemez) posture kırılana kadar.")]

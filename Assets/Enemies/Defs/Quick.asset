@@ -60,7 +60,7 @@ MonoBehaviour:
   knockbackDeceleration: 40
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
-  passThroughPlayer: 1
+  passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
   parryPostureFraction: 1
@@ -308,6 +308,68 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 1
+    followUp: 
+    followUpChance: 0
+    followUpOnly: 0
+    animWindup: 
+    animAttack: 
+    animRecover: 
+  - name: LineDash
+    weight: 3
+    minRange: 7
+    maxRange: 18
+    windup: 0.9
+    active: 0.2
+    recovery: 0.7
+    cooldown: 2.5
+    damage: 1
+    unblockable: 0
+    hitReach: 6.5
+    hitHeight: 7
+    knockbackForce: 8
+    knockbackVertical: 2
+    knockbackDuration: 0.4
+    parryBalanceMultiplier: 1
+    lungeDistance: 14
+    lungeCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
+    teleportBehind: 0
+    teleportGap: 2.4
+    teleportVanish: 0.3
+    hits: 1
+    hitInterval: 0.28
+    hitPercent: 0
+    breathHold: 0
+    endsBurst: 1
+    opener: 0
     followUp: 
     followUpChance: 0
     followUpOnly: 0
