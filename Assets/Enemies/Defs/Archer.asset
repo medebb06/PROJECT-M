@@ -48,7 +48,7 @@ MonoBehaviour:
   passThroughPlayer: 1
   knockbackScale: 0.35
   parryBalanceDamage: 50
-  parryPostureFraction: 0.5
+  parryPostureFraction: 1
   blockPostureDamage: 25
   attacks:
   - name: Shot

@@ -24,6 +24,11 @@ MonoBehaviour:
   arrivalTolerance: 0.5
   acceleration: 75
   squashStrength: 1
+  escapeDistance: 0
+  escapeSpeed: 26
+  escapeDuration: 0.28
+  escapeJump: 0
+  escapeCooldown: 3.5
   hitStunCooldown: 1
   reachForgiveness: 1.6
   leanBackDegrees: 16
@@ -43,7 +48,7 @@ MonoBehaviour:
   passThroughPlayer: 1
   knockbackScale: 0.35
   parryBalanceDamage: 50
-  parryPostureFraction: 0.5
+  parryPostureFraction: 1
   blockPostureDamage: 25
   attacks:
   - name: Jab
@@ -88,6 +93,11 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
     followUp: Jab2
     followUpChance: 0.6
     followUpOnly: 0
@@ -136,6 +146,11 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
     followUp: Jab
     followUpChance: 0.5
     followUpOnly: 0
@@ -184,6 +199,11 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
+    projectileSpeed: 0
+    projectileHeight: 2.6
+    projectileLife: 2.5
+    projectileRadius: 0.35
+    requireOnScreen: 1
     followUp: 
     followUpChance: 0
     followUpOnly: 1
