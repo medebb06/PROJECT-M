@@ -1146,19 +1146,34 @@ public class EnemyUnit : EnemyBase
     {
         slamLanded = false;
         slamStartY = transform.position.y;
-        float T = Mathf.Max(0.2f, current.slamAirTime);
-        float g = Mathf.Abs(Physics2D.gravity.y * rb.gravityScale);
-        slamVx = (slamTargetX - transform.position.x) / T;
-        rb.linearVelocity = new Vector2(slamVx, 0.5f * g * T);
-        activeDur = T + 1f;
+        // Yükseğe fırla, tepede kısa asılı kal, hedefin üstünden dik ve hızlı çakıl.
+        float fallT = Mathf.Max(0.05f, current.slamHeight / Mathf.Max(1f, current.slamFallSpeed));
+        activeDur = current.slamRise + current.slamHang + fallT + 1.2f;
+        slamVx = 0f;
     }
 
     private void TickSlam()
     {
         if (slamLanded) return;
-        bool timeUp = stateTime >= current.slamAirTime;
-        bool onGround = stateTime > 0.15f && rb.linearVelocity.y <= 0.1f && transform.position.y <= slamStartY + 0.1f;
-        if (!timeUp && !onGround) { rb.linearVelocity = new Vector2(slamVx, rb.linearVelocity.y); return; }
+        float rise = Mathf.Max(0.1f, current.slamRise);
+        float airEnd = rise + current.slamHang;
+        float sc = EnemyTime.Scale;
+        float y = transform.position.y;
+        if (stateTime < airEnd)
+        {
+            // Yükseliş (ease-out) + yatayda hedefin üstüne git.
+            float u = Mathf.Clamp01(stateTime / rise);
+            float vy = stateTime < rise ? 2f * current.slamHeight * (1f - u) / rise : 0f;
+            float targetY = slamStartY + current.slamHeight * (1f - (1f - u) * (1f - u));
+            vy += (targetY - y) * 8f;
+            float remain = Mathf.Max(0.05f, airEnd - stateTime);
+            float vx = (slamTargetX - transform.position.x) / remain;
+            rb.linearVelocity = new Vector2(vx * sc, vy * sc);
+            return;
+        }
+        float maxT = airEnd + current.slamHeight / Mathf.Max(1f, current.slamFallSpeed) + 0.4f;
+        bool onGround = y <= slamStartY + 0.1f || (rb.linearVelocity.y > -0.5f && stateTime > airEnd + 0.06f);
+        if (!onGround && stateTime < maxT) { rb.linearVelocity = new Vector2(0f, -current.slamFallSpeed * sc); return; }
         slamLanded = true;
         HardStop();
         hitDone = true;

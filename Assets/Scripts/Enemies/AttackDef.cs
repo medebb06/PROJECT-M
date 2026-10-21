@@ -83,6 +83,10 @@ public class AttackDef
     public float slamRange = 7f;
     [Tooltip("Havada kalma süresi (sn).")]
     public float slamAirTime = 0.6f;
+    public float slamHeight = 7f;      // tepe yüksekliği
+    public float slamRise = 0.4f;      // yükseliş süresi
+    public float slamHang = 0.12f;     // tepede asılı kalma
+    public float slamFallSpeed = 45f;  // çakılma hızı
     [Tooltip("İniş noktası oyuncunun bu kadar önünde (düşman tarafında).")]
     public float slamGap = 2.5f;
 

@@ -29,6 +29,10 @@ MonoBehaviour:
   escapeDuration: 0.28
   escapeJump: 0
   escapeCooldown: 3.5
+  escapeTrap: 0
+  trapDelay: 2
+  trapRadius: 3.5
+  trapHitPercent: 0.3
   hitStunCooldown: 0.6
   blockPlainHits: 0
   clashWindupFraction: 0.7
@@ -127,6 +131,10 @@ MonoBehaviour:
     slamJump: 0
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0.3
@@ -195,6 +203,10 @@ MonoBehaviour:
     slamJump: 0
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0
@@ -263,6 +275,10 @@ MonoBehaviour:
     slamJump: 0
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0.3
@@ -322,7 +338,7 @@ MonoBehaviour:
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
-    hitPercent: 0.3
+    hitPercent: 0.4
     breathHold: 0
     endsBurst: 1
     opener: 0
@@ -331,6 +347,10 @@ MonoBehaviour:
     slamJump: 1
     slamRange: 7
     slamAirTime: 0.6
+    slamHeight: 7
+    slamRise: 0.4
+    slamHang: 0.12
+    slamFallSpeed: 45
     slamGap: 2.5
     followUp: 
     followUpChance: 0.3
