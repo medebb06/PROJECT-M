@@ -312,12 +312,11 @@ public class WindCharge : MonoBehaviour
 
     // ---------------------------------------------------------
     // KINA SOKMA ANİMASYONU (geçici/prosedürel; gerçek kareler gelince değişir)
-    // Gövde geriye eğilir ve hafif çöker, kılıç ucu geri çekilip kına girer,
+    // Gövde geriye eğilir (SADECE dönüş: ölçeğe dokunma, DashFx punch'ı ölçeği yakalayıp kalıcı bozuyordu), kılıç ucu geri çekilip kına girer,
     // sonunda "çın": hızlı ileri sıçrama + parlama.
     // ---------------------------------------------------------
 
     private bool poseActive;
-    private Vector3 baseScale = Vector3.one;
     private Quaternion baseRot = Quaternion.identity;
     private SpriteRenderer blade;
     private float snapT;
@@ -339,7 +338,6 @@ public class WindCharge : MonoBehaviour
             if (!poseActive)
             {
                 poseActive = true;
-                baseScale = pt.localScale;
                 baseRot = pt.localRotation;
                 CreateBlade();
             }
@@ -347,7 +345,6 @@ public class WindCharge : MonoBehaviour
             float p = Mathf.SmoothStep(0f, 1f, glow);
 
             pt.localRotation = baseRot * Quaternion.Euler(0f, 0f, dir * 9f * p);
-            pt.localScale = new Vector3(baseScale.x * (1f + 0.04f * p), baseScale.y * (1f - 0.08f * p), baseScale.z);
 
             UpdateBlade(dir, glow);
         }
@@ -356,7 +353,6 @@ public class WindCharge : MonoBehaviour
             poseActive = false;
 
             pt.localRotation = baseRot;
-            pt.localScale = baseScale;
 
             DestroyBlade();
         }
@@ -367,14 +363,10 @@ public class WindCharge : MonoBehaviour
 
             float k = Mathf.Clamp01(snapT / SnapTime);
 
-            pt.localScale = new Vector3(baseScale.x * (1f + 0.1f * k), baseScale.y * (1f - 0.07f * k), baseScale.z);
-            pt.localRotation = baseRot * Quaternion.Euler(0f, 0f, -dir * 7f * k);
+            pt.localRotation = baseRot * Quaternion.Euler(0f, 0f, -dir * 9f * k);
 
             if (snapT <= 0f)
-            {
-                pt.localScale = baseScale;
                 pt.localRotation = baseRot;
-            }
         }
     }
 

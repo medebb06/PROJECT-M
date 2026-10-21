@@ -68,6 +68,8 @@ public class DashGhostHost : MonoBehaviour
     // ---- squash & stretch (SquashStretch bilesenine bagimli degil: o oyuncuda kapali) ----
     Transform pivot;
     Vector3 basePivotScale = Vector3.one;
+    Transform restPivot;      // dinlenme ölçeği yakalanan pivot
+    Vector3 restScale = Vector3.one;
     Vector2 punch = Vector2.one;
     float punchTime, punchTimer;
     bool punching;
@@ -79,7 +81,16 @@ public class DashGhostHost : MonoBehaviour
         if (!punching)
         {
             pivot = p.modelPivot;
-            basePivotScale = pivot.localScale;
+
+            // Dinlenme ölçeği İLK punch'ta bir kez alınır: başka bir script ölçeği o an
+            // bozmuş olsa bile punch bitince oyuncu kalıcı büyümüş / incelmiş kalmaz.
+            if (restPivot != pivot)
+            {
+                restPivot = pivot;
+                restScale = pivot.localScale;
+            }
+
+            basePivotScale = restScale;
         }
 
         punch = scale;

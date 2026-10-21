@@ -19,6 +19,10 @@ public static class PlayerDamage
     // (kombo + slam) denge hasarı çarpanı. Parry ana denge kırıcı olsun.
     public static float AttackBalanceMultiplier = 1f;
 
+    // Çatışma (düz vuruşun düşmanın karar verilmiş saldırısıyla çarpışması): parry sesi + posture dolumu
+    // yapıyordu, düz vuruş parry gibi hissettirmesin diye KAPALI. Geri açmak için true yap.
+    public static bool ClashEnabled = false;
+
     // Silah (PlayerWeapon koyar): sadece normal vuruşlar (kombo + havada).
     // Düz vuruşların CAN hasarı: posture barının tamamını vuruşlarla doldurmak,
     // düşmanın MAX canının bu oranını götürür (parry'den dolan posture can götürmez).
@@ -64,7 +68,7 @@ public static class PlayerDamage
             return result;
 
         // ÇATIŞMA: oyuncu saldırısı düşmanın karar verilmiş saldırısına denk geldi => saldırı iptal, hasar yok.
-        if (info.source == DamageSource.Attack && enemy.TryClash(info.direction.sqrMagnitude > 0.0001f ? info.direction : Vector2.right))
+        if (ClashEnabled && info.source == DamageSource.Attack && enemy.TryClash(info.direction.sqrMagnitude > 0.0001f ? info.direction : Vector2.right))
         {
             result.hit = true;
             result.onBalance = true;
