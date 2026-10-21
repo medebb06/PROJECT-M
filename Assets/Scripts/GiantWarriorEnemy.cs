@@ -91,6 +91,7 @@ public class GiantWarriorEnemy : MonoBehaviour
     {
         nextLeapTime = Time.time + leapFirstDelay;
         nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
+        nextChargeTime = Time.time + chargeFirstDelay;
         rig = GetComponent<GiantWarriorRig>();
         rig.EnsureBuilt();                       // katmanlar var olsun (Health/EnemyController sprite'lari toplar)
 
@@ -220,7 +221,7 @@ public class GiantWarriorEnemy : MonoBehaviour
     void LateUpdate()
     {
         bool run = false;
-        if (rb != null && rig != null && rig.IsAttacking && !leapActive && !enemy.IsStaggered && !enemy.IsDead)
+        if (rb != null && rig != null && rig.IsAttacking && !leapActive && !chargeActive && !enemy.IsStaggered && !enemy.IsDead)
         {
             // Kombo hazirligi sirasinda uzaktaki oyuncuya KOS (vurus menziline gelince dur).
             EnemyAttackState st = enemy.CurrentState as EnemyAttackState;
@@ -236,7 +237,7 @@ public class GiantWarriorEnemy : MonoBehaviour
             if (!run)
                 rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         }
-        if (rig != null) rig.RunWhileAttacking = run;
+        if (rig != null) rig.RunWhileAttacking = run || chargeRunning;
     }
 
     float PlayRoar()
@@ -345,6 +346,7 @@ public class GiantWarriorEnemy : MonoBehaviour
         if (hud != null) hud.HideName();
         nextLeapTime = Time.time + leapFirstDelay;
         nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
+        nextChargeTime = Time.time + chargeFirstDelay;
 
         RunCameraZoom.FocusTarget = null;
         RunCameraZoom.ForceCinematic = introPrevForce;
@@ -408,6 +410,34 @@ public class GiantWarriorEnemy : MonoBehaviour
     bool leapActive, pendingLeap, pendingWave;
 
     // ---------------------------------------------------------------------
+    // HÜCUM: odaklanır, sonra alanı boydan boya koşar (yavaş başlar, hızlanır). Alçak gövde vuruşu:
+    // üstünden ZIPLAYARAK geçilir. Alanın sonunda duvara çarpar: sarsıntı + yere yakın alan hasarı.
+    // ---------------------------------------------------------------------
+    [Header("Hücum (koşarak çarpma)")]
+    public bool chargeEnabled = true;
+    [Min(0f)] public float chargeFirstDelay = 5f;
+    [Min(1f)] public float chargeCooldown = 10f;
+    [Tooltip("Sırası geldiğinde (kovalarken) saniyede başlama olasılığı.")]
+    [Range(0f, 5f)] public float chargeChancePerSecond = 2f;
+    [Tooltip("Odaklanma (uyarı) süresi.")]
+    [Min(0.2f)] public float chargeFocusTime = 1.1f;
+    [Min(0f)] public float chargeStartSpeed = 4f;
+    [Min(1f)] public float chargeAcceleration = 55f;
+    [Min(1f)] public float chargeMaxSpeed = 60f;
+    [Tooltip("Koşarken oyuncuya çarpma yüksekliği (zeminden). Oyuncunun ayağı bunun üstündeyse (zıplamışsa) geçer.")]
+    [Min(0.5f)] public float chargeHitHeight = 3.5f;
+    [Tooltip("Duvara çarpınca şok dalgası yarıçapı (bossun gövde kenarından, iki yana).")]
+    [Min(0f)] public float chargeCrashRadius = 12f;
+    [Min(0.5f)] public float chargeCrashHitHeight = 3f;
+    [Tooltip("Çarptıktan sonra sersem bekleme (açık an).")]
+    [Min(0f)] public float chargeRecover = 1.3f;
+    [Min(10f)] public float chargeMaxDistance = 140f;
+    public Color chargeColor = new Color(1f, 0.45f, 0.05f, 1f);
+    float nextChargeTime;
+    internal bool chargeActive, chargeRunning;
+    bool pendingCharge;
+
+    // ---------------------------------------------------------------------
     // DALGA SALDIRISI: uzaktan odaklanir (kilic kalkar, kirmizi parlar), sonra RITIMLI 3 dalga firlatir.
     // Dalgalar parry / blok edilebilir; ziplayarak ya da dash ile gecilebilir.
     // ---------------------------------------------------------------------
@@ -416,13 +446,15 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Tooltip("Giristen sonra ilk dalgaya kadar en az sure (sn).")]
     [Min(0f)] public float waveFirstDelay = 2.5f;
     [Tooltip("Dalga saldirisi sonrasi tekrar secilmeden onceki sure (sn).")]
-    [Min(1f)] public float waveCooldown = 2.2f;
+    [Min(1f)] public float waveCooldown = 9f;
     [Tooltip("Dalga icin oyuncunun en az uzakligi (yakindaysa normal vurus/kombo kullanir).")]
     [Min(1f)] public float waveMinDistance = 48f;
     [Min(1f)] public float waveMaxDistance = 140f;
     [Range(0f, 1f)] public float waveChancePerSecond = 1.0f;
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
     [Min(0.4f)] public float waveFocusTime = 1.4f;
+    [Tooltip("Geri zıplayıp indikten sonra ilk dalganın çıkış süresi (odaklanma yok).")]
+    [Min(0.05f)] public float waveLandStrikeTime = 0.22f;
     [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
     [Min(0.4f)] public float waveInterval = 0.95f;
     [Range(1, 5)] public int waveCount = 3;
@@ -457,9 +489,11 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Tooltip("Oyuncu yakindayken (waveMinDistance'tan az) saniyede geri ziplama baslatma olasiligi.")]
     [Range(0f, 2f)] public float waveCloseChancePerSecond = 2f;
     [Tooltip("Ziplama sonrasi hedeflenen mesafe (oyuncuyla boss arasi).")]
-    [Min(10f)] public float waveHopTargetDistance = 62f;
+    [Min(10f)] public float waveHopTargetDistance = 34f;
     [Tooltip("Tek ziplamada en fazla kac birim geri gider.")]
-    [Min(5f)] public float waveHopMaxDistance = 42f;
+    [Min(5f)] public float waveHopMaxDistance = 20f;
+    [Tooltip("Geri zıplama inişi kamera kenarına en az bu kadar uzak kalsın (ekrandan çıkmasın).")]
+    [Min(0f)] public float waveHopScreenMargin = 9f;
     [Min(0.2f)] public float waveHopTime = 0.6f;
     [Min(0f)] public float waveHopHeight = 8f;
     [Tooltip("Ziplamadan once cokme (sn).")]
@@ -567,11 +601,11 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Tooltip("Acik: ayni yetenek (kombo / ziplama / dalga) arka arkaya iki kez secilmez.")]
     public bool skillRotation = true;
     [Tooltip("Dalga, son kullanimindan beri gecen her yetenek icin bu kadar daha sik secilir.")]
-    [Range(0f, 2f)] public float waveStaleBoost = 0.6f;
+    [Range(0f, 2f)] public float waveStaleBoost = 0.15f;
     [Tooltip("Boss'un her isabeti oyuncunun MAX canindan bu kadar alir (0.34 = 3 hata olum).")]
     [Range(0.05f, 1f)] public float bossHitPercent = 0.34f;
 
-    enum Skill { None, Melee, Combo, Sweep, Leap, Wave }
+    enum Skill { None, Melee, Combo, Sweep, Leap, Wave, Charge }
     Skill lastSkill = Skill.None;
     int skillsSinceWave = 3;
     IEnemyState trackedState;
@@ -581,8 +615,8 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Tooltip("Dongudeki siradaki yetenek 'beklenir'; baska ozel yetenek secilmez. Beklenen yetenek bu kadar sn gerceklesmezse atlanir.")]
     [Min(2f)] public float patternPatience = 9f;
     // Faz 1 dongusu (Melee = duz vurus).
-    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Melee, Skill.Leap };
-    static readonly Skill[] Pattern2 = { Skill.Wave, Skill.Combo, Skill.Sweep, Skill.Wave, Skill.Melee, Skill.Combo, Skill.Leap, Skill.Wave };
+    static readonly Skill[] Pattern1 = { Skill.Melee, Skill.Combo, Skill.Sweep, Skill.Charge, Skill.Wave, Skill.Melee, Skill.Combo, Skill.Leap };   // dalga 8'de 1, hücum 8'de 1
+    static readonly Skill[] Pattern2 = { Skill.Combo, Skill.Sweep, Skill.Charge, Skill.Wave, Skill.Combo, Skill.Melee, Skill.Leap, Skill.Charge };   // dalga 8'de 1, hücum 8'de 2
     bool phase2;
     int patIdx;
     float expectedSince;
@@ -612,6 +646,7 @@ public class GiantWarriorEnemy : MonoBehaviour
     void TrackSkill(IEnemyState st)
     {
         if (st is GiantWarriorWaveState) NoteSkill(Skill.Wave);
+        else if (st is GiantWarriorChargeState) NoteSkill(Skill.Charge);
         else if (st is GiantWarriorLeapState) NoteSkill(Skill.Leap);
         else
         {
@@ -805,6 +840,7 @@ public class GiantWarriorEnemy : MonoBehaviour
         if (arena != null) arena.RequestClose();   // dovus basladi: kapilar kapanir
         nextLeapTime = Time.time + leapFirstDelay;
         nextWaveTime = Time.time + waveFirstDelay; expectedSince = Time.time;
+        nextChargeTime = Time.time + chargeFirstDelay;
 
         if (introCutscene)
             StartCoroutine(IntroRoutine(pl));
@@ -1390,6 +1426,11 @@ public class GiantWarriorEnemy : MonoBehaviour
                 pendingWave = true;
                 return;
             }
+            if (ex == Skill.Charge && chargeEnabled && !chargeActive && !pendingCharge && Time.time >= nextChargeTime)
+            {
+                pendingCharge = true;
+                return;
+            }
         }
         else if (leapEnabled && !leapActive && !pendingLeap && Time.time >= nextLeapTime && Random.value < leapCloseChance)
         {
@@ -1821,6 +1862,15 @@ public class GiantWarriorEnemy : MonoBehaviour
                 rig.PlayAttack();
         }
 
+        if (pendingCharge)
+        {
+            pendingCharge = false;
+            if (enemy.CurrentState is EnemyAttackState && !leapActive && !waveActive && !chargeActive && !enemy.IsStaggered && !enemy.IsDead)
+                enemy.ChangeState(new GiantWarriorChargeState(this, enemy));
+            else
+                rig.PlayAttack();
+        }
+
         if (pendingLeap)
         {
             pendingLeap = false;
@@ -1907,6 +1957,11 @@ public class GiantWarriorEnemy : MonoBehaviour
                 enemy.ChangeState(new GiantWarriorWaveState(this, enemy));   // yakin: once geri zipla
         }
 
+        if (chargeEnabled && !leapActive && !waveActive && !chargeActive && !SkillBlocked(Skill.Charge) && !InMercy && Time.time >= nextChargeTime
+            && enemy.CurrentState is EnemyChaseState && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead
+            && Random.value < chargeChancePerSecond * Time.deltaTime)
+            enemy.ChangeState(new GiantWarriorChargeState(this, enemy));
+
         if (leapEnabled && !leapActive && !SkillBlocked(Skill.Leap) && Time.time >= nextLeapTime && enemy.CurrentState is EnemyChaseState
             && enemy.target != null && !enemy.IsTargetDead && !enemy.IsStaggered && !enemy.IsDead)
         {
@@ -1919,7 +1974,7 @@ public class GiantWarriorEnemy : MonoBehaviour
         UpdateComboVfx(attacking);
         UpdateComboCue();
 
-        rig.MoveAllowed = enemy.CurrentState is EnemyChaseState;
+        rig.MoveAllowed = enemy.CurrentState is EnemyChaseState || chargeRunning;
         rig.Staggered = enemy.IsStaggered;
         rig.Dead = enemy.IsDead;
 
@@ -2335,6 +2390,14 @@ public class GiantWarriorEnemy : MonoBehaviour
             }
             if (safe < want)
                 want = Mathf.Max(0f, safe - 3f);   // kenardan 3 birim pay
+            // EKRAN: inişte boss kameranın görüş alanında kalsın.
+            Camera cam = Camera.main;
+            if (cam != null && cam.orthographic)
+            {
+                float half = cam.orthographicSize * cam.aspect - o.waveHopScreenMargin;
+                float room = hopDir > 0f ? (cam.transform.position.x + half) - o.transform.position.x : o.transform.position.x - (cam.transform.position.x - half);
+                want = Mathf.Min(want, Mathf.Max(0f, room));
+            }
             if (want >= 6f)
             {
                 float gy2;
@@ -2365,11 +2428,12 @@ public class GiantWarriorEnemy : MonoBehaviour
             return false;
         }
 
-        void StartFocus()
+        void StartFocus(bool instant = false)
         {
             ph = Ph.Focus; phT = 0f;
             o.rig.SetBaseSquash(0f, 6f);
-            o.rig.PlayAttack(o.waveFocusTime, true);            // yavas kalkis: odaklandigi anlasilsin
+            // Geri zıplamadan sonra: indiği an ilk dalga (kısa savuruş). Zıplamasız (zaten uzak): kısa bir hazırlık.
+            o.rig.PlayAttack(instant ? o.waveLandStrikeTime : Mathf.Min(o.waveFocusTime, 0.6f), false);
             o.rig.SetSwordTint(o.waveColor, 1f, 0.9f);
             CombatCallout.Popup(o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f), "DALGA!", o.waveColor, 2.4f);
         }
@@ -2454,7 +2518,7 @@ public class GiantWarriorEnemy : MonoBehaviour
                     Restore();
                     o.rig.Squash(0.8f);
                     RunCameraZoom.AddShake(1.5f);
-                    StartFocus();
+                    StartFocus(true);   // iner inmez dalga: odaklanma yok
                 }
                 return;
             }
@@ -2495,6 +2559,184 @@ public class GiantWarriorEnemy : MonoBehaviour
             o.rig.SetSwordTint(o.waveColor, 0f, 3f);
             o.nextWaveTime = Time.time + o.waveCooldown;
             e.openUntil = EnemyTime.Now + 0.8f;
+        }
+    }
+
+    // =====================================================================
+    // GiantWarriorChargeState: ODAK (kılıç geride, turuncu) -> KOŞU (yavaş başlar, hızlanır) -> ÇARPMA (alan sonu)
+    // Koşu sırasında alçak gövde vuruşu: oyuncu üstünden zıplamalı. Duvara çarpınca yere yakın alan hasarı.
+    // =====================================================================
+    internal sealed class GiantWarriorChargeState : IEnemyState
+    {
+        enum Ph { Focus, Run, Crash }
+
+        readonly GiantWarriorEnemy o;
+        readonly EnemyController e;
+        Rigidbody2D rb;
+        Ph ph;
+        float t, phT, dir, speed, endX, startX, groundY, halfW;
+        bool hitDone, dodgeNoted;
+        float lastX, stillT;
+        Collider2D[] bossCols, playerCols;
+
+        public GiantWarriorChargeState(GiantWarriorEnemy owner, EnemyController enemy) { o = owner; e = enemy; }
+
+        public void Enter()
+        {
+            rb = o.GetComponent<Rigidbody2D>();
+            o.chargeActive = true;
+            e.superArmorOverride = true;
+            e.RetargetFacing();
+            e.LockFacing(true);
+            groundY = o.transform.position.y;
+            startX = o.transform.position.x;
+            dir = e.target != null ? Mathf.Sign(e.target.position.x - startX + 0.0001f) : e.FacingDirection;
+
+            BoxCollider2D body = o.GetComponent<BoxCollider2D>();
+            halfW = body != null ? body.bounds.extents.x : 4f;
+
+            // Bitiş: alanın (kapının) kenarı; arena yoksa duvara kadar.
+            float edge;
+            if (o.arena != null) edge = dir > 0f ? o.arena.maxX - o.arena.doorWidth * 0.5f : o.arena.minX + o.arena.doorWidth * 0.5f;
+            else edge = startX + dir * o.chargeMaxDistance;
+            endX = edge - dir * (halfW + 0.5f);
+            if (Mathf.Abs(endX - startX) > o.chargeMaxDistance) endX = startX + dir * o.chargeMaxDistance;
+            // Yolda sabit duvar varsa (sahne kenarı) ona çarpar.
+            if (rb != null)
+            {
+                ContactFilter2D f = new ContactFilter2D(); f.useTriggers = false; f.SetLayerMask(Physics2D.AllLayers); f.useLayerMask = true;
+                RaycastHit2D[] hs = new RaycastHit2D[8];
+                int n = rb.Cast(new Vector2(dir, 0f), f, hs, Mathf.Abs(endX - startX) + 1f);
+                for (int i = 0; i < n; i++)
+                {
+                    Collider2D c = hs[i].collider;
+                    if (c == null || c.isTrigger) continue;
+                    if (c.attachedRigidbody != null && c.attachedRigidbody.bodyType != RigidbodyType2D.Static) continue;
+                    if (hs[i].normal.x * dir > -0.5f) continue;   // zemin değil, duvar
+                    float wx = startX + dir * Mathf.Max(0f, hs[i].distance - 0.3f);
+                    if ((wx - endX) * dir < 0f) endX = wx;
+                }
+            }
+
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            ph = Ph.Focus; phT = 0f;
+            o.rig.PlayLeapTense();                       // kılıç geride, gergin bekler
+            o.rig.SetBaseSquash(0.45f, 3f);              // çömel: koşuya hazırlık
+            o.rig.SetSwordTint(o.chargeColor, 1f, 1.2f);
+            CombatCallout.Popup(o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f), "HÜCUM!", o.chargeColor, 2.4f);
+        }
+
+        void SetPlayerCollision(bool ignore)
+        {
+            if (e.target == null) return;
+            if (bossCols == null) bossCols = o.GetComponentsInChildren<Collider2D>();
+            if (playerCols == null) playerCols = e.target.GetComponentsInChildren<Collider2D>();
+            for (int i = 0; i < bossCols.Length; i++)
+                for (int j = 0; j < playerCols.Length; j++)
+                    if (bossCols[i] != null && playerCols[j] != null && !bossCols[i].isTrigger && !playerCols[j].isTrigger)
+                        Physics2D.IgnoreCollision(bossCols[i], playerCols[j], ignore);
+        }
+
+        public void Tick()
+        {
+            if (e.target == null || e.IsTargetDead) { e.ChangeState(new EnemyIdleState(e)); return; }
+            float dt = EnemyTime.DeltaTime;
+            t += dt; phT += dt;
+
+            if (ph == Ph.Focus)
+            {
+                if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+                if (phT >= o.chargeFocusTime)
+                {
+                    ph = Ph.Run; phT = 0f;
+                    speed = o.chargeStartSpeed;
+                    o.chargeRunning = true;
+                    lastX = o.transform.position.x; stillT = 0f;
+                    o.rig.SetBaseSquash(0.1f, 6f);
+                    SetPlayerCollision(true);            // içinden geçebilsin (zıplayınca üstünden)
+                }
+                return;
+            }
+
+            if (ph == Ph.Run)
+            {
+                speed = Mathf.Min(o.chargeMaxSpeed, speed + o.chargeAcceleration * dt);
+                float x = o.transform.position.x;
+                float remain = (endX - x) * dir;
+                if (rb != null) rb.linearVelocity = new Vector2(dir * speed * EnemyTime.Scale, rb.linearVelocity.y);
+                CheckRunHit();
+                if (Mathf.Abs(x - lastX) > 0.02f) { lastX = x; stillT = 0f; } else stillT += dt;
+                bool stuck = phT > 0.3f && stillT > 0.15f;   // bir şeye takıldı: çarp
+                if (remain <= 0.2f || stuck || t > 12f) Crash();
+                return;
+            }
+
+            // Crash: sersem bekle (açık an), sonra kovala.
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            if (phT >= o.chargeRecover) e.ChangeState(new EnemyChaseState(e));
+        }
+
+        void CheckRunHit()
+        {
+            if (hitDone) return;
+            PlayerController pl = e.target.GetComponent<PlayerController>();
+            if (pl == null || pl.col == null) return;
+            Bounds pb = pl.col.bounds;
+            float bx = o.transform.position.x;
+            bool overlapX = pb.max.x > bx - halfW - 0.5f && pb.min.x < bx + halfW + 0.5f;
+            if (!overlapX) return;
+            if (pb.min.y > groundY + o.chargeHitHeight) return;   // zıplamış: üstünden geçti
+            if (pl.isInvincible) { if (!dodgeNoted) { dodgeNoted = true; CombatEvents.RaiseDodge(e, true); } return; }
+            hitDone = true;
+            Hurt(pl, new Vector2(dir, 0f));
+            RunCameraZoom.AddShake(2.5f);
+        }
+
+        void Crash()
+        {
+            ph = Ph.Crash; phT = 0f;
+            o.chargeRunning = false;
+            SetPlayerCollision(false);
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            o.rig.ReleaseStrike();                       // kılıç yere iner
+            o.rig.Squash(1.2f);
+            o.rig.SetSwordTint(o.chargeColor, 0f, 3f);
+            RunCameraZoom.AddShake(4.5f);
+            e.openUntil = EnemyTime.Now + o.chargeRecover;
+
+            PlayerController pl = e.target != null ? e.target.GetComponent<PlayerController>() : null;
+            if (pl == null || pl.col == null || hitDone) return;
+            // Çarpma şok dalgası: bossun İKİ yanına yayılır (üstünden atlayıp arkasına inen de yakalanır). Zıplayan kurtulur.
+            float cx = o.transform.position.x;
+            float dx = Mathf.Max(0f, Mathf.Abs(pl.transform.position.x - cx) - halfW);
+            if (dx > o.chargeCrashRadius || pl.col.bounds.min.y > groundY + o.chargeCrashHitHeight) return;
+            if (pl.isInvincible) { CombatEvents.RaiseDodge(e, true); return; }
+            hitDone = true;
+            Hurt(pl, new Vector2(Mathf.Sign(pl.transform.position.x - cx + 0.001f), 0f));
+        }
+
+        void Hurt(PlayerController pl, Vector2 d)
+        {
+            if (o.InMercy) return;
+            PlayerDamageReceiver rcv = pl.GetComponent<PlayerDamageReceiver>();
+            if (rcv == null) return;
+            float m = e.unblockableKnockbackMultiplier;
+            rcv.TakeDamage(e.unblockableDamage, d, e.attackKnockbackForce * m, e.attackKnockbackVerticalForce * m,
+                e.attackKnockbackDuration, e.attackKnockbackDeceleration, e, PlayerHitKind.Unblockable, true);
+            EnemyAttackCoordinator.NotifyPlayerHit();
+        }
+
+        public void Exit()
+        {
+            SetPlayerCollision(false);
+            o.chargeActive = false;
+            o.chargeRunning = false;
+            e.superArmorOverride = false;
+            e.LockFacing(false);
+            if (o.rig.IsAttacking && ph != Ph.Crash) o.rig.CancelAttack();
+            o.rig.SetBaseSquash(0f, 6f);
+            o.rig.SetSwordTint(o.chargeColor, 0f, 3f);
+            o.nextChargeTime = Time.time + o.chargeCooldown;
         }
     }
 
