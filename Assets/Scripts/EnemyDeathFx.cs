@@ -438,6 +438,11 @@ public class EnemyDeathFx : MonoBehaviour
 
         SpawnFlash(c, z, u, bounds, parts[0]);
 
+        // ---- infaz: kesik çizgisinden fışkıran kan ----
+
+        if (big)
+            SliceBloodFx.Burst(c, u, n, bounds, groundY, parts[0].sortingLayerID, parts[0].sortingOrder, z, s);
+
         // ---- his: donma, sarsıntı, ses ----
 
         // Kalabalıkta / seri öldürmede donma kısalır (arka arkaya donmak can sıkmasın).

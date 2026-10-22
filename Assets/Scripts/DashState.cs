@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class DashState : IPlayerState
@@ -18,18 +18,18 @@ public class DashState : IPlayerState
     private const float DashBellPower = 1f;   // artik kullanilmiyor (eski cani; geri almak icin birakildi)
 
     // Dash hiz dususu: buyudukce son kisim daha yavas (3 = hizli firlar, sonda cok yavaslar).
-    private const float DashDecayPower = 3.5f;
+    private const float DashDecayPower = 3f;
 
     // Dash DOGAL bittiginde cikis hizi (moveSpeed carpani). Eskiden hep 0.9'du: dash yavaslayip
     // bitince kosu hizina ziplatiyordu. Iptal ile (ziplama/saldiri/parry) bitince 0.9 korunur.
-    private const float DashExitSpeedNatural = 0.2f;
+    private const float DashExitSpeedNatural = 0.04f;
     private const float DashExitSpeedCancel = 0.9f;
 
     // Dash süresi çarpanı (mesafe sabit kalır, hız buna göre düşer). Animasyon köprüsü de bunu kullanır.
-    public const float DurationScale = 2.2f;
+    public const float DurationScale = 2.5f;
 
     // Dash mesafesi çarpanı (dashDistance * bu).
-    public const float DistanceScale = 1.5f;
+    public const float DistanceScale = 1.3f;
 
     // Havada dash: dash'in son kisminda yere dogru suzulur (duz cizgi cizip havada kalmaz).
     public static float AirFallStart = 0.45f;   // dash'in bu orani gectikten sonra dusmeye baslar
@@ -236,6 +236,32 @@ public class DashState : IPlayerState
         HandleAfterImage();
     }
 
+    // Cok yumusak yavaslama: hiz egrisi smootherstep ile kapanir (basi ve sonu turevi sifir), mesafe sabit.
+    private const float SmoothPower = 3.2f;
+    private static float SmoothG(float p)
+    {
+        p = Mathf.Clamp01(p);
+        float s5 = p * p * p * (p * (p * 6f - 15f) + 10f);
+        float ramp = Mathf.SmoothStep(0f, 1f, p / 0.015f);
+        return Mathf.Pow(1f - s5, SmoothPower) * ramp;
+    }
+
+    private static float smoothNorm;
+    private static float SmoothNorm
+    {
+        get
+        {
+            if (smoothNorm <= 0f)
+            {
+                const int N = 400;
+                float sum = 0f;
+                for (int i = 0; i < N; i++) sum += SmoothG((i + 0.5f) / N);
+                smoothNorm = sum / N;
+            }
+            return smoothNorm;
+        }
+    }
+
     static float Gamma(float x)
     {
         // Sadece tam sayı + 1 için (faktöriyel): Gamma(k+1) = k!
@@ -257,7 +283,7 @@ public class DashState : IPlayerState
         // v(p) = ortalama * (m+1) * (1-p)^m  (integral = 1, mesafe sabit).
         // Basta ~%4'luk kisa yumusak giris sert sicramayi onler.
         float m = DashDecayPower;
-        float curve = (m + 1f) * Mathf.Pow(1f - p, m) * Mathf.SmoothStep(0f, 1f, p / 0.04f);
+        float curve = SmoothG(p) / SmoothNorm;
 
         float targetVx = dir * speed * curve;
 
