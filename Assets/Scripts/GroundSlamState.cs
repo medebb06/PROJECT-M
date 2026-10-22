@@ -276,7 +276,7 @@ public class GroundSlamState : IPlayerState
         int balanceDamage = enemy.SlamBalanceDamage;
 
         // Boss: bar zaten büyük; yüzde tabanlı hasar çok vurmasın, sabit hasar.
-        bool isBoss = enemy.GetComponent<GiantWarriorEnemy>() != null;
+        bool isBoss = false;
 
         if (balance != null && !isBoss)
         {
@@ -302,7 +302,7 @@ public class GroundSlamState : IPlayerState
         if (enemy == null || enemy.IsDead)
             return;
 
-        bool boss = enemy.GetComponent<GiantWarriorEnemy>() != null;
+        bool boss = false;
 
         // Slam zırhı deler: kararlı saldırıyı keser (boss hariç).
         if (!boss && enemy.IsAttackCommitted)

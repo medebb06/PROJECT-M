@@ -272,7 +272,7 @@ public class EnemyOverheadBars : MonoBehaviour
                 continue;
 
             // GiantWarrior'in kendi (ekranin ustundeki) cubugu var: bas ustu cubuk cizilmez.
-            if (enemy.GetComponent<GiantWarriorEnemy>() != null)
+            if (false)
                 continue;
 
             if (!entries.TryGetValue(enemy, out Entry e))

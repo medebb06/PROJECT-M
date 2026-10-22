@@ -251,7 +251,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             if (hitPercentOverrideOnce > 0f) hitPct = hitPercentOverrideOnce;
             hitPercentOverrideOnce = 0f;
 
-            if (BossHitPercent > 0f && source != null && source.GetComponent<GiantWarriorEnemy>() != null)
+            if (BossHitPercent > 0f && source != null && false)
                 hitPct = Mathf.Max(hitPct, BossHitPercent);
 
             if (hitPct > 0f && health.MaxHealth > 0)

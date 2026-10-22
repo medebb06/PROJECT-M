@@ -197,8 +197,8 @@ public class EnemyUnit : EnemyBase
             case UnitState.Windup: TickWindup(dt); break;
             case UnitState.Active: TickActive(dt); break;
             case UnitState.Recover: Decelerate(dt); if (stateTime >= current.recovery) EndRecover(); break;
-            case UnitState.Hurt: Decelerate(dt); if (stateTime >= hurtDuration) SetState(UnitState.Chase); break;
-            case UnitState.Stagger: Decelerate(dt); if (stateTime >= def.staggerDuration) EndStagger(); break;
+            case UnitState.Hurt: HardStop(); if (stateTime >= hurtDuration) SetState(UnitState.Chase); break;
+            case UnitState.Stagger: HardStop(); if (stateTime >= def.staggerDuration) EndStagger(); break;
         }
     }
 
@@ -326,8 +326,7 @@ public class EnemyUnit : EnemyBase
             planned = null;
             decisionTimer = 0f;
             float waitDist = def.standbyDistance + 3f;
-            if (dist < waitDist) Move(-Mathf.Sign(dx) * def.chaseSpeed * def.standbySpeedMultiplier);
-            else Stop();
+            Stop();   // geri kaçma yok, sabit bekle
             return;
         }
 
@@ -399,7 +398,7 @@ public class EnemyUnit : EnemyBase
             if (rangedMax > 0f) { KeepRange(dist, dx); decisionTimer = 0f; return; }
             // Hiçbir saldırısı bu kadar yakında kullanılamıyorsa (ör. Leaper) önce mesafe aç.
             float tooClose = TooCloseThreshold();
-            if (dist < tooClose) { Move(-Mathf.Sign(dx == 0f ? facing : dx) * def.chaseSpeed); decisionTimer = 0f; return; }
+            if (dist < tooClose) { Stop(); decisionTimer = 0f; return; }   // geri kaçma yok
             // Menzile gir.
             float want = ApproachRange();
             if (dist > want) Move(Mathf.Sign(dx) * def.chaseSpeed * (dist > def.sprintDistance ? def.sprintMultiplier : 1f));
@@ -463,8 +462,7 @@ public class EnemyUnit : EnemyBase
     {
         float dx = DxToTarget;
         float comfy = Mathf.Max(def.standbyDistance * 0.6f, 1.2f);
-        if (dist < Mathf.Min(comfy, 0.9f)) Move(-Mathf.Sign(dx) * def.chaseSpeed * def.standbySpeedMultiplier);
-        else Stop();
+        Stop();   // geri çekilme yok
     }
 
     private void MoveToStandby(int rank)
@@ -474,6 +472,7 @@ public class EnemyUnit : EnemyBase
         float want = target.position.x + side * (def.standbyDistance + (rank - 1) * def.standbySpacing);
         float delta = want - transform.position.x;
         if (Mathf.Abs(delta) <= def.arrivalTolerance) { Stop(); return; }
+        if (Mathf.Sign(delta) == side) { Stop(); return; }   // konum almak için bile geri gitme
         Move(Mathf.Sign(delta) * def.chaseSpeed * def.standbySpeedMultiplier);
     }
 

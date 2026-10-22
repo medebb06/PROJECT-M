@@ -383,7 +383,7 @@ public static class AtmosphereBuilder
 
         foreach (PlayerController p in Object.FindObjectsByType<PlayerController>()) owners.Add(p.transform);
         foreach (TrainingDummy d in Object.FindObjectsByType<TrainingDummy>()) owners.Add(d.transform);
-        foreach (EnemyController e in Object.FindObjectsByType<EnemyController>()) owners.Add(e.transform);
+        foreach (EnemyBase e in Object.FindObjectsByType<EnemyBase>()) owners.Add(e.transform);
 
         foreach (GameObject root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
             CollectNpc(root.transform, owners);

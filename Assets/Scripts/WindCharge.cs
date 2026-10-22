@@ -242,7 +242,7 @@ public class WindCharge : MonoBehaviour
             if (enemy == null || enemy.IsDead || !enemy.isActiveAndEnabled || kv.Value <= 0)
                 continue;
 
-            float bh = enemy.GetComponent<GiantWarriorEnemy>() != null ? 0f : barsHeight;
+            float bh = false ? 0f : barsHeight;
 
             DrawPips(cam, enemy, kv.Value, scale, worldOffset, bh);
         }

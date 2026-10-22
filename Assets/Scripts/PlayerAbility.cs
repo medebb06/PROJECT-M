@@ -746,11 +746,7 @@ public class PlayerAbility : MonoBehaviour
             float boss = IsBoss(e) ? bossMultiplier : 1f;
             float staggered = e.IsStaggered ? staggeredBurnMultiplier : 1f;
 
-            EnemyStatus.Get(e as EnemyController)?.ApplyBurn(
-                burnBalancePerSecond * power * boss,
-                burnHealthPerSecond * power * boss * staggered,
-                burnDuration
-            );
+            /* burn: eski EnemyStatus kaldirildi */;
         }
 
         SpawnBox(fireRange, fireHeight, AbilityInfo.Color(AbilityType.Fire), 0.3f);
@@ -1149,7 +1145,7 @@ public class PlayerAbility : MonoBehaviour
 
     private static bool IsBoss(EnemyBase e)
     {
-        return e != null && e.GetComponent<GiantWarriorEnemy>() != null;
+        return e != null && false;
     }
 
     // Oyuncunun baktığı yönde, kutu içindeki düşmanlar.
