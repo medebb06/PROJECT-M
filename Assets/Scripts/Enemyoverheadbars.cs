@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -74,6 +74,7 @@ public class EnemyOverheadBars : MonoBehaviour
         public EnemyBalance balance;
         public SpriteRenderer sprite;
         public float healthTrail = 1f;
+        public float healthShown = 1f;   // akışkan görünen can (su gibi azalır)
         public float balanceTrail = 0f;
         public float lastHealth = 1f;
         public float lastBalance = 0f;
@@ -205,7 +206,7 @@ public class EnemyOverheadBars : MonoBehaviour
             if (e.healthTrail < hp)
                 e.healthTrail = hp;
             else if (now >= e.trailHoldUntil)
-                e.healthTrail = Mathf.MoveTowards(e.healthTrail, hp, trailSpeed * dt);
+                e.healthTrail = Mathf.MoveTowards(e.healthTrail, e.healthShown, trailSpeed * dt);
 
             // Denge DOLARAK ilerler: yeni eklenen kısım kısa süre beyaz.
             if (bal < e.balanceTrail)
@@ -330,7 +331,7 @@ public class EnemyOverheadBars : MonoBehaviour
         if (x + w < 0f || x > Screen.width / scale || y > Screen.height / scale || y + totalH < 0f)
             return;
 
-        float hp = HealthPercent(e);
+        float hp = e.healthShown;
 
         // -------- CAN --------
         GUI.color = A(backColor, alpha);
@@ -397,6 +398,7 @@ public class EnemyOverheadBars : MonoBehaviour
 
         e.lastHealth = HealthPercent(e);
         e.healthTrail = e.lastHealth;
+        e.healthShown = e.lastHealth;
         e.lastBalance = e.balance != null ? e.balance.BalancePercent : 0f;
         e.balanceTrail = e.lastBalance;
 
