@@ -28,7 +28,7 @@ public class HordeMode : MonoBehaviour
     public float spawnJitter = 4f;
 
     [Header("Ödül")]
-    public int healOnKill = 8;           // ölen düşman başına can
+    public int healOnKill = 0;           // ölen düşman başına can
 
     private float nextSpawn;
     private float startTime;

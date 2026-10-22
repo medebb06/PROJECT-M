@@ -197,8 +197,8 @@ public class EnemyUnit : EnemyBase
             case UnitState.Windup: TickWindup(dt); break;
             case UnitState.Active: TickActive(dt); break;
             case UnitState.Recover: Decelerate(dt); if (stateTime >= current.recovery) EndRecover(); break;
-            case UnitState.Hurt: HardStop(); if (stateTime >= hurtDuration) SetState(UnitState.Chase); break;
-            case UnitState.Stagger: HardStop(); if (stateTime >= def.staggerDuration) EndStagger(); break;
+            case UnitState.Hurt: ShoveDecay(dt); if (stateTime >= hurtDuration) SetState(UnitState.Chase); break;
+            case UnitState.Stagger: ShoveDecay(dt); if (stateTime >= def.staggerDuration) EndStagger(); break;
         }
     }
 
@@ -1277,11 +1277,20 @@ public class EnemyUnit : EnemyBase
         return def != null && IsAttackCommitted;
     }
 
+    private float shoveMult = 1f;
+    private const float ShoveDecel = 90f;
+    // Vuruş itmesi: AI hareketi değil; sabit mesafe (v = sqrt(2*a*d)), sonra net duruş.
+    private void ShoveDecay(float dt)
+    {
+        rb.linearVelocity = new Vector2(Mathf.MoveTowards(rb.linearVelocity.x, 0f, ShoveDecel * dt), rb.linearVelocity.y);
+    }
+
     private void Knock(Vector2 dir, float force)
     {
         float d = Mathf.Sign(dir.x);
         if (d == 0f) d = 1f;
-        rb.linearVelocity = new Vector2(d * force * def.knockbackScale, rb.linearVelocity.y);
+        float dist = Mathf.Max(0.15f, force * 0.15f) * def.knockbackScale * shoveMult;
+        rb.linearVelocity = new Vector2(d * Mathf.Sqrt(2f * ShoveDecel * dist), rb.linearVelocity.y);
     }
 
     public override void ApplyBalanceHit(Vector2 hitDirection)
@@ -1314,6 +1323,7 @@ public class EnemyUnit : EnemyBase
     public override void ApplyAttackHit(Vector2 hitDirection, bool healthHit, int attackStep)
     {
         if (IsDead) return;
+        shoveMult = attackStep >= 4 ? 2.4f : 1f;
         ApplyPressure();
         SquashPunch(healthHit ? new Vector2(1.7f, 0.52f) : new Vector2(1.35f, 0.7f), healthHit ? 0.24f : 0.16f, AbsorbsHit() ? 0.4f : 1f);
         if (state == UnitState.Stagger)

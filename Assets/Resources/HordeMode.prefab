@@ -68,4 +68,4 @@ MonoBehaviour:
   endInterval: 0.7
   spawnDistance: 16
   spawnJitter: 4
-  healOnKill: 8
+  healOnKill: 0
