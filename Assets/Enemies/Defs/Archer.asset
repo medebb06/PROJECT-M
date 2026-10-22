@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Archer
   maxHealth: 45
-  maxBalance: 80
+  maxBalance: 40
   superArmor: 0
   staggerDuration: 1.6
   balanceHitStun: 0.18
@@ -66,7 +66,7 @@ MonoBehaviour:
   counterDashChance: 0.5
   counterDashCooldown: 7
   counterDashRange: 12
-  usesPosture: 0
+  usesPosture: 1
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
   passThroughPlayer: 0

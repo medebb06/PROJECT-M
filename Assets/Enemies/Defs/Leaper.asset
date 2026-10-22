@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Leaper
   maxHealth: 65
-  maxBalance: 80
+  maxBalance: 40
   superArmor: 0
   staggerDuration: 1.8
   balanceHitStun: 0.12
@@ -62,7 +62,11 @@ MonoBehaviour:
   healthHitKnockback: 12
   blockKnockback: 10
   knockbackDeceleration: 40
-  usesPosture: 0
+  counterDashAttack: 
+  counterDashChance: 0.5
+  counterDashCooldown: 7
+  counterDashRange: 12
+  usesPosture: 1
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 0.6
   passThroughPlayer: 0
@@ -128,6 +132,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -201,6 +209,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -274,6 +286,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 1

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// KLAVYE TIKI VURUŞ SESLERİ: Resources/HitClicks içindeki klavye basış kayıtlarından rastgele çalar.
@@ -126,9 +126,9 @@ public class HitClickAudio : MonoBehaviour
             instance.Play(instance.step, ref instance.lastStep, instance.stepVolume, instance.stepPitch);
     }
 
-    void PlayHealthHitSound()
+void PlayHealthHitSound()
     {
-        if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
+        if (enableHit) PlayHit();
     }
 
     void PlayHit()
@@ -140,7 +140,7 @@ public class HitClickAudio : MonoBehaviour
         else Play(hit, ref lastHit, hitVolume, hitPitch);
     }
 
-    void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
+void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
     {
         // Posture (denge) vuruşu: tahta adım sesi.
         if (r.hit && r.onBalance && r.amount > 0)
@@ -149,9 +149,9 @@ public class HitClickAudio : MonoBehaviour
             return;
         }
 
-        // Sadece CANA vurunca çalsın. Ses: eski armora (posture) vuruş sesi.
+        // CANA vurunca: eski can vuruş sesi (hitSet: ateş / klavye / buz).
         if (!r.hit || r.onBalance || r.amount <= 0) return;
-        if (enableStep) Play(step, ref lastStep, stepVolume, stepPitch);
+        if (enableHit) PlayHit();
     }
 
     void OnPlayerDamaged(PlayerDamageReport rep)
