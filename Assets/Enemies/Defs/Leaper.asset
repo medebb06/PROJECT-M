@@ -54,7 +54,7 @@ MonoBehaviour:
   leanForwardDegrees: 9
   sprintMultiplier: 1.4
   sprintDistance: 12
-  standbyDistance: 7
+  standbyDistance: 7.32
   standbySpacing: 3
   attackDecisionDelay: 0.12
   attackCooldown: 0.5
@@ -78,16 +78,16 @@ MonoBehaviour:
   attacks:
   - name: Leap
     weight: 1
-    minRange: 1.5
-    maxRange: 6
+    minRange: 1.8199998
+    maxRange: 6.3199997
     windup: 0.51000005
     active: 0.35
     recovery: 0.8
     cooldown: 0.2
     damage: 1
     unblockable: 0
-    hitReach: 6.5
-    hitHeight: 7
+    hitReach: 6.82
+    hitHeight: 8.400001
     knockbackForce: 5
     knockbackVertical: 2
     knockbackDuration: 0.4
@@ -117,14 +117,14 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 4.5
+    lungeStopGap: 4.8199997
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
     teleportBehind: 0
-    teleportGap: 2.4
+    teleportGap: 2.7199998
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
@@ -134,7 +134,7 @@ MonoBehaviour:
     endsBurst: 0
     opener: 0
     lungeThrough: 0
-    throughGap: 3
+    throughGap: 3.3199997
     hopBack: 0
     hopHeight: 3
     armored: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
     slamRise: 0.4
     slamHang: 0.12
     slamFallSpeed: 45
-    slamGap: 2.5
+    slamGap: 2.8199997
     followUp: TailSlash
     followUpChance: 0.45
     followUpOnly: 0
@@ -156,15 +156,15 @@ MonoBehaviour:
   - name: TailSlash
     weight: 0.01
     minRange: 0
-    maxRange: 6.5
+    maxRange: 6.82
     windup: 0.3
     active: 0.1
     recovery: 0.55
     cooldown: 0.2
     damage: 1
     unblockable: 0
-    hitReach: 7
-    hitHeight: 7
+    hitReach: 7.32
+    hitHeight: 8.400001
     knockbackForce: 5
     knockbackVertical: 2
     knockbackDuration: 0.4
@@ -194,14 +194,14 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 1.5
+    lungeStopGap: 1.8199998
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
     teleportBehind: 0
-    teleportGap: 2.4
+    teleportGap: 2.7199998
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
@@ -211,7 +211,7 @@ MonoBehaviour:
     endsBurst: 0
     opener: 0
     lungeThrough: 0
-    throughGap: 3
+    throughGap: 3.3199997
     hopBack: 0
     hopHeight: 3
     armored: 0
@@ -223,7 +223,7 @@ MonoBehaviour:
     slamRise: 0.4
     slamHang: 0.12
     slamFallSpeed: 45
-    slamGap: 2.5
+    slamGap: 2.8199997
     followUp: 
     followUpChance: 0
     followUpOnly: 1
@@ -232,16 +232,16 @@ MonoBehaviour:
     animRecover: 
   - name: DiveSlam
     weight: 1.2
-    minRange: 4
-    maxRange: 12
+    minRange: 4.3199997
+    maxRange: 12.320001
     windup: 0.9
     active: 0.2
     recovery: 0.9
     cooldown: 5
     damage: 1
     unblockable: 1
-    hitReach: 5
-    hitHeight: 3
+    hitReach: 5.3199997
+    hitHeight: 3.6000001
     knockbackForce: 5
     knockbackVertical: 2
     knockbackDuration: 0.4
@@ -271,14 +271,14 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 1.5
+    lungeStopGap: 1.8199998
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
     projectileRadius: 0.35
     requireOnScreen: 1
     teleportBehind: 0
-    teleportGap: 2.4
+    teleportGap: 2.7199998
     teleportVanish: 0.3
     hits: 1
     hitInterval: 0.28
@@ -288,7 +288,7 @@ MonoBehaviour:
     endsBurst: 1
     opener: 0
     lungeThrough: 0
-    throughGap: 3
+    throughGap: 3.3199997
     hopBack: 0
     hopHeight: 3
     armored: 1
@@ -300,7 +300,7 @@ MonoBehaviour:
     slamRise: 0.35
     slamHang: 0.1
     slamFallSpeed: 45
-    slamGap: 2.5
+    slamGap: 2.8199997
     followUp: 
     followUpChance: 0
     followUpOnly: 0

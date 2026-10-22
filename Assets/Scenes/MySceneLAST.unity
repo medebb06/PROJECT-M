@@ -61848,31 +61848,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: comboResetTime
-      value: 0.5
+      value: 0.575
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1Duration
-      value: 0.375
+      value: 0.43124998
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack2Duration
-      value: 0.375
+      value: 0.43124998
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack3Duration
-      value: 0.375
+      value: 0.43124998
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack4Duration
-      value: 0.5
+      value: 0.575
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: airAttackDuration
-      value: 0.35
+      value: 0.40249997
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: downAttackDuration
-      value: 0.375
+      value: 0.43124998
       objectReference: {fileID: 0}
     - target: {fileID: 6696629244512316849, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_LocalPosition.y
