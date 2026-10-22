@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -296,14 +296,6 @@ public class BalanceBreakFx : MonoBehaviour
 
     void OnGUI()
     {
-        if (flash <= 0.01f || Event.current.type != EventType.Repaint)
-            return;
-
-        GUI.depth = -1000;
-        GUI.color = whiteMode
-            ? new Color(1f, 1f, 1f, flash * flashAlpha)
-            : new Color(1f, 0.85f, 0.55f, flash * flashAlpha);
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-        GUI.color = Color.white;
+        // Tam ekran beyaz/altın flaş kaldırıldı (üst üste binince ekranı beyaza boğuyordu).
     }
 }
