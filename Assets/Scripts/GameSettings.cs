@@ -19,6 +19,8 @@ public static class GameSettings
     private const string KeyFullscreen = "projectm_fullscreen";
     private const string KeyCine = "projectm_cinematic_cam";
     private const string KeyBars = "projectm_cinematic_bars";
+    private const string KeyMusic = "projectm_music_volume";
+    private const string KeyRain = "projectm_rain_on";
     public const float MaxBarHeight = 0.35f;
 
     public const float MinUiScale = 0.6f;
@@ -40,6 +42,8 @@ public static class GameSettings
     {
         Load();
         AudioListener.volume = volume;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (s, m) => ApplyAmbience();
+        ApplyAmbience();
     }
 
     private static void Load()
@@ -110,6 +114,55 @@ public static class GameSettings
     {
         get { return Mathf.Clamp(PlayerPrefs.GetFloat(KeyBars, 0.16f), 0f, MaxBarHeight); }
         set { PlayerPrefs.SetFloat(KeyBars, Mathf.Clamp(Mathf.Round(value * 100f) / 100f, 0f, MaxBarHeight)); }
+    }
+
+
+    /// <summary>Müzik sesi (0..1). Sahnedeki 'Theme Music' kaynağını açar/ayarlar. Varsayılan 0.5.</summary>
+    public static float MusicVolume
+    {
+        get { return Mathf.Clamp01(PlayerPrefs.GetFloat(KeyMusic, 0.5f)); }
+        set { PlayerPrefs.SetFloat(KeyMusic, Mathf.Clamp01(Round(value))); ApplyAmbience(); }
+    }
+
+    /// <summary>Yağmur açık/kapalı (varsayılan açık).</summary>
+    public static bool RainEnabled
+    {
+        get { return PlayerPrefs.GetInt(KeyRain, 1) != 0; }
+        set { PlayerPrefs.SetInt(KeyRain, value ? 1 : 0); ApplyAmbience(); }
+    }
+
+    /// <summary>Müzik + yağmur ayarını sahneye uygular.</summary>
+    public static void ApplyAmbience()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        float mv = MusicVolume;
+
+        foreach (AudioSource s in Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (s == null || s.gameObject.name != "Theme Music")
+                continue;
+
+            s.volume = mv;
+            if (s.GetComponent<MusicShuffle>() == null)
+                s.gameObject.AddComponent<MusicShuffle>();
+
+            s.enabled = mv > 0.001f;   // çalma sırası MusicShuffle'da (rastgele)
+        }
+
+        bool rain = RainEnabled;
+
+        foreach (RainSystem r in Object.FindObjectsByType<RainSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (r == null)
+                continue;
+
+            if (rain && !r.gameObject.activeSelf)
+                r.gameObject.SetActive(true);
+
+            r.raining = rain;
+        }
     }
 
     /// <summary>OnGUI ölçeği: ekran yüksekliği 720'ye göre × bileşen çarpanı × ayar.</summary>

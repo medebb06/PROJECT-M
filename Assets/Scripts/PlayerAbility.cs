@@ -1609,9 +1609,14 @@ private void SpawnFocusFx(float scaleMul, Color color)
         StartCoroutine(AnimateFx(obj.transform, sr, life, start, end));
     }
 
+    public static bool oldSpriteGhosts = false;
+
     // Işınlanmadan önceki yerde mor gölge.
     private void SpawnAfterImage(Vector3 at, Color? tint = null)
     {
+        // Eski pixel-art sprite gölgesi istenmiyor (Ronni mesh iskeleti kullanılıyor).
+        if (!oldSpriteGhosts) return;
+
         if (player.playerSprite == null || player.playerSprite.sprite == null)
             return;
 

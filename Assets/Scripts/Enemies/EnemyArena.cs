@@ -85,7 +85,7 @@ public class EnemyArena : MonoBehaviour
     }
 
     [Tooltip("Arena açılınca sahnedeki yağmuru (RainSystem) kapat. Y tuşu ile açılıp kapanır.")]
-    public bool disableRain = true;
+    public bool disableRain = false;
     private bool rainOn = true;
 
     private void Start()

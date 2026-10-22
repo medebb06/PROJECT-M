@@ -4019,7 +4019,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!82 &192061304
 AudioSource:
   m_ObjectHideFlags: 0
@@ -11572,6 +11572,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2137859818}
     m_Modifications:
+    - target: {fileID: 3995854527054617986, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      propertyPath: flicker
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3995854527054617986, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      propertyPath: nightIntensity
+      value: 2.2
+      objectReference: {fileID: 0}
     - target: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
       propertyPath: m_Name
       value: Prop_Torch
@@ -11635,7 +11643,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2059142566}
   m_SourcePrefab: {fileID: 100100000, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
 --- !u!1 &449191921
 GameObject:
@@ -32805,6 +32816,10 @@ PrefabInstance:
       propertyPath: endless
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2243877206713795939, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
+      propertyPath: disableRain
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4844427406850440034, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
       propertyPath: m_LocalPosition.x
       value: -13.603169
@@ -42743,6 +42758,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WindSway
   phase: -1
   speedMultiplier: 0
+--- !u!1 &1320917865 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+  m_PrefabInstance: {fileID: 2021909465}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1320917869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1320917865}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cffe9b0e8f0b5344ac8116346670414, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSound
+  clip: {fileID: 8300000, guid: 8110cb6d9ac591145918441613d95f1d, type: 3}
+  volume: 0.55
+  minDistance: 3
+  maxDistance: 20
+  fadeSpeed: 2.5
 --- !u!1 &1328753032
 GameObject:
   m_ObjectHideFlags: 0
@@ -59326,6 +59363,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WindSway
   phase: -1
   speedMultiplier: 0
+--- !u!1 &2009844615 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+  m_PrefabInstance: {fileID: 448329268}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2014763622
 GameObject:
   m_ObjectHideFlags: 0
@@ -59875,6 +59917,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2137859818}
     m_Modifications:
+    - target: {fileID: 3995854527054617986, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      propertyPath: flicker
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3995854527054617986, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      propertyPath: nightIntensity
+      value: 2.2
+      objectReference: {fileID: 0}
     - target: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
       propertyPath: m_Name
       value: Prop_Torch2
@@ -59934,7 +59984,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4673789173580872103, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1320917869}
   m_SourcePrefab: {fileID: 100100000, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
 --- !u!1 &2024629386
 GameObject:
@@ -60853,6 +60906,23 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6742074796957804864, guid: 3687d92445d4c0848906636978e2a96c, type: 3}
   m_PrefabInstance: {fileID: 448329268}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2059142566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2009844615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cffe9b0e8f0b5344ac8116346670414, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSound
+  clip: {fileID: 8300000, guid: 8110cb6d9ac591145918441613d95f1d, type: 3}
+  volume: 0.55
+  minDistance: 3
+  maxDistance: 20
+  fadeSpeed: 2.5
 --- !u!1 &2063750361
 GameObject:
   m_ObjectHideFlags: 0

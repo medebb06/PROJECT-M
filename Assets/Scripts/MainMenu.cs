@@ -216,6 +216,8 @@ public class MainMenu : MonoBehaviour
         new Row { label = "KARARMA ALANI", kanji = "範囲", kind = 1 },
         new Row { label = "TAM EKRAN", kanji = "全画面", kind = 2 },
         new Row { label = "SİNEMATİK KAMERA", kanji = "映画", kind = 2 },
+        new Row { label = "MÜZİK", kanji = "音楽", kind = 1 },
+        new Row { label = "YAĞMUR", kanji = "雨", kind = 2 },
         new Row { label = "GERİ", kanji = "戻る", kind = 0 },
     };
 
@@ -438,8 +440,9 @@ public class MainMenu : MonoBehaviour
         knobRects = new RectTransform[n];
 
         float top = p == Page.Main ? 40f + (n - 3) * 42f : 110f;
-        float step = p == Page.Main ? -84f : -66f;
+        float step = p == Page.Main ? -84f : (n > 7 ? -58f : -66f);
         bool compact = IsTestPage(p);
+        bool dense = !compact && p != Page.Main && n > 7;
 
         if (compact)
         {
@@ -470,11 +473,11 @@ public class MainMenu : MonoBehaviour
             else
             {
                 Text label = NewText("Label", row.transform, rows[i].label, compact ? 26 : 28, PaperDim, TextAnchor.MiddleLeft, fontBold);
-                Place(label.rectTransform, new Vector2(-250f, compact ? 0f : 8f), new Vector2(520f, 60f));
+                Place(label.rectTransform, new Vector2(-250f, (compact || dense) ? 0f : 8f), new Vector2(520f, 60f));
                 AddShadow(label.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -3f));
                 labelTexts[i] = label;
 
-                if (!compact)
+                if (!compact && !dense)
                 {
                     Text kj = NewText("Kanji", row.transform, rows[i].kanji, 20, PaperDim, TextAnchor.MiddleLeft, fontRegular);
                     Place(kj.rectTransform, new Vector2(-250f, -30f), new Vector2(520f, 30f));
@@ -707,7 +710,19 @@ public class MainMenu : MonoBehaviour
                     GameSettings.CinematicCamera = !GameSettings.CinematicCamera;
                 break;
 
-            case 6: // geri
+            case 6: // müzik
+                if (dir != 0)
+                    GameSettings.MusicVolume = GameSettings.MusicVolume + dir * 0.05f;
+
+                DragSlider(6, v => GameSettings.MusicVolume = v, 0f, 1f);
+                break;
+
+            case 7: // yağmur
+                if (dir != 0 || confirm || click)
+                    GameSettings.RainEnabled = !GameSettings.RainEnabled;
+                break;
+
+            case 8: // geri
                 if (confirm || click)
                     Back();
                 break;
@@ -783,6 +798,13 @@ public class MainMenu : MonoBehaviour
 
         if (valueTexts.Length > 5 && valueTexts[5] != null)
             valueTexts[5].text = GameSettings.CinematicCamera ? "AÇIK" : "KAPALI";
+
+        float mus = GameSettings.MusicVolume;
+        if (fillRects.Length > 6)
+            SetSlider(6, mus, Mathf.RoundToInt(mus * 100f) + "%");
+
+        if (valueTexts.Length > 7 && valueTexts[7] != null)
+            valueTexts[7].text = GameSettings.RainEnabled ? "AÇIK" : "KAPALI";
     }
 
     private void SetSlider(int row, float t, string text)
