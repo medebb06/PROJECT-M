@@ -154,6 +154,7 @@ public class HordeMode : MonoBehaviour
 
     private void OnGUI()
     {
+        if (Event.current.type != EventType.Repaint) return;   // Layout/Input olaylarında çizme (GC azalt)
         GUI.Label(new Rect(10, 10, 900, 22), "[1]Duelist [2]Quick [3]Heavy [4]Leaper [5]Archer   [V] düşman saldırısı: " + (passive ? "KAPALI" : "AÇIK") + "   [B] akın: " + (running ? "AÇIK" : "KAPALI") + "   [N] hepsini öldür");
     }
 }

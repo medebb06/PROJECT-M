@@ -831,7 +831,7 @@ MonoBehaviour:
   magnetStopGap: 1.1
   riposteRange: 9
   riposteMaxDistance: 8
-  moveCancelPoint: 0.5
+  moveCancelPoint: 0.4
   attackMoveDistance: 0.8
   attackMoveSpeed: 6
   attackMoveCurve:

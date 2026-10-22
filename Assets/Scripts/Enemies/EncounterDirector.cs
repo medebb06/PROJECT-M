@@ -195,6 +195,7 @@ public class EncounterDirector : MonoBehaviour
 
     private void OnGUI()
     {
+        if (Event.current.type != EventType.Repaint) return;   // Layout/Input olaylarında çizme (GC azalt)
         if (encounters.Count == 0) return;   // serbest test: kendi koyduğun düşmanlar
         GUIStyle st = new GUIStyle(GUI.skin.label);
         st.fontSize = 18;
