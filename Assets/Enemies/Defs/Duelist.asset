@@ -69,7 +69,7 @@ MonoBehaviour:
   usesPosture: 1
   sliceDeath: 1
   hitChipHealthRatio: 0.5
-  staggerHitHealthFraction: 0.6
+  staggerHitHealthFraction: 1
   passThroughPlayer: 0
   knockbackScale: 0.35
   parryBalanceDamage: 50
