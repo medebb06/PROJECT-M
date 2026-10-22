@@ -1294,6 +1294,9 @@ public class GameVignette : MonoBehaviour
 {
     private static GameVignette instance;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { instance = null; dirtyTex = true; }
+
     private const string KeyInt = "pm_vig_int";
     private const string KeySize = "pm_vig_size";
 
@@ -1343,6 +1346,8 @@ public class GameVignette : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
 
+        // Domain reload kapalıyken static dirtyTex eski kalır: sprite atanmaz ve Image düz beyaz kutu olur. Her yeni örnekte yeniden kur.
+        dirtyTex = true;
         Apply();
     }
 

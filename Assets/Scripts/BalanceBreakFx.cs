@@ -296,6 +296,15 @@ public class BalanceBreakFx : MonoBehaviour
 
     void OnGUI()
     {
-        // Tam ekran beyaz/altın flaş kaldırıldı (üst üste binince ekranı beyaza boğuyordu).
+        if (flash <= 0.01f || Event.current.type != EventType.Repaint)
+            return;
+
+        GUI.depth = -1000;
+        Color old = GUI.color;
+        GUI.color = whiteMode
+            ? new Color(1f, 1f, 1f, flash * flashAlpha)
+            : new Color(1f, 0.85f, 0.55f, flash * flashAlpha);
+        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = old;
     }
 }
