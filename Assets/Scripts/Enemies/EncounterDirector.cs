@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -29,6 +29,16 @@ public class EncounterDirector : MonoBehaviour
 
     public List<Encounter> encounters = new List<Encounter>();
     public string groundLayerName = "Ground";
+
+    [Tooltip("Açık: encounter'daki düşmanlar TEK TEK çıkar; biri ölünce sıradaki doğar. Kapalı: hepsi birden.")]
+    public bool oneAtATime = true;
+    [Tooltip("Bir düşman ölünce sıradakinin doğmasına kadar bekleme (gerçek sn).")]
+    public float nextSpawnDelay = 0.7f;
+
+    private readonly Queue<Spawn> pending = new Queue<Spawn>();
+    private float nextSpawnAt;
+    private int spawnCounter;
+    private float spawnY, spawnZ;
 
     private int index;
     private bool active;
@@ -75,30 +85,62 @@ public class EncounterDirector : MonoBehaviour
             EnemyBase b = go.GetComponent<EnemyBase>();
             if (b == null || b.IsDead) alive.RemoveAt(i);
         }
-        if (alive.Count == 0) End();
+        if (alive.Count == 0)
+        {
+            if (pending.Count > 0)
+            {
+                if (nextSpawnAt <= 0f) nextSpawnAt = Time.unscaledTime + nextSpawnDelay;
+
+                if (Time.unscaledTime >= nextSpawnAt)
+                {
+                    nextSpawnAt = 0f;
+                    SpawnOne(e, pending.Dequeue());
+                }
+            }
+            else End();
+        }
     }
 
     private void Begin(Encounter e, Transform p)
     {
         active = true;
         alive.Clear();
+        pending.Clear();
+        spawnCounter = 0;
+        nextSpawnAt = 0f;
+        spawnY = p.position.y;
+        spawnZ = p.position.z;
+
         foreach (Spawn s in e.spawns)
+            if (s.prefab != null) pending.Enqueue(s);
+
+        if (oneAtATime)
         {
-            if (s.prefab == null) continue;
-            Vector3 pos = new Vector3(e.triggerX + s.offsetX, p.position.y, p.position.z);
-            GameObject go = Instantiate(s.prefab, pos, Quaternion.identity);
-            go.name = s.label + "_" + alive.Count;
-            EnemyUnit u = go.GetComponent<EnemyUnit>();
-            if (u != null && s.def != null) { u.def = s.def; u.ApplyDef(); }
-            alive.Add(go);
+            if (pending.Count > 0) SpawnOne(e, pending.Dequeue());
         }
+        else
+        {
+            while (pending.Count > 0) SpawnOne(e, pending.Dequeue());
+        }
+
         MakeWall(e.triggerX - e.halfWidth);
         MakeWall(e.triggerX + e.halfWidth);
+    }
+
+    private void SpawnOne(Encounter e, Spawn s)
+    {
+        Vector3 pos = new Vector3(e.triggerX + s.offsetX, spawnY, spawnZ);
+        GameObject go = Instantiate(s.prefab, pos, Quaternion.identity);
+        go.name = s.label + "_" + spawnCounter++;
+        EnemyUnit u = go.GetComponent<EnemyUnit>();
+        if (u != null && s.def != null) { u.def = s.def; u.ApplyDef(); }
+        alive.Add(go);
     }
 
     private void End()
     {
         active = false;
+        pending.Clear();
         foreach (GameObject w in walls) if (w != null) Destroy(w);
         walls.Clear();
         index++;
@@ -166,7 +208,7 @@ public class EncounterDirector : MonoBehaviour
         {
             Encounter e = encounters[index];
             string head = (index + 1) + "/" + encounters.Count + "  " + e.label;
-            if (active) GUI.Label(r, head + "   (kalan: " + alive.Count + ")", st);
+            if (active) GUI.Label(r, head + "   (kalan: " + (alive.Count + pending.Count) + ")", st);
             else
             {
                 string msg = Time.unscaledTime < clearedUntil && index > 0 ? "TEMIZ  ->  saga git\n" : "";

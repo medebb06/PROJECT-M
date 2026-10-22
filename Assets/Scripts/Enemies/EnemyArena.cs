@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 // Test arenası: düşman doğur, can/posture sıfırla, durumları ekranda gör.
@@ -19,6 +19,15 @@ public class EnemyArena : MonoBehaviour
     public float groupSpacing = 1.6f;
     public bool showLabels = true;
 
+    [Tooltip("Açık: grup tuşlarında (6/7/8/9) düşmanlar TEK TEK çıkar; biri ölünce sıradaki doğar. [O] ile aç/kapa.")]
+    public bool oneAtATime = true;
+    [Tooltip("Bir düşman ölünce sıradakinin doğmasına kadar bekleme (gerçek sn).")]
+    public float nextSpawnDelay = 0.7f;
+
+    private struct Pending { public int index; public float offset; }
+    private readonly Queue<Pending> queue = new Queue<Pending>();
+    private float nextSpawnAt;
+
     private int selected;
     private readonly List<GameObject> spawned = new List<GameObject>();
 
@@ -33,6 +42,9 @@ public class EnemyArena : MonoBehaviour
 
     private void Update()
     {
+        TickQueue();
+        if (Input.GetKeyDown(KeyCode.O)) oneAtATime = !oneAtATime;
+
         // 1-5: o tipi sağda doğur | Shift+tuş: SOLDA | Ctrl+tuş: UZAKTA (2x mesafe)
         bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
@@ -77,13 +89,16 @@ public class EnemyArena : MonoBehaviour
         {
             float side = (n % 2 == 0) ? firstSide : -firstSide;
             float step = (n / 2) * groupSpacing;
-            float x = p.position.x + side * (spawnDistance * distMul + step);
-            Vector3 pos = new Vector3(x, p.position.y, p.position.z);
-            GameObject go = Instantiate(e.prefab, pos, Quaternion.identity);
-            go.name = e.label + "_" + spawned.Count;
-            EnemyUnit u = go.GetComponent<EnemyUnit>();
-            if (u != null && e.def != null) { u.def = e.def; u.ApplyDef(); }
-            spawned.Add(go);
+            float off = side * (spawnDistance * distMul + step);
+
+            // Tek tek mod: ilki hemen, kalanlar sırada bekler (biri ölünce doğar).
+            if (oneAtATime && n > 0)
+            {
+                queue.Enqueue(new Pending { index = index, offset = off });
+                continue;
+            }
+
+            SpawnOne(index, p.position.x + off);
         }
     }
 
@@ -93,7 +108,11 @@ public class EnemyArena : MonoBehaviour
         Transform p = Player;
         if (p == null || entries.Count == 0) return;
         SpawnOne(selected, p.position.x + spawnDistance * 0.8f);
-        SpawnOne((selected + 1) % entries.Count, p.position.x - spawnDistance * 2f);
+
+        if (oneAtATime)
+            queue.Enqueue(new Pending { index = (selected + 1) % entries.Count, offset = -spawnDistance * 2f });
+        else
+            SpawnOne((selected + 1) % entries.Count, p.position.x - spawnDistance * 2f);
     }
 
     private void SpawnOne(int index, float x)
@@ -108,8 +127,39 @@ public class EnemyArena : MonoBehaviour
         spawned.Add(go);
     }
 
+    // Tek tek mod: ekranda canlı düşman kalmayınca sıradakini doğur.
+    private void TickQueue()
+    {
+        if (queue.Count == 0) return;
+
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase b = EnemyBase.All[i];
+
+            if (b != null && !b.IsDead)
+            {
+                nextSpawnAt = 0f;
+                return;
+            }
+        }
+
+        if (nextSpawnAt <= 0f) nextSpawnAt = Time.unscaledTime + nextSpawnDelay;
+
+        if (Time.unscaledTime < nextSpawnAt) return;
+
+        nextSpawnAt = 0f;
+
+        Transform p = Player;
+
+        if (p == null) { queue.Clear(); return; }
+
+        Pending s = queue.Dequeue();
+        SpawnOne(s.index, p.position.x + s.offset);
+    }
+
     public void KillAll()
     {
+        queue.Clear();
         for (int i = EnemyBase.All.Count - 1; i >= 0; i--)
         {
             EnemyBase b = EnemyBase.All[i];
@@ -137,7 +187,7 @@ public class EnemyArena : MonoBehaviour
         GUI.Label(new Rect(10, 10, 1100, 22),
             "ARENA  " + keys + "| Shift=sol  Ctrl=uzak | [6/7/8] 3/5/8 adet  [9] çift  [Tab] tip: " +
             (entries.Count > 0 ? entries[selected].label : "-") +
-            "  [K] öldür  [H] doldur  [G] etiket  [Y] yağmur   Aktif: " + EnemyBase.All.Count);
+            "  [K] öldür  [H] doldur  [G] etiket  [Y] yağmur  [O] tek tek: " + (oneAtATime ? "AÇIK" : "kapalı") + "   Aktif: " + EnemyBase.All.Count + (queue.Count > 0 ? "  Sırada: " + queue.Count : ""));
 
         PlayerPosture pp = FindFirstObjectByType<PlayerPosture>();
         if (pp != null)

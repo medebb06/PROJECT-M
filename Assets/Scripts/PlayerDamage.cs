@@ -123,6 +123,9 @@ public static class PlayerDamage
                 ? info.direction
                 : Vector2.right;
 
+        // Ölüm efekti (kılıç kesiği) için vuruş bağlamı: yön, kombo adımı, infaz mı.
+        EnemyDeathFx.SetContext(enemy, info, enemy.IsStaggered);
+
         // =====================================================
         // DENGE KATMANI
         // =====================================================

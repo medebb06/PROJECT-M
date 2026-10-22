@@ -292,6 +292,15 @@ public class Health : MonoBehaviour
             return;
         }
 
+        // Kılıç kesiği ölümü (EnemyDeathFx): efekti devralırsa solma yok.
+        if (EnemyDeathFx.TryPlay(this))
+        {
+            OnDeath?.Invoke();
+            gameObject.SetActive(false);
+            Destroy(gameObject);
+            return;
+        }
+
         if (fadeOnDeath)
         {
             StartCoroutine(

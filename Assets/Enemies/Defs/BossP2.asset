@@ -62,6 +62,12 @@ MonoBehaviour:
   healthHitKnockback: 6
   blockKnockback: 10
   knockbackDeceleration: 40
+  counterDashAttack: 
+  counterDashChance: 0.5
+  counterDashCooldown: 7
+  counterDashRange: 12
+  usesPosture: 1
+  sliceDeath: 0
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 0.5
   passThroughPlayer: 0
@@ -127,6 +133,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -200,6 +210,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 1
     slamJump: 0
@@ -273,6 +287,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -346,6 +364,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -419,6 +441,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -492,6 +518,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -565,6 +595,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 1
@@ -638,6 +672,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 1
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
