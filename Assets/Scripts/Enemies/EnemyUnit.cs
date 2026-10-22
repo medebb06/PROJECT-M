@@ -823,7 +823,22 @@ public class EnemyUnit : EnemyBase
             // Atılmasız saldırı: salım görünsün diye vuruş kısa süre SONRA gelir. Atılmalı saldırı: önce kayar, VARINCA vurur.
             hitDone = false;
             if (current.projectileSpeed > 0f) { SpawnProjectile(); hitDone = true; lungeStrike = false; }
-            if (current.slamJump) { lungeStrike = false; hitDone = true; BeginSlam(); }
+            if (current.slamJump)
+            {
+                // Zıplama saldırısı SADECE uzaktayken: windup sırasında oyuncu yaklaştıysa (min menzilin %70'i altı) zıplamadan vazgeç.
+                if (Mathf.Abs(DxToTarget) < current.minRange * 0.7f)
+                {
+                    lungeStrike = false;
+                    hitDone = true;
+                    EnemyAttackCoordinator.ReleaseAttack(this);
+                    SetState(UnitState.Recover);
+                    return;
+                }
+
+                lungeStrike = false;
+                hitDone = true;
+                BeginSlam();
+            }
         }
         if (current.slamJump) { TickSlam(); return; }
 
@@ -1656,11 +1671,11 @@ public class EnemyUnit : EnemyBase
         Vector3 pos = transform.position;
 
         bool isShot = current.projectileSpeed > 0f;
-        float zoneH = isShot ? 0.4f : current.hitHeight;
+        float zoneH = isShot ? 0.75f : current.hitHeight;
         float zoneY = isShot ? pos.y + current.projectileHeight : pos.y;
         markZone.transform.position = new Vector3(pos.x + facing * current.hitReach * 0.5f, zoneY, pos.z);
         markZone.transform.localScale = new Vector3(current.hitReach, zoneH, 1f);
-        markZone.color = cue ? new Color(1f, 1f, 1f, 0.55f) : (isShot ? new Color(1f, 0.85f, 0.4f, Mathf.Lerp(0.15f, 0.5f, p)) : new Color(1f, 0.15f, 0.1f, Mathf.Lerp(0.12f, 0.4f, p)));
+        markZone.color = cue ? new Color(1f, 1f, 1f, isShot ? 0.95f : 0.55f) : (isShot ? new Color(1f, 0.9f, 0.25f, Mathf.Lerp(0.35f, 0.9f, p)) : new Color(1f, 0.15f, 0.1f, Mathf.Lerp(0.12f, 0.4f, p)));
         markIcon.gameObject.SetActive(!isShot);
         if (current.slamJump)
         {

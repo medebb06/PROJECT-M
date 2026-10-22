@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // Okçunun mermisi: yatay, düz çizgide, sabit hızla gider (tahmin edilebilir).
 // Oyuncuya değince savunma kararını sahibi (EnemyUnit.ResolveProjectileHit) verir:
@@ -29,12 +29,66 @@ public class EnemyProjectile : MonoBehaviour
         p.radius = Mathf.Max(0.05f, atk.projectileRadius);
 
         p.sr = go.AddComponent<SpriteRenderer>();
-        p.sr.sprite = sprite;
+        p.sr.sprite = ArrowSprite();
         p.sr.sortingLayerID = sortingLayerId;
-        p.sr.sortingOrder = sortingOrder;
-        p.sr.color = new Color(1f, 0.95f, 0.8f, 1f);
-        go.transform.localScale = new Vector3(p.radius * 4.5f, p.radius * 0.9f, 1f);
+        p.sr.sortingOrder = sortingOrder + 3;
+        p.sr.color = new Color(1f, 0.97f, 0.7f, 1f);
+        // Okunur ok: uzun, kalın, parlak; sprite 4x1 birim (64x16 px, 16 ppu) → uzunluk ~3.6, yükseklik ~0.9.
+        float k = Mathf.Max(0.9f, p.radius * 2.6f);
+        go.transform.localScale = new Vector3(k, k, 1f);
+        if (p.dir.x < 0f) p.sr.flipX = true;
+
+        // Kısa, parlak iz: ok hızlı da olsa nereden geldiği görünsün.
+        TrailRenderer tr = go.AddComponent<TrailRenderer>();
+        tr.time = 0.14f;
+        tr.startWidth = 0.45f * k;
+        tr.endWidth = 0f;
+        tr.material = new Material(Shader.Find("Sprites/Default"));
+        tr.startColor = new Color(1f, 0.95f, 0.5f, 0.85f);
+        tr.endColor = new Color(1f, 0.8f, 0.2f, 0f);
+        tr.sortingLayerID = sortingLayerId;
+        tr.sortingOrder = sortingOrder + 2;
         return p;
+    }
+
+    private static Sprite arrowSprite;
+
+    // Kodla çizilen ok: koyu konturlu, parlak gövde, üçgen uç, kuyruk tüyü. Sağa bakar.
+    private static Sprite ArrowSprite()
+    {
+        if (arrowSprite != null) return arrowSprite;
+
+        const int w = 64, h = 16;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color[] px = new Color[w * h];
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        for (int i = 0; i < px.Length; i++) px[i] = clear;
+
+        Color fill = Color.white;
+        Color edge = new Color(0.12f, 0.08f, 0.02f, 0.95f);
+
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                float cy = y + 0.5f - h * 0.5f;
+                float half = 0f;
+
+                if (x >= 46) half = Mathf.Lerp(7.5f, 0f, (x - 46) / 17f);        // uç (üçgen)
+                else if (x >= 6) half = 2.0f;                                      // gövde
+                if (x < 14) half = Mathf.Max(half, Mathf.Lerp(7f, 2f, x / 14f));  // kuyruk tüyü
+
+                float d = half - Mathf.Abs(cy);
+                if (d > 1.1f) px[y * w + x] = fill;
+                else if (d > 0f) px[y * w + x] = edge;
+            }
+        }
+
+        tex.SetPixels(px);
+        tex.Apply();
+        arrowSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 16f);
+        return arrowSprite;
     }
 
     private void Update()

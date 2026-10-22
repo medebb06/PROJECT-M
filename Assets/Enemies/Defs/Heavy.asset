@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Heavy
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Heavy
-  maxHealth: 200
-  maxBalance: 130
+  maxHealth: 140
+  maxBalance: 90
   superArmor: 1
   staggerDuration: 2.6
   balanceHitStun: 0.12
@@ -129,7 +129,7 @@ MonoBehaviour:
     hits: 1
     hitInterval: 0.28
     finalHitDelay: 0
-    hitPercent: 0.35
+    hitPercent: 0.2625
     breathHold: 0
     endsBurst: 0
     opener: 0
@@ -283,7 +283,7 @@ MonoBehaviour:
     hits: 3
     hitInterval: 0.6
     finalHitDelay: 0
-    hitPercent: 0.2
+    hitPercent: 0.15
     breathHold: 0
     endsBurst: 1
     opener: 0
@@ -309,8 +309,8 @@ MonoBehaviour:
     animRecover: 
   - name: Slam
     weight: 5
-    minRange: 14.459999
-    maxRange: 30.46
+    minRange: 16
+    maxRange: 32
     windup: 0.75
     active: 0.2
     recovery: 1.5
@@ -360,7 +360,7 @@ MonoBehaviour:
     hits: 1
     hitInterval: 0.28
     finalHitDelay: 0
-    hitPercent: 0.4
+    hitPercent: 0.3
     breathHold: 0
     endsBurst: 1
     opener: 0
