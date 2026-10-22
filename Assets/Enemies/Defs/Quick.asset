@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Quick
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Quick
-  maxHealth: 70
+  maxHealth: 45
   maxBalance: 70
   superArmor: 0
   staggerDuration: 1.6

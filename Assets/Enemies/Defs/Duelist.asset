@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Duelist
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Duelist
-  maxHealth: 140
+  maxHealth: 90
   maxBalance: 100
   superArmor: 1
   staggerDuration: 2

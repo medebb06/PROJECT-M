@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // Yeni düşman çekirdeği. Davranış tamamen EnemyDef / AttackDef'ten gelir.
 // Durumlar: Idle, Chase (sıra/standby dahil), Windup, Active, Recover, Hurt, Stagger, Dead.
@@ -1315,7 +1315,7 @@ public class EnemyUnit : EnemyBase
     {
         if (IsDead) return;
         ApplyPressure();
-        SquashPunch(healthHit ? new Vector2(1.26f, 0.78f) : new Vector2(1.14f, 0.88f), healthHit ? 0.16f : 0.12f, AbsorbsHit() ? 0.4f : 1f);
+        SquashPunch(healthHit ? new Vector2(1.7f, 0.52f) : new Vector2(1.35f, 0.7f), healthHit ? 0.24f : 0.16f, AbsorbsHit() ? 0.4f : 1f);
         if (state == UnitState.Stagger)
         {
             Knock(hitDirection, def.healthHitKnockback);

@@ -91,6 +91,8 @@ public class PlayerAbility : MonoBehaviour
 
     [Header("Atılım Kesiği")]
     public float dashRange = 20f;
+    [Tooltip("Atılımda geçilen HER düşmana anında vurulan can hasarı (normal vuruş ≈14).")]
+    public int dashCutDamage = 28;
     [Tooltip("Atılım süresi (sn). Başlangıç ışınlanır gibi çok hızlı, sonra yavaşlayarak durur.")]
     public float dashDuration = 0.5f;
     [Tooltip("Süzülme: büyük = yolun çoğu ilk anda alınır, kalanı uzun süre yavaşlayarak süzülür.")]
@@ -1053,6 +1055,11 @@ public class PlayerAbility : MonoBehaviour
                         if ((ep.x - pos.x) * dir >= -0.5f && (next.x - ep.x) * dir >= -0.5f)
                         {
                             passed.Add(e);
+                            if (dashCutDamage > 0)
+                            {
+                                DamageInfo cut = new DamageInfo { source = DamageSource.Ability, comboStep = 1, healthDamage = dashCutDamage, direction = new Vector2(dir, 0f), hitPosition = e.transform.position + Vector3.up };
+                                PlayerDamage.HitEnemy(e, cut);
+                            }
                             wc.AddCharge(e, dashChargePerEnemy);
 
                             NoCallout.PopupAbove(e, "+" + dashChargePerEnemy, c, 0.5f);

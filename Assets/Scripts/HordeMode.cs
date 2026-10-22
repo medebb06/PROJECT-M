@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -35,6 +35,15 @@ public class HordeMode : MonoBehaviour
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;   // R ile sahne yeniden yüklenince de akın kurulsun
+        TryCreate();
+    }
+
+    private static void OnSceneLoaded(Scene s, LoadSceneMode m) { TryCreate(); }
+
+    private static void TryCreate()
     {
         if (SceneManager.GetActiveScene().name != "EncounterTest") return;
         if (FindFirstObjectByType<HordeMode>() != null) return;

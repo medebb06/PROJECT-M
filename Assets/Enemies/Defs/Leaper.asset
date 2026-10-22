@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Leaper
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Leaper
-  maxHealth: 100
+  maxHealth: 65
   maxBalance: 80
   superArmor: 0
   staggerDuration: 1.8

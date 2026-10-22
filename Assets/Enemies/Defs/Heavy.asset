@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Heavy
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Heavy
-  maxHealth: 320
+  maxHealth: 200
   maxBalance: 200
   superArmor: 1
   staggerDuration: 2.6
