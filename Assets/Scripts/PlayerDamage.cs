@@ -29,7 +29,7 @@ public static class PlayerDamage
     public static float PostureToHealthRatio = 0.5f;
 
     /// <summary>Kombonun 4. (son) vuruşunun denge ve can hasarı çarpanı.</summary>
-    public static float FinalHitDamageMultiplier = 1.6f;
+    public static float FinalHitDamageMultiplier = 2.0f;
 
     /// <summary>Düz vuruşların (kombo, havada, slam) CAN hasarı çarpanı.</summary>
     public static float HealthDamageBoost = 1.4f;
@@ -48,7 +48,7 @@ public static class PlayerDamage
     private static void ResetStatics()
     {
         PostureToHealthRatio = 0.5f;
-        FinalHitDamageMultiplier = 1.6f;
+        FinalHitDamageMultiplier = 2.0f;
         NormalHitBalanceBoost = 2f;
         AttackBalanceMultiplier = 1f;
         WeaponBalanceMultiplier = 1f;
@@ -232,7 +232,7 @@ public static class PlayerDamage
             Resolve(
                 StatType.HealthDamage,
                 info.healthDamage,
-                critMultiplier * Charms.HeavyDamage * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
+                critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
                 * ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) ? HealthDamageBoost : 1f)
                 * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
                 stats
@@ -344,6 +344,10 @@ public static class PlayerDamage
                 (result.killed ? "  (öldü)" : "")
             );
         }
+
+        // Ufak vuruş duraksaması (4. vuruş biraz uzun).
+        if (info.source == DamageSource.Attack && result.hit && !result.onBalance)
+            HitStop.Request(info.comboStep >= 4 ? 0.07f : 0.035f);
 
         CombatEvents.RaiseEnemyHit(enemy, info, result);
     }

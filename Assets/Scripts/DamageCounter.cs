@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 // Düşmanın üstünde vurdukça ADIM ADIM artan toplam hasar sayacı.
@@ -40,6 +40,17 @@ public class DamageCounter : MonoBehaviour
     private void OnHit(EnemyBase enemy, DamageInfo info, HitResult r)
     {
         if (enemy == null || !r.hit || r.amount <= 0) return;
+        AddInternal(enemy, r.amount);
+    }
+
+    // Zehir / patlama gibi vuruş dışı hasarlar da sayaca yansısın.
+    public static void Add(EnemyBase enemy, int amount)
+    {
+        if (instance != null && enemy != null && amount > 0) instance.AddInternal(enemy, amount);
+    }
+
+    private void AddInternal(EnemyBase enemy, int amount)
+    {
         Entry e;
         if (!entries.TryGetValue(enemy, out e))
         {
@@ -48,8 +59,9 @@ public class DamageCounter : MonoBehaviour
             entries[enemy] = e;
         }
         if (Time.time - e.lastHit > resetAfter + fadeTime) { e.target = 0; e.shown = 0f; }
-        e.target += r.amount;
+        e.target += amount;
         e.lastHit = Time.time;
+        e.pop = 1f;   // squash: vuruş başına bir kez
     }
 
     private void OnKilled(EnemyBase enemy)
@@ -67,7 +79,7 @@ public class DamageCounter : MonoBehaviour
         {
             Entry e = kv.Value;
             if (e.enemy == null || Time.time - e.lastHit > resetAfter + fadeTime) { remove.Add(kv.Key); continue; }
-            e.pop = Mathf.MoveTowards(e.pop, 0f, dt * 6f);
+            e.pop = Mathf.MoveTowards(e.pop, 0f, dt * 12f);
             if (e.shown < e.target)
             {
                 e.tick -= dt;
@@ -77,7 +89,6 @@ public class DamageCounter : MonoBehaviour
                 {
                     e.shown += 1f;
                     e.tick += interval;
-                    e.pop = 1f;
                 }
             }
         }

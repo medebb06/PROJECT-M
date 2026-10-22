@@ -18,7 +18,8 @@ public class HordeMode : MonoBehaviour
     public List<Entry> entries = new List<Entry>();
 
     [Header("Akın")]
-    public bool running = true;
+    public bool running = false;       // otomatik akın kapalı; B ile aç
+    public bool passive = true;        // düşmanlar saldırmaz / yürümez; V ile aç-kapa
     public int startAlive = 4;           // başta aynı anda en fazla
     public int maxAliveCap = 10;         // zamanla çıkacağı üst sınır
     public float rampSeconds = 90f;      // üst sınıra çıkma süresi
@@ -61,7 +62,7 @@ public class HordeMode : MonoBehaviour
     }
 
     private void OnEnable() { CombatEvents.EnemyKilled += OnKilled; startTime = Time.time; nextSpawn = Time.time + 2f; }
-    private void OnDisable() { CombatEvents.EnemyKilled -= OnKilled; }
+    private void OnDisable() { CombatEvents.EnemyKilled -= OnKilled; EnemyUnit.Passive = false; }
 
     private void OnKilled(EnemyBase e)
     {
@@ -76,6 +77,16 @@ public class HordeMode : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.B)) running = !running;
         if (Input.GetKeyDown(KeyCode.N)) KillAll();
+        if (Input.GetKeyDown(KeyCode.V)) passive = !passive;
+        EnemyUnit.Passive = passive;
+        if (Time.timeScale > 0.01f)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SpawnFixed("Duelist");
+            if (Input.GetKeyDown(KeyCode.Alpha2)) SpawnFixed("Quick");
+            if (Input.GetKeyDown(KeyCode.Alpha3)) SpawnFixed("Heavy");
+            if (Input.GetKeyDown(KeyCode.Alpha4)) SpawnFixed("Leaper");
+            if (Input.GetKeyDown(KeyCode.Alpha5)) SpawnFixed("Archer");
+        }
         if (!running || Time.time < nextSpawn || entries.Count == 0) return;
 
         float k = Mathf.Clamp01((Time.time - startTime) / Mathf.Max(1f, rampSeconds));
@@ -89,6 +100,22 @@ public class HordeMode : MonoBehaviour
         nextSpawn = Time.time + Mathf.Lerp(startInterval, endInterval, k);
         if (alive >= cap) return;
         SpawnRandom();
+    }
+
+    // Oyuncunun sağında sabit bir noktada (aynı anda varsa yan yana) istenen türü çıkarır.
+    private void SpawnFixed(string label)
+    {
+        GameObject p = GameObject.FindWithTag("Player");
+        if (p == null) return;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].label != label || entries[i].prefab == null) continue;
+            int alive = 0;
+            for (int j = 0; j < EnemyBase.All.Count; j++) { EnemyBase b = EnemyBase.All[j]; if (b != null && !b.IsDead) alive++; }
+            float x = p.transform.position.x + 6f + 2.4f * (alive % 5);
+            Instantiate(entries[i].prefab, new Vector3(x, p.transform.position.y, 0f), Quaternion.identity);
+            return;
+        }
     }
 
     private void SpawnRandom()
@@ -127,6 +154,6 @@ public class HordeMode : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Label(new Rect(10, 10, 600, 22), "AKIN: " + (running ? "AÇIK" : "KAPALI") + "   [B] aç/kapa   [N] hepsini öldür   ölen düşman +" + healOnKill + " can");
+        GUI.Label(new Rect(10, 10, 900, 22), "[1]Duelist [2]Quick [3]Heavy [4]Leaper [5]Archer   [V] düşman saldırısı: " + (passive ? "KAPALI" : "AÇIK") + "   [B] akın: " + (running ? "AÇIK" : "KAPALI") + "   [N] hepsini öldür");
     }
 }

@@ -60,7 +60,7 @@ MonoBehaviour:
   - label: Heavy
     prefab: {fileID: 6956973913847538072, guid: b924220c146e6e2448cbe0cec749015b, type: 3}
     weight: 1
-  running: 1
+  running: 0
   startAlive: 4
   maxAliveCap: 10
   rampSeconds: 90

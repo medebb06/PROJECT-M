@@ -193,7 +193,7 @@ public class EnemyUnit : EnemyBase
         switch (state)
         {
             case UnitState.Idle:
-            case UnitState.Chase: TickLocomotion(dt); break;
+            case UnitState.Chase: if (Passive) { HardStop(); FaceTarget(); } else TickLocomotion(dt); break;
             case UnitState.Windup: TickWindup(dt); break;
             case UnitState.Active: TickActive(dt); break;
             case UnitState.Recover: Decelerate(dt); if (stateTime >= current.recovery) EndRecover(); break;
@@ -1277,6 +1277,7 @@ public class EnemyUnit : EnemyBase
         return def != null && IsAttackCommitted;
     }
 
+    public static bool Passive;   // test: true iken düşman yürümez / saldırmaz (HordeMode)
     private float shoveMult = 1f;
     private const float ShoveDecel = 90f;
     // Vuruş itmesi: AI hareketi değil; sabit mesafe (v = sqrt(2*a*d)), sonra net duruş.
@@ -1289,7 +1290,7 @@ public class EnemyUnit : EnemyBase
     {
         float d = Mathf.Sign(dir.x);
         if (d == 0f) d = 1f;
-        float dist = Mathf.Max(0.15f, force * 0.26f) * def.knockbackScale * shoveMult;
+        float dist = Mathf.Max(0.15f, force * 0.4f) * def.knockbackScale * shoveMult;
         rb.linearVelocity = new Vector2(d * Mathf.Sqrt(2f * ShoveDecel * dist), rb.linearVelocity.y);
     }
 
@@ -1323,9 +1324,9 @@ public class EnemyUnit : EnemyBase
     public override void ApplyAttackHit(Vector2 hitDirection, bool healthHit, int attackStep)
     {
         if (IsDead) return;
-        shoveMult = (attackStep >= 4 ? 2.4f : 1f) * Charms.HeavyShove;
+        shoveMult = attackStep >= 4 ? 2.4f : 1f;
         ApplyPressure();
-        SquashPunch(healthHit ? new Vector2(1.7f, 0.52f) : new Vector2(1.35f, 0.7f), healthHit ? 0.24f : 0.16f, AbsorbsHit() ? 0.4f : 1f);
+        SquashPunch(healthHit ? new Vector2(1.45f, 0.67f) : new Vector2(1.25f, 0.8f), healthHit ? 0.2f : 0.14f, AbsorbsHit() ? 0.4f : 1f);
         if (state == UnitState.Stagger)
         {
             Knock(hitDirection, def.healthHitKnockback);
