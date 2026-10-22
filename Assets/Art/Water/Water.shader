@@ -93,7 +93,7 @@ Shader "ProjectM/Water"
         float4 _ProjectM_WaterMul;     // rgb: su rengi çarpanı
         float4 _ProjectM_LightColor;   // rgb: güneş/ay rengi
         float4 _ProjectM_Glint;        // x: ışık yolu pırıltı çarpanı
-        float4 _WaterRipples[16];   // x, derinlik, başlangıç zamanı, güç
+        float4 _WaterRipples32[32];   // x, derinlik, başlangıç zamanı, güç
 
         struct Attributes
         {
@@ -164,29 +164,41 @@ Shader "ProjectM/Water"
             float2 off = float2(wave * _WaveAmp * grow + n1.y * _WaveAmp * 0.35 * grow, 0.0);
 
             // ---- halkalar ----
+            // r.w > 0: normal halka (adim, vurus, ortam).  r.w < 0: YAGMUR DAMLASI halkasi
+            // (kucuk, keskin, kisa omurlu; su yuzeyinin her derinligine duser, yakin olan buyuk gorunur).
             float ringLight = 0.0;   // + sırt (ışık alır), - çukur (gölge)
+            float dropLight = 0.0;   // yagmur damlasi halkalarinin parlak sirti
             [unroll]
-            for (int k = 0; k < 16; k++)
+            for (int k = 0; k < 32; k++)
             {
-                float4 r = _WaterRipples[k];
+                float4 r = _WaterRipples32[k];
                 float age = _WaterTime - r.z;
+                bool drop = r.w < 0.0;
+                float str = abs(r.w);
+                float lifeT = drop ? _RippleLife * 0.5 : _RippleLife;
 
-                if (age > 0.0 && age < _RippleLife)
+                if (age > 0.0 && age < lifeT)
                 {
                     float2 e = float2(x - r.x, (d - r.y) * _RippleAspect);
                     float dist = length(e);
-                    float rad = age * _RippleSpeed * (0.6 + 0.4 * r.w);
-                    float life = 1.0 - age / _RippleLife;
-                    float band = (dist - rad) / _RippleWidth;
-                    float ring = exp(-band * band) * life * life * r.w;
-                    float band2 = (dist - rad * 0.55) / (_RippleWidth * 0.8);
-                    ring += exp(-band2 * band2) * life * life * life * r.w * 0.5;
+                    float persp = 0.55 + 0.6 * saturate(r.y / 7.0);   // derindeki (yakindaki) damla daha buyuk
+                    float spd = drop ? _RippleSpeed * 0.4 * persp : _RippleSpeed * (0.6 + 0.4 * str);
+                    float wid = drop ? _RippleWidth * 0.55 * persp : _RippleWidth;
+                    float rad = age * spd + (drop ? 0.04 : 0.0);
+                    float life = 1.0 - age / lifeT;
+                    float band = (dist - rad) / wid;
+                    float g = exp(-band * band);
+                    float ring = g * life * life * str;
+                    float band2 = (dist - rad * 0.55) / (wid * 0.8);
+                    ring += exp(-band2 * band2) * life * life * life * str * 0.5;
 
-                    off.x += (e.x / max(dist, 0.001)) * ring * _RippleDistort;
-                    off.y += (e.y / max(dist, 0.001)) / _RippleAspect * ring * _RippleDistort * 0.5;
+                    float dk = drop ? 0.6 : 1.0;
+                    off.x += (e.x / max(dist, 0.001)) * ring * _RippleDistort * dk;
+                    off.y += (e.y / max(dist, 0.001)) / _RippleAspect * ring * _RippleDistort * 0.5 * dk;
                     // Halkanın dış yüzü ışığı yakalar, iç yüzü kararır (gerçek dalgacık gibi).
-                    float slope = -band * exp(-band * band) * life * life * r.w;
+                    float slope = -band * g * life * life * str;
                     ringLight += slope;
+                    if (drop) dropLight += g * life * life * str;
                 }
             }
 
@@ -239,6 +251,9 @@ Shader "ProjectM/Water"
                 float lo = max(-ringLight, 0.0);
                 col += lightCol * hi * _RippleLight * 0.5 * (0.4 + 0.6 * near);
                 col *= 1.0 - lo * _RippleLight * 0.35;
+                // Yagmur damlalari: ince, parlak, soguk-gumus halka (gece de secilsin).
+                half3 dropCol = max(lightCol * 1.3, half3(0.42h, 0.55h, 0.75h));
+                col += dropCol * saturate(dropLight) * _RippleLight * 1.25;
             }
 
             return half4(col, spr.a);

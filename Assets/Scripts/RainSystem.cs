@@ -595,7 +595,7 @@ public class RainSystem : MonoBehaviour
                     continue;
 
                 // Suya düşen damla: yüzeyde minik halka (+ ara sıra damlacık).
-                water.RippleAtSurface(x, Random.Range(0.10f, 0.22f));
+                water.RainRipple(x, Random.Range(0.8f, 1.3f));
 
                 if (Random.value < 0.25f)
                     water.Splash(new Vector2(x, water.WaterY), 1, 0.45f);

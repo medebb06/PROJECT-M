@@ -80,7 +80,7 @@ public class WaterSurface : MonoBehaviour
     /// <summary>Ana kameranın gerçekten çizdiği ortho yarı-yüksekliği (Pixel Perfect / Cinemachine sonrası).</summary>
     public float VisibleSize => mainVisibleSize > 0f ? mainVisibleSize : (mainCam != null ? mainCam.orthographicSize : 10f);
     private RenderTexture rt;
-    private readonly Vector4[] ripples = new Vector4[16];
+    private readonly Vector4[] ripples = new Vector4[32];
     private int nextRipple;
     private float ambientTimer;
 
@@ -109,7 +109,7 @@ public class WaterSurface : MonoBehaviour
     private static readonly int ReflRectId = Shader.PropertyToID("_WaterReflRect");
     private static readonly int MoonXId = Shader.PropertyToID("_WaterMoonX");
     private static readonly int TimeId = Shader.PropertyToID("_WaterTime");
-    private static readonly int RipplesId = Shader.PropertyToID("_WaterRipples");
+    private static readonly int RipplesId = Shader.PropertyToID("_WaterRipples32");
     private static readonly int LightPosId = Shader.PropertyToID("_ProjectM_LightPos");
 
     [Tooltip("Kapalıysa Scene/Game ekranında (Play dışında) su sabit durur. Play'de her zaman akar.")]
@@ -302,8 +302,21 @@ public class WaterSurface : MonoBehaviour
     public void Ripple(Vector2 worldPos, float strength)
     {
         float depth = Mathf.Max(0.12f, WaterY - worldPos.y);
-        ripples[nextRipple] = new Vector4(worldPos.x, depth, Now, Mathf.Clamp(strength, 0f, 2f));
-        nextRipple = (nextRipple + 1) % ripples.Length;
+        ripples[RainSlots + nextRipple] = new Vector4(worldPos.x, depth, Now, Mathf.Clamp(strength, 0f, 2f));
+        nextRipple = (nextRipple + 1) % (ripples.Length - RainSlots);
+    }
+
+    // Yagmur damlalari icin ayri halka havuzu: yagmur yogunken karakter/darbe halkalarini ezmez (eskiden hepsi ayni 16 yuvadaydi, halkalar yarida kayboluyordu).
+    private const int RainSlots = 20;
+    private int nextRainRipple;
+
+    public void RainRipple(float x, float strength)
+    {
+        // Damla suyun yuzeyinin her derinligine duser (perspektif: asagidaki = yakindaki).
+        // Negatif guc = shader'da kucuk, keskin, kisa omurlu damla halkasi.
+        float depth = Mathf.Lerp(0.3f, ambientMaxDepth, Random.value);
+        ripples[nextRainRipple] = new Vector4(x, depth, Now, -Mathf.Clamp(strength, 0.01f, 2f));
+        nextRainRipple = (nextRainRipple + 1) % RainSlots;
     }
 
     /// <summary>Su çizgisinde, verilen X'te halka.</summary>
