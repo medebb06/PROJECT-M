@@ -9,6 +9,9 @@ namespace RonniSkin
     [RequireComponent(typeof(RonniSkinRig), typeof(RonniSkinAnimator))]
     public class RonniPlayerBridge : MonoBehaviour
     {
+        // Ronni'yi sahnedeki props/zemin/Demirci sirasinin uzerine tasir; dusmanlar (30-31) bunun ARKASINDA, sahnenin onunde kalir.
+        public const int OrderBoost = 30;
+
         public PlayerController player;
         [Tooltip("Old sprite to hide (defaults to PlayerController.playerSprite).")]
         public SpriteRenderer originalSprite;
@@ -360,7 +363,7 @@ namespace RonniSkin
             if (mainOld != null)
             {
                 rig.sortingLayerName = mainOld.sortingLayerName;
-                rig.sortingOrderOffset = mainOld.sortingOrder;
+                rig.sortingOrderOffset = mainOld.sortingOrder + OrderBoost;
             }
         }
 
@@ -660,13 +663,13 @@ namespace RonniSkin
                 if (best != null)
                 {
                     mainOld = best; Align(best.bounds); aligned = true;
-                    rig.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigBL != null) rigBL.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigJump != null) rigJump.SetSorting(best.sortingLayerName, best.sortingOrder);
-                    if (rigAtk != null) rigAtk.SetSorting(best.sortingLayerName, best.sortingOrder);
+                    rig.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigBL != null) rigBL.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigJump != null) rigJump.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigAtk != null) rigAtk.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                 }
             }
             if (hideOriginal && hidden != null) foreach (var r in hidden) if (r != null && !r.forceRenderingOff) r.forceRenderingOff = true;

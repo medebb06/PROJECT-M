@@ -90,7 +90,7 @@ TextureImporter:
     maxTextureSize: 4096
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 2
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,6 +113,32 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: WebGL
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
     maxTextureSize: 4096
     resizeAlgorithm: 0
     textureFormat: -1
@@ -180,7 +206,7 @@ TextureImporter:
         width: 1345
         height: 1356
       alignment: 9
-      pivot: {x: 0.22330, y: 0.00295}
+      pivot: {x: 0.2233, y: 0.00295}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -224,7 +250,7 @@ TextureImporter:
         width: 1345
         height: 1356
       alignment: 9
-      pivot: {x: 0.22330, y: 0.00295}
+      pivot: {x: 0.2233, y: 0.00295}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -233,6 +259,10 @@ TextureImporter:
       bones: []
       spriteID: 13c75403a84e424fb0f677b627558beb
       internalID: 4317161149738259205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     - serializedVersion: 2
       name: Attack1G_6
       rect:
@@ -242,7 +272,7 @@ TextureImporter:
         width: 1345
         height: 1356
       alignment: 9
-      pivot: {x: 0.22330, y: 0.00295}
+      pivot: {x: 0.2233, y: 0.00295}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -251,6 +281,10 @@ TextureImporter:
       bones: []
       spriteID: 918db5b9beb14701816c9abf4f4890e9
       internalID: 2635223629362885486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []

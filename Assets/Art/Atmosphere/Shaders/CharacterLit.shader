@@ -121,7 +121,7 @@ Shader "ProjectM/CharacterLit"
 
                 c.rgb += add * c.a;
                 // Toplam tavan: orijinal rengin en fazla ~1.8 kati (bloom'u tetikleyip parlamasin).
-                c.rgb = min(c.rgb, max(c.rgb - add * c.a, 0.0h) * 1.8h + 0.12h * c.a);
+                c.rgb = min(c.rgb, max(c.rgb - add * c.a, 0.0h) * 1.35h + 0.08h * c.a);
                 return c;
             }
             ENDHLSL

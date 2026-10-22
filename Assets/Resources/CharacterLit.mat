@@ -34,11 +34,11 @@ Material:
     m_Ints: []
     m_Floats:
     - _EnableExternalAlpha: 0
-    - _FireRim: 1.6
+    - _FireRim: 1
     - _FireRimWidth: 0.07
     - _FireSoft: 0.22
     - _PMA: 0
-    - _PointLit: 0.8
+    - _PointLit: 0.3
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}

@@ -260,12 +260,17 @@ Shader "ProjectM/SilhouetteRim"
 
             float2 stepUV = dir * _MainTex_TexelSize.xy * _RimWidth;
 
-            half a1 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.33).a;
-            half a2 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.66).a;
-            half a3 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV).a;
+            // Kenar isigi kapaliysa (_RimIntensity 0: cali, ot, bulut) 3 doku okumasi atlanir.
+            half rim = 0.0h;
+            if (_RimIntensity > 0.001h)
+            {
+                half a1 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.33).a;
+                half a2 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV * 0.66).a;
+                half a3 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv + stepUV).a;
 
-            half empty = 1.0h - (a1 * 0.5h + a2 * 0.3h + a3 * 0.2h);
-            half rim = saturate(empty) * tex.a * (1.0h - saturate(_Blur * 0.35h));
+                half empty = 1.0h - (a1 * 0.5h + a2 * 0.3h + a3 * 0.2h);
+                rim = saturate(empty) * tex.a * (1.0h - saturate(_Blur * 0.35h));
+            }
 
             // Işığa doğru eğilince kenar parlar, ışıktan uzaklaşınca söner.
             half towardLight = (half)(i.wind.y * i.wind.x * dir.x);

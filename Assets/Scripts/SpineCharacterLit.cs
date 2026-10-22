@@ -8,8 +8,8 @@ using UnityEngine;
 /// </summary>
 public class SpineCharacterLit : MonoBehaviour
 {
-    [Range(0f, 3f)] public float pointLit = 0.7f;
-    [Range(0f, 4f)] public float fireRim = 1.8f;
+    [Range(0f, 3f)] public float pointLit = 0.3f;
+    [Range(0f, 4f)] public float fireRim = 1.0f;
     public float rimWidth = 0.09f;
     public float softness = 0.3f;
 

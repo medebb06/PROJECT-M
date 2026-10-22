@@ -50,6 +50,9 @@ public class WindSway : MonoBehaviour
         shadow = null;
     }
 
+private Vector4 lastWp = new Vector4(float.NaN, 0f, 0f, 0f);
+    private Renderer lastShadow;
+
     private void LateUpdate()
     {
         if (rend == null)
@@ -63,10 +66,6 @@ public class WindSway : MonoBehaviour
             Mathf.Max(0.01f, b.size.y),
             speedMultiplier > 0f ? speedMultiplier : autoSpeed
         );
-
-        rend.GetPropertyBlock(mpb);
-        mpb.SetVector(WindParamsId, wp);
-        rend.SetPropertyBlock(mpb);
 
         // Ağaç gölgesi (ProjectedShadow, sadece Play'de oluşur) da aynı ritimle sallansın.
         if (Time.unscaledTime >= nextShadowCheck)
@@ -85,6 +84,24 @@ public class WindSway : MonoBehaviour
                 }
             }
         }
+
+        // Degerler degismediyse property block'u her karede yeniden yazma (CPU tasarrufu).
+        bool changed =
+            float.IsNaN(lastWp.x) ||
+            Mathf.Abs(wp.y - lastWp.y) > 0.0005f ||
+            Mathf.Abs(wp.z - lastWp.z) > 0.0005f ||
+            wp.x != lastWp.x || wp.w != lastWp.w ||
+            shadow != lastShadow;
+
+        if (!changed)
+            return;
+
+        lastWp = wp;
+        lastShadow = shadow;
+
+        rend.GetPropertyBlock(mpb);
+        mpb.SetVector(WindParamsId, wp);
+        rend.SetPropertyBlock(mpb);
 
         if (shadow != null)
         {
