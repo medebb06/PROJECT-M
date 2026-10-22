@@ -32801,6 +32801,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2243877206713795939, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
+      propertyPath: endless
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4844427406850440034, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
       propertyPath: m_LocalPosition.x
       value: -13.603169
@@ -61852,19 +61856,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1Duration
-      value: 0.47437498
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack2Duration
-      value: 0.47437498
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack3Duration
-      value: 0.47437498
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack4Duration
-      value: 0.6325
+      value: 0.48
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: airAttackDuration

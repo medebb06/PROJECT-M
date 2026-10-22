@@ -700,9 +700,8 @@ public class PlayerController : MonoBehaviour
     {
         get
         {
-            return defenseController != null &&
-                   defenseController.IsBlocking &&
-                   !defenseController.IsParrying;
+            // Blok basılıyken yürüme KALDIRILDI: blok = yerinde durur.
+            return false;
         }
     }
 

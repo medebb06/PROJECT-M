@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// Oyuncu savunması: parry (bas) ve block (basılı tut).
@@ -110,9 +110,9 @@ public class PlayerDefenseController : MonoBehaviour
     {
         get
         {
-            return IsParrying ||
-                   IsBlocking ||
-                   (MobileInput.GetMouseButton(1) && !suppressHeld);
+            // SADECE gerçek savunma durumu. Eskiden buraya 'sağ tık basılı' da ekliydi: hasar / posture kırılması /
+            // dash sonrası tuş basılı kalırsa savunma aslında kapalıyken bile oyuncu yürüyemiyor ve saldıramıyordu (takılma).
+            return IsParrying || IsBlocking;
         }
     }
 

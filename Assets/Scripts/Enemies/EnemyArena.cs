@@ -25,8 +25,8 @@ public class EnemyArena : MonoBehaviour
     public float nextSpawnDelay = 0.7f;
 
     [Header("Sonsuz mod")]
-    [Tooltip("Açık: sürekli rastgele tipte düşman, sırayla sağdan/soldan doğar; öldürdükçe can dolar. [T] ile aç/kapa.")]
-    public bool endless = true;
+    [Tooltip("Açık: sürekli rastgele tipte düşman, sırayla sağdan/soldan doğar; öldürdükçe can dolar. [T] ile aç/kapa. Oyun başında KAPALI başlar.")]
+    public bool endless = false;
     public float endlessSpawnDistance = 20f;
     public float endlessSpawnGap = 1.2f;
     public int endlessStartMax = 2;
@@ -179,7 +179,6 @@ public class EnemyArena : MonoBehaviour
 
     private void TickEndless()
     {
-        if (Input.GetKeyDown(KeyCode.U) && UltimateAbility.Instance != null) UltimateAbility.Instance.Fill();
         if (!endless || entries.Count == 0) return;
         Transform p = Player;
         if (p == null) return;

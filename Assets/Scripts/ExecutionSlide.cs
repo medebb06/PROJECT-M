@@ -11,17 +11,19 @@ public class ExecutionSlide : MonoBehaviour
     public static int SlideCount;
 
     public static bool Enabled = true;
-    public static float Duration = 0.34f;      // kayma süresi (sn, gerçek zaman)
+    public static float Duration = 0.16f;      // kayma süresi (sn, gerçek zaman)
     public static float PastEdge = 1.0f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
     public static float GhostGap = 0.03f;
-    public static float HoldTime = 0.25f;   // kayma bittikten sonra da hedef alinamaz / hasar almaz kalir
+    public static float HoldTime = 0.12f;   // kayma bittikten sonra da hedef alinamaz / hasar almaz kalir
 
     private PlayerController pl;
     private Rigidbody2D rb;
     private Collider2D[] ignored;
     private Collider2D[] myCols;
     private float x0, x1, age, ghostT;
-    private bool wasInvincible;
+    private bool finished;
+    private bool fxEnded;
+    private static ExecutionSlide current;
 
     public static void Play(PlayerController player, Transform enemy, float dir)
     {
@@ -36,6 +38,8 @@ public class ExecutionSlide : MonoBehaviour
         // düşman oyuncunun önünde değilse (zaten arkada) kayma yok
         if ((ex - px) * dir <= 0f)
             return;
+
+        if (current != null) current.Finish();
 
         GameObject go = new GameObject("ExecutionSlide");
         ExecutionSlide s = go.AddComponent<ExecutionSlide>();
@@ -97,7 +101,9 @@ public class ExecutionSlide : MonoBehaviour
         SetIgnore(true);
 
         SlideCount++;
-        wasInvincible = pl.isInvincible;
+        finished = false;
+        fxEnded = false;
+        current = this;
         pl.isInvincible = true;
         Active = true;
 
@@ -105,7 +111,7 @@ public class ExecutionSlide : MonoBehaviour
         DashFx.Ghost(pl);
     }
 
-    private void Update()
+private void Update()
     {
         if (pl == null || rb == null)
         {
@@ -113,24 +119,50 @@ public class ExecutionSlide : MonoBehaviour
             return;
         }
 
-        age += Time.unscaledDeltaTime;
-        float k = Mathf.Clamp01(age / Mathf.Max(0.02f, Duration));
-        float e = 1f - Mathf.Pow(1f - k, 5f);   // hizli baslar, cok uzun ve yumusak durur
-        if (age > Duration + HoldTime) { Finish(); return; }
-
-        if (k < 1f) rb.position = new Vector2(Mathf.Lerp(x0, x1, e), rb.position.y);
-        else rb.position = new Vector2(x1, rb.position.y);
-        rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-
-        ghostT -= Time.unscaledDeltaTime;
-
-        if (k < 1f && ghostT <= 0f)
+        // Dash başladıysa slide hemen bırakır: iki sistem aynı pozisyonu çekiştirmesin (takılma).
+        if (pl.isDashing)
         {
-            ghostT = GhostGap;
-            DashFx.Ghost(pl);
+            Finish();
+            return;
         }
 
+        age += Time.unscaledDeltaTime;
 
+        if (age > Duration + HoldTime)
+        {
+            Finish();
+            return;
+        }
+
+        float k = Mathf.Clamp01(age / Mathf.Max(0.02f, Duration));
+        float e = 1f - Mathf.Pow(1f - k, 5f);   // hizli baslar, yumusak durur
+
+        if (k < 1f)
+        {
+            rb.position = new Vector2(Mathf.Lerp(x0, x1, e), rb.position.y);
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            ghostT -= Time.unscaledDeltaTime;
+
+            if (ghostT <= 0f)
+            {
+                ghostT = GhostGap;
+                DashFx.Ghost(pl);
+            }
+        }
+        else if (Active)
+        {
+            // Kayma bitti: oyuncu ARTIK serbest (eskiden HoldTime boyunca pozisyona çivileniyordu,
+            // dash / saldırı / hareket çalışmıyordu). Sadece dokunulmazlık kısa süre daha sürer.
+            rb.position = new Vector2(x1, rb.position.y);
+            Active = false;
+
+            if (!fxEnded)
+            {
+                fxEnded = true;
+                DashFx.End(pl);
+            }
+        }
     }
 
     private void SetIgnore(bool on)
@@ -149,22 +181,56 @@ public class ExecutionSlide : MonoBehaviour
         }
     }
 
-    private void Finish()
+private void Finish()
     {
+        if (finished) return;
+        finished = true;
+
+        if (current == this) current = null;
+
         SetIgnore(false);
 
         if (pl != null)
         {
-            pl.isInvincible = wasInvincible;
-            DashFx.End(pl);
+            ReleaseInvincible();
+
+            if (!fxEnded && !pl.isDashing)
+            {
+                fxEnded = true;
+                DashFx.End(pl);
+            }
         }
 
         Active = false;
         Destroy(gameObject);
     }
 
-    private void OnDestroy()
+// Eskiden slide basindaki isInvincible degeri geri yaziliyordu; getter dash/hasar korumasini da
+    // icerdigi icin true geri yazilip kalici dokunulmazlik (düşman vuramiyor) bug'i çıkıyordu.
+    // Artik sadece slide'in actigi state dokunulmazligi kapatilir (dash / ölüm devam ediyorsa dokunma).
+    private void ReleaseInvincible()
     {
-        Active = false;
+        if (pl == null) return;
+
+        bool dead = pl.stateMachine != null && pl.stateMachine.CurrentState is PlayerDeathState;
+
+        if (!pl.isDashing && !dead)
+            pl.isInvincible = false;
+    }
+
+
+private void OnDestroy()
+    {
+        if (!finished)
+        {
+            finished = true;
+            SetIgnore(false);
+            ReleaseInvincible();
+        }
+
+        if (current == this) current = null;
+
+        // Yeni bir slide başladıysa onun Active bayrağını ezme.
+        if (current == null) Active = false;
     }
 }

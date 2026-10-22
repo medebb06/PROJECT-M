@@ -9,6 +9,11 @@ public class PlayerCombatController : MonoBehaviour
     [SerializeField] private PlayerDefenseController defenseController;
 
     public float inputBufferTime = 0.2f;
+
+    [Header("İnfaz hızı")]
+    [Tooltip("Sersemlemiş (infaz edilebilir) düşmana yönelen vuruş bu kat daha HIZLI oynar (süre / bu değer). 1 = kapalı.")]
+    [Min(1f)] public float executionSpeedMult = 1.8f;
+    private bool lastLungeStaggered;
     public float comboResetTime = 0.45f;
 
     [Header("Tepki (iptal penceresi)")]
@@ -584,9 +589,15 @@ public class PlayerCombatController : MonoBehaviour
                 break;
         }
 
+        float lunge = ComputeMagnetLunge();
+
         attackDuration /= Charms.StormMult;   // FIRTINA charm'ı: saldırı hızı
 
-        float lunge = ComputeMagnetLunge();
+        // İNFAZ: sersemlemiş düşmana giden vuruş çok daha çabuk.
+        bool execAttack = lastLungeStaggered && executionSpeedMult > 1f;
+        if (execAttack) attackDuration /= executionSpeedMult;
+
+        // (lunge, süre hesabından önce yukarıda hesaplanır)
 
         attackStartTime = Time.time;
         attackDurationNow = attackDuration;
@@ -614,12 +625,16 @@ public class PlayerCombatController : MonoBehaviour
             hitTime
         );
 
+        if (execAttack)
+            player.SetAttackAnimationSpeed(executionSpeedMult);
+
         currentState.Enter();
     }
 
     // Önündeki düşmana doğru saldırı kayması. Riposte'ta (parry sonrası) uzun atılma, sersemlemiş düşman öncelikli.
     private float ComputeMagnetLunge()
     {
+        lastLungeStaggered = false;
         if (attackMoveDistance <= 0.001f) return 1f;
         float dir = player.facingDir >= 0f ? 1f : -1f;
         float range = counterHit ? riposteRange : magnetRange;
@@ -639,6 +654,7 @@ public class PlayerCombatController : MonoBehaviour
             if (score < bestScore) { bestScore = score; best = e; bestDx = dx; }
         }
         if (best == null) return 1f;
+        lastLungeStaggered = best.IsStaggered;
         // Kilic dovusu: dusmanin govdesi kilic ucu mesafesine (swordTipEnd) gelene kadar yaklas, daha fazla degil.
         float dist = Mathf.Clamp(bestDx - swordTipEnd, 0f, maxDist);
         return dist / attackMoveDistance;
