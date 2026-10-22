@@ -21,6 +21,9 @@ public class WindCharge : MonoBehaviour
 {
     public const int MaxStacks = 8;
 
+    /// <summary>Düşmanların üstündeki "/ / /" Kın çizgileri. Kın şimdilik kapalı olduğu için gizli.</summary>
+    public static bool ShowPips = false;
+
     public static WindCharge Instance { get; private set; }
 
     /// <summary>false: vuruş / parry yük biriktirmez (Atılım Kesiği sadece işaret koyar).</summary>
@@ -206,7 +209,7 @@ public class WindCharge : MonoBehaviour
 
     private void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint || stacks.Count == 0)
+        if (!ShowPips || Event.current.type != EventType.Repaint || stacks.Count == 0)
             return;
 
         Camera cam = GameCamera.Get();

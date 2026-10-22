@@ -83,6 +83,16 @@ public class RunCameraZoom : MonoBehaviour
     public static float FocusZoomIn = 0.12f;
     private float focusBlend, focusBlendVel;
 
+    /// <summary>Q yeteneği basılı tutulurken true: kamera yavaşça yaklaşır.</summary>
+    public static bool AbilityFocus;
+    /// <summary>Q bırakıldığı an: kamera hızla uzaklaşıp yerine oturur.</summary>
+    public static bool AbilityPunchRequest;
+    public static float AbilityZoomAmount = 0.2f;     // 0.45 = görüş %45 yakınlaşır
+    public static float AbilityZoomInTime = 0.45f;      // yaklaşma yavaş (sn)
+    public static float AbilityZoomOutTime = 0.07f;    // uzaklaşma anlık (sn)
+    public static float AbilityPunchSize = 0.22f;      // bırakınca normalin ötesine açılma payı
+    private float abilityBlend, abilityVel, abilityPunch, abilityPunchVel;
+
     // Dis kaynakli kamera sarsintisi (dunya birimi): CameraShake/Impulse yeterince gorunmediginde dogrudan konum titretir.
     private static float kick;
     private static float kickSign = 1f;
@@ -414,6 +424,19 @@ public class RunCameraZoom : MonoBehaviour
 
         // Cok yakinlasmasin: tum "yaklasma" etkilerinin (nefes, giris sinematigi, odak, parry) toplami sinirlanir.
         zoomK = Mathf.Max(zoomK, minZoomScale);
+
+        // Q yeteneği: basılı tutarken YAVAŞÇA yaklaş, bırakınca ANİDEN uzaklaş (kısa 'patlama' payıyla).
+        if (AbilityPunchRequest)
+        {
+            AbilityPunchRequest = false;
+            abilityPunch = AbilityPunchSize;
+            abilityPunchVel = 0f;
+        }
+
+        abilityBlend = Mathf.SmoothDamp(abilityBlend, AbilityFocus ? 1f : 0f, ref abilityVel, AbilityFocus ? AbilityZoomInTime : AbilityZoomOutTime, Mathf.Infinity, Time.unscaledDeltaTime);
+        abilityPunch = Mathf.SmoothDamp(abilityPunch, 0f, ref abilityPunchVel, 0.22f, Mathf.Infinity, Time.unscaledDeltaTime);
+        float abilityEase = abilityBlend * abilityBlend * (3f - 2f * abilityBlend);
+        zoomK = zoomK * (1f - AbilityZoomAmount * abilityEase) + abilityPunch;
 
         Set(zoomK);
 

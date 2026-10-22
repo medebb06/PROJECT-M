@@ -112,6 +112,51 @@ public class PlayerAbility : MonoBehaviour
     // DURUM
     // ---------------------------------------------------------
 
+    [Header("Odak Kesiği (Q, bar dolunca)")]
+    [Tooltip("Bar dolduğunda Q: biraz odaklan, çevredeki düşmanları kesip infaz et. Dolmamışsa Q eskisi gibi Kın'ı patlatır.")]
+    public bool focusEnabled = true;
+    [Tooltip("Kın patlatma (Q). Şimdilik KAPALI; Q sadece Odak Kesiği.")]
+    public bool kinEnabled = false;
+    [Tooltip("Q basılı tutulurken en fazla bu kadar sn odaklanır, sonra otomatik atar.")]
+    public float focusMaxHold = 3f;
+    [Tooltip("Bar kapasitesi.")]
+    public float focusMax = 100f;
+    [Tooltip("Başarılı parry'nin bara eklediği.")]
+    public float focusPerParry = 25f;
+    [Tooltip("Her öldürmenin bara eklediği.")]
+    public float focusPerKill = 12f;
+    [Tooltip("Her düşmana isabetli vuruşun bara eklediği.")]
+    public float focusPerHit = 2f;
+    [Tooltip("Test: oyun başında bar dolu başlasın.")]
+    public bool focusStartFull = false;
+    [Tooltip("Odaklanma süresi (sn): bu sürede kilitli ama dokunulmazsın.")]
+    public float focusTime = 0.7f;
+    [Tooltip("Kesik menzili (dünya birimi).")]
+    public float focusRadius = 26f;
+    [Tooltip("Aynı anda infaz edilen düşman sayısı.")]
+    public int focusTargets = 3;
+    [Tooltip("Kesik efekti (Slash_Aoe_A_recolor_1 Variant).")]
+    public GameObject focusSlashFx;
+    [Tooltip("Efekt ölçeği.")]
+    public float focusFxScale = 7f;
+
+    public float focusCharge;
+    public float FocusCharge01 => focusMax <= 0f ? 0f : Mathf.Clamp01(focusCharge / focusMax);
+    public const int FocusLevels = 3;
+    public int FocusLevel => focusMax <= 0f ? 0 : Mathf.Clamp(Mathf.FloorToInt(focusCharge / (focusMax / FocusLevels) + 0.001f), 0, FocusLevels);
+    public bool FocusFull => focusCharge >= focusMax - 0.001f;
+    public bool FocusReady => focusEnabled && FocusLevel >= 1 && !focusing;
+
+    [Header("Hafif versiyon (Q'ya tek basış, 1 seviye harcar)")]
+    [Tooltip("Hafif versiyonun etki yarıçapı.")]
+    public float focusLightRadius = 14f;
+    [Range(0f, 1f)] public float focusLightHealthPercent = 0.3f;
+    [Range(0f, 1f)] public float focusLightBalancePercent = 0.6f;
+    [Tooltip("Hafif versiyonda efekt ölçeği çarpanı.")]
+    public float focusLightFxMult = 0.45f;
+    public bool IsFocusing => focusing;
+    private bool focusing;
+
     public bool HasAbility { get; private set; }
     public AbilityType Type { get; private set; }
     public int Level { get; private set; }
@@ -161,6 +206,9 @@ public class PlayerAbility : MonoBehaviour
         health = GetComponent<Health>();
         combat = GetComponent<PlayerCombatController>();
 
+        if (focusStartFull)
+            focusCharge = focusMax;
+
         SyncWindCharge();
     }
 
@@ -173,12 +221,14 @@ public class PlayerAbility : MonoBehaviour
     private void OnEnable()
     {
         CombatEvents.ParrySucceeded += OnParry;
+        CombatEvents.EnemyHit += OnEnemyHitFocus;
         CombatEvents.EnemyKilled += OnKilled;
     }
 
     private void OnDisable()
     {
         CombatEvents.ParrySucceeded -= OnParry;
+        CombatEvents.EnemyHit -= OnEnemyHitFocus;
         CombatEvents.EnemyKilled -= OnKilled;
     }
 
@@ -260,12 +310,306 @@ public class PlayerAbility : MonoBehaviour
     private void OnParry(EnemyBase enemy, bool brokeBalance)
     {
         Charge(parryCharge);
+        FocusAdd(focusPerParry);
     }
 
     private void OnKilled(EnemyBase enemy)
     {
         Charge(killCharge);
+        FocusAdd(focusPerKill);
     }
+
+private void OnEnemyHitFocus(EnemyBase enemy, DamageInfo info, HitResult result)
+    {
+        if (info.source == DamageSource.Attack && result.hit)
+            FocusAdd(focusPerHit);
+    }
+
+    private void FocusAdd(float amount)
+    {
+        if (!focusEnabled || focusing || amount <= 0f)
+            return;
+
+        bool was = focusCharge >= focusMax - 0.001f;
+        focusCharge = Mathf.Min(focusMax, focusCharge + amount);
+
+        if (!was && FocusFull && player != null)
+        {
+            LastReadyTime = Time.unscaledTime;
+            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "ODAK HAZIR [Q]", new Color(1f, 0.1f, 0.1f), 0.9f);
+        }
+    }
+
+    private void TryFocusSlash()
+    {
+        if (focusing || !FocusReady)
+            return;
+
+        if (FindFocusTargets().Count == 0)
+        {
+            if (Time.unscaledTime >= nextWarn)
+            {
+                nextWarn = Time.unscaledTime + 0.8f;
+                NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "HEDEF YOK", new Color(0.75f, 0.75f, 0.8f), 0.7f);
+            }
+
+            return;
+        }
+
+        if (combat != null && combat.IsAttacking)
+            combat.CancelAttack();
+
+        StartCoroutine(FocusSlashRoutine());
+    }
+
+private List<EnemyBase> FindFocusTargets(float radius = -1f, int max = -1)
+    {
+        if (radius <= 0f) radius = focusRadius;
+        if (max < 0) max = focusTargets;
+
+        List<EnemyBase> found = CharmUtil.EnemiesInRadius((Vector2)player.transform.position, radius);
+        List<EnemyBase> result = new List<EnemyBase>();
+
+        for (int i = 0; i < found.Count; i++)
+        {
+            EnemyBase e = found[i];
+            if (e == null || e.IsDead || !e.gameObject.activeInHierarchy)
+                continue;
+            result.Add(e);
+        }
+
+        Vector2 p = player.transform.position;
+        result.Sort((a, b) => ((Vector2)a.transform.position - p).sqrMagnitude.CompareTo(((Vector2)b.transform.position - p).sqrMagnitude));
+
+        if (result.Count > max)
+            result.RemoveRange(max, result.Count - max);
+
+        return result;
+    }
+
+private IEnumerator FocusSlashRoutine()
+    {
+        focusing = true;
+
+        // Bar tamamen doluysa tutarak TAM versiyon atılabilir; aksi halde / erken bırakılırsa hafif versiyon (1 seviye).
+        bool canFull = FocusFull;
+        bool completed = false;
+
+        // Tam versiyon KIRMIZI, hafif (tek seviye) versiyon BEYAZ.
+        Color c = canFull ? new Color(1f, 0.1f, 0.1f) : Color.white;
+        NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, canFull ? "ODAK..." : "KESİK", c, focusTime);
+
+        float t = 0f;
+        float nextImage = 0f;
+
+        try
+        {
+            RunCameraZoom.AbilityFocus = true;
+
+            while (true)
+            {
+                if (player == null || (health != null && health.IsDead))
+                    yield break;
+
+                t += Time.deltaTime;
+
+                player.inputLocked = true;
+                player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.15f);
+
+                if (player.rb != null)
+                    player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+
+                if (Time.time >= nextImage)
+                {
+                    nextImage = Time.time + 0.06f;
+                    SpawnAfterImage(player.transform.position, new Color(c.r, c.g, c.b, 0.45f));
+                }
+
+                if (canFull && t >= focusTime)
+                {
+                    completed = true;
+                    break;
+                }
+
+                if (!MobileInput.GetKey(key) || t >= focusMaxHold)
+                    break;
+
+                yield return null;
+            }
+
+            RunCameraZoom.AbilityFocus = false;
+            RunCameraZoom.AbilityPunchRequest = true;
+
+            if (completed)
+                CastFocusFull(c);
+            else
+                CastFocusLight(c);
+        }
+        finally
+        {
+            focusing = false;
+            RunCameraZoom.AbilityFocus = false;
+
+            if (player != null && !windSheathing)
+            {
+                player.inputLockTimer = 0f;
+                player.inputLocked = false;
+            }
+        }
+    }
+
+    private void FaceTarget(EnemyBase e)
+    {
+        if (e == null)
+            return;
+
+        float face = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+
+        if (face != 0f)
+        {
+            player.facingDir = face;
+
+            if (player.playerSprite != null)
+                player.playerSprite.flipX = face < 0f;
+        }
+    }
+
+    // TAM: bar sıfırlanır, en yakın 3 düşman kesilerek infaz edilir.
+    private void CastFocusFull(Color c)
+    {
+        focusCharge = 0f;
+
+        List<EnemyBase> targets = FindFocusTargets();
+
+        if (targets.Count > 0)
+            FaceTarget(targets[0]);
+
+       SpawnFocusFx(1f, c);
+
+        int killed = 0;
+
+        for (int i = 0; i < targets.Count; i++)
+        {
+            EnemyBase e = targets[i];
+            if (e == null || e.IsDead)
+                continue;
+
+            Health eh = e.GetComponent<Health>();
+            if (eh == null || eh.IsDead)
+                continue;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+            if (dir == 0f)
+                dir = player.facingDir;
+
+            DamageInfo info = new DamageInfo
+            {
+                source = DamageSource.Ability,
+                comboStep = 1,
+                healthDamage = eh.MaxHealth,
+                direction = new Vector2(dir, 0f),
+                hitPosition = e.transform.position + Vector3.up,
+                target = e
+            };
+
+            EnemyDeathFx.SetContext(e, info, true);
+            CombatCallout.PopupAbove(e, "İNFAZ!", c, 0.9f);
+            eh.TakeDamage(eh.MaxHealth + 9999);
+            killed++;
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.35f);
+
+        Shake(1.0f);
+        HitStop.Request(0.14f, 0.05f);
+
+        if (killed > 0)
+            CombatFlow.AddLink();
+    }
+
+    // HAFİF: 1 seviye harcar, çevredeki düşmanlara daha az hasar (öldürmez garantisi yok, normal hasar hattı).
+    private void CastFocusLight(Color c)
+    {
+        List<EnemyBase> targets = FindFocusTargets(focusLightRadius, 99);
+
+        if (targets.Count == 0)
+        {
+            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "HEDEF YOK", new Color(0.75f, 0.75f, 0.8f), 0.7f);
+            return;
+        }
+
+        focusCharge = Mathf.Max(0f, focusCharge - focusMax / FocusLevels);
+
+        FaceTarget(targets[0]);
+        SpawnFocusFx(focusLightFxMult, c);
+
+        for (int i = 0; i < targets.Count; i++)
+        {
+            EnemyBase e = targets[i];
+            if (e == null || e.IsDead)
+                continue;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+            if (dir == 0f)
+                dir = player.facingDir;
+
+            HitPercent(e, focusLightBalancePercent, focusLightHealthPercent, new Vector2(dir, 0f));
+
+            if (e != null && !e.IsDead)
+                e.PlayTintFlash(c, 0.25f);
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.2f);
+
+        Shake(0.5f);
+        HitStop.Request(0.06f, 0.05f);
+    }
+
+private void SpawnFocusFx(float scaleMul, Color color)
+    {
+        if (focusSlashFx == null)
+            focusSlashFx = Resources.Load<GameObject>("FocusSlashFx");
+
+        if (focusSlashFx == null)
+            return;
+
+        Vector3 p = player.transform.position;
+        GameObject fx = Instantiate(focusSlashFx, new Vector3(p.x, p.y + 1.2f, p.z + 2f), Quaternion.identity);
+        fx.transform.localScale = Vector3.one * focusFxScale * scaleMul;
+
+        // Rengi çalışma anında ver (kırmızı: tam, beyaz: hafif).
+        ParticleSystem[] pss = fx.GetComponentsInChildren<ParticleSystem>(true);
+
+        for (int i = 0; i < pss.Length; i++)
+        {
+            ParticleSystem.MainModule main = pss[i].main;
+            float a = main.startColor.mode == ParticleSystemGradientMode.Color ? main.startColor.color.a : 1f;
+            main.startColor = new Color(color.r, color.g, color.b, a);
+
+            ParticleSystem.ColorOverLifetimeModule col = pss[i].colorOverLifetime;
+
+            if (col.enabled)
+            {
+                Gradient old = col.color.gradient;
+                GradientAlphaKey[] ak = old != null ? old.alphaKeys : new GradientAlphaKey[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) };
+                Gradient g = new Gradient();
+                g.SetKeys(new GradientColorKey[] { new GradientColorKey(color, 0f), new GradientColorKey(color, 1f) }, ak);
+                col.color = new ParticleSystem.MinMaxGradient(g);
+            }
+        }
+
+        Renderer[] rs = fx.GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < rs.Length; i++)
+        {
+            rs[i].sortingLayerID = SortingLayer;
+            rs[i].sortingOrder = SortingOrder + 20;
+        }
+
+        Destroy(fx, 3f);
+    }
+
 
     /// <summary>Charm'lar için: bekleme süresini kısalt.</summary>
     public void ReduceCooldown(float seconds)
@@ -365,6 +709,16 @@ public class PlayerAbility : MonoBehaviour
     // Q: Kın. Her zaman aktif; düşmanlardaki yükü patlatır.
     private void TryKin()
     {
+        // Bar doluysa Q = Odak Kesiği.
+        if (FocusReady && CanAct() && !windSheathing && !dashSlashing)
+        {
+            TryFocusSlash();
+            return;
+        }
+
+        if (focusing || !kinEnabled)
+            return;
+
         if (!CanAct() || windSheathing || Time.time < kinReadyAt)
             return;
 
