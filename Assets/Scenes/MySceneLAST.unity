@@ -70243,6 +70243,10 @@ PrefabInstance:
       propertyPath: dashCooldownScale
       value: 0.7
       objectReference: {fileID: 0}
+    - target: {fileID: 9087282568792326975, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: sortingOrderOffset
+      value: 29
+      objectReference: {fileID: 0}
     - target: {fileID: 9135974849126324683, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: m_Size.x
       value: 1.5
