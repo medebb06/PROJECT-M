@@ -762,6 +762,8 @@ public class RainSystem : MonoBehaviour
     }
 
     // TimeOfDay global ışığı her kare ezdiği için, bu TimeOfDay'den SONRA çalışır.
+    private float lightBase = 1f, lastLightSet = -999f;
+    private bool lightSetLive;
     public void ApplyLight()
     {
         if (globalLight == null && Time.unscaledTime >= lightScan)
@@ -778,10 +780,17 @@ public class RainSystem : MonoBehaviour
             }
         }
 
-        if (globalLight == null || flashLevel <= 0.001f || !lightningLight)
+        if (globalLight == null)
             return;
 
-        globalLight.intensity *= 1f + (flashBoost - 1f) * flashLevel;
+        // Başkası (TimeOfDay) yazmadıysa, önceki parlama çarpanını geri al: üst üste çarpılıp ekranı beyaza boğmasın.
+        if (!Mathf.Approximately(globalLight.intensity, lastLightSet))
+            lightBase = globalLight.intensity;
+
+        float mult = (flashLevel <= 0.001f || !lightningLight) ? 1f : 1f + (flashBoost - 1f) * flashLevel;
+        lightSetLive = true;
+        globalLight.intensity = lightBase * mult;
+        lastLightSet = globalLight.intensity;
     }
 }
 

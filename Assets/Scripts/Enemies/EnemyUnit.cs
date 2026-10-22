@@ -229,7 +229,7 @@ public class EnemyUnit : EnemyBase
             case UnitState.Chase: if (Passive) { HardStop(); FaceTarget(); } else TickLocomotion(dt); break;
             case UnitState.Windup: TickWindup(dt); break;
             case UnitState.Active: TickActive(dt); break;
-            case UnitState.Recover: Decelerate(dt); if (stateTime >= current.recovery) EndRecover(); break;
+            case UnitState.Recover: if (hopping) TickHop(); else Decelerate(dt); if (stateTime >= current.recovery) { hopping = false; EndRecover(); } break;
             case UnitState.Hurt: ShoveDecay(dt); if (stateTime >= hurtDuration) SetState(UnitState.Chase); break;
             case UnitState.Stagger: ShoveDecay(dt); if (stateTime >= def.staggerDuration) EndStagger(); break;
         }
@@ -790,6 +790,14 @@ public class EnemyUnit : EnemyBase
                 // Oyuncunun içinden geçip arkasında biter.
                 float dxt = DxToTarget;
                 lungeTravel = (dxt * facing > 0f) ? Mathf.Abs(dxt) + current.throughGap : 0f;
+                // Oyuncunun girişini takip et: gittiği yöne doğru öncül, arkasına tam otursun.
+                Rigidbody2D prt = target.GetComponent<Rigidbody2D>();
+                if (prt != null && lungeTravel > 0f)
+                {
+                    float vx = prt.linearVelocity.x * Mathf.Sign(facing);
+                    float dur = lungeTravel / 45f;
+                    lungeTravel = Mathf.Max(2f, lungeTravel + Mathf.Clamp(vx * dur, -4f, 10f));
+                }
                 SetPlayerCollision(true);
             }
             else if (IsLineDash(current))
@@ -1054,6 +1062,7 @@ public class EnemyUnit : EnemyBase
 
     private void SetState(UnitState s)
     {
+        if (s != UnitState.Recover) hopping = false;
         UnitState prev = state;
         if (s == UnitState.Stagger) SquashPunch(new Vector2(0.8f, 1.2f), 0.22f, 1f);
 
@@ -1240,6 +1249,7 @@ public class EnemyUnit : EnemyBase
     private void BeginSlam()
     {
         slamLanded = false;
+        hopOriginX = transform.position.x;
         slamStartY = transform.position.y;
         // Yükseğe fırla, tepede kısa asılı kal, hedefin üstünden dik ve hızlı çakıl.
         float fallT = Mathf.Max(0.05f, current.slamHeight / Mathf.Max(1f, current.slamFallSpeed));
@@ -1286,6 +1296,20 @@ public class EnemyUnit : EnemyBase
         SquashPunch(new Vector2(1.35f, 0.72f), 0.18f, 1f);
         StartCoroutine(SlamWaveFx(lx, transform.position.y, current.slamRange));
         SetState(UnitState.Recover);
+        hopping = current.hopBack;
+    }
+
+    private float hopOriginX;
+    private bool hopping;
+    private void TickHop()
+    {
+        float dur = Mathf.Max(0.15f, Mathf.Min(0.4f, current.recovery));
+        float u = stateTime / dur;
+        if (u >= 1f) { hopping = false; HardStop(); return; }
+        float sc = EnemyTime.Scale;
+        float vx = (hopOriginX - transform.position.x) / Mathf.Max(0.03f, dur - stateTime);
+        float vy = current.hopHeight * 4f * (1f - 2f * u) / dur + 6f;
+        rb.linearVelocity = new Vector2(Mathf.Clamp(vx, -60f, 60f) * sc, vy * sc);
     }
 
     private System.Collections.IEnumerator SlamWaveFx(float x, float y, float range)

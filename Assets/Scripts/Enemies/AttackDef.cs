@@ -78,6 +78,8 @@ public class AttackDef
     public bool lungeThrough = false;
     [Tooltip("lungeThrough: oyuncunun bu kadar ARKASINDA durur.")]
     public float throughGap = 3f;
+    public bool hopBack;
+    public float hopHeight = 3f;
 
     [Header("Ağır saldırı (Heavy)")]
     [Tooltip("Windup + aktif sırasında oyuncu vuruşu sersemletmez / çatışma olmaz (posture kırılması yine sersemletir).")]
