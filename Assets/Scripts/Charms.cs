@@ -7,7 +7,7 @@ using UnityEngine;
 //   ZEHİR   : vurduğun düşman zehirlenir (vuruş bitince 3.5 sn boyunca can yakar).
 //   PATLAMA : ölen düşman patlar, çevresindekilere hasar verir (zincirleme).
 //   KAN     : can vuruşundan verdiğin hasarın %35'i kadar can kazanırsın.
-//   FIRTINA : saldırı hızı x1.45.
+//   FIRTINA : saldırı hızı x1.2.
 //   AĞIR    : hasar +%30, düşman 3 kat uzağa itilir.
 public enum CharmType { Poison, Explosion, Blood, Storm }
 
@@ -19,7 +19,7 @@ public static class Charms
     public static void Set(CharmType t, bool v) { on[(int)t] = v; }
     public static void Toggle(CharmType t) { on[(int)t] = !on[(int)t]; }
 
-    public static float StormMult { get { return Active(CharmType.Storm) ? 1.45f : 1f; } }
+    public static float StormMult { get { return Active(CharmType.Storm) ? 1.2f : 1f; } }
     
     
 
@@ -35,7 +35,7 @@ public static class Charms
             case CharmType.Poison: return "Vurduğun düşman zehirlenir, 3.5 sn can yanar";
             case CharmType.Explosion: return "Ölen düşman patlar, çevresine hasar verir (zincir)";
             case CharmType.Blood: return "Verdiğin can hasarının %35'i kadar can kazanırsın";
-            default: return "Saldırı hızı x1.45";
+            default: return "Saldırı hızı x1.2";
 
         }
     }
@@ -253,6 +253,8 @@ public class CharmManager : MonoBehaviour
 public class PoisonStatus : MonoBehaviour
 {
     public const int MaxStacks = 8;
+    public const float StackCooldown = 0.35f;
+    private float lastStack = -999f;
     private EnemyBase enemy;
     private Health health;
     private float until, nextTick, tickEvery;
@@ -264,7 +266,11 @@ public class PoisonStatus : MonoBehaviour
         if (enemy == null) { enemy = GetComponent<EnemyBase>(); health = GetComponent<Health>(); }
         until = Time.time + time;
         tickEvery = tick; tickDamage = dmg;
-        stacks = Mathf.Min(MaxStacks, stacks + 1);
+        if (Time.time - lastStack >= StackCooldown)
+        {
+            stacks = Mathf.Min(MaxStacks, stacks + 1);   // yığın hızı saldırı hızından bağımsız (Fırtına ile patlamasın)
+            lastStack = Time.time;
+        }
         if (nextTick < Time.time) nextTick = Time.time + tick;
     }
 

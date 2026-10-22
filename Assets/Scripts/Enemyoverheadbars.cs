@@ -200,11 +200,16 @@ public class EnemyOverheadBars : MonoBehaviour
             if (hp < e.lastHealth - 0.0001f)
                 e.trailHoldUntil = now + trailDelay;
 
+            // Akışkan can: hedefe üstel yaklaşır (su gibi akar).
+            float diffS = hp - e.healthShown;
+            if (Mathf.Abs(diffS) < 0.0004f) e.healthShown = hp;
+            else e.healthShown += diffS * (1f - Mathf.Exp(-11f * dt));
+
             e.lastHealth = hp;
             e.lastBalance = bal;
 
-            if (e.healthTrail < hp)
-                e.healthTrail = hp;
+            if (e.healthTrail < e.healthShown)
+                e.healthTrail = e.healthShown;
             else if (now >= e.trailHoldUntil)
                 e.healthTrail = Mathf.MoveTowards(e.healthTrail, e.healthShown, trailSpeed * dt);
 
