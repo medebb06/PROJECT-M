@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class PlayerCombatController : MonoBehaviour
@@ -558,6 +558,8 @@ public class PlayerCombatController : MonoBehaviour
                 hitTime = attack4HitTime;
                 break;
         }
+
+        attackDuration /= Charms.StormMult;   // FIRTINA charm'ı: saldırı hızı
 
         float lunge = ComputeMagnetLunge();
 

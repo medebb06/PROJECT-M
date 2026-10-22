@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public class StartingAbility : MonoBehaviour
 {
-    public static bool active = true;
+    public static bool active = false;
     public static AbilityType type = AbilityType.DashSlash;
 
     private static StartingAbility instance;
@@ -20,7 +20,7 @@ public class StartingAbility : MonoBehaviour
     private static void ResetStatics()
     {
         instance = null;
-        active = true;
+        active = false;
         type = AbilityType.DashSlash;
     }
 

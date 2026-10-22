@@ -1323,7 +1323,7 @@ public class EnemyUnit : EnemyBase
     public override void ApplyAttackHit(Vector2 hitDirection, bool healthHit, int attackStep)
     {
         if (IsDead) return;
-        shoveMult = attackStep >= 4 ? 2.4f : 1f;
+        shoveMult = (attackStep >= 4 ? 2.4f : 1f) * Charms.HeavyShove;
         ApplyPressure();
         SquashPunch(healthHit ? new Vector2(1.7f, 0.52f) : new Vector2(1.35f, 0.7f), healthHit ? 0.24f : 0.16f, AbsorbsHit() ? 0.4f : 1f);
         if (state == UnitState.Stagger)

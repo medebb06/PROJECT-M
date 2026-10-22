@@ -140,7 +140,7 @@ public static class PlayerDamage
                 Resolve(
                     StatType.BalanceDamage,
                     info.balanceDamage,
-                    critMultiplier * sourceMultiplier * KillFlow.DamageMult,
+                    critMultiplier * sourceMultiplier,
                     stats
                 );
 
@@ -232,7 +232,7 @@ public static class PlayerDamage
             Resolve(
                 StatType.HealthDamage,
                 info.healthDamage,
-                critMultiplier * KillFlow.DamageMult * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
+                critMultiplier * Charms.HeavyDamage * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
                 * ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) ? HealthDamageBoost : 1f)
                 * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
                 stats
