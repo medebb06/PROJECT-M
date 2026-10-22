@@ -291,13 +291,13 @@ MonoBehaviour:
     animAttack: 
     animRecover: 
   - name: Slam
-    weight: 1.5
-    minRange: 6
-    maxRange: 14
-    windup: 1.1
+    weight: 5
+    minRange: 14
+    maxRange: 30
+    windup: 0.75
     active: 0.2
     recovery: 1.5
-    cooldown: 8
+    cooldown: 6
     damage: 2
     unblockable: 1
     hitReach: 7
@@ -353,9 +353,9 @@ MonoBehaviour:
     slamRange: 7
     slamAirTime: 0.6
     slamHeight: 7
-    slamRise: 0.4
-    slamHang: 0.12
-    slamFallSpeed: 45
+    slamRise: 0.28
+    slamHang: 0.08
+    slamFallSpeed: 60
     slamGap: 2.5
     followUp: 
     followUpChance: 0.3

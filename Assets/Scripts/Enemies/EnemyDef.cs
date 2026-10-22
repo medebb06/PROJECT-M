@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 // Bir düşman tipinin tüm verisi. Yeni düşman = prefab + bir EnemyDef.
@@ -100,6 +100,14 @@ public class EnemyDef : ScriptableObject
     public float healthHitKnockback = 4f;
     public float blockKnockback = 3f;
     public float knockbackDeceleration = 25f;
+
+    [Header("Karşı atılma (oyuncunun dash'ine cevap)")]
+    [Tooltip("Boş değilse: oyuncu yakında dash atınca bu isimli saldırı (followUpOnly) şansla zorla seçilir.")]
+    public string counterDashAttack = "";
+    [Range(0f, 1f)] public float counterDashChance = 0.5f;
+    public float counterDashCooldown = 7f;
+    [Tooltip("Oyuncu dash attığında düşman en fazla bu yatay mesafedeyse tetiklenir.")]
+    public float counterDashRange = 12f;
 
     [Header("Posture kullanımı")]
     [Tooltip("Kapalı: posture barı yok, düz vuruş doğrudan can götürür; parry düşmanı sersemletir (infaz fırsatı). Elite / boss için açık bırak.")]

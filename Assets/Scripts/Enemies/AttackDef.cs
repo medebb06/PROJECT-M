@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // Tek bir saldırının TÜM zamanlaması ve hasarı burada. Klip bu değerlere uydurulur.
 [System.Serializable]
@@ -73,6 +73,11 @@ public class AttackDef
     public bool endsBurst = false;
     [Tooltip("Düşman oyuncuyu ilk gördüğünde (ilk saldırı kararında) bunu öncelikle kullanır.")]
     public bool opener = false;
+
+    [Tooltip("Atılma oyuncunun İÇİNDEN geçip arkasında biter (lungeDistance > 0 olmalı). Atılma sırasında oyuncuyla çarpışma kapanır.")]
+    public bool lungeThrough = false;
+    [Tooltip("lungeThrough: oyuncunun bu kadar ARKASINDA durur.")]
+    public float throughGap = 3f;
 
     [Header("Ağır saldırı (Heavy)")]
     [Tooltip("Windup + aktif sırasında oyuncu vuruşu sersemletmez / çatışma olmaz (posture kırılması yine sersemletir).")]

@@ -103,6 +103,7 @@ public class EnemyUnit : EnemyBase
     protected override void OnEnable()
     {
         base.OnEnable();
+        CombatEvents.PlayerDashed += OnPlayerDashed;
         if (health != null) health.OnDeath += HandleDeath;
     }
 
@@ -111,6 +112,7 @@ public class EnemyUnit : EnemyBase
         if (health != null) health.OnDeath -= HandleDeath;
         EnemyAttackCoordinator.ReleaseAttack(this);
         EnemyAttackCoordinator.ReleaseEngage(this);
+        CombatEvents.PlayerDashed -= OnPlayerDashed;
         base.OnDisable();
     }
 
@@ -160,6 +162,37 @@ public class EnemyUnit : EnemyBase
     }
 
     // Oyuncu ile gövde çarpışmasını kapat: birbirini itmez, içinden geçer.
+        // ---- Karşı atılma: oyuncu yakınında dash atınca (şansla) arkasına atılıp odaklanır.
+    private AttackDef forced;
+    private float forcedUntil, counterReadyAt;
+
+    private void OnPlayerDashed()
+    {
+        if (dead || def == null || target == null || string.IsNullOrEmpty(def.counterDashAttack)) return;
+        if (Time.time < counterReadyAt) return;
+        if (state == UnitState.Windup || state == UnitState.Active || state == UnitState.Stagger || state == UnitState.Hurt || state == UnitState.Dead) return;
+        if (Mathf.Abs(DxToTarget) > def.counterDashRange) return;
+        if (Random.value > def.counterDashChance) return;
+        for (int i = 0; i < def.attacks.Count; i++)
+            if (def.attacks[i].name == def.counterDashAttack)
+            {
+                forced = def.attacks[i];
+                forcedUntil = Time.time + 1.2f;
+                counterReadyAt = Time.time + def.counterDashCooldown;
+                return;
+            }
+    }
+
+    private void SetPlayerCollision(bool ignore)
+    {
+        if (target == null) return;
+        Collider2D[] mine = GetComponentsInChildren<Collider2D>();
+        Collider2D[] theirs = target.GetComponentsInChildren<Collider2D>();
+        for (int i = 0; i < mine.Length; i++)
+            for (int j = 0; j < theirs.Length; j++)
+                Physics2D.IgnoreCollision(mine[i], theirs[j], ignore);
+    }
+
     private void IgnorePlayerCollision()
     {
         Collider2D[] mine = GetComponentsInChildren<Collider2D>();
@@ -380,7 +413,7 @@ public class EnemyUnit : EnemyBase
 
         EnemyAttackCoordinator.JoinQueue(this);
         int rank = EnemyAttackCoordinator.GetStandbyRank(this);
-        if (rank > 0)
+        if (rank > 0 && forced == null)
         {
             MoveToStandby(rank);
             planned = null;
@@ -391,7 +424,9 @@ public class EnemyUnit : EnemyBase
         // Seçimi koru: koordinatör uyarı süresine göre izin verir; her karede yeniden
         // seçersek uzun uyarılı saldırı hep kazanır.
         int pi = planned == null ? -1 : def.attacks.IndexOf(planned);
-        if (pi < 0 || !AttackUsable(pi, dist, true)) planned = PickAttack(dist);
+        if (forced != null && Time.time > forcedUntil) forced = null;
+        if (forced != null) planned = forced;
+        else if (pi < 0 || !AttackUsable(pi, dist, true)) planned = PickAttack(dist);
         AttackDef pick = planned;
         if (pick == null)
         {
@@ -458,11 +493,20 @@ public class EnemyUnit : EnemyBase
         return v.z > 0f && v.x > 0.02f && v.x < 0.98f;
     }
 
+    // Bekleme / nefes / saldırı arası: uzaktaysa oyuncuya DOĞRU yürü (bekleme dolsun diye durma), yakındaysa sabit dur.
+    private void ApproachFar(float dist)
+    {
+        float dx = DxToTarget;
+        float far = Mathf.Max(def.standbyDistance, CloseRange());
+        if (dist > far) Move(Mathf.Sign(dx) * def.chaseSpeed * (dist > def.sprintDistance ? def.sprintMultiplier : 1f));
+        else Stop();
+    }
+
     private void Hold(float dist)
     {
         float dx = DxToTarget;
         float comfy = Mathf.Max(def.standbyDistance * 0.6f, 1.2f);
-        Stop();   // geri çekilme yok
+        ApproachFar(dist);   // geri çekilme yok; uzaktaysa saldırı beklemeden yaklaş
     }
 
     private void MoveToStandby(int rank)
@@ -611,6 +655,8 @@ public class EnemyUnit : EnemyBase
     private void StartAttack(AttackDef a)
     {
         current = a;
+        if (forced == a) forced = null;
+        FaceTarget();
         burstCount++;
         if (a.endsBurst && burstTarget > 0) burstCount = burstTarget;
         cueFired = committedFired = hitDone = false;
@@ -683,6 +729,12 @@ public class EnemyUnit : EnemyBase
         // Yer şoku: iniş noktası windup'ın ilk anında belirlenir ve bir daha DEĞİŞMEZ (uyarı alanı = gerçek iniş yeri).
         if (current.slamJump && stateTime < 0.04f)
             slamTargetX = target.position.x - Mathf.Sign(DxToTarget == 0f ? facing : DxToTarget) * current.slamGap;
+        // Kaçan oyuncuya öncül: iniş noktası koşu yönünde ileri kaydırılır (yine windup başında kilitlenir, uyarı alanı = gerçek iniş).
+        if (current.slamJump && stateTime < 0.04f)
+        {
+            Rigidbody2D prb = target.GetComponent<Rigidbody2D>();
+            if (prb != null) slamTargetX += Mathf.Clamp(prb.linearVelocity.x * (current.windup * 0.5f + current.slamRise + current.slamHang), -9f, 9f);
+        }
         if (teleportPending && stateTime >= current.teleportVanish) DoTeleport();
         if (teleportPending) { HardStop(); return; }
         // Engellenemez saldırıda yön BAŞTAN kilitli: arkasına geçersen dönüp vurmaz.
@@ -733,6 +785,23 @@ public class EnemyUnit : EnemyBase
             // Atılmalı saldırı: karar anında yetişemediyse bile oyuncu az geri çekildiyse tüm boşluğu kapatır (menzil + 4).
             float cap = Mathf.Max(current.lungeDistance, current.maxRange + 4f);
             lungeTravel = Mathf.Min(lungeTravel, cap);
+            if (current.lungeThrough)
+            {
+                // Oyuncunun içinden geçip arkasında biter.
+                float dxt = DxToTarget;
+                lungeTravel = (dxt * facing > 0f) ? Mathf.Abs(dxt) + current.throughGap : 0f;
+                SetPlayerCollision(true);
+            }
+            else if (IsLineDash(current))
+            {
+                // Kaçan oyuncuya öncül: koşu yönündeki hızı kadar ileri atıl.
+                Rigidbody2D prb = target.GetComponent<Rigidbody2D>();
+                if (prb != null)
+                {
+                    float away = prb.linearVelocity.x * facing;
+                    if (away > 0f) lungeTravel += Mathf.Min(6f, away * (lungeTravel / 45f));
+                }
+            }
             lungeStrike = current.lungeDistance > 0f && lungeTravel > 0.5f;
             // Uzun atılma biraz daha uzun sürer (en çok ~45 birim/sn): ışınlanma gibi görünmesin.
             activeDur = lungeStrike ? Mathf.Max(current.active, lungeTravel / 45f) : current.active;
@@ -995,6 +1064,7 @@ public class EnemyUnit : EnemyBase
         {
             EnemyAttackCoordinator.ReleaseAttack(this);
             if (telegraph != null) telegraph.StopWarning();
+            if (current != null && current.lungeThrough && !def.passThroughPlayer) SetPlayerCollision(false);
         }
 
         state = s;
@@ -1051,7 +1121,7 @@ public class EnemyUnit : EnemyBase
         if (breathHolding) { Stop(); return; }   // bu saldırıdan sonra geri çekilme yok, sabit bekle
         if (rangedMax > 0f) { KeepRange(dist, dx); return; }
         float want = Mathf.Max(def.breathDistance, CloseRange() + 1f);
-        Stop();   // nefes alırken yürüyerek geri çekilme yok, yerinde dur
+        ApproachFar(dist);   // geri çekilme yok; uzaktaysa nefeste de yaklaş
     }
 
     private void EndRecover()
