@@ -27,6 +27,9 @@ public class ExecutionSlide : MonoBehaviour
 
     public static void Play(PlayerController player, Transform enemy, float dir)
     {
+        // Infaz: keskin, beyaz-sicak isik cakmasi.
+        if (enemy != null) GameplayLightFlash.Burst((Vector2)enemy.position + Vector2.up * 1.6f, new Color(1f, 0.93f, 0.8f), 3.4f, 12f, 0.45f);
+
         if (!Enabled || Active || player == null || enemy == null || player.rb == null)
             return;
 

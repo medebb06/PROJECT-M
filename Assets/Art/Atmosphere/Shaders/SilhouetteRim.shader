@@ -47,6 +47,10 @@ Shader "ProjectM/SilhouetteRim"
 
         [Header(Depth Blur)]
         _Blur ("Blur (ekran pikseli, DepthBlur ayarlar)", Range(0,8)) = 0
+
+        [Header(Mesale ve noktasal isik)]
+        _PointLit ("Noktasal isik tepkisi (0 = etkilenmez)", Range(0,3)) = 1
+        _FireRim ("Ates kenar isigi (mesaleye bakan kenarlar)", Range(0,4)) = 1.4
     }
 
     SubShader
@@ -68,6 +72,13 @@ Shader "ProjectM/SilhouetteRim"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
 #include "Assets/Art/Atmosphere/Shaders/WorldGray.hlsl"
+        #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
+        #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/ShapeLightVariables.hlsl"
+
+        // Global Light 2D'nin etkin rengi (renk * siddet). Ambient2DSync her kare ayarlar.
+        // Isik dokusundan bu cikarilinca geriye sadece mesale/fener gibi noktasal isiklar kalir.
+        float4 _ProjectM_Ambient2D;
+
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -99,9 +110,12 @@ Shader "ProjectM/SilhouetteRim"
             half _Blur;
             half _SwayAmp;
             half _SwaySpeed;
+            half _PointLit;
+            half _FireRim;
         CBUFFER_END
 
         #include "ProjectMWind.hlsl"
+        #include "ProjectMFire.hlsl"
 
         TEXTURE2D(_NormalMap);
         SAMPLER(sampler_NormalMap);
@@ -173,6 +187,7 @@ Shader "ProjectM/SilhouetteRim"
             float3 positionWS : TEXCOORD1;
             float2 flip : TEXCOORD2;
             float2 wind : TEXCOORD3;   // x = yükseklik oranı, y = salınım (-1..1)
+            float2 lightUV : TEXCOORD4;
             UNITY_VERTEX_OUTPUT_STEREO
         };
 
@@ -198,11 +213,16 @@ Shader "ProjectM/SilhouetteRim"
             o.uv = v.uv;
             o.color = v.color * _Color * unity_SpriteColor;
             o.flip = unity_SpriteProps.xy;
+            o.lightUV = ComputeScreenPos(o.positionCS / o.positionCS.w).xy;
             return o;
         }
 
         half4 frag(Varyings i) : SV_Target
         {
+            // Ates kenar isigi icin ekran turevleri (discard'dan ONCE).
+            float2 pmfUVdx = ddx(i.uv), pmfUVdy = ddy(i.uv);
+            float2 pmfWdx = ddx(i.positionWS.xy), pmfWdy = ddy(i.positionWS.xy);
+
             // Yaprak titremesi: üst kısımlar küçük, düzensiz kıpırdar.
             float2 uv = i.uv;
             half flutter = 0;
@@ -280,6 +300,26 @@ Shader "ProjectM/SilhouetteRim"
                 rgb += rimRGB * lit * _NormalIntensity * tex.a * windGlow * moonK;
             }
 
+            // Ates kenar isigi: ay isigi gibi ama mesaleye bakan kenarlar yanar, alev titredikce kesik kesik;
+            // genis yaricapta alfa egiminden yumusak kubbe (sahte normal map). ProjectMFire.hlsl
+            if (_FireRim > 0.001h)
+                rgb += PMF_FireLight(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), uv, i.positionWS.xy, tex.a,
+                                     pmfUVdx, pmfUVdy, pmfWdx, pmfWdy, 0.18, 0.45) * _FireRim * (1.0h - haze * 0.85h);
+
+            // Mesale/fener isigi: 2D isik dokusundan global isik cikarilir, kalan noktasal isik
+            // siluetin kendi rengiyle carpilip eklenir (gece mesale yakinindaki agac/esya sicak aydinlanir,
+            // golge dusuren nesnelerin arkasi karanlik kalir). Pus arttikca etkisi azalir.
+#if USE_SHAPE_LIGHT_TYPE_0
+            if (_PointLit > 0.001h)
+            {
+                half3 L0 = SAMPLE_TEXTURE2D(_ShapeLightTexture0, sampler_ShapeLightTexture0, i.lightUV).rgb
+                         * _ShapeLightBlendFactors0.x * max(_HDREmulationScale, 1.0h);
+                half3 pt = max(L0 - (half3)_ProjectM_Ambient2D.rgb, 0.0h);
+                pt = pt / (1.0h + pt * 0.5h);
+                rgb += c.rgb * pt * _PointLit * (1.0h - haze * 0.85h);
+            }
+#endif
+
             // Ayın önünden geçen bulut yarı saydamlaşır: ay içinden sızar.
             half fadeA = 1.0h - _MoonFade * (1.0h - smoothstep(0.0h, _MoonFadeRadius, (half)len)) * _UseMoon;
 
@@ -287,13 +327,15 @@ Shader "ProjectM/SilhouetteRim"
         }
         ENDHLSL
 
-        // Tek etiketsiz pass (URP'nin Sprite-Unlit-Default'u gibi): 2D Renderer bunu çizer.
+        // 2D Renderer'in isikli pass'i: isik dokularini (mesale vs.) okuyabilmek icin.
         Pass
         {
+            Tags { "LightMode" = "Universal2D" }
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             ENDHLSL
         }
     }

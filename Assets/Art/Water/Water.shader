@@ -66,6 +66,7 @@ Shader "ProjectM/Water"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+            #include "Assets/Art/Atmosphere/Shaders/ProjectMFire.hlsl"
 
         TEXTURE2D(_MainTex);        SAMPLER(sampler_MainTex);
         TEXTURE2D(_NoiseTex);       SAMPLER(sampler_NoiseTex);
@@ -241,6 +242,21 @@ Shader "ProjectM/Water"
             float sparkle = row * blob * 2.5;
             float vfade = saturate(1.0 - d / (_FadeDistance * 1.2));
             col += lightC * mask * vfade * (sparkle * _MoonIntensity + _MoonGlow) * glint;
+
+            // ---- ates yolu: mesalelerin suda titreyen sicak isik seridi (ay yolunun ates hali) ----
+            [unroll]
+            for (int fk = 0; fk < 4; fk++)
+            {
+                float4 fp = _ProjectM_Fire4Pos[fk];
+                if (fk < (int)_ProjectM_Fire4Count && fp.w > 0.001)
+                {
+                    float fw = 1.1 * (1.0 + d * 0.18);
+                    float fa = (x - fp.x) / fw;
+                    float fm = exp(-fa * fa);
+                    float fv = saturate(1.0 - d / (_FadeDistance * 0.8));
+                    col += _ProjectM_Fire4Col[fk].rgb * fm * fv * (row * blob * 1.8 + 0.1) * fp.w * 0.85;
+                }
+            }
 
             // ---- halka ışığı ----
             // Halka rengi ışıktan: ay yolunda ayın rengi, başka yerde yansıyan gökyüzünün rengi.

@@ -579,6 +579,9 @@ private IEnumerator FocusSlashRoutine()
 
 private void SpawnFocusFx(float scaleMul, Color color)
     {
+        // Odak yetenegi: seviye renginde buyuk isik patlamasi (cevreyi bir an boyar).
+        if (player != null) GameplayLightFlash.Burst((Vector2)player.transform.position + Vector2.up * 1.4f, color, 4f * Mathf.Lerp(0.6f, 1f, scaleMul), 26f * Mathf.Lerp(0.6f, 1f, scaleMul), 0.7f);
+
         if (focusSlashFx == null)
             focusSlashFx = Resources.Load<GameObject>("FocusSlashFx");
 

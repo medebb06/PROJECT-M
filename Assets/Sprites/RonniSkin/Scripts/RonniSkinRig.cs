@@ -91,7 +91,10 @@ namespace RonniSkin
             // parts
             var partsRoot = new GameObject("Parts").transform;
             partsRoot.SetParent(transform, false);
-            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            // Karakter isigi: mesale isigi + ates kenar isigi + sahte normal map (ProjectM/CharacterLit).
+            var litRef = Resources.Load<Material>("CharacterLit");
+            Shader sh = litRef != null ? litRef.shader : null;
+            if (sh == null || !sh.isSupported) sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
             if (sh == null) sh = Shader.Find("Sprites/Default");
             foreach (var pd in data.parts)
             {

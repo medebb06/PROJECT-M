@@ -9,6 +9,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Fire_radial_07
   m_Shader: {fileID: 4800000, guid: 707d42827b5c79e4fb8aa317dffe2924, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _USECOLOR_ON
   m_InvalidKeywords:
@@ -19,6 +21,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -75,6 +78,7 @@ Material:
     - _EnableExternalAlpha: 0
     - _Fresnel_pow: 5
     - _InvFade: 1
+    - _InvertFresnel: 0
     - _MainTex_UV_invert: 0
     - _MaskMult: 1
     - _MaskTex_UV_invert: 0
@@ -98,12 +102,16 @@ Material:
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _MainTex_speed: {r: 0, g: 0, b: 0, a: 0}
     - _MainTex_uv: {r: 0, g: 0, b: 1, a: 1}
+    - _MaskTex_offset: {r: 0, g: 0, b: 0, a: 0}
+    - _MaskTex_speed: {r: 0, g: 0, b: 0, a: 0}
+    - _MaskTex_tile: {r: 1, g: 1, b: 0, a: 0}
     - _Mask_udrl: {r: 0, g: 0, b: 0, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _Smoothstep: {r: 0, g: 1, b: 0, a: 0}
     - _TintColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
     - _VOTex_speed: {r: 0, g: 0, b: 0, a: 0}
     - _VOTex_uv: {r: 0, g: 0, b: 1, a: 1}
-    - _color1: {r: 1, g: 1, b: 1, a: 1}
+    - _color1: {r: 1.5, g: 1.5, b: 1.5, a: 1}
     - _color2: {r: 0.5660378, g: 0.5660378, b: 0.5660378, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
