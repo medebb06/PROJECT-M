@@ -1289,7 +1289,7 @@ public class EnemyUnit : EnemyBase
     {
         float d = Mathf.Sign(dir.x);
         if (d == 0f) d = 1f;
-        float dist = Mathf.Max(0.15f, force * 0.15f) * def.knockbackScale * shoveMult;
+        float dist = Mathf.Max(0.15f, force * 0.26f) * def.knockbackScale * shoveMult;
         rb.linearVelocity = new Vector2(d * Mathf.Sqrt(2f * ShoveDecel * dist), rb.linearVelocity.y);
     }
 

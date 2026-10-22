@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// Oyuncunun düşmana verdiği TÜM hasarın geçtiği tek nokta.
@@ -140,7 +140,7 @@ public static class PlayerDamage
                 Resolve(
                     StatType.BalanceDamage,
                     info.balanceDamage,
-                    critMultiplier * sourceMultiplier,
+                    critMultiplier * sourceMultiplier * KillFlow.DamageMult,
                     stats
                 );
 
@@ -232,7 +232,7 @@ public static class PlayerDamage
             Resolve(
                 StatType.HealthDamage,
                 info.healthDamage,
-                critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
+                critMultiplier * KillFlow.DamageMult * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f)
                 * ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) ? HealthDamageBoost : 1f)
                 * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
                 stats
