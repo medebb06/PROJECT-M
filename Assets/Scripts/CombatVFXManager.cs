@@ -11,7 +11,13 @@ public class CombatVFXManager : MonoBehaviour
 
     [Header("Impact (denge vurusu) yerlesimi")]
     [Tooltip("Impact efekti dusmanin vurulan yonde, oyuncudan uzaga bu kadar geride cikar (birim).")]
-    [SerializeField] private float impactBackOffset = 4f;
+    [SerializeField] private float impactBackOffset = 2.5f;
+    [Tooltip("Kivilcimlarin (Shafts Streched) ekstra buyutme carpani.")]
+    [SerializeField] private float impactSparkScale = 2.2f;
+    [Tooltip("Cekirdek (Light/Shafts) dunya olcegi.")]
+    [SerializeField] private float impactCoreScale = 3f;
+    [Tooltip("Shafts Streched (cizgi) dunya olcegi.")]
+    [SerializeField] private float impactLineScale = 1.2f;
     [SerializeField] private float impactScale = 3f;
 
     [Header("Defense VFX")]
@@ -77,7 +83,7 @@ public class CombatVFXManager : MonoBehaviour
         float side = direction.x != 0f ? Mathf.Sign(direction.x) : 1f;
         if (pc != null && !Mathf.Approximately(position.x, pc.transform.position.x))
             side = Mathf.Sign(position.x - pc.transform.position.x);
-        position.x += side * impactBackOffset;
+        Vector3 corePos = position;
 
         if (balanceHitVFX == null)
         {
@@ -85,14 +91,31 @@ public class CombatVFXManager : MonoBehaviour
             return;
         }
 
-        SpawnVFX(balanceHitVFX, position, direction, impactScale);
+        SpawnVFX(balanceHitVFX, new Vector3(corePos.x + side * impactBackOffset, corePos.y, corePos.z), direction, impactScale, go =>
+        {
+            // Kok (Impact yayilma efekti) arkada ve buyuk; cekirdek (Light/Shafts) dusmanin ustunde kalir; Shafts Streched kucuk.
+            float r = Mathf.Max(0.01f, go.transform.lossyScale.x);
+            foreach (string n in new[] { "Light", "Shafts" })
+            {
+                Transform c = go.transform.Find(n);
+                if (c == null) continue;
+                c.position = corePos;
+                c.localScale = Vector3.one * (impactCoreScale / r);
+            }
+            Transform sp = go.transform.Find("Shafts Streched");
+            if (sp != null)
+            {
+                sp.position = corePos;
+                sp.localScale = Vector3.one * (impactLineScale / r);
+            }
+        });
     }
 
     public void PlayParry(Vector3 position, Vector2 direction)
     {
         if (parryVariants != null && parryVariants.Length > 0)
         {
-            GameObject v = parryVariants[Random.Range(0, parryVariants.Length)];
+            GameObject v = parryVariants[0]; // hep mavi (Hit_1_Blue)
             if (v != null)
             {
                 Vector3 vp = position;
@@ -174,7 +197,7 @@ public class CombatVFXManager : MonoBehaviour
     private readonly System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>> pools =
         new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>>();
 
-    private void SpawnVFX(GameObject prefab, Vector3 position, Vector2 direction, float scale = 1f)
+    private void SpawnVFX(GameObject prefab, Vector3 position, Vector2 direction, float scale = 1f, System.Action<GameObject> post = null)
     {
         Quaternion rotation = Quaternion.identity;
 
@@ -231,6 +254,7 @@ public class CombatVFXManager : MonoBehaviour
             fx.gameObject.SetActive(true);
         }
 
+        if (post != null) post(fx.gameObject);
         fx.Restart();
     }
 

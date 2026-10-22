@@ -58248,6 +58248,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CombatVFXManager
   healthHitVFX: {fileID: 1035977224672214417, guid: 918af597840689442a38cd79f451219f, type: 3}
   balanceHitVFX: {fileID: 1035977224672214417, guid: 057aa477789506a44bd206e9c5acad19, type: 3}
+  impactBackOffset: 2.5
+  impactSparkScale: 4.2
+  impactCoreScale: 3
+  impactLineScale: 1.2
+  impactScale: 6
   parryVFX: {fileID: 6192724089161036641, guid: 5b98f72e8b1ddea4f86d2bdbc90f24a0, type: 3}
   parryUsesPrefab: 1
   parryOffset: 3

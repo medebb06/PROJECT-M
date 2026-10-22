@@ -33,13 +33,13 @@ public static class SlashInkFx
     public static readonly Arc[] Arcs =
     {
         // 1: Attack1G_3 merkez (5.28, 8.15) R~5.3; 280° -> 0° -> 90° -> 190°
-        new Arc { c = new Vector2(4.6f, 5.6f), rx = 8.2f, ry = 4.4f, a0 = -80f, a1 = 190f, thick = 2.3f, life = 0.16f, scale = 1.1f, peak = 0.65f, shift = new Vector2(-1.8f, 0f) },
+        new Arc { c = new Vector2(4.6f, 5.6f), rx = 8.2f, ry = 4.4f, a0 = -80f, a1 = 190f, thick = 2.3f, life = 0.12f, scale = 1.1f, peak = 0.65f, shift = new Vector2(-1.8f, 0f) },
         // 2: Attack2G_3 merkez (2.05, 4.39) elips 8 x 4; 350° -> 270° -> 180° -> 100°
-        new Arc { c = new Vector2(2.05f, 4.39f), rx = 8.0f, ry = 4.0f, a0 = 350f, a1 = 100f, thick = 2.4f, life = 0.17f, scale = 1f, peak = 0.7f },
+        new Arc { c = new Vector2(2.05f, 4.39f), rx = 8.0f, ry = 4.0f, a0 = 350f, a1 = 100f, thick = 2.4f, life = 0.13f, scale = 1f, peak = 0.7f },
         // 3: Attack3G_2 saplama, gogus hizasi y~3.9, x -3.5 .. 10.2
-        new Arc { line = true, p0 = new Vector2(-3.5f, 3.9f), p1 = new Vector2(10.2f, 3.9f), thick = 1.3f, life = 0.12f, scale = 1f, peak = 0.3f },
+        new Arc { line = true, p0 = new Vector2(-9f, 3.9f), p1 = new Vector2(10.2f, 3.9f), thick = 0.55f, life = 0.1f, scale = 1f, peak = 0.3f },
         // 4: Attack4G_4 merkez (2.19, 2.56) yassi elips 8.5 x 2.45; 60° -> 0° -> 270° -> 150° (biraz kucuk)
-        new Arc { c = new Vector2(2.19f, 2.56f), rx = 8.5f, ry = 2.45f, a0 = 60f, a1 = -210f, thick = 1.6f, life = 0.19f, scale = 1.2f, peak = 0.6f, shift = new Vector2(0f, 2.2f) },
+        new Arc { c = new Vector2(2.19f, 2.56f), rx = 8.5f, ry = 2.45f, a0 = 60f, a1 = -210f, thick = 1.6f, life = 0.14f, scale = 1.2f, peak = 0.6f, shift = new Vector2(0f, 2.2f) },
     };
 
     [Tooltip("Ronni karesi bulunamazsa: 1 kare birimi = bu kadar dunya birimi.")]
@@ -157,7 +157,7 @@ public static class SlashInkFx
         {
             // Havada asagi saplama: vurus kutusundan gecen dikey cizgi (dunya biriminde).
             float h = Mathf.Max(1f, box.y) * 0.9f;
-            arc = new Arc { line = true, p0 = new Vector2(0f, h), p1 = new Vector2(0f, -h), thick = Mathf.Max(0.3f, box.x * 0.22f), life = 0.12f, scale = 1f, peak = 0.3f };
+            arc = new Arc { line = true, p0 = new Vector2(0f, h), p1 = new Vector2(0f, -h), thick = Mathf.Max(0.3f, box.x * 0.22f), life = 0.09f, scale = 1f, peak = 0.3f };
             origin = new Vector3(center.x, center.y, 0f);
             unit = 1f;
             left = false;
@@ -222,7 +222,7 @@ public class SlashSmear : MonoBehaviour
     private float peakPow;
 
     // Sis dagilmasi (animasyondaki SmearGhost ile ayni degerler).
-    private const float FogLife = 0.45f;     // sisin dagilma suresi
+    private const float FogLife = 0.3f;     // sisin dagilma suresi
     private const float FogWiden = 3.6f;     // her parca kendi yerinde bu kata kadar genisler
     private const float HazeWiden = 4.8f;    // arka sis katmani daha da genis
     private MaterialPropertyBlock mpb;
