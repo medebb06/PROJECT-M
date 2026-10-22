@@ -33,13 +33,13 @@ public static class SlashInkFx
     public static readonly Arc[] Arcs =
     {
         // 1: Attack1G_3 merkez (5.28, 8.15) R~5.3; 280° -> 0° -> 90° -> 190°
-        new Arc { c = new Vector2(4.6f, 5.6f), rx = 8.2f, ry = 4.4f, a0 = -80f, a1 = 190f, thick = 2.3f, life = 0.12f, scale = 1.1f, peak = 0.65f, shift = new Vector2(-1.8f, 0f) },
+        new Arc { c = new Vector2(4.6f, 5.6f), rx = 8.2f, ry = 4.4f, a0 = -80f, a1 = 190f, thick = 2.3f, life = 0.13f, scale = 1.1f, peak = 0.65f, shift = new Vector2(-1.8f, 0f) },
         // 2: Attack2G_3 merkez (2.05, 4.39) elips 8 x 4; 350° -> 270° -> 180° -> 100°
-        new Arc { c = new Vector2(2.05f, 4.39f), rx = 8.0f, ry = 4.0f, a0 = 350f, a1 = 100f, thick = 2.4f, life = 0.13f, scale = 1f, peak = 0.7f },
+        new Arc { c = new Vector2(2.05f, 4.39f), rx = 8.0f, ry = 4.0f, a0 = 350f, a1 = 100f, thick = 2.4f, life = 0.14f, scale = 1f, peak = 0.7f },
         // 3: Attack3G_2 saplama, gogus hizasi y~3.9, x -3.5 .. 10.2
         new Arc { line = true, p0 = new Vector2(-9f, 3.9f), p1 = new Vector2(10.2f, 3.9f), thick = 0.55f, life = 0.1f, scale = 1f, peak = 0.3f },
         // 4: Attack4G_4 merkez (2.19, 2.56) yassi elips 8.5 x 2.45; 60° -> 0° -> 270° -> 150° (biraz kucuk)
-        new Arc { c = new Vector2(2.19f, 2.56f), rx = 8.5f, ry = 2.45f, a0 = 60f, a1 = -210f, thick = 1.6f, life = 0.14f, scale = 1.2f, peak = 0.6f, shift = new Vector2(0f, 2.2f) },
+        new Arc { c = new Vector2(2.19f, 2.56f), rx = 8.5f, ry = 2.45f, a0 = 60f, a1 = -210f, thick = 1.6f, life = 0.155f, scale = 1.2f, peak = 0.6f, shift = new Vector2(0f, 2.2f) },
     };
 
     [Tooltip("Ronni karesi bulunamazsa: 1 kare birimi = bu kadar dunya birimi.")]
@@ -157,7 +157,7 @@ public static class SlashInkFx
         {
             // Havada asagi saplama: vurus kutusundan gecen dikey cizgi (dunya biriminde).
             float h = Mathf.Max(1f, box.y) * 0.9f;
-            arc = new Arc { line = true, p0 = new Vector2(0f, h), p1 = new Vector2(0f, -h), thick = Mathf.Max(0.3f, box.x * 0.22f), life = 0.09f, scale = 1f, peak = 0.3f };
+            arc = new Arc { line = true, p0 = new Vector2(0f, h), p1 = new Vector2(0f, -h), thick = Mathf.Max(0.3f, box.x * 0.22f), life = 0.1f, scale = 1f, peak = 0.3f };
             origin = new Vector3(center.x, center.y, 0f);
             unit = 1f;
             left = false;
@@ -197,8 +197,7 @@ public static class SlashInkFx
         // Sis katmani: animasyondaki smear dagilmasi gibi daha buyuk, daha soluk, yumusak kopya.
         Material hm = HazeMat();
 
-        if (hm != null)
-            MakeLayer(arc, anchor, origin, scl * 1.04f, hm, sortingLayerId, sortingOrder - 1, true);
+        // Sis katmani kapali: iz keskin kenarli kalir (bicak izi gibi).
 
         return true;
     }
@@ -207,7 +206,7 @@ public static class SlashInkFx
 /// <summary>Tek bir smear seridi: bas yay boyunca hizla ilerler, kuyruk arkasindan gelip siler, biter.</summary>
 public class SlashSmear : MonoBehaviour
 {
-    private const int N = 48;
+    private const int N = 120;
 
     private SlashInkFx.Arc arc;
     private Transform anchor;
@@ -222,7 +221,7 @@ public class SlashSmear : MonoBehaviour
     private float peakPow;
 
     // Sis dagilmasi (animasyondaki SmearGhost ile ayni degerler).
-    private const float FogLife = 0.3f;     // sisin dagilma suresi
+    private const float FogLife = 0.4f;     // sisin dagilma suresi
     private const float FogWiden = 3.6f;     // her parca kendi yerinde bu kata kadar genisler
     private const float HazeWiden = 4.8f;    // arka sis katmani daha da genis
     private MaterialPropertyBlock mpb;
@@ -277,7 +276,7 @@ private void LateUpdate()
             float e = 1f - (1f - fk) * (1f - fk);
             MeshRenderer mr = GetComponent<MeshRenderer>();
 
-            if (mr != null)
+            if (false && mr != null)
             {
                 if (mpb == null) mpb = new MaterialPropertyBlock();
                 mr.GetPropertyBlock(mpb);
@@ -331,7 +330,8 @@ private void Build()
         if (fog)
         {
             float fk = Mathf.Clamp01(fogT / FogLife);
-            fade = (1f - fk) * (1f - fk);
+            fade = 1f - fk * fk;                       // sonuna kadar parlak, sonra keskin kesilir
+            // (kuyruk silme kaldirildi: iz ucta V'ye donusuyordu; sadece incelip solar)
         }
 
         if (haze)
@@ -346,7 +346,7 @@ private void Build()
         {
             float fk2 = Mathf.Clamp01(fogT / FogLife);
             float e2 = 1f - (1f - fk2) * (1f - fk2);
-            widen = Mathf.Lerp(1f, haze ? HazeWiden : FogWiden, e2);
+            widen = Mathf.Lerp(1f, 0.3f, e2);               // kenarlar keskin kalir, iz incelerek biter
         }
 
         Vector2 lineDir = (arc.p1 - arc.p0).normalized;
@@ -371,9 +371,15 @@ private void Build()
             {
                 float a = Mathf.Lerp(arc.a0, arc.a1, s) * Mathf.Deg2Rad;
                 Vector2 p = arc.c + new Vector2(Mathf.Cos(a) * arc.rx, Mathf.Sin(a) * arc.ry);
-                Vector2 inward = (arc.c - p).normalized;
+                Vector2 tang = new Vector2(-Mathf.Sin(a) * arc.rx, Mathf.Cos(a) * arc.ry);
+                Vector2 inward = new Vector2(-tang.y, tang.x).normalized;   // egrinin gercek normali (uclarda V olmasin)
+                if (Vector2.Dot(inward, arc.c - p) < 0f) inward = -inward;
                 Vector2 mid = p + inward * (w * 0.5f);
                 float half = w * widen * 0.5f;
+                // Egrilik yaricapindan genis serit kendi uzerine katlanip V olur: yaricapla sinirla.
+                float sa = Mathf.Sin(a), ca = Mathf.Cos(a);
+                float rad = Mathf.Pow(arc.rx * arc.rx * sa * sa + arc.ry * arc.ry * ca * ca, 1.5f) / Mathf.Max(0.001f, arc.rx * arc.ry);
+                { float lim = Mathf.Max(0.001f, rad * 0.7f); half = lim * (float)System.Math.Tanh(half / lim); }   // yumusak sinir (kirik/girinti yok)
                 outer = mid - inward * half;
                 inner = mid + inward * half;
             }
