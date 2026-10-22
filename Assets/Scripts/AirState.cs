@@ -53,7 +53,8 @@ public class AirState : IPlayerState
 
         if (
             player.dashPressed &&
-            player.dashCooldownTimer <= 0f
+            player.dashCooldownTimer <= 0f &&
+            (player.isGrounded || !DashState.AirDashUsed)
         )
         {
             sm.ChangeState(

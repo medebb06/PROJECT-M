@@ -31,6 +31,9 @@ public class DashState : IPlayerState
     // Dash mesafesi çarpanı (dashDistance * bu).
     public const float DistanceScale = 1.3f;
 
+    // Havada tek dash: yere degene kadar ikinci dash yok (PlayerMovement.GroundCheck sifirlar).
+    public static bool AirDashUsed = false;
+
     // Havada dash: dash'in son kisminda yere dogru suzulur (duz cizgi cizip havada kalmaz).
     public static float AirFallStart = 0.45f;   // dash'in bu orani gectikten sonra dusmeye baslar
     public static float AirFallSpeed = 13f;     // en sonda inis hizi (birim/sn)
@@ -72,6 +75,8 @@ public class DashState : IPlayerState
         // FIX: audioPlayer atanmamışsa NullReferenceException atıyordu.
         if (player.audioPlayer != null)
             player.audioPlayer.PlayDash(speedFactor);
+
+        if (!player.isGrounded) AirDashUsed = true;
 
         player.isDashing = true;
         player.canControl = false;
