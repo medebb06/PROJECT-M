@@ -83,6 +83,10 @@ public static class PlayerDamage
 
         info.target = enemy;
 
+        // ZIRH: yetenek / zehir gibi sadece can hasarı verenler, posture'lı (zırhlı) düşmanda önce zırhı yer.
+        if (info.source == DamageSource.Ability && info.balanceDamage <= 0 && info.healthDamage > 0 && enemy.UsesPosture)
+            info.balanceDamage = Mathf.Max(1, Mathf.RoundToInt(info.healthDamage * 0.8f));
+
         // AKIŞ: zincir / karşılık çarpanı (sadece düz vuruş ve slam).
         if (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
         {

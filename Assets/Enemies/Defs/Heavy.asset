@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDef
   displayName: Heavy
   maxHealth: 200
-  maxBalance: 200
+  maxBalance: 130
   superArmor: 1
   staggerDuration: 2.6
   balanceHitStun: 0.12
@@ -62,8 +62,8 @@ MonoBehaviour:
   healthHitKnockback: 6
   blockKnockback: 10
   knockbackDeceleration: 40
-  usesPosture: 0
-  hitChipHealthRatio: 0.5
+  usesPosture: 1
+  hitChipHealthRatio: 0.25
   staggerHitHealthFraction: 0.4
   passThroughPlayer: 0
   knockbackScale: 0.35

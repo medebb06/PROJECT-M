@@ -280,7 +280,10 @@ public class PoisonStatus : MonoBehaviour
         if (Time.time < nextTick) return;
         nextTick = Time.time + tickEvery;
         int dealt = tickDamage * stacks;
-        health.TakeDamage(dealt);
+        // Zırhlı düşmanda zehir önce zırhı aşındırır (yavaşça); zırh kırıksa normal can yakar.
+        EnemyBalance armor = enemy.UsesPosture ? GetComponent<EnemyBalance>() : null;
+        if (armor != null && !armor.IsBroken) armor.AddBalanceDamage(Mathf.Max(1, Mathf.RoundToInt(dealt * 0.4f)), false);
+        else health.TakeDamage(dealt);
         DamageCounter.Add(enemy, dealt);
         if (!health.IsDead) enemy.PlayTintFlash(new Color(0.45f, 1f, 0.25f, 1f), 0.15f);
     }
