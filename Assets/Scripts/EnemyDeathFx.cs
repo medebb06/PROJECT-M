@@ -36,15 +36,25 @@ public class EnemyDeathFx : MonoBehaviour
 
     [Header("Donma (hit stop rampası, gerçek zaman)")]
     [Tooltip("Normal ölüm: rampa süresi (sn). Zaman ~0.02 hızdan normale yükselir.")]
-    public float freezeDuration = 0.22f;
+    public float freezeDuration = 0.15f;
     public float freezeStartScale = 0.02f;
     [Tooltip("Büyükse daha uzun donuk kalır, sonra hızlı bırakır.")]
     public float freezePower = 3f;
     [Tooltip("İnfaz ölümü.")]
-    public float bigFreezeDuration = 0.55f;
+    public float bigFreezeDuration = 0.42f;
     public float bigFreezeStartScale = 0.03f;
     public float bigFreezePower = 2.4f;
     public int freezePriority = 20;
+
+    [Header("Kalabalıkta donmayı kıs")]
+    [Tooltip("Ekranda her ek canlı düşman için donma süresi 1/(1+bu x düşman) ile bölünür. 0 = kapalı.")]
+    public float crowdFreezeFalloff = 0.7f;
+    [Tooltip("Son öldürmeden bu kadar sn (gerçek zaman) içinde gelen öldürme 'seri' sayılır.")]
+    public float rapidKillWindow = 0.6f;
+    [Tooltip("Seri öldürmede donma süresi bu çarpanla kısalır.")]
+    public float rapidKillFreezeMultiplier = 0.5f;
+    [Tooltip("Donma süresi, normal süresinin en az bu oranı kadar kalır (0 = tamamen kalkabilir).")]
+    [Range(0f, 1f)] public float minFreezeFactor = 0.2f;
 
     [Header("Kamera sarsıntısı")]
     public float shake = 0.45f;
@@ -209,6 +219,7 @@ public class EnemyDeathFx : MonoBehaviour
         public Vector2 uv;
     }
 
+    private float lastKillTime = -99f;
     private readonly List<Piece> pieces = new List<Piece>();
     private readonly List<Flash> flashes = new List<Flash>();
 
@@ -429,13 +440,34 @@ public class EnemyDeathFx : MonoBehaviour
 
         // ---- his: donma, sarsıntı, ses ----
 
+        // Kalabalıkta / seri öldürmede donma kısalır (arka arkaya donmak can sıkmasın).
+        int others = 0;
+
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase b = EnemyBase.All[i];
+
+            if (b != null && b != (EnemyBase)unit && !b.IsDead)
+                others++;
+        }
+
+        float k = 1f / (1f + crowdFreezeFalloff * others);
+
+        if (Time.unscaledTime - lastKillTime < rapidKillWindow)
+            k *= rapidKillFreezeMultiplier;
+
+        lastKillTime = Time.unscaledTime;
+        k = Mathf.Max(k, minFreezeFactor);
+
+        float freeze = (big ? bigFreezeDuration : freezeDuration) * k;
+
         if (big)
-            HitStop.RequestRamp(bigFreezeDuration, bigFreezeStartScale, 1f, bigFreezePower, freezePriority);
+            HitStop.RequestRamp(freeze, bigFreezeStartScale, 1f, bigFreezePower, freezePriority);
         else
-            HitStop.RequestRamp(freezeDuration, freezeStartScale, 1f, freezePower, freezePriority);
+            HitStop.RequestRamp(freeze, freezeStartScale, 1f, freezePower, freezePriority);
 
         if (CameraShake.Instance != null)
-            CameraShake.Instance.Shake(big ? bigShake : shake);
+            CameraShake.Instance.Shake((big ? bigShake : shake) * (0.5f + 0.5f * k));
 
         PlaySound(big);
 

@@ -1055,6 +1055,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EncounterDirector
   encounters: []
   groundLayerName: Ground
+  oneAtATime: 1
+  nextSpawnDelay: 0.7
 --- !u!4 &881975843
 Transform:
   m_ObjectHideFlags: 0

@@ -4654,6 +4654,75 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WindSway
   phase: -1
   speedMultiplier: 0
+--- !u!1001 &197298179
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3164142379554466725, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_Name
+      value: GiantWarrior
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2.3373837
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2.3373837
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2.3373837
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 136.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -5.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8710175613251154176, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cf4f4bad370b2344299be0696b6e4bde, type: 3}
 --- !u!1 &198269076
 GameObject:
   m_ObjectHideFlags: 0
@@ -35580,7 +35649,7 @@ Transform:
   m_GameObject: {fileID: 1215873780}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -16.95, y: 0.6500001, z: 0}
+  m_LocalPosition: {x: -16.95, y: 0.65, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -53160,7 +53229,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 5.6, z: 0}
-  m_LocalScale: {x: 2.9612994, y: 3.018848, z: 1}
+  m_LocalScale: {x: 2.9556766, y: 3.1317892, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1161478054}
@@ -53214,7 +53283,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 7
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 8142f191a67f445fa99026dfff27a779, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 233478fd7f4243b68f2ef7557357f8f4, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 0.95}
   m_FlipX: 0
   m_FlipY: 0
@@ -54578,7 +54647,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 5.6, z: 0}
-  m_LocalScale: {x: 3.102107, y: 3.0083256, z: 1}
+  m_LocalScale: {x: 2.9811985, y: 2.9900768, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 131178657}
@@ -54632,7 +54701,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 7
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 39ce3849b6d04908b60743152a8d6079, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 8142f191a67f445fa99026dfff27a779, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 0.95}
   m_FlipX: 0
   m_FlipY: 0
@@ -59368,23 +59437,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyArchetype
   type: 0
-  applyMoveset: 1
-  applyScale: 1
-  overrideProfile: 0
-  custom:
-    health: 1
-    maxBalance: 1
-    chaseSpeed: 1
-    attackDamage: 1
-    unblockableDamage: 1
-    attackRecovery: 1
-    parryBalanceDamage: 1
-    blockPostureDamage: 1
-    attackKnockback: 1
-    knockbackTaken: 1
-    scale: 1
-    attackRangeOverride: 0
-    chaseStopOverride: 0
 --- !u!114 &1942622306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -63077,3 +63129,4 @@ SceneRoots:
   - {fileID: 1394862113}
   - {fileID: 1024988557}
   - {fileID: 1136314304}
+  - {fileID: 197298179}

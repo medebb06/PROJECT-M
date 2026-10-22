@@ -1,5 +1,20 @@
 using UnityEngine;
 
-/// <summary>Eski düşman tipi bileşeni. Artık kullanılmıyor; sahnelerdeki eski bileşenler kırılmasın diye boş bırakıldı.
-/// Yeni sistem: EnemyDef + EnemyUnit.</summary>
-public class EnemyArchetype : MonoBehaviour { }
+// Küçük köprü: eski düşman sınıflarının (LegacyBoss) derlenmesi için.
+public enum EnemyArchetypeType
+{
+    Duelist,
+    Quick,
+    Heavy,
+    Archer,
+    Swarm,
+    Shielded,
+    Flyer,
+    Bomber,
+    Practice    // Antrenman Düellocusu: özel saldırı yok, oyuncuya 0 hasar
+}
+
+public class EnemyArchetype : MonoBehaviour
+{
+    public EnemyArchetypeType type = EnemyArchetypeType.Duelist;
+}

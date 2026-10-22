@@ -13,9 +13,12 @@ public enum CharmType { Poison, Explosion, Blood, Storm }
 
 public static class Charms
 {
+    // ANA ŞALTER: false iken charm menüsü (TAB) açılmaz, hiçbir charm etkisi çalışmaz. Demo için kapalı.
+    public static readonly bool Enabled = false;
+
     private static readonly bool[] on = new bool[4];
 
-    public static bool Active(CharmType t) { return on[(int)t]; }
+    public static bool Active(CharmType t) { return Enabled && on[(int)t]; }
     public static void Set(CharmType t, bool v) { on[(int)t] = v; }
     public static void Toggle(CharmType t) { on[(int)t] = !on[(int)t]; }
 
@@ -66,6 +69,8 @@ public class CharmManager : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Boot()
     {
+        if (!Charms.Enabled) return;
+
         GameObject go = new GameObject("CharmManager");
         DontDestroyOnLoad(go);
         go.AddComponent<CharmManager>();

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -456,7 +456,7 @@ public class GiantWarriorEnemy : MonoBehaviour
     [Range(0f, 1f)] public float waveChancePerSecond = 1.0f;
     [Tooltip("Odaklanma suresi: kilic yavasca kalkar, ilk dalga bu sure sonra cikar.")]
     [Min(0.4f)] public float waveFocusTime = 1.4f;
-    [Tooltip("Geri zıplayıp indikten sonra ilk dalganın çıkış süresi (odaklanma yok).")]
+    [Tooltip("KULLANILMIYOR (odaklanma geri getirildi: inişten sonra da waveFocusTime kullanılır).")]
     [Min(0.05f)] public float waveLandStrikeTime = 0.22f;
     [Tooltip("Dalgalar arasi sure (sn): RITIM. Esit aralikli.")]
     [Min(0.4f)] public float waveInterval = 0.95f;
@@ -2499,8 +2499,8 @@ public class GiantWarriorEnemy : MonoBehaviour
         {
             ph = Ph.Focus; phT = 0f;
             o.rig.SetBaseSquash(0f, 6f);
-            // Geri zıplamadan sonra: indiği an ilk dalga (kısa savuruş). Zıplamasız (zaten uzak): kısa bir hazırlık.
-            o.rig.PlayAttack(instant ? o.waveLandStrikeTime : Mathf.Min(o.waveFocusTime, 0.6f), false);
+            // Odaklanma (eski davranış): hem geri zıplayıp indikten sonra hem zıplamasız durumda tam waveFocusTime.
+            o.rig.PlayAttack(o.waveFocusTime, false);   // odaklanma: kılıç yavaşça kalkar, ilk dalga waveFocusTime sonra
             o.rig.SetSwordTint(o.waveColor, 1f, 0.9f);
             CombatCallout.Popup(o.transform.position + new Vector3(0f, o.waveHeight * 1.3f, 0f), "DALGA!", o.waveColor, 2.4f);
         }
@@ -2585,7 +2585,7 @@ public class GiantWarriorEnemy : MonoBehaviour
                     Restore();
                     o.rig.Squash(0.8f);
                     RunCameraZoom.AddShake(1.5f);
-                    StartFocus(true);   // iner inmez dalga: odaklanma yok
+                    StartFocus();   // indikten sonra da odaklan (eski davranış)
                 }
                 return;
             }
