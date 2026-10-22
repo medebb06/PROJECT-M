@@ -259,7 +259,8 @@ public class PlayerMovement : MonoBehaviour
         // (kosarken saldiri) fizik her adimda pozisyonu oynatip karakter titrer / vurus hizlanir.
         if (player.attackFacingLocked && player.isGrounded)
         {
-            player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+            float runVx = AttackState.RunWhileAttacking ? player.moveInput * moveSpeed * AttackState.RunSpeedMult : 0f;
+            player.rb.linearVelocity = new Vector2(runVx, player.rb.linearVelocity.y);
             return;
         }
 

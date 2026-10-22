@@ -76,10 +76,16 @@ public class AttackState : ICombatState
     }
 
     private float enterTime;
+    private int slideCountAtEnter;
+
+    // Saldiri hareketi (ileri kayma) kapali: bunun yerine saldirirken kosulabilir.
+    public static bool RunWhileAttacking = false;
+    public static float RunSpeedMult = 0.7f;
 
     public void Enter()
     {
         t = 0f;
+        slideCountAtEnter = ExecutionSlide.SlideCount;
         enterTime = Time.time + 0.001f;
         if (combatRef == null) combatRef = player.GetComponent<PlayerCombatController>();
         hasHit = false;
@@ -133,7 +139,10 @@ public class AttackState : ICombatState
         // Koşarken ilk vuruş: hızın bir kısmı ileri taşınır (dur-kalk olmasın).
         float vx = player.rb.linearVelocity.x;
 
-        if (step == 1 && Mathf.Abs(vx) > 0.5f && Mathf.Sign(vx) == attackDirection)
+        if (RunWhileAttacking)
+            moveDistance = 0f;
+
+        if (!RunWhileAttacking && step == 1 && Mathf.Abs(vx) > 0.5f && Mathf.Sign(vx) == attackDirection)
         {
             float baseDistance = moveDistance;
 
@@ -234,11 +243,14 @@ public class AttackState : ICombatState
         // CLEAR HORIZONTAL MOMENTUM
         // =====================================================
 
-        player.rb.linearVelocity =
-            new Vector2(
-                0f,
-                player.rb.linearVelocity.y
-            );
+        if (!RunWhileAttacking)
+        {
+            player.rb.linearVelocity =
+                new Vector2(
+                    0f,
+                    player.rb.linearVelocity.y
+                );
+        }
     }
 
     public void Tick()
@@ -295,11 +307,14 @@ public class AttackState : ICombatState
                 curve
             );
 
-        player.rb.position =
-            new Vector2(
-                desiredX,
-                player.rb.position.y
-            );
+        if (!RunWhileAttacking && !ExecutionSlide.Active && ExecutionSlide.SlideCount == slideCountAtEnter)
+        {
+            player.rb.position =
+                new Vector2(
+                    desiredX,
+                    player.rb.position.y
+                );
+        }
 
         // =====================================================
         // HIT WINDOW
@@ -320,7 +335,7 @@ public class AttackState : ICombatState
         // kosuya iptal etme (yoksa kosu basiliyken vurus - kosu - vurus diye cok hizli kesik vuruslar oluyor).
         bool chaining = combatRef != null && combatRef.LastAttackPressTime > enterTime;
 
-        if (hasHit && !chaining && n >= moveCancelPointNow() && Mathf.Abs(player.moveInput) > 0.3f && player.IsGrounded())
+        if (!RunWhileAttacking && hasHit && !chaining && n >= moveCancelPointNow() && Mathf.Abs(player.moveInput) > 0.3f && player.IsGrounded())
         {
             Exit();
             return;
@@ -375,11 +390,14 @@ public class AttackState : ICombatState
 
         player.attackFacingLocked = false;
 
-        player.rb.linearVelocity =
-            new Vector2(
-                0f,
-                player.rb.linearVelocity.y
-            );
+        if (!RunWhileAttacking)
+        {
+            player.rb.linearVelocity =
+                new Vector2(
+                    0f,
+                    player.rb.linearVelocity.y
+                );
+        }
 
         player.SetAttackAnimationSpeed(1f);
 

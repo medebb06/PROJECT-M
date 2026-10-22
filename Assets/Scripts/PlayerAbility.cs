@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -324,7 +324,7 @@ public class PlayerAbility : MonoBehaviour
         }
 
         // Girdi tamponu: kilitliyken / başka eylem sürerken basılan Q/E kaybolmasın.
-        if (MobileInput.GetKeyDown(key))
+        if (!UltimateAbility.OwnsQ && MobileInput.GetKeyDown(key))
             bufferedKin = Time.unscaledTime;
 
         if (HasAbility && MobileInput.GetKeyDown(specialKey))

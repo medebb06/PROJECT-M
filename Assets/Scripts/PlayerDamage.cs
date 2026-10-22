@@ -249,8 +249,11 @@ public static class PlayerDamage
             healthAmount = Mathf.Max(1, Mathf.RoundToInt(healthAmount * SpamHealthMult));
 
         // Sersemlemiş düşman daha çabuk ölür (infaz barı boşken de bitirilebilsin).
+        bool execKill = false;
+
         if (enemy.IsStaggered)
         {
+            execKill = true;
             healthAmount =
                 Mathf.Max(1, Mathf.RoundToInt(healthAmount * 2f));
 
@@ -275,6 +278,13 @@ public static class PlayerDamage
         enemy.PlayHealthHitSound();
 
         bool killed = health.IsDead;
+
+        // İnfaz öldürmesi: oyuncu dash gibi çok hızlı kayarak düşmanın arkasına geçer.
+        if (killed && execKill && (info.source == DamageSource.Attack))
+        {
+            PlayerController slidePlayer = Object.FindFirstObjectByType<PlayerController>();
+            ExecutionSlide.Play(slidePlayer, enemy.transform, info.direction.x);
+        }
 
         if (!killed)
         {

@@ -1402,7 +1402,7 @@ public class EnemyUnit : EnemyBase
             if (state != UnitState.Windup && state != UnitState.Active) Knock(hitDirection, def.blockKnockback);
             return;
         }
-        SquashPunch(new Vector2(1.14f, 0.88f), 0.12f, AbsorbsHit() ? 0.4f : 1f);
+        SquashPunch(new Vector2(1.5f, 0.74f), 0.2f, AbsorbsHit() ? 0.5f : 1f);
         if (AbsorbsHit()) { PlayBalanceDamageFlash(); return; }
         PlayBalanceDamageFlash();
         if (state != UnitState.Stagger && Time.time >= hurtImmuneUntil)
@@ -1422,7 +1422,7 @@ public class EnemyUnit : EnemyBase
         if (IsDead) return;
         shoveMult = attackStep >= 4 ? 2.4f : 1f;
         ApplyPressure();
-        SquashPunch(healthHit ? new Vector2(1.45f, 0.67f) : new Vector2(1.25f, 0.8f), healthHit ? 0.2f : 0.14f, AbsorbsHit() ? 0.4f : 1f);
+        SquashPunch(healthHit ? new Vector2(1.95f, 0.55f) : new Vector2(1.55f, 0.72f), healthHit ? 0.28f : 0.2f, AbsorbsHit() ? 0.5f : 1f);
         if (state == UnitState.Stagger)
         {
             Knock(hitDirection, def.healthHitKnockback);

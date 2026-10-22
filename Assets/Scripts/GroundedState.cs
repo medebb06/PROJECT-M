@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class GroundedState : IPlayerState
 {
@@ -70,7 +70,7 @@ public class GroundedState : IPlayerState
         {
             player.SetVelocity(
                 new Vector2(
-                    0f,
+                    player.IsBlockWalkable ? player.moveInput * player.Movement.moveSpeed * PlayerController.BlockWalkMult : 0f,
                     player.rb.linearVelocity.y
                 )
             );
@@ -108,7 +108,7 @@ public class GroundedState : IPlayerState
         {
             player.SetVelocity(
                 new Vector2(
-                    0f,
+                    player.IsBlockWalkable ? player.moveInput * player.Movement.moveSpeed * PlayerController.BlockWalkMult : 0f,
                     player.rb.linearVelocity.y
                 )
             );

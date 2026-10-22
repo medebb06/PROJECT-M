@@ -693,6 +693,19 @@ public class PlayerController : MonoBehaviour
         animationController.SetBlockingAnimation(blocking);
     }
 
+    // Blok basili tutulurken (parry penceresi disinda) yavasca yurunebilir.
+    public const float BlockWalkMult = 0.3f;
+
+    public bool IsBlockWalkable
+    {
+        get
+        {
+            return defenseController != null &&
+                   defenseController.IsBlocking &&
+                   !defenseController.IsParrying;
+        }
+    }
+
     public bool IsDefending()
     {
         return defenseController != null &&
