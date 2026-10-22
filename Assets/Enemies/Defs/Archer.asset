@@ -62,6 +62,10 @@ MonoBehaviour:
   healthHitKnockback: 12
   blockKnockback: 10
   knockbackDeceleration: 40
+  counterDashAttack: 
+  counterDashChance: 0.5
+  counterDashCooldown: 7
+  counterDashRange: 12
   usesPosture: 0
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
@@ -75,7 +79,7 @@ MonoBehaviour:
     weight: 6
     minRange: 6
     maxRange: 24
-    windup: 0.8
+    windup: 0.6
     active: 0.12
     recovery: 0.7
     cooldown: 1
@@ -113,7 +117,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
-    projectileSpeed: 30
+    projectileSpeed: 48
     projectileHeight: 2.6
     projectileLife: 1.8
     projectileRadius: 0.35
@@ -128,6 +132,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -201,6 +209,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -221,7 +233,7 @@ MonoBehaviour:
     weight: 3
     minRange: 7
     maxRange: 22
-    windup: 0.9
+    windup: 0.65
     active: 0.12
     recovery: 0.7
     cooldown: 1.2
@@ -259,7 +271,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
-    projectileSpeed: 22
+    projectileSpeed: 36
     projectileHeight: 0.6
     projectileLife: 2.5
     projectileRadius: 0.35
@@ -274,6 +286,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -294,7 +310,7 @@ MonoBehaviour:
     weight: 2
     minRange: 8
     maxRange: 24
-    windup: 0.45
+    windup: 0.35
     active: 0.12
     recovery: 0.9
     cooldown: 1.5
@@ -332,7 +348,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     lungeStopGap: 2
-    projectileSpeed: 45
+    projectileSpeed: 65
     projectileHeight: 2.6
     projectileLife: 1.5
     projectileRadius: 0.35
@@ -347,6 +363,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0

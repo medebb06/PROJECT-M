@@ -655,6 +655,7 @@ public class EnemyUnit : EnemyBase
     private void StartAttack(AttackDef a)
     {
         current = a;
+        if (!a.followUpOnly) hopOriginX = transform.position.x;
         if (forced == a) forced = null;
         FaceTarget();
         burstCount++;
@@ -876,6 +877,7 @@ public class EnemyUnit : EnemyBase
                 if (state != UnitState.Active) return;
             }
             SetState(UnitState.Recover);
+            hopping = current.hopBack && !current.slamJump;
         }
     }
 
@@ -1303,13 +1305,13 @@ public class EnemyUnit : EnemyBase
     private bool hopping;
     private void TickHop()
     {
-        float dur = Mathf.Max(0.15f, Mathf.Min(0.4f, current.recovery));
+        float dur = Mathf.Max(0.15f, Mathf.Min(0.5f, current.recovery));
         float u = stateTime / dur;
         if (u >= 1f) { hopping = false; HardStop(); return; }
         float sc = EnemyTime.Scale;
         float vx = (hopOriginX - transform.position.x) / Mathf.Max(0.03f, dur - stateTime);
-        float vy = current.hopHeight * 4f * (1f - 2f * u) / dur + 6f;
-        rb.linearVelocity = new Vector2(Mathf.Clamp(vx, -60f, 60f) * sc, vy * sc);
+        float vy = current.hopHeight > 0.01f ? current.hopHeight * 4f * (1f - 2f * u) / dur + 6f : 0f;
+        rb.linearVelocity = new Vector2(Mathf.Clamp(vx, -90f, 90f) * sc, vy * sc);
     }
 
     private System.Collections.IEnumerator SlamWaveFx(float x, float y, float range)
