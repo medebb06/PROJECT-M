@@ -68,7 +68,7 @@ namespace RonniSkin
         float frameFadeT; bool frameFading;
         [Header("Smear parlaması (Impact gibi)")]
         [Tooltip("Kare kare saldırılardaki smear'ın üstüne toplamalı HDR parlama (Resources/AtkGlow). Bloom ile parlar.")] public bool frameSmearGlow = true;
-        [Tooltip("Smear karesi bitince smear sis gibi genişleyip soluklaşarak dağılsın (sonraki saldırıdan bağımsız).")] public bool smearDissolve = true;
+        [Tooltip("Smear karesi bitince smear sis gibi genişleyip soluklaşarak dağılsın (sonraki saldırıdan bağımsız).")] public bool smearDissolve = false;
         [Header("Attack4 geçiş yumuşatma")]
         [Tooltip("Attack4 karelerinin arasında önceki karenin soluk bir izi kalır: sert kare atlamaları (özellikle dönüş) akıcı görünür.")] public bool frameBlendAtk4 = true;
         [Tooltip("Geçiş izinin kaybolma süresi (sn).")] [Range(0.02f, 0.2f)] public float frameBlendTime = 0.07f;

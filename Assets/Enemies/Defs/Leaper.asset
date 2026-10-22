@@ -67,6 +67,7 @@ MonoBehaviour:
   counterDashCooldown: 7
   counterDashRange: 12
   usesPosture: 1
+  sliceDeath: 1
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 0.6
   passThroughPlayer: 0
@@ -116,7 +117,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 1.5
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
@@ -155,14 +156,14 @@ MonoBehaviour:
   - name: TailSlash
     weight: 0.01
     minRange: 0
-    maxRange: 5
+    maxRange: 6.5
     windup: 0.3
     active: 0.1
     recovery: 0.55
     cooldown: 0.2
     damage: 1
     unblockable: 0
-    hitReach: 5.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2

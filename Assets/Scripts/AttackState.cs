@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -75,9 +75,13 @@ public class AttackState : ICombatState
         this.hitTime = hitTime;
     }
 
+    private float enterTime;
+
     public void Enter()
     {
         t = 0f;
+        enterTime = Time.time + 0.001f;
+        if (combatRef == null) combatRef = player.GetComponent<PlayerCombatController>();
         hasHit = false;
 
         processedEnemies.Clear();
@@ -131,8 +135,18 @@ public class AttackState : ICombatState
 
         if (step == 1 && Mathf.Abs(vx) > 0.5f && Mathf.Sign(vx) == attackDirection)
         {
+            float baseDistance = moveDistance;
+
             moveDistance +=
                 Mathf.Min(Mathf.Abs(vx) * player.attackMomentumCarry, player.attackMomentumMax);
+
+            // Tasinan mesafe ayni kisa pencereye sikismasin (kosarken isinlanma / cok hizli vurus hissi):
+            // kayma hizi duran vurusla ayni kalsin, pencere mesafeyle orantili uzasin.
+            if (baseDistance > 0.01f)
+            {
+                float stretch = moveDistance / baseDistance;
+                moveEnd = Mathf.Min(0.9f, moveStart + (moveEnd - moveStart) * stretch);
+            }
         }
 
         target =
@@ -204,6 +218,16 @@ public class AttackState : ICombatState
             target =
                 start +
                 dir * allowedDistance;
+        }
+
+        // Kilic dovusu: onumuzdeki dusmanin govdesine kilic ucu mesafesinden (swordTipEnd) fazla yaklasma.
+        if (combatRef != null)
+        {
+            float limit = EnemyApproachLimit(attackDirection, combatRef.swordTipEnd);
+            float travelled = Mathf.Abs(target.x - start.x);
+
+            if (travelled > limit)
+                target = start + dir * limit;
         }
 
         // =====================================================
@@ -292,7 +316,11 @@ public class AttackState : ICombatState
         }
 
         // Vuruş sonrası yön tuşu toparlanmayı iptal eder (yapışkan hissi azalsın).
-        if (hasHit && n >= moveCancelPointNow() && Mathf.Abs(player.moveInput) > 0.3f && player.IsGrounded())
+        // Saldiri sirasinda tekrar saldiri tusuna basildiysa oyuncu komboya devam ediyor:
+        // kosuya iptal etme (yoksa kosu basiliyken vurus - kosu - vurus diye cok hizli kesik vuruslar oluyor).
+        bool chaining = combatRef != null && combatRef.LastAttackPressTime > enterTime;
+
+        if (hasHit && !chaining && n >= moveCancelPointNow() && Mathf.Abs(player.moveInput) > 0.3f && player.IsGrounded())
         {
             Exit();
             return;
@@ -306,6 +334,29 @@ public class AttackState : ICombatState
         {
             Exit();
         }
+    }
+
+    private float EnemyApproachLimit(float dirSign, float gap)
+    {
+        float limit = float.MaxValue;
+        Vector3 pp = player.transform.position;
+
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase e = EnemyBase.All[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            float dx = (e.transform.position.x - pp.x) * dirSign;
+
+            if (dx < 0f || Mathf.Abs(e.transform.position.y - pp.y) > 3f)
+                continue;
+
+            limit = Mathf.Min(limit, Mathf.Max(0f, dx - gap));
+        }
+
+        return limit;
     }
 
     private float moveCancelPointNow()
@@ -377,7 +428,7 @@ public class AttackState : ICombatState
         // Silah menzili: kutu büyürse merkez ileri kayar (oyuncunun arkasına uzamaz).
         Vector2 box = combat.EffectiveHitBox;
 
-        boxCenter += dir * (box.x - combat.hitBoxSize.x) * 0.5f;
+        boxCenter = combat.SwordTipCenter(attackDirection);
 
         Collider2D[] hits =
             Physics2D.OverlapBoxAll(
@@ -386,6 +437,9 @@ public class AttackState : ICombatState
                 0f,
                 enemyLayer
             );
+
+        // Slash Ink efekti: her savurusta (vurus olsun olmasin) oynar.
+        PlayerWeapon.Ensure(player.gameObject).OnSwing(step, boxCenter, box, dir, false);
 
         bool hitSomething = false;
         int hitCount = 0;

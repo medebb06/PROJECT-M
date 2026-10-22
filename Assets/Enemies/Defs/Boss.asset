@@ -79,14 +79,14 @@ MonoBehaviour:
   - name: Combo4
     weight: 6
     minRange: 0
-    maxRange: 5
+    maxRange: 6.5
     windup: 0.8
     active: 0.15
     recovery: 1.3
     cooldown: 1
     damage: 2
     unblockable: 0
-    hitReach: 5
+    hitReach: 7
     hitHeight: 4
     knockbackForce: 6
     knockbackVertical: 2
@@ -156,14 +156,14 @@ MonoBehaviour:
   - name: Overhead
     weight: 3
     minRange: 0
-    maxRange: 5
+    maxRange: 6.5
     windup: 0.9
     active: 0.15
     recovery: 1.2
     cooldown: 1
     damage: 2
     unblockable: 0
-    hitReach: 6
+    hitReach: 7
     hitHeight: 4
     knockbackForce: 10
     knockbackVertical: 2
@@ -271,7 +271,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 1.5
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5

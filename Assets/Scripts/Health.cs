@@ -319,35 +319,55 @@ public class Health : MonoBehaviour
     {
         fading = true;
 
+        // Dissolve shader'i varsa dusman noise ile eriyerek kaybolur (yoksa eski alfa solmasi).
+        Shader dissolve = isPlayer ? null : Resources.Load<Shader>("Shaders/SpriteDissolveURP");
+        Material[] mats = null;
+
+        if (dissolve != null && sprites != null)
+        {
+            mats = new Material[sprites.Length];
+
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] == null)
+                    continue;
+
+                Material m = new Material(dissolve);
+                m.SetFloat("_Cutoff", 0f);
+                sprites[i].material = m;
+                mats[i] = m;
+            }
+        }
+
+        float duration = mats != null ? Mathf.Max(fadeDuration, 0.8f) : fadeDuration;
         float elapsed = 0f;
 
-        while (
-            elapsed <
-            fadeDuration
-        )
+        while (elapsed < duration)
         {
-            elapsed +=
-                Time.deltaTime;
+            elapsed += Time.deltaTime;
 
-            float progress =
-                Mathf.Clamp01(
-                    elapsed /
-                    fadeDuration
-                );
+            float progress = Mathf.Clamp01(elapsed / duration);
 
-            float alpha =
-                Mathf.Lerp(
-                    1f,
-                    0f,
-                    progress
-                );
+            if (mats != null)
+            {
+                float eased = progress * progress * (3f - 2f * progress);
 
-            SetAlpha(alpha);
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (mats[i] != null)
+                        mats[i].SetFloat("_Cutoff", eased);
+                }
+            }
+            else
+            {
+                SetAlpha(Mathf.Lerp(1f, 0f, progress));
+            }
 
             yield return null;
         }
 
-        SetAlpha(0f);
+        if (mats == null)
+            SetAlpha(0f);
 
         OnDeath?.Invoke();
 

@@ -255,6 +255,14 @@ public class PlayerMovement : MonoBehaviour
         if (player.inputLocked)
             return;
 
+        // Yerde saldirirken yatay hareketi AttackState'in kaymasi yonetir. Burada hiz birikirse
+        // (kosarken saldiri) fizik her adimda pozisyonu oynatip karakter titrer / vurus hizlanir.
+        if (player.attackFacingLocked && player.isGrounded)
+        {
+            player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+            return;
+        }
+
         float targetSpeed =
             player.moveInput *
             moveSpeed;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using Unity.Cinemachine;
 
@@ -164,7 +164,6 @@ public class CombatImpactFeedback : MonoBehaviour
         if (slow > 0f && freeze > 0f)
             HitStop.RequestRamp(freeze + slow, hitSlowScaleSharp, 1f, 2f, NormalPriority);
 
-        PlayDirectionalShake(Mathf.Max(Pick(hitShake, step, 0f) * m, step >= 4 ? finalHitMinShake : 0f), dir);
 
         AttackImpact?.Invoke(step, Pick(hitKick, step, 0f));
     }
@@ -175,9 +174,10 @@ public class CombatImpactFeedback : MonoBehaviour
             return;
 
         float sx = Mathf.Abs(dir.x) > 0.01f ? Mathf.Sign(dir.x) : 1f;
-        Vector3 v = new Vector3(sx, -shakeDown, 0f).normalized * force;
+        Vector3 v = new Vector3(sx * 0.15f, 1f, 0f).normalized * force;
 
         impulseSource.GenerateImpulseWithVelocity(v);
+        if (force >= finalHitMinShake) RunCameraZoom.AddShake(force * 3f);
     }
 
     // =========================================================
@@ -197,7 +197,7 @@ public class CombatImpactFeedback : MonoBehaviour
         if (SuppressNextParrySlow) SuppressNextParrySlow = false;
         else EnemyTime.RequestRamp(slowDur, 0.2f, 2f);
 
-        PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2));
+        PlayScreenShake(Mathf.Max(parryShakeForce, parryShake2), true);
 
         PlayPunch(
             parryPunchAmount,
@@ -219,7 +219,7 @@ public class CombatImpactFeedback : MonoBehaviour
             HitStop.RequestRamp(bf + bs, Mathf.Lerp(1f, blockSlowScale, otherHitStopScale), 1f, 2f, BlockPriority);
         }
 
-        PlayScreenShake(blockShakeForce);
+        
 
         PlayPunch(
             blockPunchAmount,
@@ -241,7 +241,7 @@ public class CombatImpactFeedback : MonoBehaviour
         HitStop.Request(kf, 0f, BalanceBreakPriority);
         HitStop.RequestRamp(kf + ks, 0.5f, 1f, 2f, BalanceBreakPriority);
 
-        PlayScreenShake(Mathf.Max(breakShake2, 1.6f));
+        
         PlayPunch(0.3f, 0.18f);
 
         AttackImpact?.Invoke(0, Mathf.Max(breakKick2, 0.2f));
@@ -252,13 +252,14 @@ public class CombatImpactFeedback : MonoBehaviour
     // =========================================================
 
     private void PlayScreenShake(
-        float force
+        float force, bool kick = false
     )
     {
         if (impulseSource == null)
             return;
 
-        impulseSource.GenerateImpulse(force);
+        
+        if (kick) RunCameraZoom.AddShake(force * 2.5f);
     }
 
     // =========================================================

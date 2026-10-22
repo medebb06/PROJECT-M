@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -149,12 +149,25 @@ public class PlayerWeapon : MonoBehaviour
             PlayerAbility.Instance.SpawnRingFx(center, greatswordShockRadius, new Color(1f, 0.6f, 0.4f, 0.8f));
 
         if (player != null && player.impulseSource != null)
-            player.impulseSource.GenerateImpulse(0.6f);
+            RunCameraZoom.AddShake(1.5f);
     }
 
     // Hilal biçimli kesik izi: kutu boyunda, silah renginde, hızla söner.
     private void SpawnSlash(Vector2 center, Vector2 box, Vector2 dir, int step)
     {
+        // Slash Ink efekti (NamuFX): saldiri yonune hizalanir. Prefab yoksa asagidaki hilal izi kullanilir.
+        {
+            int layerId = 0;
+            int order = 103;
+            if (player != null && player.playerSprite != null)
+            {
+                layerId = player.playerSprite.sortingLayerID;
+                order = player.playerSprite.sortingOrder + 3;
+            }
+            if (SlashInkFx.Spawn(center, box, dir, step, layerId, order, transform))
+                return;
+        }
+
         GameObject obj = new GameObject("Kesik");
         obj.transform.position = new Vector3(center.x, center.y, 0f);
 

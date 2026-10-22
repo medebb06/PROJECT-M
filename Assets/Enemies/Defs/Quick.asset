@@ -67,6 +67,7 @@ MonoBehaviour:
   counterDashCooldown: 7
   counterDashRange: 12
   usesPosture: 1
+  sliceDeath: 1
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 1
   passThroughPlayer: 0
@@ -78,7 +79,7 @@ MonoBehaviour:
   - name: Jab
     weight: 0.01
     minRange: 0
-    maxRange: 4
+    maxRange: 6.5
     windup: 0.42
     active: 0.1
     recovery: 0.4
@@ -155,14 +156,14 @@ MonoBehaviour:
   - name: DashSlash
     weight: 0.01
     minRange: 0
-    maxRange: 4
+    maxRange: 6.5
     windup: 0.42
     active: 0.22
     recovery: 0.65
     cooldown: 0.5
     damage: 1
     unblockable: 0
-    hitReach: 6.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2
@@ -193,7 +194,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 2
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
@@ -501,7 +502,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 2
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5

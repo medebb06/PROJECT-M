@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -142,11 +142,13 @@ public class AirAttackState : ICombatState
 
             center = player.transform.TransformPoint(local);
             size = combat.EffectiveHitBox;
-            center += new Vector2(direction, 0f) * (size.x - combat.hitBoxSize.x) * 0.5f;
+            center = combat.SwordTipCenter(direction);
             dir = direction > 0f ? Vector2.right : Vector2.left;
         }
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(center, size, 0f, enemyLayer);
+
+        PlayerWeapon.Ensure(player.gameObject).OnSwing(down ? 3 : step, center, size, dir, false);
 
         bool hitSomething = false;
 

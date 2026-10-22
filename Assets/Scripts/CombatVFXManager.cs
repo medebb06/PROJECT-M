@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.VFX;
 
 public class CombatVFXManager : MonoBehaviour
@@ -9,8 +9,25 @@ public class CombatVFXManager : MonoBehaviour
     [SerializeField] private GameObject healthHitVFX;
     [SerializeField] private GameObject balanceHitVFX;
 
+    [Header("Impact (denge vurusu) yerlesimi")]
+    [Tooltip("Impact efekti dusmanin vurulan yonde, oyuncudan uzaga bu kadar geride cikar (birim).")]
+    [SerializeField] private float impactBackOffset = 4f;
+    [SerializeField] private float impactScale = 3f;
+
     [Header("Defense VFX")]
     [SerializeField] private GameObject parryVFX;
+    [Tooltip("Acik: parry'de parryVFX prefab'i (Impact02_White) oynar; kodla cizilen efektin yerine gecer.")]
+    [SerializeField] private bool parryUsesPrefab = true;
+    [Tooltip("Parry efekti oyuncudan dusmana dogru bu kadar uzakta cikar (birim).")]
+    [SerializeField] private float parryOffset = 3f;
+    private PlayerController parryPlayer;
+
+    [Header("Parry (Casual_Hit Hit_1 varyasyonlari)")]
+    [Tooltip("Parry'de bunlardan biri rastgele oynar. Doluysa eski parry efektleri tamamen devre disi.")]
+    [SerializeField] private GameObject[] parryVariants;
+    [SerializeField] private float parryScale = 3.5f;
+    [Tooltip("Parry efektinin oynatma hizi (1 = normal, kucuk = daha akiskan/yavas).")]
+    [SerializeField] private float parrySpeed = 0.75f;
 
     [Header("Parry (kodla çizilen çatışma efekti)")]
     [Tooltip("Açık: parry'de ParryVFX (yıldız flaşı + halka + kıvılcım) oynar.")]
@@ -56,20 +73,56 @@ public class CombatVFXManager : MonoBehaviour
 
     public void PlayBalanceHit(Vector3 position, Vector2 direction)
     {
-        if (SpriteFxLibrary.Play("hit_balance", position, direction))
-            return;
+        PlayerController pc = parryPlayer != null ? parryPlayer : (parryPlayer = FindAnyObjectByType<PlayerController>());
+        float side = direction.x != 0f ? Mathf.Sign(direction.x) : 1f;
+        if (pc != null && !Mathf.Approximately(position.x, pc.transform.position.x))
+            side = Mathf.Sign(position.x - pc.transform.position.x);
+        position.x += side * impactBackOffset;
 
         if (balanceHitVFX == null)
         {
-            Debug.LogWarning("BALANCE HIT VFX ASSIGNED DEĞİL!");
+            SpriteFxLibrary.Play("hit_balance", position, direction);
             return;
         }
 
-        SpawnVFX(balanceHitVFX, position, direction);
+        SpawnVFX(balanceHitVFX, position, direction, impactScale);
     }
 
     public void PlayParry(Vector3 position, Vector2 direction)
     {
+        if (parryVariants != null && parryVariants.Length > 0)
+        {
+            GameObject v = parryVariants[Random.Range(0, parryVariants.Length)];
+            if (v != null)
+            {
+                Vector3 vp = position;
+                PlayerController pc = parryPlayer != null ? parryPlayer : (parryPlayer = FindAnyObjectByType<PlayerController>());
+                if (pc != null)
+                {
+                    float sd = Mathf.Sign(position.x - pc.transform.position.x);
+                    if (sd == 0f) sd = 1f;
+                    vp.x += sd * parryOffset;
+                }
+                SpawnVFX(v, vp, Vector2.zero, parryScale);
+                return;
+            }
+        }
+
+        // Parry efekti: beyaz + parlak Impact02 prefab'i (atanmissa her seyden once bu oynar).
+        if (parryUsesPrefab && parryVFX != null)
+        {
+            Vector3 fxPos = position;
+            PlayerController pl = parryPlayer != null ? parryPlayer : (parryPlayer = FindAnyObjectByType<PlayerController>());
+            if (pl != null)
+            {
+                float side = Mathf.Sign(position.x - pl.transform.position.x);
+                if (side == 0f) side = 1f;
+                fxPos.x += side * parryOffset;
+            }
+            SpawnVFX(parryVFX, fxPos, Vector2.zero);
+            return;
+        }
+
         if (SpriteFxLibrary.Play("parry", position, direction))
             return;
 
@@ -121,7 +174,7 @@ public class CombatVFXManager : MonoBehaviour
     private readonly System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>> pools =
         new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.Stack<PooledVfx>>();
 
-    private void SpawnVFX(GameObject prefab, Vector3 position, Vector2 direction)
+    private void SpawnVFX(GameObject prefab, Vector3 position, Vector2 direction, float scale = 1f)
     {
         Quaternion rotation = Quaternion.identity;
 
@@ -160,6 +213,17 @@ public class CombatVFXManager : MonoBehaviour
                 fx = vfx.AddComponent<PooledVfx>();
 
             fx.Setup(this, prefab, vfxSortingLayer, vfxSortingOrder);
+
+            if (!Mathf.Approximately(scale, 1f))
+            {
+                vfx.transform.localScale = Vector3.one * scale;
+                foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var m = ps.main;
+                    m.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                    if (prefab != null && parryVariants != null && System.Array.IndexOf(parryVariants, prefab) >= 0) m.simulationSpeed = parrySpeed;
+                }
+            }
         }
         else
         {

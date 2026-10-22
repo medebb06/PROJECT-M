@@ -67,6 +67,7 @@ MonoBehaviour:
   counterDashCooldown: 7
   counterDashRange: 12
   usesPosture: 1
+  sliceDeath: 1
   hitChipHealthRatio: 0.5
   staggerHitHealthFraction: 0.6
   passThroughPlayer: 0
@@ -78,14 +79,14 @@ MonoBehaviour:
   - name: LungeSlash
     weight: 0.01
     minRange: 0
-    maxRange: 4
+    maxRange: 6.5
     windup: 0.46750003
     active: 0.2
     recovery: 0.7
     cooldown: 0.5
     damage: 1
     unblockable: 0
-    hitReach: 6.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2
@@ -116,7 +117,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 2
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
@@ -155,14 +156,14 @@ MonoBehaviour:
   - name: ShortSlash
     weight: 0.01
     minRange: 0
-    maxRange: 4
+    maxRange: 6.5
     windup: 0.5
     active: 0.12
     recovery: 0.6
     cooldown: 0.5
     damage: 1
     unblockable: 0
-    hitReach: 6.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2
@@ -232,14 +233,14 @@ MonoBehaviour:
   - name: Cut2
     weight: 1
     minRange: 0
-    maxRange: 4.5
+    maxRange: 6.5
     windup: 0.4
     active: 0.12
     recovery: 0.8
     cooldown: 0.5
     damage: 1
     unblockable: 0
-    hitReach: 6.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2
@@ -309,14 +310,14 @@ MonoBehaviour:
   - name: TwinStrike
     weight: 1
     minRange: 0
-    maxRange: 3.5
+    maxRange: 6.5
     windup: 0.6
     active: 0.12
     recovery: 0.8
     cooldown: 0.5
     damage: 1
     unblockable: 0
-    hitReach: 6.5
+    hitReach: 7
     hitHeight: 7
     knockbackForce: 5
     knockbackVertical: 2

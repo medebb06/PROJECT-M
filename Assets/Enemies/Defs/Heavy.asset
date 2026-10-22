@@ -62,7 +62,12 @@ MonoBehaviour:
   healthHitKnockback: 6
   blockKnockback: 10
   knockbackDeceleration: 40
+  counterDashAttack: 
+  counterDashChance: 0.5
+  counterDashCooldown: 7
+  counterDashRange: 12
   usesPosture: 1
+  sliceDeath: 1
   hitChipHealthRatio: 0.25
   staggerHitHealthFraction: 0.4
   passThroughPlayer: 0
@@ -74,14 +79,14 @@ MonoBehaviour:
   - name: Overhead
     weight: 4
     minRange: 0
-    maxRange: 5
+    maxRange: 6.5
     windup: 1
     active: 0.15
     recovery: 1.2
     cooldown: 1
     damage: 2
     unblockable: 0
-    hitReach: 6
+    hitReach: 7
     hitHeight: 4
     knockbackForce: 10
     knockbackVertical: 2
@@ -128,6 +133,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 1
     slamJump: 0
@@ -147,7 +156,7 @@ MonoBehaviour:
   - name: Sweep (unblockable)
     weight: 0.01
     minRange: 0
-    maxRange: 4.5
+    maxRange: 6.5
     windup: 1.1
     active: 0.25
     recovery: 1.2
@@ -185,7 +194,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    lungeStopGap: 1.5
+    lungeStopGap: 4.5
     projectileSpeed: 0
     projectileHeight: 2.6
     projectileLife: 2.5
@@ -201,6 +210,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 0
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 0
     alertYellow: 0
     slamJump: 0
@@ -220,14 +233,14 @@ MonoBehaviour:
   - name: Crush3
     weight: 8
     minRange: 0
-    maxRange: 5
+    maxRange: 6.5
     windup: 0.9
     active: 0.15
     recovery: 1.4
     cooldown: 1
     damage: 2
     unblockable: 0
-    hitReach: 5
+    hitReach: 7
     hitHeight: 4
     knockbackForce: 6
     knockbackVertical: 2
@@ -274,6 +287,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 0
@@ -347,6 +364,10 @@ MonoBehaviour:
     breathHold: 0
     endsBurst: 1
     opener: 0
+    lungeThrough: 0
+    throughGap: 3
+    hopBack: 0
+    hopHeight: 3
     armored: 1
     alertYellow: 0
     slamJump: 1

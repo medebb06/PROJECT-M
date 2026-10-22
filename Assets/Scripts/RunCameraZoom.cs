@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Unity.Cinemachine;
 
 /// <summary>
@@ -85,6 +85,7 @@ public class RunCameraZoom : MonoBehaviour
 
     // Dis kaynakli kamera sarsintisi (dunya birimi): CameraShake/Impulse yeterince gorunmediginde dogrudan konum titretir.
     private static float kick;
+    private static float kickSign = 1f;
     public static void AddShake(float worldUnits) { kick = Mathf.Max(kick, worldUnits); }
     public float forceZoomIn = 0.2f;
 
@@ -439,8 +440,8 @@ public class RunCameraZoom : MonoBehaviour
 
         if (kick > 0.001f)
         {
-            kick *= Mathf.Exp(-Time.unscaledDeltaTime * 7f);
-            Vector2 kv = Random.insideUnitCircle * kick;
+            kick *= Mathf.Exp(-Time.unscaledDeltaTime * 6f);
+            Vector2 kv = new Vector2(0f, Mathf.Sin(Time.unscaledTime * 2f * Mathf.PI * 9f) * kick);
             shakeOff += new Vector3(kv.x, kv.y, 0f);
         }
         else

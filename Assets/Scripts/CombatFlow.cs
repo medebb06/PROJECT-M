@@ -221,7 +221,7 @@ public class CombatFlow : MonoBehaviour
         PlayerController p = Player();
 
         if (p != null && p.impulseSource != null)
-            p.impulseSource.GenerateImpulse(0.7f);
+            { }
 
         if (WindCharge.Instance != null)
             WindCharge.Instance.PlayBurst(enemy, 3);

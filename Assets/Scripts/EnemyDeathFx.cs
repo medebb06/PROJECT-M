@@ -41,9 +41,9 @@ public class EnemyDeathFx : MonoBehaviour
     [Tooltip("Büyükse daha uzun donuk kalır, sonra hızlı bırakır.")]
     public float freezePower = 3f;
     [Tooltip("İnfaz ölümü.")]
-    public float bigFreezeDuration = 0.42f;
-    public float bigFreezeStartScale = 0.03f;
-    public float bigFreezePower = 2.4f;
+    public float bigFreezeDuration = 0.2f;
+    public float bigFreezeStartScale = 0.15f;
+    public float bigFreezePower = 2f;
     public int freezePriority = 20;
 
     [Header("Kalabalıkta donmayı kıs")]
@@ -623,7 +623,19 @@ public class EnemyDeathFx : MonoBehaviour
         if (mats.TryGetValue(tex, out m) && m != null)
             return m;
 
-        m = new Material(sr.sharedMaterial);
+        // Parcalar Dissolve shader'i ile erir (ilerleme vertex alpha'dan gelir).
+        Shader dissolve = Resources.Load<Shader>("Shaders/SpriteDissolveURP");
+
+        if (dissolve != null)
+        {
+            m = new Material(dissolve);
+            m.SetFloat("_VertexDissolve", 1f);
+        }
+        else
+        {
+            m = new Material(sr.sharedMaterial);
+        }
+
         m.mainTexture = tex;
         m.name = "DeathFx_" + tex.name;
 

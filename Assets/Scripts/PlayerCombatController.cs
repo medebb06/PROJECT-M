@@ -45,13 +45,32 @@ public class PlayerCombatController : MonoBehaviour
     // Vuruş kutusu (silah çarpanı kaldırıldı).
     public Vector2 EffectiveHitBox
     {
-        get { return hitBoxSize; }
+        get { return new Vector2(Mathf.Max(0.2f, swordTipEnd - swordTipStart), swordTipHeight); }
     }
+
+    // Hasar sadece kilicin UCUNDA: oyuncunun ayagindan (x) swordTipStart..swordTipEnd mesafesi.
+    // Sap / govde bolgesindeki (daha yakin) dusman hasar almaz; arkaya da vurmaz.
+    public Vector2 SwordTipCenter(float dir)
+    {
+        float x = player.transform.position.x + (dir >= 0f ? 1f : -1f) * (swordTipStart + swordTipEnd) * 0.5f;
+        float y = player.attackPoint != null ? player.attackPoint.position.y : player.transform.position.y + 1.6f;
+        return new Vector2(x, y);
+    }
+
+    private float SwordTipMid => (swordTipStart + swordTipEnd) * 0.5f;
 
     // Aktif saldırının zamanlaması (iptal / zıplama kuralları için).
     private float attackStartTime;
     private float attackDurationNow;
     private float attackHitTimeNow;
+
+    [Header("Kılıç ucu hasar bölgesi")]
+    [Tooltip("Hasar bölgesi oyuncunun ayağından bu kadar uzakta başlar (sap/gövde bölgesi hasar vermez).")]
+    public float swordTipStart = 3.6f;
+    [Tooltip("Kılıç ucunun oyuncudan en uzak noktası.")]
+    public float swordTipEnd = 5.8f;
+    [Tooltip("Hasar bölgesinin yüksekliği.")]
+    public float swordTipHeight = 3.6f;
 
     [Header("Attack Range")]
     public Vector2 hitBoxSize = new Vector2(1.5f, 1.2f);
@@ -178,6 +197,9 @@ public class PlayerCombatController : MonoBehaviour
 
     public bool IsAttacking => currentState != null;
 
+    // Son saldiri tusuna basilma zamani (kosarken iptal kurali icin).
+    public float LastAttackPressTime { get; private set; } = -10f;
+
     // Saldırının ilerleme oranı (0..1). Saldırı yoksa 1.
     public float AttackProgress =>
         currentState != null && attackDurationNow > 0f
@@ -222,6 +244,9 @@ public class PlayerCombatController : MonoBehaviour
 
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
+        if (MobileInput.GetMouseButtonDown(0))
+            LastAttackPressTime = Time.time;
+
         if (MobileInput.GetMouseButtonDown(0))
             bufferTimer = Mathf.Max(
                 Mathf.Max(inputBufferTime, player.minInputBuffer),
@@ -608,13 +633,14 @@ public class PlayerCombatController : MonoBehaviour
             EnemyBase e = EnemyBase.All[i];
             if (e == null || e.IsDead) continue;
             float dx = (e.transform.position.x - pp.x) * dir;
-            if (dx < 0.2f || dx > range) continue;
+            if (dx < 0.2f || dx > range + swordTipEnd) continue;
             if (Mathf.Abs(e.transform.position.y - pp.y) > 3f) continue;
             float score = dx - (counterHit && e.IsStaggered ? 100f : 0f);
             if (score < bestScore) { bestScore = score; best = e; bestDx = dx; }
         }
         if (best == null) return 1f;
-        float dist = Mathf.Clamp(bestDx - magnetStopGap, attackMoveDistance, Mathf.Max(attackMoveDistance, maxDist));
+        // Kilic dovusu: dusmanin govdesi kilic ucu mesafesine (swordTipEnd) gelene kadar yaklas, daha fazla degil.
+        float dist = Mathf.Clamp(bestDx - swordTipEnd, 0f, maxDist);
         return dist / attackMoveDistance;
     }
 
