@@ -141,6 +141,8 @@ public class PlayerAbility : MonoBehaviour
     public float focusFxScale = 7f;
 
     public float focusCharge;
+    [Tooltip("Test: bar hep dolu (EnemyArena [U] açar).")]
+    public bool focusInfinite = false;
     public float FocusCharge01 => focusMax <= 0f ? 0f : Mathf.Clamp01(focusCharge / focusMax);
     public const int FocusLevels = 3;
     public int FocusLevel => focusMax <= 0f ? 0 : Mathf.Clamp(Mathf.FloorToInt(focusCharge / (focusMax / FocusLevels) + 0.001f), 0, FocusLevels);
@@ -396,7 +398,7 @@ private IEnumerator FocusSlashRoutine()
         bool completed = false;
 
         // Tam versiyon KIRMIZI, hafif (tek seviye) versiyon BEYAZ.
-        Color c = canFull ? new Color(1f, 0.1f, 0.1f) : Color.white;
+        Color c = FocusLevelColor(FocusLevel);
         NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, canFull ? "ODAK..." : "KESİK", c, focusTime);
 
         float t = 0f;
@@ -474,6 +476,15 @@ private IEnumerator FocusSlashRoutine()
                 player.playerSprite.flipX = face < 0f;
         }
     }
+
+/// <summary>1 seviye: beyaz, 2 seviye: mor, 3 seviye (tam): kırmızı.</summary>
+    public static Color FocusLevelColor(int level)
+    {
+        if (level >= 3) return new Color(1f, 0.1f, 0.1f);
+        if (level == 2) return new Color(0.65f, 0.25f, 1f);
+        return Color.white;
+    }
+
 
     // TAM: bar sıfırlanır, en yakın 3 düşman kesilerek infaz edilir.
     private void CastFocusFull(Color c)
@@ -654,6 +665,9 @@ private void SpawnFocusFx(float scaleMul, Color color)
     {
         if (player == null)
             return;
+
+        if (focusInfinite)
+            focusCharge = focusMax;
 
         if (HasAbility && CooldownLeft > 0f)
         {

@@ -60,9 +60,12 @@ public class EnemyArena : MonoBehaviour
     private void Update()
     {
         TickQueue();
-        if (Input.GetKeyDown(KeyCode.T)) { endless = !endless; kills = 0; endlessOver = false; }
+        // [T] ışınlanma tuşu: eski sonsuz mod kısayolu kaldırıldı (test döngüsü artık [U]).
         TickEndless();
         if (Input.GetKeyDown(KeyCode.O)) oneAtATime = !oneAtATime;
+        if (Input.GetKeyDown(KeyCode.U)) ToggleFocusTest();
+        if (Input.GetKeyDown(KeyCode.I)) ToggleInfiniteBar();
+        TickFocusTest();
 
         // 1-5: o tipi sağda doğur | Shift+tuş: SOLDA | Ctrl+tuş: UZAKTA (2x mesafe)
         bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -221,6 +224,123 @@ public class EnemyArena : MonoBehaviour
             ph.Heal(Mathf.Max(1, Mathf.RoundToInt(ph.MaxHealth * healPerKillFraction)));
     }
 
+// ---------------------------------------------------------
+    // ODAK TESTİ [U]: sonsuz döngü, düşmanlar 2'şer gelir (biri sağdan, biri soldan),
+    // yetenek barı hep DOLU. Tekrar [U] ile kapanır.
+    // ---------------------------------------------------------
+    [Header("Odak testi [U]")]
+    public bool focusTest = false;
+    [Tooltip("Bir çift ölünce yeni çiftin gelmesine kadar bekleme (gerçek sn).")]
+    public float focusTestPairDelay = 0.8f;
+    public float focusTestSpawnDistance = 14f;
+    private float focusTestNextAt;
+
+    private void ToggleFocusTest()
+    {
+        focusTest = !focusTest;
+        if (focusTest) focusTestWave = 0;
+        endless = false;
+        queue.Clear();
+        focusTestNextAt = 0f;
+
+        Transform p = Player;
+        }
+
+    // [I]: yetenek barı hep dolu (aç/kapa).
+    private void ToggleInfiniteBar()
+    {
+        Transform p = Player;
+        PlayerAbility ab = p != null ? PlayerAbility.Ensure(p.gameObject) : PlayerAbility.Instance;
+        if (ab == null) return;
+
+        ab.focusInfinite = !ab.focusInfinite;
+        if (ab.focusInfinite) ab.focusCharge = ab.focusMax;
+    }
+
+private void TickFocusTest()
+    {
+        if (!focusTest || entries.Count == 0) return;
+
+        Transform p = Player;
+        if (p == null) return;
+
+        Health ph = p.GetComponent<Health>();
+        if (ph != null && ph.IsDead) return;
+
+        // (Bar dolumu artık [I] tuşunda.)
+
+        // Canlı düşman varsa bekle.
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase b = EnemyBase.All[i];
+            if (b != null && !b.IsDead) { focusTestNextAt = 0f; return; }
+        }
+
+        if (focusTestNextAt <= 0f) focusTestNextAt = Time.unscaledTime + focusTestPairDelay;
+        if (Time.unscaledTime < focusTestNextAt) return;
+        focusTestNextAt = 0f;
+
+        // Test hiç bitmesin: her çiftte can dolsun.
+        if (ph != null) ph.Heal(ph.MaxHealth);
+
+        // Sıradaki karşılaşma (liste bitince başa döner).
+        Encounter enc = Encounters[focusTestWave % Encounters.Length];
+        focusTestWave++;
+        focusTestCurrent = enc.name;
+
+        int r = FindEntry(enc.right);
+        int l = FindEntry(enc.left);
+        if (r < 0) r = RandomValidEntry();
+        if (l < 0) l = r;
+        if (r < 0) return;
+
+        SpawnOne(r, p.position.x + enc.rightDist);    // sağdan
+        SpawnOne(l, p.position.x - enc.leftDist);     // soldan
+    }
+
+    // Karşılaşma tasarımı: kolaydan zora, her çift farklı bir şeyi sınar. Mesafeler farklı: iki düşman AYNI ANDA gelmez, biri önce ulaşır.
+    private struct Encounter
+    {
+        public string name, right, left;
+        public float rightDist, leftDist;
+        public Encounter(string name, string right, float rightDist, string left, float leftDist)
+        { this.name = name; this.right = right; this.rightDist = rightDist; this.left = left; this.leftDist = leftDist; }
+    }
+
+    private static readonly Encounter[] Encounters =
+    {
+        new Encounter("Isınma: Duelist + Duelist",           "Duelist", 12f, "Duelist", 16f),
+        new Encounter("Hız: Quick + Duelist",                 "Quick",   12f, "Duelist", 15f),
+        new Encounter("Yavaş tehdit: Heavy + Duelist",        "Heavy",   14f, "Duelist", 11f),
+        new Encounter("Çifte hız: Quick + Quick",             "Quick",   12f, "Quick",   17f),
+        new Encounter("Atlayan: Leaper + Duelist",            "Leaper",  13f, "Duelist", 12f),
+        new Encounter("Menzilli: Archer + Heavy",             "Archer",  19f, "Heavy",   12f),
+        new Encounter("Baskı: Heavy + Quick",                 "Heavy",   13f, "Quick",   16f),
+        new Encounter("İki cephe: Leaper + Archer",           "Leaper",  12f, "Archer",  20f),
+        new Encounter("Final: Heavy + Leaper",                "Heavy",   12f, "Leaper",  14f),
+    };
+
+    private int focusTestWave;
+    private string focusTestCurrent = "";
+
+    private int FindEntry(string label)
+    {
+        for (int i = 0; i < entries.Count; i++)
+            if (entries[i].prefab != null && string.Equals(entries[i].label, label, System.StringComparison.OrdinalIgnoreCase)) return i;
+        return -1;
+    }
+
+    private int RandomValidEntry()
+    {
+        for (int tries = 0; tries < 10; tries++)
+        {
+            int c = Random.Range(0, entries.Count);
+            if (entries[c].prefab != null) return c;
+        }
+        return -1;
+    }
+
+
     public void KillAll()
     {
         queue.Clear();
@@ -253,6 +373,15 @@ public class EnemyArena : MonoBehaviour
             "ARENA  " + keys + "| Shift=sol  Ctrl=uzak | [6/7/8] 3/5/8 adet  [9] çift  [Tab] tip: " +
             (entries.Count > 0 ? entries[selected].label : "-") +
             "  [K] öldür  [H] doldur  [G] etiket  [Y] yağmur  [O] tek tek: " + (oneAtATime ? "AÇIK" : "kapalı") + "   Aktif: " + EnemyBase.All.Count + (queue.Count > 0 ? "  Sırada: " + queue.Count : ""));
+
+        if (focusTest)
+        {
+            GUIStyle fb = new GUIStyle(GUI.skin.label);
+            fb.fontSize = 22;
+            fb.alignment = TextAnchor.UpperCenter;
+            fb.normal.textColor = Color.white;
+            GUI.Label(new Rect(0, 8, Screen.width, 32), "ODAK TESTİ  [U] kapat   [I] bar hep dolu: " + (PlayerAbility.Instance != null && PlayerAbility.Instance.focusInfinite ? "AÇIK" : "kapalı") + "   |   " + (focusTestWave > 0 ? focusTestWave + ". " + focusTestCurrent : "hazırlanıyor"), fb);
+        }
 
         if (endless)
         {
