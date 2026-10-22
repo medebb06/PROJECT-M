@@ -465,6 +465,8 @@ public class PlayerMovement : MonoBehaviour
             wasAirborne = true;
         }
 
+        if (groundedNow) DashState.AirDashUsed = false;
+
         wasGrounded =
             groundedNow;
 
