@@ -1420,7 +1420,7 @@ public class EnemyUnit : EnemyBase
             if (state != UnitState.Windup && state != UnitState.Active) Knock(hitDirection, def.blockKnockback);
             return;
         }
-        SquashPunch(new Vector2(1.5f, 0.74f), 0.2f, AbsorbsHit() ? 0.5f : 1f);
+        SquashPunch(new Vector2(1.5f, 0.74f), 0.2f, AbsorbsHit() ? 0.5f : 1f, hitDirection.x);
         if (AbsorbsHit()) { PlayBalanceDamageFlash(); return; }
         PlayBalanceDamageFlash();
         if (state != UnitState.Stagger && Time.time >= hurtImmuneUntil)
@@ -1440,7 +1440,7 @@ public class EnemyUnit : EnemyBase
         if (IsDead) return;
         shoveMult = attackStep >= 4 ? 2.4f : 1f;
         ApplyPressure();
-        SquashPunch(healthHit ? new Vector2(1.95f, 0.55f) : new Vector2(1.55f, 0.72f), healthHit ? 0.28f : 0.2f, AbsorbsHit() ? 0.5f : 1f);
+        SquashPunch(healthHit ? new Vector2(1.95f, 0.55f) : new Vector2(1.55f, 0.72f), healthHit ? 0.28f : 0.2f, AbsorbsHit() ? 0.5f : 1f, hitDirection.x, healthHit);
         if (state == UnitState.Stagger)
         {
             Knock(hitDirection, def.healthHitKnockback);
@@ -1524,18 +1524,40 @@ public class EnemyUnit : EnemyBase
     private Vector3 squashBase = Vector3.one;
     private Vector2 squashCur = Vector2.one;
     private Vector2 squashVel;
-    private Vector2 punchScale = Vector2.one;
-    private float punchTime = 0.1f;
-    private float punchTimer;
+    // Yaylı (spring) squash: vuruş ölçeği iter, yay normali AŞAR (basık -> uzun -> hafif basık -> durulma).
+    private Vector2 sqOff, sqOffVel;      // ölçeğin 1'den sapması
+    private float kickRot, kickRotVel;    // vuruş yönüne gövde sarsılması (derece)
+    private float sqOmega = 28f;          // yay hızı (rad/s)
+    private float sqZeta = 0.32f;         // sönüm: <1 = yaylanır
+    private float lastPunchTime = -10f;
     private float leanCur, leanVel;
 
-    private void SquashPunch(Vector2 scale, float duration, float strength)
+    private void SquashPunch(Vector2 scale, float duration, float strength, float dirX = 0f, bool heavy = false)
     {
         if (def == null) return;
         float s = def.squashStrength * strength;
-        punchScale = new Vector2(Mathf.Lerp(1f, scale.x, s), Mathf.Lerp(1f, scale.y, s));
-        punchTime = Mathf.Max(0.03f, duration);
-        punchTimer = punchTime;
+        Vector2 add = new Vector2((scale.x - 1f) * s, (scale.y - 1f) * s);
+
+        // Kombo birikimi: kısa aralıkla gelen vuruşlar öncekinin üstüne biner (sınırlı).
+        bool chain = Time.time - lastPunchTime < 0.35f;
+        lastPunchTime = Time.time;
+        sqOff = chain ? sqOff * 0.55f + add : add;
+        sqOff.x = Mathf.Clamp(sqOff.x, -0.45f, 1.1f);
+        sqOff.y = Mathf.Clamp(sqOff.y, -0.6f, 0.45f);
+
+        // Süre -> yay periyodu. Normal vuruş ~0.2 sn, can vuruşu ~0.28 sn; yaylanma için ~2.2x.
+        float T = Mathf.Max(0.06f, duration) * 2.2f;
+        sqOmega = 2f * Mathf.PI / T;
+        sqZeta = heavy ? 0.26f : 0.34f;
+        sqOffVel = Vector2.zero;
+
+        // Vuruş yönünde gövde sarsılması: vuruş sağa itiyorsa üst kısım saat yönünde (negatif Z) eğilir.
+        if (Mathf.Abs(dirX) > 0.05f)
+        {
+            float deg = (heavy ? 11f : 6.5f) * Mathf.Clamp01(strength + 0.2f) * Mathf.Clamp01(def.squashStrength);
+            kickRot = -Mathf.Sign(dirX) * deg;
+            kickRotVel = 0f;
+        }
     }
 
     private void UpdateSquash()
@@ -1562,17 +1584,26 @@ public class EnemyUnit : EnemyBase
             leanSmooth = 0.03f;
         }
         leanCur = Mathf.SmoothDamp(leanCur, leanTarget, ref leanVel, leanSmooth, Mathf.Infinity, Time.unscaledDeltaTime);
-        transform.rotation = Quaternion.Euler(0f, 0f, leanCur);
 
-        if (punchTimer > 0f)
+        // Yay çözümü (alt adımlı, sabit): ölçek sapması + gövde sarsılması.
+        float dt = Mathf.Min(EnemyTime.DeltaTime, 0.033f);   // kare takılmasında yay patlamasın
+        int steps = Mathf.Clamp(Mathf.CeilToInt(dt / 0.008f), 1, 6);
+        float h = steps > 0 ? dt / steps : 0f;
+        float w2 = sqOmega * sqOmega, c = 2f * sqZeta * sqOmega;
+        for (int i = 0; i < steps; i++)
         {
-            punchTimer -= EnemyTime.DeltaTime;
-            float k = Mathf.Clamp01(punchTimer / punchTime);
-            k = k * k * (3f - 2f * k);
-            target = Vector2.Scale(target, new Vector2(Mathf.Lerp(1f, punchScale.x, k), Mathf.Lerp(1f, punchScale.y, k)));
+            sqOffVel += (-w2 * sqOff - c * sqOffVel) * h;
+            sqOff += sqOffVel * h;
+            kickRotVel += (-w2 * kickRot - c * kickRotVel) * h;
+            kickRot += kickRotVel * h;
         }
+        if (sqOff.sqrMagnitude < 1e-6f && sqOffVel.sqrMagnitude < 1e-4f) { sqOff = Vector2.zero; sqOffVel = Vector2.zero; }
+        if (Mathf.Abs(kickRot) < 0.01f && Mathf.Abs(kickRotVel) < 0.05f) { kickRot = 0f; kickRotVel = 0f; }
 
-        squashCur = Vector2.SmoothDamp(squashCur, target, ref squashVel, 0.04f, Mathf.Infinity, Time.unscaledDeltaTime);
+        transform.rotation = Quaternion.Euler(0f, 0f, leanCur + kickRot);
+        target = new Vector2(1f + sqOff.x, 1f + sqOff.y);
+
+        squashCur = Vector2.SmoothDamp(squashCur, target, ref squashVel, 0.012f, Mathf.Infinity, Time.unscaledDeltaTime);
         transform.localScale = new Vector3(squashBase.x * squashCur.x, squashBase.y * squashCur.y, squashBase.z);
     }
 
