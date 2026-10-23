@@ -130,7 +130,7 @@ public static class PlayerDamage
         // DENGE KATMANI
         // =====================================================
 
-        // ARKADAN VURUŞ: posture'a önden gibi normal vurur; sadece can hasarına x1.5 uygulanır.
+        // ARKADAN VURUŞ: posture'a önden gibi normal vurur + cana ayrıca x1.5 can hasarı biner.
         bool backHit = (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
             && !enemy.IsStaggered && Mathf.Abs(info.direction.x) > 0.1f
             && info.direction.x * enemy.FacingDirection > 0f;
@@ -189,6 +189,20 @@ public static class PlayerDamage
                     balance.chipCarry -= chip;
                     health.TakeDamage(chip);
                 }
+            }
+
+            // ARKADAN: posture'a ek olarak, posture ne olursa olsun cana da x1.5 vurur (ileride 'arkadan darbe' build'i için).
+            if (backHit && health != null && !health.IsDead)
+            {
+                int backAmount =
+                    Resolve(
+                        StatType.HealthDamage,
+                        info.healthDamage,
+                        critMultiplier * (info.source == DamageSource.Attack ? WeaponHealthMultiplier : 1f) * HealthDamageBoost
+                        * (info.source == DamageSource.Attack && info.comboStep >= 4 ? FinalHitDamageMultiplier : 1f),
+                        stats
+                    );
+                health.TakeDamage(Mathf.Max(1, Mathf.RoundToInt(backAmount * BackHitDamageMultiplier)));
             }
 
             if (feedback != null && !enemy.BlocksPlainHits)

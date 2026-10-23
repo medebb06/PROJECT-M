@@ -639,3 +639,4 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Oyun modunda reflection ile test edildi (spawn, god, bar, kapatma); gerçek tuş basışı denenmedi.
 - TeleportToMouse (T = imlece ışınlan) kullanıcı isteğiyle GERİ ALINDI (yukarıdaki kaldırılanlar listesinden çıkar).
 - GÜNCELLEME: arkadan vuruş artık posture'ı ATLAMIYOR (önden gibi normal posture vurur). Arkadan sadece "ARKADAN!" yazısı ve can katmanına ulaşan hasarda x1.5 kaldı.
+- GÜNCELLEME 2: arkadan vuruş = posture normal + cana HER ZAMAN ayrıca x1.5 can hasarı (posture olsa da). `BackHitDamageMultiplier` ile ayarlanır. Sağlık katmanındaki eski x1.5 de duruyor (posture kırıkken zaten can katmanına düşer).
