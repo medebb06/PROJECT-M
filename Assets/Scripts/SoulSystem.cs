@@ -152,6 +152,8 @@ public class SoulFx : MonoBehaviour
 
     AudioSource sfx;
     AudioClip bellClip, releaseClip, loseClip;
+    AudioClip[] absorbClips; int lastAbsorb = -1;
+    const bool AbsorbSfxOn = false;   // ruhların kılıca girme sesi: true yapınca tekrar açılır
 
     // HUD
     Canvas hudCanvas;
@@ -201,8 +203,9 @@ public class SoulFx : MonoBehaviour
         sfx = gameObject.AddComponent<AudioSource>();
         sfx.playOnAwake = false; sfx.spatialBlend = 0f;
         bellClip = MakeBell();
-        var absorbFile = Resources.Load<AudioClip>("SoulSfx/soul_absorb");   // gerçek ruh emilim sesi (yoksa kodla üretilen çan)
-        if (absorbFile != null) bellClip = absorbFile;
+        var allSfx = Resources.LoadAll<AudioClip>("SoulSfx"); var pick = new List<AudioClip>();
+        foreach (var c in allSfx) if (c != null && c.name.StartsWith("soul_absorb_")) pick.Add(c);   // eski tekli soul_absorb dosyası dışarıda kalır
+        absorbClips = pick.ToArray();   // gerçek ruh emilim sesleri (Resources/SoulSfx/soul_absorb_*); her emilimde biri rastgele çalar. Yoksa kodla üretilen çan.
         releaseClip = MakeRelease();
         loseClip = MakeLose();
 
@@ -615,7 +618,14 @@ public class SoulFx : MonoBehaviour
         // Peş peşe girişlerde ses perdesi yükselir (zincir hissi).
         if (Time.time - chainT < 0.5f) chain = Mathf.Min(chain + 1, 7); else chain = 0;
         chainT = Time.time;
-        PlayOne(bellClip, 0.55f, 1f + 0.055f * chain);
+        AudioClip ac = bellClip;
+        if (absorbClips != null && absorbClips.Length > 0)
+        {
+            int k = Random.Range(0, absorbClips.Length);
+            if (absorbClips.Length > 1 && k == lastAbsorb) k = (k + 1) % absorbClips.Length;   // aynı ses üst üste gelmesin
+            lastAbsorb = k; ac = absorbClips[k];
+        }
+        if (AbsorbSfxOn) PlayOne(ac, 0.3f, Mathf.Clamp(Random.Range(0.96f, 1.04f) + 0.04f * chain, 0.9f, 1.3f));   // şimdilik kapalı (AbsorbSfxOn = false)
     }
 
     // ===================================================================

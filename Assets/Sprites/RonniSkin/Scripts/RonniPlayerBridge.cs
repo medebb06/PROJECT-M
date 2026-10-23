@@ -141,10 +141,10 @@ namespace RonniSkin
         // [saldırı, kare] = (x, y) ölçek. Kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur.
         static readonly Vector2[,] SquashTable =
         {
-            { new Vector2(1.06f, 0.94f), new Vector2(1.12f, 0.92f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack1: yatay kesim -> yukarı yay
-            { new Vector2(1.04f, 0.96f), new Vector2(1.14f, 0.91f), new Vector2(0.95f, 1.07f), Vector2.one },   // Attack2: öne uzanma -> yukarı yay
-            { new Vector2(1.08f, 0.92f), new Vector2(1.18f, 0.90f), new Vector2(1.07f, 0.96f), Vector2.one },   // Attack3: gerilme -> saplama
-            { new Vector2(1.05f, 0.95f), new Vector2(0.97f, 1.05f), new Vector2(1.16f, 0.90f), Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
+            { new Vector2(1.10f, 0.90f), new Vector2(1.20f, 0.87f), new Vector2(0.93f, 1.10f), Vector2.one },   // Attack1: yatay kesim -> yukarı yay
+            { new Vector2(1.08f, 0.92f), new Vector2(1.22f, 0.88f), new Vector2(0.93f, 1.10f), Vector2.one },   // Attack2: öne uzanma -> yukarı yay
+            { new Vector2(1.12f, 0.89f), new Vector2(1.26f, 0.86f), new Vector2(1.10f, 0.94f), Vector2.one },   // Attack3: gerilme -> saplama
+            { new Vector2(1.09f, 0.91f), new Vector2(0.95f, 1.08f), new Vector2(1.24f, 0.87f), Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
         };
         // ---- Kare kare hareket akışı: sprite kareleri arasında karakter yaslanır, öne atılır, geri oturur (sprite'lara dokunmadan) ----
         [Header("Kare kare hareket akışı (lunge / yaslanma)")]
@@ -155,10 +155,10 @@ namespace RonniSkin
         // [saldırı, kare] = (ileri kayma, yukarı kayma: sprite boyunun oranı; öne eğilme: derece). Kare 1 hazırlık (geri yaslan), 2 vuruş (öne at), 3 devam, 4 otur.
         static readonly Vector3[,] FlowTable =
         {
-            { new Vector3(-0.035f, 0f, -3f), new Vector3(0.085f, 0f, 6f),    new Vector3(0.055f, 0f, 3f),   new Vector3(0.012f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack1
-            { new Vector3(-0.035f, 0f, -2.5f), new Vector3(0.095f, 0f, 6f),  new Vector3(0.06f, 0f, 3f),    new Vector3(0.012f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack2
-            { new Vector3(-0.055f, 0f, -3.5f), new Vector3(0.12f, 0f, 7f),   new Vector3(0.085f, 0f, 4f),   new Vector3(0.015f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack3 (saplama)
-            { new Vector3(-0.035f, 0f, -2f), new Vector3(0.045f, 0.05f, 0f), new Vector3(0.08f, 0.03f, 4f), new Vector3(0.12f, 0f, 8f), new Vector3(0.04f, 0f, 2f), Vector3.zero, Vector3.zero },   // Attack4 (sıçrama -> büyük kesim)
+            { new Vector3(-0.07f, 0f, -6.5f), new Vector3(0.135f, 0f, 9f),    new Vector3(0.09f, 0f, 4.5f),   new Vector3(0.018f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack1
+            { new Vector3(-0.07f, 0f, -6f), new Vector3(0.15f, 0f, 9f),  new Vector3(0.095f, 0f, 4.5f),    new Vector3(0.018f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack2
+            { new Vector3(-0.09f, 0f, -7f), new Vector3(0.19f, 0f, 10.5f),   new Vector3(0.13f, 0f, 6f),   new Vector3(0.022f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack3 (saplama)
+            { new Vector3(-0.07f, 0f, -4.5f), new Vector3(0.07f, 0.06f, 0f), new Vector3(0.12f, 0.04f, 6f), new Vector3(0.185f, 0f, 11f), new Vector3(0.06f, 0f, 3f), Vector3.zero, Vector3.zero },   // Attack4 (sıçrama -> büyük kesim)
         };
         Vector3 FlowTarget(Sprite s)
         {
@@ -183,7 +183,7 @@ namespace RonniSkin
             hitSprVel = Vector2.zero;
             // B: vuruşta karakter öne itilir + öne eğilir; yay geri tepmeyle (recoil) oturur. Son kombo vuruşu en güçlüsü.
             float m = hitLungeMul * (step >= 4 ? 1.9f : 1f + 0.12f * Mathf.Max(0, step - 1));
-            hitFlow = new Vector2(0.028f * m, 3.2f * m);
+            hitFlow = new Vector2(0.042f * m, 4.5f * m);
             hitFlowVel = Vector2.zero;
         }
         [Tooltip("Vuruşta öne itilme / eğilme / geri tepme çarpanı (0 = kapalı).")] public float hitLungeMul = 1f;
@@ -642,6 +642,35 @@ namespace RonniSkin
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
         [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.0f; float chiburiT = -1f; bool bladeCut;
         float chiForcedDur = -1f;
+        // Kılıç sesleri: Resources/SwordSfx/sword_spin_* (chiburi dönüşü) ve sword_sheathe_* (kına koyma). Her çalışta biri rastgele.
+        AudioSource swordSfx; AudioClip[] spinClips, sheatheClips; int lastSpinSfx = -1, lastSheSfx = -1;
+        public float spinSfxVolume = 0.7f, sheatheSfxVolume = 0.8f;
+        void PlaySwordSfx(bool spin)
+        {
+            if (swordSfx == null)
+            {
+                swordSfx = gameObject.AddComponent<AudioSource>(); swordSfx.playOnAwake = false; swordSfx.spatialBlend = 0f;
+                var all = Resources.LoadAll<AudioClip>("SwordSfx");
+                var a = new System.Collections.Generic.List<AudioClip>(); var b = new System.Collections.Generic.List<AudioClip>();
+                foreach (var c in all) { if (c == null) continue; if (c.name.StartsWith("sword_spin_")) a.Add(c); else if (c.name.StartsWith("sword_sheathe_")) b.Add(c); }
+                spinClips = a.ToArray(); sheatheClips = b.ToArray();
+            }
+            var arr = spin ? spinClips : sheatheClips;
+            if (arr == null || arr.Length == 0) return;
+            int k = Random.Range(0, arr.Length);
+            int last = spin ? lastSpinSfx : lastSheSfx;
+            if (arr.Length > 1 && k == last) k = (k + 1) % arr.Length;
+            if (spin) lastSpinSfx = k; else lastSheSfx = k;
+            swordSfx.pitch = Random.Range(0.95f, 1.05f);
+            swordSfx.PlayOneShot(arr[k], spin ? spinSfxVolume : sheatheSfxVolume);
+        }
+        // Kına koyma sesi: bıçak kına girerken başlar, tsuba oturunca (tık) biter (klip ~0.9 sn).
+        float SheatheSfxTime()
+        {
+            float d = ChiDur;
+            if (TenkaReady()) { float s = d / TenkaTotal; return Mathf.Max(0.05f, (TenkaSpinReal + tenkaSlashSec + tenkaRegripTime + tenkaInsertTime) * s - 0.85f); }
+            return d * 0.7f;
+        }
         float ChiDur => chiForcedDur > 0f ? chiForcedDur : (TenkaReady() ? TenkaTotal : chiburiDur);
         [Header("Tenka chiburi zamanlaması (sn)")]
         [Tooltip("Hazırlık + kılıcı elde çevirme (hızlı). Eski klipte dönüş bölümü 1.60 klip-sn idi; süre klipteki yeni dönüş bölümüne (1.21 klip-sn) orantılı uygulanır, yani hız eskisiyle aynı.")] public float tenkaSpinTime = 0.8f;
@@ -829,7 +858,11 @@ namespace RonniSkin
                 if (chiForcedDur < 0f && (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded)) chiburiT = -1f;
                 else
                 {
+                    float prevChi = chiburiT;
                     chiburiT += Time.deltaTime;
+                    if (prevChi <= 0f) PlaySwordSfx(true);                                   // chiburi dönüşü başladı
+                    float shT = SheatheSfxTime();
+                    if (prevChi < shT && chiburiT >= shT) PlaySwordSfx(false);               // kılıç kına giriyor
                     if (chiburiT >= ChiDur) { chiburiT = -1f; chiForcedDur = -1f; anim.swordReady = false; }
                     else { anim.swordReady = true; shClip = null; return; }
                 }

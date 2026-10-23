@@ -10,15 +10,16 @@ public static class MenuSfx
     public static float SelectVolume = 1f;
     public static Vector2 NavPitch = new Vector2(0.97f, 1.03f);
 
-    static AudioClip click;
+    static AudioClip click, navClip;
     static AudioSource src;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { click = null; src = null; startClip = null; }
+    static void Reset() { click = null; navClip = null; src = null; startClip = null; }
 
     static void Init()
     {
         if (click == null) click = Resources.Load<AudioClip>("MenuSfx/menu_click");
+        if (navClip == null) navClip = Resources.Load<AudioClip>("MenuSfx/menu_nav");   // W/S gezinme sesi (yoksa menu_click)
         if (src == null)
         {
             var go = new GameObject("MenuSfx");
@@ -30,11 +31,12 @@ public static class MenuSfx
         }
     }
 
-    static void Play(float vol, float pitch)
+    static void Play(float vol, float pitch, AudioClip clip = null)
     {
-        if (click == null || src == null) return;
+        if (clip == null) clip = click;
+        if (clip == null || src == null) return;
         src.pitch = pitch;
-        src.PlayOneShot(click, vol);
+        src.PlayOneShot(clip, vol);
     }
 
     /// <summary>START'a basinca calan giris sesi (Resources/MenuSfx/menu_start).</summary>
@@ -50,6 +52,6 @@ public static class MenuSfx
         src.PlayOneShot(startClip, StartVolume);
     }
 
-    public static void Nav() { Init(); Play(NavVolume, Random.Range(NavPitch.x, NavPitch.y)); }
+    public static void Nav() { Init(); Play(NavVolume, Random.Range(NavPitch.x, NavPitch.y), navClip); }
     public static void Select() { Init(); Play(SelectVolume, 1f); }
 }
