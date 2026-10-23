@@ -628,6 +628,7 @@ public class PlayerCombatController : MonoBehaviour
         if (execAttack)
             player.SetAttackAnimationSpeed(executionSpeedMult);
 
+        if (player.Movement != null) player.Movement.DisarmParryBurst();   // saldırı, parry atılma hakkını yakar
         PlayerGrunt.Play();   // saldırı sesi: her vuruşta "hah!"
         currentState.Enter();
     }

@@ -8,10 +8,15 @@ using UnityEngine;
 public class PlayerInputHandler : MonoBehaviour
 {
     private PlayerController player;
+    private PlayerDefenseController defense;
+
+    /// <summary>Parry penceresi acikken (basarili olana ya da bitene kadar) dash baslamaz; tus tamponda bekler.</summary>
+    public static bool LockDashWhileParrying = true;
 
     public void Initialize(PlayerController controller)
     {
         player = controller;
+        defense = controller.GetComponent<PlayerDefenseController>();
     }
 
     public void ReadInput()
@@ -85,6 +90,7 @@ public class PlayerInputHandler : MonoBehaviour
         // =====================================================
 
         player.dashPressed =
-            player.dashBufferTimer > 0f;
+            player.dashBufferTimer > 0f &&
+            !(LockDashWhileParrying && defense != null && defense.IsParrying);
     }
 }

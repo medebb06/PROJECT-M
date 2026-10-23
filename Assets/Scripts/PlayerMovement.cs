@@ -175,6 +175,8 @@ public class PlayerMovement : MonoBehaviour
 
     public void UpdateTimers()
     {
+        TickParryBurst();
+
         jumpBufferCounter =
             Mathf.Max(
                 0f,
@@ -247,6 +249,128 @@ public class PlayerMovement : MonoBehaviour
     // HORIZONTAL MOVEMENT
     // =========================================================
 
+    // =========================================================
+    // PARRY SONRASI ATILMA: parry'den sonra ilk yon tusu kisa, hizli bir atilma verir.
+    // =========================================================
+
+    [Header("Parry Sonrasi Atilma")]
+    [Tooltip("Basarili parry'den sonra bu sure (sn) icinde ilk yon basisi atilma verir.")]
+    public float parryBurstWindow = 0.6f;
+    [Tooltip("Atilmanin baslangic hizi = kosu hizi x bu carpan (dash 10 birim / 0.15 sn).")]
+    public float parryBurstSpeedMult = 4f;
+    [Tooltip("Atilmanin suresi (sn); hiz bu surede kosu hizina iner.")]
+    public float parryBurstTime = 0.16f;
+
+    private float parryBurstArmedUntil = -1f;
+    private float parryBurstEnd = -1f;
+    private float parryBurstDir = 1f;
+    private bool parryBurstActive;
+    private int burstOrigLayer, burstColOrigLayer;
+    private GameObject burstColObject;
+    private float burstGhostTimer;
+
+    // Atilma basliyor: dash gibi 'Dash' katmanina gecer (dusmanlarin icinden gecilir) ve iz birakir.
+    private void BeginParryBurstFx()
+    {
+        parryBurstActive = true;
+        burstGhostTimer = 0f;
+        burstOrigLayer = player.gameObject.layer;
+        burstColObject = null;
+
+        int dashLayer = LayerMask.NameToLayer("Dash");
+        if (dashLayer >= 0)
+        {
+            player.gameObject.layer = dashLayer;
+
+            if (player.col != null && player.col.gameObject != player.gameObject)
+            {
+                burstColObject = player.col.gameObject;
+                burstColOrigLayer = burstColObject.layer;
+                burstColObject.layer = dashLayer;
+            }
+        }
+
+        DashFx.Begin(player);
+        DashFx.Ghost(player);
+    }
+
+    private void EndParryBurstFx()
+    {
+        if (!parryBurstActive)
+            return;
+
+        parryBurstActive = false;
+        parryBurstEnd = -1f;
+        player.gameObject.layer = burstOrigLayer;
+
+        if (burstColObject != null)
+        {
+            burstColObject.layer = burstColOrigLayer;
+            burstColObject = null;
+        }
+
+        // Atilma bir dusmanin icinde bittiyse en yakin kenara al.
+        HitboxUtil.EjectFromEnemies(player);
+        DashFx.End(player);
+    }
+
+    // Her karede: atilma suresi bitince / dash vb. girince katmani geri verir, iz birakir.
+    private void TickParryBurst()
+    {
+        if (!parryBurstActive)
+            return;
+
+        if (Time.time >= parryBurstEnd || player.isDashing || !player.canControl)
+        {
+            EndParryBurstFx();
+            return;
+        }
+
+        burstGhostTimer -= Time.deltaTime;
+        if (burstGhostTimer <= 0f)
+        {
+            burstGhostTimer = DashFx.GhostSpacing;
+            DashFx.Ghost(player);
+        }
+    }
+
+    public void ArmParryBurst()
+    {
+        parryBurstArmedUntil = Time.time + parryBurstWindow;
+    }
+
+    public void DisarmParryBurst()
+    {
+        parryBurstArmedUntil = -1f;
+    }
+
+    // true = bu fizik adiminda hiz atilmaya ait, normal hareket calismasin.
+    private bool UpdateParryBurst()
+    {
+        if (Time.time < parryBurstEnd)
+        {
+            float t = 1f - (parryBurstEnd - Time.time) / Mathf.Max(0.01f, parryBurstTime);
+            float speed = Mathf.Lerp(moveSpeed * parryBurstSpeedMult, moveSpeed, t * t);
+            player.rb.linearVelocity = new Vector2(parryBurstDir * speed, player.rb.linearVelocity.y);
+            return true;
+        }
+
+        if (Time.time < parryBurstArmedUntil &&
+            player.isGrounded &&
+            Mathf.Abs(player.moveInput) > 0.1f)
+        {
+            parryBurstArmedUntil = -1f;
+            parryBurstDir = Mathf.Sign(player.moveInput);
+            parryBurstEnd = Time.time + parryBurstTime;
+            BeginParryBurstFx();
+            player.SpawnDust();
+            player.rb.linearVelocity = new Vector2(parryBurstDir * moveSpeed * parryBurstSpeedMult, player.rb.linearVelocity.y);
+            return true;
+        }
+
+        return false;
+    }
+
     public void ApplyMovement(float control)
     {
         if (!player.canControl)
@@ -263,6 +387,9 @@ public class PlayerMovement : MonoBehaviour
             player.rb.linearVelocity = new Vector2(runVx, player.rb.linearVelocity.y);
             return;
         }
+
+        if (UpdateParryBurst())
+            return;
 
         float targetSpeed =
             player.moveInput *

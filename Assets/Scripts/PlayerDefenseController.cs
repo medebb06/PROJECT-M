@@ -320,6 +320,9 @@ public class PlayerDefenseController : MonoBehaviour
         lastSuccessTime = Time.time;
         counterConsumed = false;
 
+        if (player != null && player.Movement != null)
+            player.Movement.ArmParryBurst();   // ilk yon tusu atilma verir
+
         PlayerPosture myPosture = GetComponent<PlayerPosture>();
         if (myPosture != null && myPosture.MaxPosture > 0 && parryPostureRecoverFraction > 0f)
             myPosture.RecoverPosture(Mathf.Max(1, Mathf.CeilToInt(myPosture.MaxPosture * parryPostureRecoverFraction)));
