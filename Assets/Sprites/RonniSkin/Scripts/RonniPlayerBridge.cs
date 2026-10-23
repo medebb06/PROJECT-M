@@ -151,6 +151,7 @@ namespace RonniSkin
         }
         Vector2 SquashTarget(Sprite s)
         {
+            if (guardSqOn) return guardSq;
             if (s != null && s.name == "DashHD_1") return DashSquashTarget();
             if (!frameSquash || s == null) return Vector2.one;
             string n = s.name;   // "Attack2HD_3"
@@ -171,6 +172,24 @@ namespace RonniSkin
         Sprite[] parryRevSprites; bool parryRevLoaded;
         bool ParryRevOn() { if (!parryAttack2Reverse) return false; ParrySprite(0); return parryRevSprites != null; }
         float parryFrameT = -1f, parryFrameEnd; bool parrySuccPrev; Sprite[] parrySprites; bool parryLoaded;
+        // ---- Block / parry v2: kare kare savunma (ParryHD_1 = koruma pozu) ----
+        [Header("Block / Parry v2 (kare kare savunma)")]
+        [Tooltip("Block ve parry denemesinde rig yerine el çizimi koruma karesi (ParryHD_1: kılıç dik, gövdenin önünde). Başarılı parry aynı kareden başlar: poz atlaması olmaz. Kapalı = eski rig block.")] public bool frameGuard = true;
+        [Tooltip("Koruma pozuna geçişte ilk sıkışma (hazırlık) süresi (sn).")] public float guardRaiseTime = 0.08f;
+        [Tooltip("Geçişin ilk anındaki sıkışma (x geniş, y basık).")] public Vector2 guardRaiseSquash = new Vector2(1.07f, 0.93f);
+        [Tooltip("Koruma beklerken nefes / gerginlik genliği (ölçek oranı).")] [Range(0f, 0.04f)] public float guardBreath = 0.012f;
+        [Tooltip("Nefes periyodu (sn).")] public float guardBreathPeriod = 1.4f;
+        [Tooltip("Block'a vuruş gelince geri itilme (dünya birimi).")] public float guardHitPush = 0.16f;
+        [Tooltip("Block vuruş tepkisi süresi (sn).")] public float guardHitTime = 0.26f;
+        [Tooltip("Block vuruşunda anlık sıkışma (x, y ekleme).")] public Vector2 guardHitSquash = new Vector2(0.10f, -0.08f);
+        [Tooltip("Block vuruşunda titreme genliği (dünya birimi).")] public float guardHitShake = 0.025f;
+        [Tooltip("Parry tuşuna basınca (başarı beklenmeden) kısa yukarı esneme: block'tan ayırt edilsin.")] public Vector2 parryTryStretch = new Vector2(-0.06f, 0.08f);
+        [Tooltip("Parry denemesi esneme süresi (sn).")] public float parryTryTime = 0.16f;
+        [Tooltip("Başarılı parry kareleri: (kare1, kare2 smear, kare3) squash hedefleri.")] public Vector2[] parrySquash = { new Vector2(1.05f, 0.95f), new Vector2(1.13f, 0.91f), new Vector2(0.95f, 1.06f) };
+        [Tooltip("Parry kareleri arasında önceki karenin soluk izi (geçiş yumuşar).")] public bool parryBlend = true;
+        [Tooltip("Parry karelerini (ParryHD_*) saldırı kareleriyle aynı hizaya getiren yatay düzeltme (sayfa pikseli). ParryHD pivotu arka ayakta, saldırı kareleri gövde altında: -177 = kafa/gövde rig ile aynı yerde kalır, block/parry'de karakter öne kaymaz.")] public float parryAlignPx = -177f;
+        bool guardWant, guardSqOn; float guardT = -1f, guardHitT = -1f, parryTryT = -1f, guardOffX; Vector2 guardSq = Vector2.one;
+        bool GuardFrames() { return frameGuard && ParrySprite(0) != null && !ParryRevOn(); }
         Sprite ParrySprite(int i)
         {
             if (parryAttack2Reverse)
@@ -218,7 +237,7 @@ namespace RonniSkin
                 if (rimC == null && player != null) rimC = player.GetComponentInChildren<CharacterRim>(true);
                 if (rimC != null) rimC.RequestScan();
             }
-            if (frameBlendAtk4 && blendPrev != null && blendPrev != s && s.name.StartsWith("Attack4HD") && blendPrev.name.StartsWith("Attack4HD") && frameSR.enabled)
+            if (blendPrev != null && blendPrev != s && frameSR.enabled && ((frameBlendAtk4 && s.name.StartsWith("Attack4HD") && blendPrev.name.StartsWith("Attack4HD")) || (parryBlend && s.name.StartsWith("ParryHD_") && blendPrev.name.StartsWith("ParryHD_"))))
             {
                 var ai = new GameObject("~atk_afterimage");
                 ai.transform.position = blendPos; ai.transform.localScale = blendScale;
@@ -243,7 +262,7 @@ namespace RonniSkin
             frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x, L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y, 1f);
             UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
-            Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_") || s.name.StartsWith("ParryRev_")) off += parryOffset;
+            Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_") || s.name.StartsWith("ParryRev_")) off += parryOffset; if (s.name.StartsWith("ParryHD_")) off.x += parryAlignPx * rig.unitsPerPixel * Mathf.Abs(r.transform.lossyScale.y) * frameAtkPxScale; off.x += guardOffX; guardOffX = 0f;
             frameSR.transform.position = r.transform.position + new Vector3(off.x * fx, off.y, 0f);
             blendPrev = s; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
         }
@@ -589,7 +608,8 @@ namespace RonniSkin
         void UpdateCombat()
         {
             atkClip = null;
-            if (player.isDashing || (combat != null && combat.IsAttacking)) { defAtk = null; chiburiT = -1f; }   // saldırı / dash savunma animasyonunu keser
+            guardWant = false;
+            if (player.isDashing || (combat != null && combat.IsAttacking)) { defAtk = null; chiburiT = -1f; guardT = -1f; }   // saldırı / dash savunma animasyonunu keser
             // ---- dash: quick low lunge, everything streams back ----
             bool dashing = player.isDashing;
             if (dashing && !wasDashing) dashStart = Time.time;
@@ -632,13 +652,30 @@ namespace RonniSkin
             else if (postureHit && (blocking || parrying) && defClip != "guard_break") StartDef("block_hit");
             else if (parrying && !wasParrying && defClip != "parry_success") StartDef("parry");
             wasParrying = parrying;
+            // ---- v2: kare kare koruma (block / parry denemesi) ----
+            if (GuardFrames())
+            {
+                if (defClip != "guard_break") defClip = null;   // eski parry / block_hit aksiyonları (ana rig) koruma karesinin altından/arkasından görünmesin
+                bool g = blocking || parrying;
+                if (g)
+                {
+                    guardWant = true; chiburiT = -1f;
+                    if (guardT < 0f) guardT = 0f; else guardT += Time.deltaTime;
+                    if (postureHit && !(posture != null && posture.IsBroken)) { guardHitT = 0f; sqCur.x += guardHitSquash.x * squashAmount; sqCur.y += guardHitSquash.y * squashAmount; }
+                    if (parryEdge) parryTryT = 0f;
+                }
+                else guardT = -1f;
+                if (guardHitT >= 0f) { guardHitT += Time.deltaTime; if (guardHitT > guardHitTime) guardHitT = -1f; }
+                if (parryTryT >= 0f) { parryTryT += Time.deltaTime; if (parryTryT > parryTryTime) parryTryT = -1f; }
+            }
+            else { guardT = -1f; guardHitT = -1f; parryTryT = -1f; }
             bool pSucc = oldSucc && !parrySuccPrev; parrySuccPrev = oldSucc;
             if (frameParry && ParrySprite(0) != null)
             {
                 // Sadece BASARILI parry'de oynar (tusa basmak tek basina animasyon baslatmaz).
                 if (pSucc) { parryFrameT = 0f; parryFrameEnd = (ParryRevOn() ? parryRevFrameTime * 3f : parryF1Time + parryF2Time) + parryHoldAfterSuccess; }
             }
-            if (playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
+            if (!GuardFrames() && playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
             {
                 defClip = null;   // eski parry / block_hit klipleri bunun üstüne binmesin
                 float dtd = Time.deltaTime;
@@ -864,7 +901,38 @@ namespace RonniSkin
                     {
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
                         atkWasOn = false; defWasOn = false;
-                        ShowFrame(ParrySprite(ParryIndex(parryFrameT)));
+                        int pi = ParryIndex(parryFrameT);
+                        if (GuardFrames() && frameSquash && parrySquash != null && parrySquash.Length >= 3)
+                        {
+                            Vector2 pt = parrySquash[Mathf.Clamp(pi, 0, 2)];
+                            if (pi >= 2) { float hold = Mathf.Max(0.01f, parryFrameEnd - parryF1Time - parryF2Time); float hu = Mathf.Clamp01((parryFrameT - parryF1Time - parryF2Time) / hold); pt = Vector2.Lerp(pt, Vector2.one, hu * hu * (3f - 2f * hu)); }
+                            guardSq = Vector2.one + (pt - Vector2.one) * squashAmount; guardSqOn = true;
+                        }
+                        ShowFrame(ParrySprite(pi));
+                        guardSqOn = false;
+                    }
+                    else if (guardWant && mode == 0 && atkClip == null && !player.isDashing && GuardFrames())
+                    {
+                        // KORUMA: el çizimi koruma karesi (ParryHD_1) + hazırlık sıkışması + nefes + vuruş tepkisi + parry denemesi esnemesi
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
+                        atkWasOn = false; defWasOn = false; atkHoldT = 0f; atkRetT = 0f; atkFade = 0f; lastAtkFrames = false;
+                        float gt = Mathf.Max(0f, guardT);
+                        float ru = Sm01(gt / Mathf.Max(0.01f, guardRaiseTime));
+                        Vector2 sq = Vector2.Lerp(guardRaiseSquash, Vector2.one, ru);
+                        float br = guardBreath * Mathf.Sin(gt * Mathf.PI * 2f / Mathf.Max(0.2f, guardBreathPeriod)) * ru;
+                        sq += new Vector2(-br * 0.6f, br);
+                        if (parryTryT >= 0f) { float pu = 1f - Mathf.Clamp01(parryTryT / Mathf.Max(0.01f, parryTryTime)); sq += parryTryStretch * pu * pu; }
+                        if (guardHitT >= 0f)
+                        {
+                            float hu = Mathf.Clamp01(guardHitT / Mathf.Max(0.01f, guardHitTime));
+                            // hızlı geri itilme, yaylanarak yerine oturma
+                            float push = Mathf.Exp(-5f * hu) * Mathf.Cos(hu * Mathf.PI * 1.5f) * (1f - hu);
+                            guardOffX = -guardHitPush * push + Mathf.Sin(guardHitT * 95f) * guardHitShake * (1f - hu) * (1f - hu);
+                            sq += new Vector2(guardHitSquash.x, guardHitSquash.y) * (1f - hu) * (1f - hu) * (1f - hu);
+                        }
+                        guardSq = frameSquash ? Vector2.one + (sq - Vector2.one) * squashAmount : Vector2.one; guardSqOn = true;
+                        ShowFrame(ParrySprite(0));
+                        guardSqOn = false;
                     }
                     else if (framePend)
                     {
