@@ -64,6 +64,8 @@ namespace RonniSkin
         readonly List<Splat> splats = new List<Splat>();
 
         public bool Active { get { return active; } }
+        /// Saldırı rig klibi (attack1) sürerken köprü true yapar: kılıç sesi / kan damlası çalmaz (saldırı sesleri başka yerden gelir).
+        [HideInInspector] public bool quiet;
 
         /// Klip oynarken her karede çağır.
         public void Drive(RonniSkinRig r)
@@ -166,7 +168,7 @@ namespace RonniSkin
             if (sheathed && !wasSheathSfx && sfx && rig.Shown) PlaySheath();
             wasSheathSfx = sheathed;
             bool swingNow = fxTip != null && fxTip.localScale.y > 0.5f && !sheathed;
-            if (swingNow && !wasSwing && sfx && rig.Shown && Time.time - lastSwingT > 0.45f) PlaySwing();
+            if (swingNow && !wasSwing && sfx && !quiet && rig.Shown && Time.time - lastSwingT > 0.45f) PlaySwing();
             if (!swingNow && swingSrc != null && swingSrc.isPlaying) { swingSrc.volume = Mathf.MoveTowards(swingSrc.volume, 0f, Time.deltaTime * 9f); if (swingSrc.volume <= 0.001f) swingSrc.Stop(); }   // sallama bitti: ses de biter
             wasSwing = swingNow;
 
@@ -225,7 +227,7 @@ namespace RonniSkin
             }
             // kan: silkeleme anında bir kez
             bool dropNow = fxTip != null && fxTip.localScale.x > 0.5f;
-            if (dropNow && !wasDrop && blood && rig.Shown) SpawnDrops(root, upp, layer);
+            if (dropNow && !wasDrop && blood && !quiet && rig.Shown) SpawnDrops(root, upp, layer);
             wasDrop = dropNow;
         }
 
