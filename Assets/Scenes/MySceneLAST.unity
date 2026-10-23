@@ -7001,7 +7001,7 @@ SpriteRenderer:
   m_SortingOrder: 17
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 69c44162232cc8546b6cca8298a42379, type: 3}
-  m_Color: {r: 1, g: 1, b: 0, a: 0.45120004}
+  m_Color: {r: 1, g: 1, b: 0, a: 0.25267202}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -17797,7 +17797,7 @@ MonoBehaviour:
   horizonAnchor: {fileID: 1426343561}
   horizonY: -0.82385755
   lightOffset: {x: 0, y: 3.6000001}
-  windStrength: 2.5
+  windStrength: 3
   animateInEditMode: 0
   rays: []
   rayPulse: 0.35
@@ -18426,7 +18426,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed34d031d5cf43043ace4bbff9dfa18f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NearMoonRim
-  strength: 1
+  strength: 0.2
   moonColor: {r: 0.62, g: 0.8, b: 1.15, a: 1}
   duskAmount: 0.25
 --- !u!114 &627874783
