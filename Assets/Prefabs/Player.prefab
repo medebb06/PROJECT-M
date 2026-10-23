@@ -214,6 +214,7 @@ MonoBehaviour:
   idleFolder: RonniIdle
   idleScale: 1
   drawnIdleFolder: RonniIdleKatana
+  useTenka: 1
   standJumpFolder: RonniJump
   smearGlow: 6
   atkCutStart: 0.42
@@ -287,7 +288,7 @@ MonoBehaviour:
   blockRaise2: 0.18
   blockReturn2: 0.3
   idleDrawnPeriod2: 3.2
-  chiburiDur: 2.6
+  chiburiDur: 3
   chiSpinTime: 0.3
   chiSpinPhase: 0.62
   frameDash: 1
@@ -808,6 +809,109 @@ MonoBehaviour:
         maskHue: 0.9778
         maskRange: 0.045
         maskSoft: 0.02
+  - name: "Kare kare (sald\u0131r\u0131, dash, parry)"
+    folders:
+    - '#frames'
+    entries:
+    - category: HaoriOuter
+      slot:
+        hue: -121.0858
+        hueAbsolute: 0
+        satMul: 0.5838
+        satAdd: 0
+        gamma: 1
+        valMul: 0.3005
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: HaoriInner
+      slot:
+        hue: -124.199
+        hueAbsolute: 0
+        satMul: 0.8627
+        satAdd: 0
+        gamma: 1
+        valMul: 0.3899
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Gi
+      slot:
+        hue: 229.0909
+        hueAbsolute: 1
+        satMul: 0
+        satAdd: 0.1089
+        gamma: 1
+        valMul: 1.0464
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Belt
+      slot:
+        hue: -168.7779
+        hueAbsolute: 0
+        satMul: 1.6745
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4089
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Pants
+      slot:
+        hue: -163.3297
+        hueAbsolute: 0
+        satMul: 0.222
+        satAdd: 0
+        gamma: 1
+        valMul: 0.2229
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Feet
+      slot:
+        hue: -147.323
+        hueAbsolute: 0
+        satMul: 0.1204
+        satAdd: 0
+        gamma: 1
+        valMul: 0.8916
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Feet2
+      slot:
+        hue: 1.1177
+        hueAbsolute: 0
+        satMul: 0
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1234
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Saya
+      slot:
+        hue: -148.08
+        hueAbsolute: 0
+        satMul: 0
+        satAdd: 0
+        gamma: 1
+        valMul: 0.2794
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+  frameRendererName: Ronni_Atk1Frames
+  frameMapFolder: RonniFrameMaps
+  frameMaterialName: RonniFrameLit
 --- !u!1 &6518560691318549444
 GameObject:
   m_ObjectHideFlags: 0

@@ -10,7 +10,7 @@ namespace RonniSkin
     ///   fxMouth  scale.x = bıçak kının ağzında kırpılsın (kınının içi görünmez)
     ///   fxGlint  scale.x = parlama gücü (bıçak düzlemi kameraya döndüğünde)
     ///   fxTip    scale.x = kan damlası tetiği (silkeleme anı), scale.y = dönüş izi gücü
-    [DefaultExecutionOrder(150)]
+    [DefaultExecutionOrder(-100)]   // CharacterRim'den önce: gizlenen/gösterilen parçaların arka ışık kopyaları aynı karede eşitlensin
     public class RonniTenka : MonoBehaviour
     {
         [Header("Kılıç ölçüleri (kaynak piksel, kılıç ekseni üzerinde)")]
