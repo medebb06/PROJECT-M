@@ -19,6 +19,15 @@ public class SliceBloodFx : MonoBehaviour
     public static int SplatCount = 26;
     public static float SplatLife = 6f;
 
+    /// <summary>Gercek kan rengi: koyu kirmizi (r baskin, g/b cok az).</summary>
+    public static Color BloodColor(float shade, float a)
+    {
+        return new Color(shade, shade * Random.Range(0.02f, 0.06f), shade * Random.Range(0.03f, 0.08f), a);
+    }
+
+    private float k = 1f;
+    private int dropN, mistN, splatCap;
+
     private static Texture2D hardTex, softTex;
     private static Material hardMat, softMat;
     private static Sprite splatSprite;
@@ -48,10 +57,11 @@ public class SliceBloodFx : MonoBehaviour
     private readonly List<float> splatBorn = new List<float>();
     private readonly List<float> splatTarget = new List<float>();
 
-    public static void Burst(Vector2 center, Vector2 cutDir, Vector2 cutNormal, Bounds bounds, float groundY, int sortingLayerId, int sortingOrder, float z, float side)
+    public static void Burst(Vector2 center, Vector2 cutDir, Vector2 cutNormal, Bounds bounds, float groundY, int sortingLayerId, int sortingOrder, float z, float side, float scale = 1f)
     {
         GameObject go = new GameObject("SliceBlood");
         SliceBloodFx fx = go.AddComponent<SliceBloodFx>();
+        fx.k = scale;
         fx.Init(center, cutDir, cutNormal, bounds, groundY, sortingLayerId, sortingOrder, z, side);
     }
 
@@ -151,6 +161,10 @@ public class SliceBloodFx : MonoBehaviour
     {
         EnsureAssets();
 
+        dropN = Mathf.Max(4, Mathf.RoundToInt(DropCount * k));
+        mistN = Mathf.Max(1, Mathf.RoundToInt(MistCount * k));
+        splatCap = Mathf.Max(3, Mathf.RoundToInt(SplatCount * k));
+
         c = center;
         u = cutDir.normalized;
         n = cutNormal.normalized;
@@ -164,11 +178,11 @@ public class SliceBloodFx : MonoBehaviour
 
         transform.position = new Vector3(c.x, c.y, z);
 
-        drops = MakeSystem("Drops", hardMat, DropCount * 2, true);
+        drops = MakeSystem("Drops", hardMat, dropN * 2, true);
         var dm = drops.main;
         dm.gravityModifier = Gravity / Mathf.Max(0.1f, Mathf.Abs(Physics.gravity.y));
 
-        mist = MakeSystem("Mist", softMat, MistCount * 2, false);
+        mist = MakeSystem("Mist", softMat, mistN * 2, false);
         mist.GetComponent<ParticleSystemRenderer>().sortingOrder = order - 1;
 
         var col = mist.colorOverLifetime;
@@ -194,12 +208,12 @@ public class SliceBloodFx : MonoBehaviour
             ep.velocity = Vector3.zero;
             ep.startLifetime = Random.Range(0.12f, 0.2f);
             ep.startSize = Random.Range(0.7f, 1.3f) * Power;
-            ep.startColor = new Color(0.3f, 1f, 0.25f, 0.75f);
+            ep.startColor = new Color(0.78f, 0.04f, 0.05f, 0.75f);
             flash.Emit(ep, 1);
         }
 
         // sis
-        for (int i = 0; i < MistCount; i++)
+        for (int i = 0; i < mistN; i++)
         {
             ParticleSystem.EmitParams ep = new ParticleSystem.EmitParams();
             ep.position = new Vector3(c.x + side * Random.Range(halfW * 0.5f, halfW * 1.0f), c.y, z) + (Vector3)(u * Random.Range(-len * 0.3f, len * 0.3f));
@@ -207,7 +221,7 @@ public class SliceBloodFx : MonoBehaviour
             ep.velocity = v;
             ep.startLifetime = Random.Range(0.55f, 1.0f);
             ep.startSize = Random.Range(0.5f, 1.1f) * Power;
-            ep.startColor = new Color(0.04f, Random.Range(0.35f, 0.55f), 0.06f, 1f);
+            ep.startColor = new Color(Random.Range(0.35f, 0.55f), 0.02f, 0.03f, 1f);
             mist.Emit(ep, 1);
         }
 
@@ -252,7 +266,7 @@ public class SliceBloodFx : MonoBehaviour
             ep.startSize *= Power;
 
             float shade = Random.Range(0.45f, 0.9f);
-            ep.startColor = new Color(shade * Random.Range(0.05f, 0.14f), shade, shade * Random.Range(0.08f, 0.2f), 1f);
+            ep.startColor = BloodColor(shade, 1f);
 
             drops.Emit(ep, 1);
         }
@@ -276,7 +290,7 @@ public class SliceBloodFx : MonoBehaviour
         {
             if (buf[i].position.y > groundY) continue;
 
-            if (makeSplat && splatsMade < SplatCount && Random.value < 0.7f)
+            if (makeSplat && splatsMade < splatCap && Random.value < 0.7f)
             {
                 Splat sp = new Splat();
                 sp.time = 0f;
@@ -298,13 +312,13 @@ public class SliceBloodFx : MonoBehaviour
         age += Time.deltaTime;
 
         // fışkırma: başta yoğun, sonra azalır
-        if (emitted < DropCount)
+        if (emitted < dropN)
         {
             float k = Mathf.Clamp01(age / EmitTime);
-            float target = DropCount * (1f - (1f - k) * (1f - k));
+            float target = dropN * (1f - (1f - k) * (1f - k));
             int add = Mathf.Max(0, Mathf.FloorToInt(target - emitted));
 
-            if (age <= 0.0001f) add = Mathf.Max(add, DropCount * 3 / 4);
+            if (age <= 0.0001f) add = Mathf.Max(add, dropN * 3 / 4);
 
             if (add > 0)
             {
@@ -368,10 +382,64 @@ public class SliceBloodFx : MonoBehaviour
         sr.sortingLayerID = layerId;
         sr.sortingOrder = order - 5;
         float shade = Random.Range(0.35f, 0.7f);
-        sr.color = new Color(shade * 0.06f, shade, shade * 0.1f, 0.9f);
+        sr.color = BloodColor(shade * 0.85f, 0.9f);
 
         splats.Add(sr);
         splatBorn.Add(age);
         splatTarget.Add(s.size);
+    }
+}
+
+/// <summary>HER VURUSTA KAN: oyuncu bir dusmana isabet ettirince (can/denge) kisa kan sicramasi.</summary>
+public static class HitBloodFx
+{
+    public static bool Enabled = true;
+    public static float HealthScale = 0.55f;
+    public static float BalanceScale = 0.3f;
+    public static float KillScale = 0.8f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void Reset() { CombatEvents.EnemyHit -= OnHit; CombatEvents.EnemyHit += OnHit; }
+
+    static void OnHit(EnemyBase e, DamageInfo d, HitResult r)
+    {
+        if (!Enabled || e == null || !r.hit || r.amount <= 0) return;
+        float k = r.killed ? KillScale : (r.onBalance ? BalanceScale : HealthScale);
+        if (r.critical) k *= 1.3f;
+
+        Collider2D col = e.GetComponentInChildren<Collider2D>();
+        Bounds b;
+        if (col != null) b = col.bounds;
+        else b = new Bounds(e.transform.position + Vector3.up * 0.8f, new Vector3(0.8f, 1.6f, 0.1f));
+
+        Renderer rend = e.GetComponentInChildren<SpriteRenderer>();
+        int layer = rend != null ? rend.sortingLayerID : 0;
+        int order = rend != null ? rend.sortingOrder : 0;
+
+        float s = Mathf.Abs(d.direction.x) > 0.01f ? Mathf.Sign(d.direction.x) : 0f;
+        if (s == 0f)
+        {
+            var pc = Object.FindAnyObjectByType<PlayerController>();
+            s = pc != null && !Mathf.Approximately(pc.transform.position.x, e.transform.position.x) ? Mathf.Sign(e.transform.position.x - pc.transform.position.x) : 1f;
+        }
+
+        Vector2 c = d.hitPosition != Vector3.zero ? (Vector2)d.hitPosition : (Vector2)b.center;
+        c.x = Mathf.Clamp(c.x, b.min.x, b.max.x);
+        c.y = Mathf.Clamp(c.y, b.min.y + 0.2f, b.max.y);
+
+        float feetY = b.min.y;
+        float groundY = feetY - 0.05f;
+        var hits = Physics2D.RaycastAll(new Vector2(b.center.x, feetY + 0.4f), Vector2.down, 3f);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            var h = hits[i].collider;
+            if (h == null || h.isTrigger || h.transform.IsChildOf(e.transform)) continue;
+            if (h.GetComponentInParent<EnemyBase>() != null || h.GetComponentInParent<PlayerController>() != null) continue;
+            groundY = hits[i].point.y; break;
+        }
+
+        Vector2 u = new Vector2(-0.35f * s, 1f).normalized;
+        Vector2 n = new Vector2(1f, 0.35f * s).normalized;
+        SliceBloodFx.Burst(c, u, n, b, groundY, layer, order, e.transform.position.z, s, k);
     }
 }

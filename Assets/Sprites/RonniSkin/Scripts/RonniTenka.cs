@@ -33,11 +33,11 @@ namespace RonniSkin
         public bool smear = true;
         [Range(0f, 1f)] public float smearAlpha = 0.5f;
         public Color smearColor = new Color(0.86f, 0.93f, 1f, 1f);
-        [Header("Kan (düşman kanı: yeşil) — silkeleme anında")]
+        [Header("Kan (gerçek kan rengi) — silkeleme anında")]
         public bool blood = true;
         public int dropCount = 22;
-        [Tooltip("Düşman kanıyla aynı yeşil (SliceBloodFx). Her damla bunun açık/koyu tonunu alır.")]
-        public Color dropColor = new Color(0.08f, 0.8f, 0.12f, 1f);
+        [Tooltip("Artik SliceBloodFx.BloodColor kullanilir (koyu kirmizi, ton rastgele).")]
+        public Color dropColor = new Color(0.8f, 0.03f, 0.04f, 1f);
         [Tooltip("Rig birimi / sn (1 birim = 1000 kaynak piksel).")] public float dropSpeed = 3.4f;
         public float dropGravity = 16f, dropLife = 1.4f;
         [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(60f, 130f);
@@ -167,6 +167,7 @@ namespace RonniSkin
             wasSheathSfx = sheathed;
             bool swingNow = fxTip != null && fxTip.localScale.y > 0.5f && !sheathed;
             if (swingNow && !wasSwing && sfx && rig.Shown && Time.time - lastSwingT > 1.5f) PlaySwing();
+            if (!swingNow && swingSrc != null && swingSrc.isPlaying) { swingSrc.volume = Mathf.MoveTowards(swingSrc.volume, 0f, Time.deltaTime * 9f); if (swingSrc.volume <= 0.001f) swingSrc.Stop(); }   // sallama bitti: ses de biter
             wasSwing = swingNow;
 
 
@@ -321,7 +322,7 @@ namespace RonniSkin
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = circleHard; if (fxMat != null) sr.sharedMaterial = fxMat;   // beyaz daire: renk tam uygulanır
                 float shade = Random.Range(0.45f, 0.9f);   // SliceBloodFx damla tonları
-                Color c = new Color(shade * Random.Range(0.05f, 0.14f) * dropColor.r / 0.08f, shade * dropColor.g / 0.8f, shade * Random.Range(0.08f, 0.2f) * dropColor.b / 0.12f, 1f);
+                Color c = SliceBloodFx.BloodColor(shade, 1f);
                 sr.color = c;
                 sr.sortingLayerName = layer; sr.sortingOrder = order;
                 Vector3 vLocal = (swing * (0.6f + 0.6f * f) + fwd * 0.55f + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(-0.2f, 0.3f), 0f)) * dropSpeed * Random.Range(0.6f, 1.1f);
@@ -366,7 +367,7 @@ namespace RonniSkin
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = circleHard; if (fxMat != null) sr.sharedMaterial = fxMat;
             float sh = Random.Range(0.35f, 0.7f);   // SliceBloodFx leke tonları
-            var c = new Color(sh * 0.06f * dropColor.r / 0.08f, sh * dropColor.g / 0.8f, sh * 0.1f * dropColor.b / 0.12f, 0.9f); sr.color = c;
+            var c = SliceBloodFx.BloodColor(sh * 0.85f, 0.9f); sr.color = c;
             sr.sortingLayerName = d.layer; sr.sortingOrder = d.order;
             splats.Add(new Splat { sr = sr, age = 0f, w = Random.Range(splatPx.x, splatPx.y) * upp * sc });
         }
