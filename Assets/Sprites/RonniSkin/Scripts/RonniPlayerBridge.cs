@@ -181,16 +181,26 @@ namespace RonniSkin
             k = Mathf.Min(k, hitKickMax);
             hitSpr = new Vector2(k, -k * 0.85f);
             hitSprVel = Vector2.zero;
+            // B: vuruşta karakter öne itilir + öne eğilir; yay geri tepmeyle (recoil) oturur. Son kombo vuruşu en güçlüsü.
+            float m = hitLungeMul * (step >= 4 ? 1.9f : 1f + 0.12f * Mathf.Max(0, step - 1));
+            hitFlow = new Vector2(0.028f * m, 3.2f * m);
+            hitFlowVel = Vector2.zero;
         }
+        [Tooltip("Vuruşta öne itilme / eğilme / geri tepme çarpanı (0 = kapalı).")] public float hitLungeMul = 1f;
+        Vector2 hitFlow, hitFlowVel;   // x: ileri kayma (sprite boyu oranı), y: öne eğilme (derece)
         [Header("Vuruş darbesi (yaylı squash)")]
         [Tooltip("Vuruş darbesi çarpanı (CombatImpactFeedback.hitKick x bu). 1 = eski, 2.5 = belirgin.")] public float hitKickMul = 2.5f;
         [Tooltip("Tek vuruşta en fazla ölçek sapması.")] public float hitKickMax = 0.28f;
         [Tooltip("Yay hızı (rad/s). Büyük = daha hızlı titrer.")] public float hitSprOmega = 30f;
         [Tooltip("Sönüm (0..1). Küçük = daha çok yaylanır.")] [Range(0.1f, 1f)] public float hitSprZeta = 0.34f;
         Vector2 hitSpr, hitSprVel;
+        [Header("Parry darbesi (başarılı parry'de yaylı squash)")]
+        [Tooltip("Başarılı parry'de darbe çarpanı (0 = kapalı).")] public float parryPopAmount = 1f;
+        [Tooltip("Çarpma anı ezilme (x genişler, y basılır); yay bırakınca yukarı/ileri uzayıp oturur.")] public Vector2 parryPopSquash = new Vector2(0.2f, -0.17f);
+        [Tooltip("Çarpmanın geri itmesi: (geri kayma = sprite boyu oranı, geriye eğilme derece). Yay bırakınca öne doğru savrulur.")] public Vector2 parryPopRecoil = new Vector2(-0.03f, -3.5f);
         void TickHitSpring()
         {
-            if (hitSpr == Vector2.zero && hitSprVel == Vector2.zero) return;
+            if (hitSpr == Vector2.zero && hitSprVel == Vector2.zero && hitFlow == Vector2.zero && hitFlowVel == Vector2.zero) return;
             float dt = Mathf.Min(Time.deltaTime, 0.033f);
             if (dt <= 0f) return;   // hit-stop: sapma donuk kalır
             int steps = Mathf.Clamp(Mathf.CeilToInt(dt / 0.008f), 1, 5);
@@ -199,7 +209,10 @@ namespace RonniSkin
             {
                 hitSprVel += (-w2 * hitSpr - c * hitSprVel) * h;
                 hitSpr += hitSprVel * h;
+                hitFlowVel += (-w2 * 0.8f * hitFlow - c * 0.9f * hitFlowVel) * h;
+                hitFlow += hitFlowVel * h;
             }
+            if (hitFlow.sqrMagnitude < 1e-7f && hitFlowVel.sqrMagnitude < 1e-5f) { hitFlow = Vector2.zero; hitFlowVel = Vector2.zero; }
             if (hitSpr.sqrMagnitude < 1e-6f && hitSprVel.sqrMagnitude < 1e-4f) { hitSpr = Vector2.zero; hitSprVel = Vector2.zero; }
         }
         Vector2 SquashTarget(Sprite s)
@@ -342,8 +355,8 @@ namespace RonniSkin
             float flowH = L * s.rect.height / Mathf.Max(1f, s.pixelsPerUnit);
             Vector3 flowT = FlowTarget(s);
             if (!flowWasOn) flowCur = Vector3.zero; else flowCur = Vector3.Lerp(flowCur, flowT, 1f - Mathf.Exp(-flowSpeed * Time.deltaTime));
-            frameSR.transform.rotation = Quaternion.Euler(0f, 0f, -flowCur.z * fx);
-            frameSR.transform.position = r.transform.position + new Vector3(off.x * fx + flowCur.x * fx * flowH, off.y + flowCur.y * flowH, 0f);
+            frameSR.transform.rotation = Quaternion.Euler(0f, 0f, -(flowCur.z + hitFlow.y) * fx);
+            frameSR.transform.position = r.transform.position + new Vector3(off.x * fx + (flowCur.x + hitFlow.x) * fx * flowH, off.y + flowCur.y * flowH, 0f);
             blendPrev = s; blendRot = frameSR.transform.rotation; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
         }
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
@@ -757,6 +770,7 @@ namespace RonniSkin
             }
             else { guardT = -1f; guardHitT = -1f; parryTryT = -1f; }
             bool pSucc = oldSucc && !parrySuccPrev; parrySuccPrev = oldSucc;
+            if (pSucc && frameSquash && parryPopAmount > 0f) { hitSpr = parryPopSquash * parryPopAmount; hitSprVel = Vector2.zero; hitFlow = parryPopRecoil * parryPopAmount; hitFlowVel = Vector2.zero; }
             if (frameParry && ParrySprite(0) != null)
             {
                 // Sadece BASARILI parry'de oynar (tusa basmak tek basina animasyon baslatmaz).
