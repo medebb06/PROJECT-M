@@ -298,6 +298,12 @@
    "parent": "armR_end",
    "x": 850,
    "y": 2600
+  },
+  {
+   "name": "tsukaB",
+   "parent": "katana",
+   "x": 1519.0,
+   "y": 2172.0
   }
  ],
  "parts": [
@@ -567,11 +573,49 @@
    ],
    "wPow": 4,
    "wFall": 0.12,
-   "hidden": false,
+   "hidden": true,
    "grid": [
     16,
     5
    ]
+  },
+  {
+   "name": "idle_kin",
+   "x": 1476,
+   "y": 2125,
+   "w": 1256,
+   "h": 886,
+   "order": 14,
+   "runOrder": 14,
+   "actOrder": 14,
+   "bones": [
+    "katana",
+    "katTip",
+    "katEnd"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false,
+   "grid": [
+    12,
+    6
+   ]
+  },
+  {
+   "name": "idle_tsuka",
+   "x": 753,
+   "y": 1871,
+   "w": 792,
+   "h": 410,
+   "order": 15,
+   "runOrder": 15,
+   "actOrder": 15,
+   "bones": [
+    "tsukaB"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": false
   },
   {
    "name": "idle_sol_haori",
@@ -579,9 +623,9 @@
    "y": 1517,
    "w": 592,
    "h": 1512,
-   "order": 14,
-   "runOrder": 14,
-   "actOrder": 14,
+   "order": 16,
+   "runOrder": 16,
+   "actOrder": 16,
    "bones": [
     "hL1",
     "hL2",
@@ -605,9 +649,9 @@
    "y": 2153,
    "w": 473,
    "h": 293,
-   "order": 15,
-   "runOrder": 15,
-   "actOrder": 15,
+   "order": 17,
+   "runOrder": 17,
+   "actOrder": 17,
    "bones": [
     "slL1",
     "slL2",
@@ -627,9 +671,9 @@
    "y": 2096,
    "w": 327,
    "h": 671,
-   "order": 16,
-   "runOrder": 16,
-   "actOrder": 16,
+   "order": 18,
+   "runOrder": 18,
+   "actOrder": 18,
    "bones": [
     "armL1",
     "armL2",
@@ -649,9 +693,9 @@
    "y": 1601,
    "w": 579,
    "h": 833,
-   "order": 17,
-   "runOrder": 17,
-   "actOrder": 17,
+   "order": 19,
+   "runOrder": 19,
+   "actOrder": 19,
    "bones": [
     "slL1",
     "slL2",
@@ -671,9 +715,9 @@
    "y": 622,
    "w": 868,
    "h": 940,
-   "order": 18,
-   "runOrder": 18,
-   "actOrder": 18,
+   "order": 20,
+   "runOrder": 20,
+   "actOrder": 20,
    "bones": [
     "head"
    ],
@@ -687,9 +731,9 @@
    "y": 572,
    "w": 1337,
    "h": 889,
-   "order": 19,
-   "runOrder": 19,
-   "actOrder": 19,
+   "order": 21,
+   "runOrder": 21,
+   "actOrder": 21,
    "bones": [
     "head",
     "fringe1",
@@ -711,9 +755,9 @@
    "y": 1055,
    "w": 452,
    "h": 139,
-   "order": 20,
-   "runOrder": 20,
-   "actOrder": 20,
+   "order": 22,
+   "runOrder": 22,
+   "actOrder": 22,
    "bones": [
     "head"
    ],
@@ -727,9 +771,9 @@
    "y": 1155,
    "w": 87,
    "h": 149,
-   "order": 21,
-   "runOrder": 21,
-   "actOrder": 21,
+   "order": 23,
+   "runOrder": 23,
+   "actOrder": 23,
    "bones": [
     "eyeA"
    ],
@@ -743,9 +787,9 @@
    "y": 1189,
    "w": 73,
    "h": 131,
-   "order": 22,
-   "runOrder": 22,
-   "actOrder": 22,
+   "order": 24,
+   "runOrder": 24,
+   "actOrder": 24,
    "bones": [
     "eyeB"
    ],
