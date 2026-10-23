@@ -11,7 +11,7 @@ public class PlayerInputHandler : MonoBehaviour
     private PlayerDefenseController defense;
 
     /// <summary>Parry penceresi acikken (basarili olana ya da bitene kadar) dash baslamaz; tus tamponda bekler.</summary>
-    public static bool LockDashWhileParrying = true;
+    public static bool LockDashWhileParrying = false;   // dash parry'yi de böler
 
     public void Initialize(PlayerController controller)
     {

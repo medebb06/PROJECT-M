@@ -396,6 +396,8 @@ private IEnumerator FocusSlashRoutine()
         // Bar tamamen doluysa tutarak TAM versiyon atılabilir; aksi halde / erken bırakılırsa hafif versiyon (1 seviye).
         bool canFull = FocusFull;
         bool completed = false;
+        int fsf = Time.frameCount;
+        bool cutByDash = false;
 
         // Tam versiyon KIRMIZI, hafif (tek seviye) versiyon BEYAZ.
         Color c = FocusLevelColor(FocusLevel);
@@ -434,6 +436,12 @@ private IEnumerator FocusSlashRoutine()
                     break;
                 }
 
+                if (castInterruptFrame >= fsf)
+                {
+                    cutByDash = true;
+                    break;
+                }
+
                 if (!MobileInput.GetKey(key) || t >= focusMaxHold)
                     break;
 
@@ -443,7 +451,11 @@ private IEnumerator FocusSlashRoutine()
             RunCameraZoom.AbilityFocus = false;
             RunCameraZoom.AbilityPunchRequest = true;
 
-            if (completed)
+            if (cutByDash)
+            {
+                // dash böldü: atış yok
+            }
+            else if (completed)
                 CastFocusFull(c);
             else
                 CastFocusLight(c);
@@ -1158,12 +1170,18 @@ private void SpawnFocusFx(float scaleMul, Color color)
 
     private bool windSheathing;
 
+    // Dash her şeyi böler: kilitli yetenek rutinleri (odak, kın, yetenek atılımı) bu kareden sonra kesilir.
+    private int castInterruptFrame = -1;
+    public void InterruptCasting() { castInterruptFrame = Time.frameCount; }
+
     // Kınına sokma: kilitli + savunmasız. Vurulursan bozulur (patlama yok).
     private IEnumerator WindSheath(WindCharge wc)
     {
         windSheathing = true;
 
         bool interrupted = false;
+        int wsf = Time.frameCount;
+        bool dashCut = false;
 
         Action<PlayerDamageReport> onHurt = r =>
         {
@@ -1188,6 +1206,12 @@ private void SpawnFocusFx(float scaleMul, Color color)
         {
             while (t < windSheathTime)
             {
+                if (castInterruptFrame >= wsf)
+                {
+                    dashCut = true;
+                    break;
+                }
+
                 if (interrupted || player == null || (health != null && health.IsDead))
                     break;
 
@@ -1213,6 +1237,9 @@ private void SpawnFocusFx(float scaleMul, Color color)
             if (wc != null)
                 wc.SetGlow(0f);
         }
+
+        if (dashCut)
+            yield break;
 
         if (interrupted)
         {
@@ -1335,6 +1362,7 @@ private void SpawnFocusFx(float scaleMul, Color color)
     private IEnumerator DashSlashRoutine(WindCharge wc)
     {
         dashSlashing = true;
+        int dsf = Time.frameCount;
 
         Color c = AbilityInfo.Color(AbilityType.DashSlash);
 
@@ -1363,6 +1391,9 @@ private void SpawnFocusFx(float scaleMul, Color color)
                 lockedNow = elapsed < dashLockTime;
 
                 // Süzülme kısmında başka girdiler atılımı böler (kontrol hemen oyuncuya döner).
+                if (castInterruptFrame >= dsf)
+                    break;
+
                 if (!lockedNow && (windSheathing || DashInterrupted()))
                     break;
 

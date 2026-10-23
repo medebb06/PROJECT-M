@@ -63,7 +63,7 @@ public class EnemyArena : MonoBehaviour
         if (MainMenu.Active) return;
 
         // P: sonsuz düşman döngüsü | O: yetenek barı hep dolu | I: ölümsüzlük (hepsi aç/kapa)
-        if (Input.GetKeyDown(KeyCode.P)) ToggleEndless();
+        if (Input.GetKeyDown(KeyCode.P) && !Charms.KuroyoruMode) ToggleEndless();
         if (Input.GetKeyDown(KeyCode.O)) ToggleInfiniteBar();
         if (Input.GetKeyDown(KeyCode.I)) ToggleGod();
     }
@@ -115,6 +115,37 @@ public class EnemyArena : MonoBehaviour
     private void Start()
     {
         if (disableRain) SetRain(false);
+        if (Charms.KuroyoruMode) BeginKuroyoru();   // KUROYORU'da R ile yeniden başlayınca mod devam eder
+    }
+
+    [Header("Kuroyoru modu")]
+    [Tooltip("Kaç öldürmede bir charm seçimi çıkar.")]
+    public int kuroyoruKillsPerPick = 20;
+    [Tooltip("Mod başlayınca ilk düşmanın gelmesine kadar bekleme (gerçek sn).")]
+    public float kuroyoruStartGrace = 2.5f;
+
+    // Sonsuz mod + tek vuruşta ölüm + her 20 öldürmede +%2 charm seçimi.
+    public void BeginKuroyoru()
+    {
+        KillAll();   // (mod bayrağı henüz kapalı: eski düşmanlar sayılmasın)
+        Charms.ClearStacks();
+        Charms.KuroyoruMode = true;
+        focusTest = false;
+        queue.Clear();
+        endless = true;
+        kills = 0;
+        aliveEndless = 0;
+        nextEndlessAt = Time.unscaledTime + kuroyoruStartGrace;
+        endlessSide = -1;
+        endlessOver = false;
+    }
+
+    private System.Collections.IEnumerator OpenPickerSoon()
+    {
+        yield return new WaitForSecondsRealtime(0.6f);   // son öldürmenin efekti bitsin
+        Transform p = Player;
+        Health ph = p != null ? p.GetComponent<Health>() : null;
+        if (Charms.KuroyoruMode && (ph == null || !ph.IsDead)) KuroyoruPicker.Open();
     }
 
     private void SetRain(bool on)
@@ -207,6 +238,7 @@ public class EnemyArena : MonoBehaviour
     private void TickEndless()
     {
         if (!endless || entries.Count == 0) return;
+        if (KuroyoruPicker.IsOpen) return;
         Transform p = Player;
         if (p == null) return;
         Health ph = p.GetComponent<Health>();
@@ -241,6 +273,9 @@ public class EnemyArena : MonoBehaviour
     {
         aliveEndless = Mathf.Max(0, aliveEndless - 1);
         kills++;
+        if (Charms.KuroyoruMode && kuroyoruKillsPerPick > 0 && kills % kuroyoruKillsPerPick == 0)
+            StartCoroutine(OpenPickerSoon());
+        if (Charms.KuroyoruMode) return;   // tek vuruşta öldüğümüz için can doldurmaya gerek yok
         Transform p = Player;
         if (p == null) return;
         Health ph = p.GetComponent<Health>();
@@ -401,7 +436,12 @@ private void TickFocusTest()
         big.normal.textColor = Color.white;
 
         string line = "";
-        if (endless) line += "SONSUZ MOD   Öldürme: " + kills + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
+        if (endless && Charms.KuroyoruMode)
+        {
+            int per = Mathf.Max(1, kuroyoruKillsPerPick);
+            line += "KUROYORU   Öldürme: " + kills + "   |   sonraki charm: " + (per - kills % per) + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
+        }
+        else if (endless) line += "SONSUZ MOD   Öldürme: " + kills + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
         if (bar) line += (line.Length > 0 ? "   |   " : "") + "BAR FULL";
         if (godMode) line += (line.Length > 0 ? "   |   " : "") + "ÖLÜMSÜZ";
         GUI.Label(new Rect(0, 8, Screen.width, 32), line, big);

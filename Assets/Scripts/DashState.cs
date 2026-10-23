@@ -29,7 +29,7 @@ public class DashState : IPlayerState
     public const float DurationScale = 2.5f;
 
     // Dash mesafesi çarpanı (dashDistance * bu).
-    public const float DistanceScale = 1.3f;
+    public const float DistanceScale = 1.45f;
 
     // Havada tek dash: yere degene kadar ikinci dash yok (PlayerMovement.GroundCheck sifirlar).
     public static bool AirDashUsed = false;
@@ -93,6 +93,7 @@ public class DashState : IPlayerState
         dir = player.GetDashDirection();
 
         speed = player.dashDistance * DistanceScale / (player.dashTime * DurationScale);
+        speed *= MoveChain.Begin(player.dashTime * DurationScale);   // zincirde art arda hareket: mesafe azalır
 
         // collision layer save
         originalLayer = player.gameObject.layer;
@@ -156,7 +157,7 @@ public class DashState : IPlayerState
 
         // Dash bir dusmanin (ozellikle genis boss govdesinin) icinde bittiyse fizigin yavas
         // itmesini bekleme: en yakin kenara hemen al.
-        HitboxUtil.EjectFromEnemies(player);
+        HitboxUtil.EjectFromEnemies(player, dir);   // düşmanın içinde bittiyse dash yönünde (arkasına) çık
 
         player.dashCooldownTimer = player.dashCooldown * player.dashCooldownScale;
 
@@ -166,7 +167,7 @@ public class DashState : IPlayerState
         // dash çıkışında momentum koru
         Vector2 vel = player.rb.linearVelocity;
 
-        vel.x = dir * player.moveSpeed * (endedByCancel ? DashExitSpeedCancel : DashExitSpeedNatural);
+        vel.x = dir * player.moveSpeed * (endedByCancel ? MoveChain.ExitSpeedMult : DashExitSpeedNatural);
 
         player.SetVelocity(vel);
 
@@ -189,31 +190,7 @@ public class DashState : IPlayerState
     {
         timer -= Time.deltaTime;
 
-        float live = MobileInput.GetAxisRaw("Horizontal");
-
-        if (
-            Mathf.Abs(live) > 0.1f &&
-            Mathf.Sign(live) != dir &&
-            !redirected &&
-            total > 0f &&
-            (1f - timer / total) < RedirectWindow
-        )
-        {
-            dir = Mathf.Sign(live);
-            player.facingDir = dir;
-
-            // Ters yöne dönünce dash YENİDEN başlar (tam mesafe): aksi halde kalan kuyruk
-            // sağ gidişi yarım yamalak geri alır ve oyuncu olduğu yerde kalır.
-            if (!redirected)
-            {
-                redirected = true;
-                timer = total;
-                blendTimer = 0.18f;
-            }
-
-            if (player.playerSprite != null)
-                player.playerSprite.flipX = dir < 0f;
-        }
+        // Dash boyunca YÖN DEĞİŞMEZ; dash bitince oyuncu istediği yöne döner (eski ters yöne yönlendirme kaldırıldı).
 
         // Zıplama / saldırı / parry isteği dash sırasında hatırlanır; dash'in son kısmında
         // (yavaş kuyruk) varsa dash erken biter ve istek hemen çalışır.

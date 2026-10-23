@@ -162,6 +162,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // Varsayılan knockback değerleriyle hasar al.
     // --------------------------------------------------
 
+    // Test: [I] tuşu ölümsüzlük (EnemyArena).
+    public static bool GodMode;
+
     public static float FixedHitPercent = 0.2f;
 
     /// <summary>GiantWarrior'in isabetleri: max canin bu orani (0 = FixedHitPercent kullan).</summary>
@@ -169,9 +172,6 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
 
     // Düşman saldırısı bu tek vuruş için max canın yüzdesini (ağır vuruş) belirler; TakeDamage tüketir.
     [System.NonSerialized] public float hitPercentOverrideOnce;
-
-    /// <summary>Ölümsüzlük (I tuşu): açıkken hiçbir vuruş işlemez.</summary>
-    public static bool GodMode;
 
     public void TakeDamage(int damage, Vector2 hitDirection)
     {
@@ -260,6 +260,10 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
             if (hitPct > 0f && health.MaxHealth > 0)
                 damage = Mathf.Max(1, Mathf.CeilToInt(health.MaxHealth * hitPct));
         }
+
+        // KUROYORU: aldığımız her hasar öldürür.
+        if (Charms.KuroyoruMode && damage > 0)
+            damage = Mathf.Max(damage, health.CurrentHealth);
 
         int healthBefore = health.CurrentHealth;
 

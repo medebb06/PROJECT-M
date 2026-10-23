@@ -640,3 +640,37 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - TeleportToMouse (T = imlece ışınlan) kullanıcı isteğiyle GERİ ALINDI (yukarıdaki kaldırılanlar listesinden çıkar).
 - GÜNCELLEME: arkadan vuruş artık posture'ı ATLAMIYOR (önden gibi normal posture vurur). Arkadan sadece "ARKADAN!" yazısı ve can katmanına ulaşan hasarda x1.5 kaldı.
 - GÜNCELLEME 2: arkadan vuruş = posture normal + cana HER ZAMAN ayrıca x1.5 can hasarı (posture olsa da). `BackHitDamageMultiplier` ile ayarlanır. Sağlık katmanındaki eski x1.5 de duruyor (posture kırıkken zaten can katmanına düşer).
+
+
+## Dash: yön kilidi + her şeyi böler
+- Scripts/DashState.cs: dash sırasında ters yöne tuşla yön değiştirme (RedirectWindow bloğu) KALDIRILDI. Yön dash başlangıcında belirlenir, dash bitince değişir.
+- Scripts/PlayerController.cs: `TryDashInterrupt()` (Update'te ReadInput'tan sonra). Kilitli durumlarda (canControl=false / inputLocked / PlayerHurtState / PlayerPostureBreakState / LedgeClimbState) dash tamponu varsa dash'e zorla geçer. Havada tek-dash kuralı (AirDashUsed) ve bekleme süresi korunur. Ölüm / menü / duraklatmada çalışmaz.
+- Scripts/PlayerInputHandler.cs: `LockDashWhileParrying=false` (parry de dash ile bölünür).
+- Scripts/PlayerAbility.cs: `InterruptCasting()` — odak (FocusSlashRoutine, atış iptal), kına sokma (WindSheath) ve yetenek atılımı (DashSlashRoutine) dash ile kesilir.
+- Saldırı / savunma / chiburi zaten dash'te iptal ediliyordu (DashState.Enter, RonniPlayerBridge).
+- Yedek: Assets/_BackupDash~/. Test: play modda kilitli durum -> DashState'e geçiş doğrulandı (tuş basışı değil, tampon enjekte edilerek). Yön kilidi kod okuyarak doğrulandı, oyunda elle denenmedi.
+- Not: ExecutionSlide (infaz kayması) ve boss tarafı kapsam dışı.
+
+
+## Hareket zinciri (vur-kaç istikrarı)
+- YENİ Scripts/MoveChain.cs: dash, infaz kayması ve parry atılması art arda gelince mesafe azalır: zincir penceresi 0.7 sn (önceki hareketin tahmini bitişinden sonra), çarpanlar 1 / 0.8 / 0.65 / 0.55. Ayarlar: `MoveChain.ChainWindow`, `Scale[]`, `ExitSpeedMult` (0.75), `SpeedCap` (40).
+- DashState: hız `MoveChain.Begin` çarpanıyla ölçeklenir; iptal çıkış hızı 0.9 -> `MoveChain.ExitSpeedMult` (0.75).
+- PlayerMovement (parry atılması): artık SABİT ADIM: `parryStepDistance=4.5` (eski ~6.7 birim, zirve 56 u/s); zirve hızı mesafeden hesaplanır, çıkış hızı `moveSpeed*ExitSpeedMult`. Kayma sürerken (ExecutionSlide.Active) başlamaz; `CancelParryBurst()` eklendi.
+- ExecutionSlide: kayma düşmanın arka kenarının ötesinde biter, sadece "ötesi" (PastEdge 4.5) zincirde kısalır; kayma başlayınca parry atılması iptal edilir (kayma kazanır).
+- PlayerController.CapHorizontalSpeed: dash / kayma / hasar-posture-ölüm durumları dışında yatay hız `MoveChain.SpeedCap`'i aşamaz.
+- Ölçüm (play): art arda 4 dash: çarpanlar 1/0.8/0.65/0.55, mesafe ~8.7 -> 6.9 -> 5.6 -> 5.0 birim. Parry atılması ve kayma kod okuyarak doğrulandı, oyunda tetiklenmedi.
+- Yedek: Assets/_BackupMoveChain~/. Eski davranışa dönmek için `MoveChain.Enabled=false` (zincir + tavan kapanır; parry adımı ve çıkış hızı yine yeni değerlerde kalır).
+- 6. öneri (kontrol geri geldi işareti) bilerek yapılmadı.
+
+- DASH AYARI: DistanceScale 1.3->1.45; zincir penceresi 0.7->0.35 sn, çarpanlar 1/0.88/0.75/0.65; dash düşmanın gövdesinde bitince artık dash YÖNÜNDE (arkasına) çıkar (HitboxUtil.EjectFromEnemies(p, preferDir)), geri fırlatmaz. Yedek: _BackupMoveChain~/v2_*.
+
+
+## KUROYORU modu (ana menu)
+- Ana menude BASLA'nin altinda yeni satir: KUROYORU. Sonsuz mod (sagdan/soldan sirayla rastgele dusman) + TEK VURUSTA OLUM.
+- Her 20 oldurmede oyun durur, 4 charm'in (ZEHIR/PATLAMA/KAN/FIRTINA) +%2'lik versiyonundan biri secilir (1-4 tusu ya da tikla). Ayni charm tekrar secilebilir, yigilir. Carpan: Charms.PerPick = 0.02.
+- Etkiler (yigin n): FIRTINA saldiri hizi x(1+0.02n) | KAN verdigin can hasarinin %2n'i kadar can | ZEHIR vurulan dusmana saniyede max canin %2n'i | PATLAMA oLen dusman max canin %2n'i kadar cevreye hasar.
+- Akis: MainMenu.ActivateMain(1) -> StartGame sonunda EnemyArena.BeginKuroyoru(). Olunce R ile yeniden baslayinca mod devam eder (EnemyArena.Start), yigin sifirlanir. Ana menuye donunce (GoToMainMenu) mod kapanir. Kuroyoru'da P tusu devre disi.
+- Tek vurus: PlayerDamageReceiver.TakeDamage icinde Charms.KuroyoruMode iken hasar = en az mevcut can. I (olumsuzluk) tusu hala bunu atlar.
+- Degisen dosyalar: Scripts/Kuroyoru.cs (yeni, KuroyoruPicker), Scripts/Charms.cs, Scripts/MainMenu.cs, Scripts/Enemies/EnemyArena.cs, Scripts/PlayerDamageReceiver.cs. Yedekler: Assets/_BackupKuroyoru~/ (PlayerDamageReceiver yedegi GodMode satirlarindan ONCEKI eski kopya; guncel dosyada GodMode var).
+- Charms.Enabled hala false (TAB menusu kapali); charm etkileri Kuroyoru yiginlariyla calisir. CharmManager artik her zaman olusur.
+- Test: derleme temiz; play modunda menu->KUROYORU akisi, secim ekrani, yigilma (FIRTINA x2 = 1.04, ZEHIR x1), tek vuruşta olum dogrulandi. Ses/his ve gercek tus basimi, zehir/patlama/kan etkilerinin oyunda gorunumu test EDILMEDI.

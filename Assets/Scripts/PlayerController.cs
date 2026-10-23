@@ -305,6 +305,7 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         inputHandler.ReadInput();
+        TryDashInterrupt();
 
         HandleJump();
         HandleTimers();
@@ -320,6 +321,69 @@ public class PlayerController : MonoBehaviour
     {
         movement.FixedUpdateMovement();
         stateMachine.FixedUpdate();
+        CapHorizontalSpeed();
+    }
+
+    // DASH HER ŞEYİ BÖLER: sersemleme (hurt), posture kırılması, ledge tırmanışı, yetenek kilitleri
+    // (odak / kın / yetenek atılımı), kontrol kilidi... Normal durumlar dash'i kendi state'lerinde zaten işler.
+    private void TryDashInterrupt()
+    {
+        if (isDashing || dashBufferTimer <= 0f || dashCooldownTimer > 0f)
+            return;
+
+        if (Time.timeScale <= 0.01f || MainMenu.Active)
+            return;
+
+        Health hp = GetComponent<Health>();
+
+        if (hp != null && hp.IsDead)
+            return;
+
+        IPlayerState cs = stateMachine != null ? stateMachine.CurrentState : null;
+
+        if (cs == null || cs is DashState || cs is PlayerDeathState)
+            return;
+
+        bool locked = !canControl || inputLocked || cs is PlayerHurtState || cs is PlayerPostureBreakState || cs is LedgeClimbState;
+
+        if (!locked)
+            return;
+
+        if (!isGrounded && DashState.AirDashUsed)
+            return;
+
+        PlayerAbility ab = PlayerAbility.Instance;
+
+        if (ab != null)
+            ab.InterruptCasting();
+
+        inputLocked = false;
+        inputLockTimer = 0f;
+        canControl = true;
+        isAttackLocked = false;
+
+        // Kilitliyken yön girişi sıfırlanıyor: dash yönü için tuşu oku.
+        moveInput = MobileInput.GetAxisRaw("Horizontal");
+
+        stateMachine.ChangeState(new DashState(this, stateMachine));
+    }
+
+    // Tek yatay hız tavanı: dash / infaz kayması dışında hiçbir kaynak MoveChain.SpeedCap'i aşamaz.
+    private void CapHorizontalSpeed()
+    {
+        if (!MoveChain.Enabled || rb == null || isDashing || ExecutionSlide.Active)
+            return;
+
+        IPlayerState cs = stateMachine != null ? stateMachine.CurrentState : null;
+
+        // Hasar geri itmesi ve posture kırılması kendi hızını belirler.
+        if (cs == null || cs is PlayerHurtState || cs is PlayerPostureBreakState || cs is PlayerDeathState)
+            return;
+
+        Vector2 v = rb.linearVelocity;
+
+        if (Mathf.Abs(v.x) > MoveChain.SpeedCap)
+            rb.linearVelocity = new Vector2(Mathf.Sign(v.x) * MoveChain.SpeedCap, v.y);
     }
 
     private void HandleTimers()

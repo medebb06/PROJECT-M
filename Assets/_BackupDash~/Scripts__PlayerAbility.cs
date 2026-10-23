@@ -1,0 +1,1734 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// YETENEK YUVASI (Sekiro protez aleti mantığı). Tek yuva, [E] ile kullanılır.
+/// Parry'nin YERİNE değil YANINDA: bekleme süresi uzun, parry ve öldürme
+/// bekleme süresini kısaltır (şarj).
+///
+///   Şok Dalgası : çevredeki tüm düşmanlara denge hasarı + geri itme.
+///   Gölge Adım  : en yakın düşmanın ARKASINA ışınlan + güçlü denge vuruşu.
+///   Buz Nefesi  : düşmanların zamanı yavaşlar; öndekiler kesilir + denge.
+///   Alev Dalgası: öndekileri yakar (sersemlemiş düşmana çift yanık).
+///
+/// Hasarlar düşmanın MAX denge / canının YÜZDESİ (ölçekten bağımsız) ve
+/// PlayerDamage hattından geçer (kaynak = Ability): kritik, charm'lar
+/// (zehir vb.) ve istatistikler çalışır; riposte hakkı yemez.
+///
+/// Seviye (1-3): +%25 güç, −%10 bekleme. Koşu başında seçilir, dükkanda
+/// yükseltilir / değiştirilir. RunManager oyuncuya kendiliğinden ekler.
+/// </summary>
+public class PlayerAbility : MonoBehaviour
+{
+    public static PlayerAbility Instance { get; private set; }
+
+    /// <summary>Yetenek kullanıldı (charm'lar abone olabilir).</summary>
+    public static event Action<AbilityType> Used;
+
+    [Header("Giriş")]
+    [Tooltip("E: KIN. Her zaman aktif; düşmanlardaki biriken yükü patlatır.")]
+    public KeyCode key = KeyCode.E;   // KIN (eskiden Q; Q artık kılıcı koyma / çekme)
+
+    [Tooltip("Seçilen özel yetenek (Atılım Kesiği...). Kın yükü biriktirir.")]
+    public KeyCode specialKey = KeyCode.None;   // şimdilik tuşu yok (eskiden E)
+
+    [Header("Geçici test")]
+    [Tooltip("true: tüm bekleme süreleri 0 (denge ayarı yapılana kadar).")]
+    public bool zeroCooldowns = true;
+
+    [Tooltip("Kın patlatma arası en az bekleme (sn).")]
+    public float kinCooldown = 0f;
+
+    [Header("Şarj (bekleme kısaltma, sn)")]
+    public float parryCharge = 2.5f;
+    public float killCharge = 0.75f;
+
+    [Tooltip("Boss'a karşı hasar / yanık çarpanı.")]
+    [Range(0f, 1f)] public float bossMultiplier = 0.5f;
+
+    [Header("Şok Dalgası")]
+    public float shockRadius = 4.5f;
+    [Range(0f, 1f)] public float shockBalancePercent = 0.3f;
+    [Range(0f, 1f)] public float shockHealthPercent = 0.06f;
+    public float shockPush = 9f;
+    public float shockInvulnerable = 0.25f;
+
+    [Header("Gölge Adım")]
+    public float shadowRange = 9f;
+    public float shadowBehind = 1.4f;
+    [Range(0f, 1f)] public float shadowBalancePercent = 0.4f;
+    [Range(0f, 1f)] public float shadowHealthPercent = 0.1f;
+    public float shadowInvulnerable = 0.4f;
+
+    [Header("Buz Nefesi")]
+    public float frostRange = 6f;
+    public float frostHeight = 3f;
+    [Range(0.05f, 1f)] public float frostSlowScale = 0.35f;
+    public float frostSlowDuration = 3.5f;
+    [Range(0f, 1f)] public float frostBalancePercent = 0.2f;
+    [Range(0f, 1f)] public float frostHealthPercent = 0.04f;
+    [Tooltip("Öndeki düşmanlar bu süre yeni saldırı başlatamaz.")]
+    public float frostFreeze = 1.5f;
+
+    [Header("Alev Dalgası")]
+    public float fireRange = 6.5f;
+    public float fireHeight = 2.6f;
+    [Range(0f, 1f)] public float fireHitBalancePercent = 0.1f;
+    [Range(0f, 1f)] public float fireHitHealthPercent = 0.03f;
+    [Range(0f, 1f)] public float burnBalancePerSecond = 0.07f;
+    [Range(0f, 1f)] public float burnHealthPerSecond = 0.04f;
+    public float burnDuration = 4f;
+    public float staggeredBurnMultiplier = 2f;
+
+    [Header("Rüzgâr Birikimi")]
+    [Tooltip("Düşmanın üstündeki her rüzgâr çizgisi = bu kadar max denge yüzdesi.")]
+    [Range(0f, 0.2f)] public float windBalancePerStack = 0.06f;
+    [Range(0f, 0.1f)] public float windHealthPerStack = 0.015f;
+    [Tooltip("Kılıcı kınına sokma süresi (sn). Bu sürede kilitli ve savunmasızsın; vurulursan bozulur.")]
+    public float windSheathTime = 0.75f;
+
+    [Header("Atılım Kesiği")]
+    public float dashRange = 20f;
+    [Tooltip("Atılımda geçilen HER düşmana anında vurulan can hasarı (normal vuruş ≈14).")]
+    public int dashCutDamage = 28;
+    [Tooltip("Atılım süresi (sn). Başlangıç ışınlanır gibi çok hızlı, sonra yavaşlayarak durur.")]
+    public float dashDuration = 0.5f;
+    [Tooltip("Süzülme: büyük = yolun çoğu ilk anda alınır, kalanı uzun süre yavaşlayarak süzülür.")]
+    [Range(2f, 8f)] public float dashGlide = 5f;
+    [Tooltip("Atılımın ilk bu kadar saniyesi (ışınlanma kısmı) kilitli; sonrası süzülme: başka girdiler (saldırı, parry, dash, zıplama, Q/E) süzülmeyi böler, hareket süzülmeyle birlikte çalışır.")]
+    public float dashLockTime = 0.1f;
+
+    [Header("Girdi tamponu")]
+    [Tooltip("Kilitliyken basılan Q/E bu süre boyunca hatırlanır, açılınca çalışır (sn).")]
+    public float inputBuffer = 0.4f;
+    [Tooltip("Atılış sırasında + biraz sonrasına dokunulmazlık (sn).")]
+    public float dashInvulnerable = 0.4f;
+    [Tooltip("Geçilen her düşmana eklenen Kın yükü.")]
+    public int dashChargePerEnemy = 2;
+
+    // ---------------------------------------------------------
+    // DURUM
+    // ---------------------------------------------------------
+
+    [Header("Odak Kesiği (Q, bar dolunca)")]
+    [Tooltip("Bar dolduğunda Q: biraz odaklan, çevredeki düşmanları kesip infaz et. Dolmamışsa Q eskisi gibi Kın'ı patlatır.")]
+    public bool focusEnabled = true;
+    [Tooltip("Kın patlatma (Q). Şimdilik KAPALI; Q sadece Odak Kesiği.")]
+    public bool kinEnabled = false;
+    [Tooltip("Q basılı tutulurken en fazla bu kadar sn odaklanır, sonra otomatik atar.")]
+    public float focusMaxHold = 3f;
+    [Tooltip("Bar kapasitesi.")]
+    public float focusMax = 100f;
+    [Tooltip("Başarılı parry'nin bara eklediği.")]
+    public float focusPerParry = 25f;
+    [Tooltip("Her öldürmenin bara eklediği.")]
+    public float focusPerKill = 12f;
+    [Tooltip("Her düşmana isabetli vuruşun bara eklediği.")]
+    public float focusPerHit = 2f;
+    [Tooltip("Test: oyun başında bar dolu başlasın.")]
+    public bool focusStartFull = false;
+    [Tooltip("Odaklanma süresi (sn): bu sürede kilitli ama dokunulmazsın.")]
+    public float focusTime = 0.7f;
+    [Tooltip("Kesik menzili (dünya birimi).")]
+    public float focusRadius = 26f;
+    [Tooltip("Aynı anda infaz edilen düşman sayısı.")]
+    public int focusTargets = 3;
+    [Tooltip("Kesik efekti (Slash_Aoe_A_recolor_1 Variant).")]
+    public GameObject focusSlashFx;
+    [Tooltip("Efekt ölçeği.")]
+    public float focusFxScale = 7f;
+
+    public float focusCharge;
+    [Tooltip("Test: bar hep dolu (EnemyArena [U] açar).")]
+    public bool focusInfinite = false;
+    public float FocusCharge01 => focusMax <= 0f ? 0f : Mathf.Clamp01(focusCharge / focusMax);
+    public const int FocusLevels = 3;
+    public int FocusLevel => focusMax <= 0f ? 0 : Mathf.Clamp(Mathf.FloorToInt(focusCharge / (focusMax / FocusLevels) + 0.001f), 0, FocusLevels);
+    public bool FocusFull => focusCharge >= focusMax - 0.001f;
+    public bool FocusReady => focusEnabled && FocusLevel >= 1 && !focusing;
+
+    [Header("Hafif versiyon (Q'ya tek basış, 1 seviye harcar)")]
+    [Tooltip("Hafif versiyonun etki yarıçapı.")]
+    public float focusLightRadius = 14f;
+    [Range(0f, 1f)] public float focusLightHealthPercent = 0.3f;
+    [Range(0f, 1f)] public float focusLightBalancePercent = 0.6f;
+    [Tooltip("Hafif versiyonda efekt ölçeği çarpanı.")]
+    public float focusLightFxMult = 0.45f;
+    public bool IsFocusing => focusing;
+    private bool focusing;
+
+    public bool HasAbility { get; private set; }
+    public AbilityType Type { get; private set; }
+    public int Level { get; private set; }
+
+    public float CooldownLeft { get; private set; }
+    public float CooldownTotal { get; private set; } = 1f;
+    public bool Ready => HasAbility && CooldownLeft <= 0f;
+
+    // 0..1 (HUD dolumu)
+    public float Charge01 =>
+        !HasAbility ? 0f : 1f - Mathf.Clamp01(CooldownLeft / Mathf.Max(0.01f, CooldownTotal));
+
+    public float LastReadyTime { get; private set; } = -99f;
+    public float LastUsedTime { get; private set; } = -99f;
+
+    private float Power => 1f + 0.25f * (Mathf.Max(1, Level) - 1);
+
+    private PlayerController player;
+    private Health health;
+    private PlayerCombatController combat;
+    private float nextWarn;
+
+    private static Sprite ringSprite;
+    private static Sprite squareSprite;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        Instance = null;
+        Used = null;
+    }
+
+    public static PlayerAbility Ensure(GameObject playerObject)
+    {
+        PlayerAbility a = playerObject.GetComponent<PlayerAbility>();
+
+        if (a == null)
+            a = playerObject.AddComponent<PlayerAbility>();
+
+        return a;
+    }
+
+    private void Awake()
+    {
+        Instance = this;
+        player = GetComponent<PlayerController>();
+        health = GetComponent<Health>();
+        combat = GetComponent<PlayerCombatController>();
+
+        if (focusStartFull)
+            focusCharge = focusMax;
+
+        SyncWindCharge();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    private void OnEnable()
+    {
+        CombatEvents.ParrySucceeded += OnParry;
+        CombatEvents.EnemyHit += OnEnemyHitFocus;
+        CombatEvents.EnemyKilled += OnKilled;
+    }
+
+    private void OnDisable()
+    {
+        CombatEvents.ParrySucceeded -= OnParry;
+        CombatEvents.EnemyHit -= OnEnemyHitFocus;
+        CombatEvents.EnemyKilled -= OnKilled;
+    }
+
+    // =========================================================
+    // API (RunManager / dükkan)
+    // =========================================================
+
+    public void Equip(AbilityType type, int level = 1)
+    {
+        HasAbility = true;
+        Type = type;
+        Level = Mathf.Clamp(level, 1, AbilityInfo.MaxLevel);
+
+        SyncWindCharge();
+
+        CooldownTotal = ComputeCooldown();
+        CooldownLeft = 0f;
+        LastReadyTime = Time.unscaledTime;
+    }
+
+    public bool CanLevelUp => HasAbility && Level < AbilityInfo.MaxLevel;
+
+    public void LevelUp()
+    {
+        if (!CanLevelUp)
+            return;
+
+        Level++;
+        CooldownTotal = ComputeCooldown();
+        CooldownLeft = Mathf.Min(CooldownLeft, CooldownTotal);
+    }
+
+    public void Clear()
+    {
+        HasAbility = false;
+        Level = 0;
+        CooldownLeft = 0f;
+
+        SyncWindCharge();
+    }
+
+    // Kın (WindCharge) her zaman oyuncuda olur.
+    private void SyncWindCharge()
+    {
+        // Kın her zaman aktif: WindCharge oyuncuda hep var.
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null)
+            wc = gameObject.AddComponent<WindCharge>();
+
+        wc.stacking = true;
+    }
+
+    public void Refill()
+    {
+        if (CooldownLeft > 0f)
+            LastReadyTime = Time.unscaledTime;
+
+        CooldownLeft = 0f;
+    }
+
+    private float ComputeCooldown()
+    {
+        if (zeroCooldowns)
+            return 0f;
+
+        float cd =
+            AbilityInfo.BaseCooldown(Type) *
+            (1f - 0.1f * (Mathf.Max(1, Level) - 1)) *
+            MetaProgress.AbilityCooldownMultiplier;
+
+        return Mathf.Max(1f, cd);
+    }
+
+    // =========================================================
+    // ŞARJ
+    // =========================================================
+
+    private void OnParry(EnemyBase enemy, bool brokeBalance)
+    {
+        Charge(parryCharge);
+        FocusAdd(focusPerParry);
+    }
+
+    private void OnKilled(EnemyBase enemy)
+    {
+        Charge(killCharge);
+        FocusAdd(focusPerKill);
+    }
+
+private void OnEnemyHitFocus(EnemyBase enemy, DamageInfo info, HitResult result)
+    {
+        if (info.source == DamageSource.Attack && result.hit)
+            FocusAdd(focusPerHit);
+    }
+
+    private void FocusAdd(float amount)
+    {
+        if (!focusEnabled || focusing || amount <= 0f)
+            return;
+
+        bool was = focusCharge >= focusMax - 0.001f;
+        focusCharge = Mathf.Min(focusMax, focusCharge + amount);
+
+        if (!was && FocusFull && player != null)
+        {
+            LastReadyTime = Time.unscaledTime;
+            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "ODAK HAZIR [E]", new Color(1f, 0.1f, 0.1f), 0.9f);
+        }
+    }
+
+    private void TryFocusSlash()
+    {
+        if (focusing || !FocusReady)
+            return;
+
+        if (FindFocusTargets().Count == 0)
+        {
+            if (Time.unscaledTime >= nextWarn)
+            {
+                nextWarn = Time.unscaledTime + 0.8f;
+                NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "HEDEF YOK", new Color(0.75f, 0.75f, 0.8f), 0.7f);
+            }
+
+            return;
+        }
+
+        if (combat != null && combat.IsAttacking)
+            combat.CancelAttack();
+
+        StartCoroutine(FocusSlashRoutine());
+    }
+
+private List<EnemyBase> FindFocusTargets(float radius = -1f, int max = -1)
+    {
+        if (radius <= 0f) radius = focusRadius;
+        if (max < 0) max = focusTargets;
+
+        List<EnemyBase> found = CharmUtil.EnemiesInRadius((Vector2)player.transform.position, radius);
+        List<EnemyBase> result = new List<EnemyBase>();
+
+        for (int i = 0; i < found.Count; i++)
+        {
+            EnemyBase e = found[i];
+            if (e == null || e.IsDead || !e.gameObject.activeInHierarchy)
+                continue;
+            result.Add(e);
+        }
+
+        Vector2 p = player.transform.position;
+        result.Sort((a, b) => ((Vector2)a.transform.position - p).sqrMagnitude.CompareTo(((Vector2)b.transform.position - p).sqrMagnitude));
+
+        if (result.Count > max)
+            result.RemoveRange(max, result.Count - max);
+
+        return result;
+    }
+
+private IEnumerator FocusSlashRoutine()
+    {
+        focusing = true;
+
+        // Bar tamamen doluysa tutarak TAM versiyon atılabilir; aksi halde / erken bırakılırsa hafif versiyon (1 seviye).
+        bool canFull = FocusFull;
+        bool completed = false;
+
+        // Tam versiyon KIRMIZI, hafif (tek seviye) versiyon BEYAZ.
+        Color c = FocusLevelColor(FocusLevel);
+        NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, canFull ? "ODAK..." : "KESİK", c, focusTime);
+
+        float t = 0f;
+        float nextImage = 0f;
+
+        try
+        {
+            RunCameraZoom.AbilityFocus = true;
+
+            while (true)
+            {
+                if (player == null || (health != null && health.IsDead))
+                    yield break;
+
+                t += Time.deltaTime;
+
+                player.inputLocked = true;
+                player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.15f);
+
+                if (player.rb != null)
+                    player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+
+                if (Time.time >= nextImage)
+                {
+                    nextImage = Time.time + 0.06f;
+                    SpawnAfterImage(player.transform.position, new Color(c.r, c.g, c.b, 0.45f));
+                }
+
+                if (canFull && t >= focusTime)
+                {
+                    completed = true;
+                    break;
+                }
+
+                if (!MobileInput.GetKey(key) || t >= focusMaxHold)
+                    break;
+
+                yield return null;
+            }
+
+            RunCameraZoom.AbilityFocus = false;
+            RunCameraZoom.AbilityPunchRequest = true;
+
+            if (completed)
+                CastFocusFull(c);
+            else
+                CastFocusLight(c);
+        }
+        finally
+        {
+            focusing = false;
+            RunCameraZoom.AbilityFocus = false;
+
+            if (player != null && !windSheathing)
+            {
+                player.inputLockTimer = 0f;
+                player.inputLocked = false;
+            }
+        }
+    }
+
+    private void FaceTarget(EnemyBase e)
+    {
+        if (e == null)
+            return;
+
+        float face = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+
+        if (face != 0f)
+        {
+            player.facingDir = face;
+
+            if (player.playerSprite != null)
+                player.playerSprite.flipX = face < 0f;
+        }
+    }
+
+/// <summary>1 seviye: beyaz, 2 seviye: mor, 3 seviye (tam): kırmızı.</summary>
+    public static Color FocusLevelColor(int level)
+    {
+        if (level >= 3) return new Color(1f, 0.1f, 0.1f);
+        if (level == 2) return new Color(0.65f, 0.25f, 1f);
+        return Color.white;
+    }
+
+
+    // TAM: bar sıfırlanır, en yakın 3 düşman kesilerek infaz edilir.
+    private void CastFocusFull(Color c)
+    {
+        focusCharge = 0f;
+
+        List<EnemyBase> targets = FindFocusTargets();
+
+        if (targets.Count > 0)
+            FaceTarget(targets[0]);
+
+       SpawnFocusFx(1f, c);
+
+        int killed = 0;
+
+        for (int i = 0; i < targets.Count; i++)
+        {
+            EnemyBase e = targets[i];
+            if (e == null || e.IsDead)
+                continue;
+
+            Health eh = e.GetComponent<Health>();
+            if (eh == null || eh.IsDead)
+                continue;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+            if (dir == 0f)
+                dir = player.facingDir;
+
+            DamageInfo info = new DamageInfo
+            {
+                source = DamageSource.Ability,
+                comboStep = 1,
+                healthDamage = eh.MaxHealth,
+                direction = new Vector2(dir, 0f),
+                hitPosition = e.transform.position + Vector3.up,
+                target = e
+            };
+
+            EnemyDeathFx.SetContext(e, info, true);
+            CombatCallout.PopupAbove(e, "İNFAZ!", c, 0.9f);
+            eh.TakeDamage(eh.MaxHealth + 9999);
+            killed++;
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.35f);
+
+        Shake(1.0f);
+        HitStop.Request(0.14f, 0.05f);
+
+        if (killed > 0)
+            CombatFlow.AddLink();
+    }
+
+    // HAFİF: 1 seviye harcar, çevredeki düşmanlara daha az hasar (öldürmez garantisi yok, normal hasar hattı).
+    private void CastFocusLight(Color c)
+    {
+        List<EnemyBase> targets = FindFocusTargets(focusLightRadius, 99);
+
+        if (targets.Count == 0)
+        {
+            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "HEDEF YOK", new Color(0.75f, 0.75f, 0.8f), 0.7f);
+            return;
+        }
+
+        focusCharge = Mathf.Max(0f, focusCharge - focusMax / FocusLevels);
+
+        FaceTarget(targets[0]);
+        SpawnFocusFx(focusLightFxMult, c);
+
+        for (int i = 0; i < targets.Count; i++)
+        {
+            EnemyBase e = targets[i];
+            if (e == null || e.IsDead)
+                continue;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+            if (dir == 0f)
+                dir = player.facingDir;
+
+            HitPercent(e, focusLightBalancePercent, focusLightHealthPercent, new Vector2(dir, 0f));
+
+            if (e != null && !e.IsDead)
+                e.PlayTintFlash(c, 0.25f);
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.2f);
+
+        Shake(0.5f);
+        HitStop.Request(0.06f, 0.05f);
+    }
+
+private void SpawnFocusFx(float scaleMul, Color color)
+    {
+        // Odak yetenegi: seviye renginde buyuk isik patlamasi (cevreyi bir an boyar).
+        if (player != null) GameplayLightFlash.Burst((Vector2)player.transform.position + Vector2.up * 1.4f, color, 4f * Mathf.Lerp(0.6f, 1f, scaleMul), 26f * Mathf.Lerp(0.6f, 1f, scaleMul), 0.7f);
+
+        if (focusSlashFx == null)
+            focusSlashFx = Resources.Load<GameObject>("FocusSlashFx");
+
+        if (focusSlashFx == null)
+            return;
+
+        Vector3 p = player.transform.position;
+        GameObject fx = Instantiate(focusSlashFx, new Vector3(p.x, p.y + 1.2f, p.z + 2f), Quaternion.identity);
+        fx.transform.localScale = Vector3.one * focusFxScale * scaleMul;
+
+        // Rengi çalışma anında ver (kırmızı: tam, beyaz: hafif).
+        ParticleSystem[] pss = fx.GetComponentsInChildren<ParticleSystem>(true);
+
+        for (int i = 0; i < pss.Length; i++)
+        {
+            ParticleSystem.MainModule main = pss[i].main;
+            float a = main.startColor.mode == ParticleSystemGradientMode.Color ? main.startColor.color.a : 1f;
+            main.startColor = new Color(color.r, color.g, color.b, a);
+
+            ParticleSystem.ColorOverLifetimeModule col = pss[i].colorOverLifetime;
+
+            if (col.enabled)
+            {
+                Gradient old = col.color.gradient;
+                GradientAlphaKey[] ak = old != null ? old.alphaKeys : new GradientAlphaKey[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) };
+                Gradient g = new Gradient();
+                g.SetKeys(new GradientColorKey[] { new GradientColorKey(color, 0f), new GradientColorKey(color, 1f) }, ak);
+                col.color = new ParticleSystem.MinMaxGradient(g);
+            }
+        }
+
+        Renderer[] rs = fx.GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < rs.Length; i++)
+        {
+            rs[i].sortingLayerID = SortingLayer;
+            rs[i].sortingOrder = SortingOrder + 20;
+        }
+
+        Destroy(fx, 3f);
+    }
+
+
+    /// <summary>Charm'lar için: bekleme süresini kısalt.</summary>
+    public void ReduceCooldown(float seconds)
+    {
+        Charge(seconds);
+    }
+
+    private void Charge(float seconds)
+    {
+        if (!HasAbility || CooldownLeft <= 0f || seconds <= 0f)
+            return;
+
+        CooldownLeft -= seconds;
+
+        if (CooldownLeft <= 0f)
+        {
+            CooldownLeft = 0f;
+            OnBecameReady();
+        }
+    }
+
+    private void OnBecameReady()
+    {
+        LastReadyTime = Time.unscaledTime;
+
+        if (player != null)
+        {
+            NoCallout.Popup(
+                player.transform.position + Vector3.up * 2.4f,
+                AbilityInfo.Name(Type).ToUpperInvariant() + " HAZIR",
+                AbilityInfo.Color(Type),
+                0.8f
+            );
+        }
+    }
+
+    // =========================================================
+    // GÜNCELLEME
+    // =========================================================
+
+    private void Update()
+    {
+        if (player == null)
+            return;
+
+        if (focusInfinite)
+            focusCharge = focusMax;
+
+        if (HasAbility && CooldownLeft > 0f)
+        {
+            // Ölçekli zaman: menüde / duraklamada akmaz.
+            CooldownLeft -= Time.deltaTime;
+
+            if (CooldownLeft <= 0f)
+            {
+                CooldownLeft = 0f;
+                OnBecameReady();
+            }
+        }
+
+        // Girdi tamponu: kilitliyken / başka eylem sürerken basılan Q/E kaybolmasın.
+        if (MobileInput.GetKeyDown(key))
+            bufferedKin = Time.unscaledTime;
+
+        if (HasAbility && MobileInput.GetKeyDown(specialKey))
+            bufferedSpecial = Time.unscaledTime;
+
+        if (bufferedKin > 0f)
+        {
+            if (Time.unscaledTime - bufferedKin > inputBuffer)
+            {
+                bufferedKin = -1f;
+            }
+            else if (CanAct() && !windSheathing && Time.time >= kinReadyAt)
+            {
+                bufferedKin = -1f;
+                TryKin();
+            }
+        }
+
+        if (bufferedSpecial > 0f)
+        {
+            if (Time.unscaledTime - bufferedSpecial > inputBuffer || !HasAbility)
+            {
+                bufferedSpecial = -1f;
+            }
+            else if (CanAct() && !dashSlashing)
+            {
+                bufferedSpecial = -1f;
+                TrySpecial();
+            }
+        }
+    }
+
+    private float bufferedKin = -1f;
+    private float bufferedSpecial = -1f;
+
+    private float kinReadyAt;
+
+    // Q: Kın. Her zaman aktif; düşmanlardaki yükü patlatır.
+    private void TryKin()
+    {
+        // Bar doluysa Q = Odak Kesiği.
+        if (FocusReady && CanAct() && !windSheathing && !dashSlashing)
+        {
+            TryFocusSlash();
+            return;
+        }
+
+        if (focusing || !kinEnabled)
+            return;
+
+        if (!CanAct() || windSheathing || Time.time < kinReadyAt)
+            return;
+
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || wc.Total <= 0)
+        {
+            if (Time.unscaledTime >= nextWarn)
+            {
+                nextWarn = Time.unscaledTime + 0.8f;
+
+                NoCallout.Popup(
+                    player.transform.position + Vector3.up * 2.4f,
+                    "YÜK YOK",
+                    new Color(0.75f, 0.75f, 0.8f),
+                    0.7f
+                );
+            }
+
+            return;
+        }
+
+        // Saldırı ortasında basılırsa saldırı iptal (yetenek öncelikli).
+        if (combat != null && combat.IsAttacking)
+            combat.CancelAttack();
+
+        kinReadyAt = Time.time + kinCooldown;
+
+        StartCoroutine(WindSheath(wc));
+    }
+
+    // Özel yetenek tuşu (Atılım Kesiği...).
+    private void TrySpecial()
+    {
+        if (!CanAct())
+            return;
+
+        if (!Ready)
+        {
+            if (Time.unscaledTime >= nextWarn)
+            {
+                nextWarn = Time.unscaledTime + 0.8f;
+
+                NoCallout.Popup(
+                    player.transform.position + Vector3.up * 2.4f,
+                    "YETENEK " + Mathf.CeilToInt(CooldownLeft) + " SN",
+                    new Color(0.75f, 0.75f, 0.8f),
+                    0.7f
+                );
+            }
+
+            return;
+        }
+
+        if (TryUse())
+        {
+            LastUsedTime = Time.unscaledTime;
+            CooldownTotal = ComputeCooldown();
+            CooldownLeft = CooldownTotal;
+
+            Used?.Invoke(Type);
+        }
+    }
+
+    private bool CanAct()
+    {
+        if (!player.canControl || player.inputLocked)
+            return false;
+
+        if (Time.timeScale < 0.01f)
+            return false;
+
+        if (health != null && health.IsDead)
+            return false;
+
+        IPlayerState s = player.stateMachine != null ? player.stateMachine.CurrentState : null;
+
+        if (
+            s is PlayerHurtState ||
+            s is PlayerDeathState ||
+            s is PlayerPostureBreakState
+        )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryUse()
+    {
+        // Saldırı ortasında basılırsa saldırı iptal (yetenek öncelikli).
+        if (combat != null && combat.IsAttacking)
+            combat.CancelAttack();
+
+        switch (Type)
+        {
+            case AbilityType.Shockwave: return UseShockwave();
+            case AbilityType.ShadowStep: return UseShadowStep();
+            case AbilityType.Frost: return UseFrost();
+            case AbilityType.Fire: return UseFire();
+            case AbilityType.WindStore: return UseWindStore();
+            case AbilityType.DashSlash: return UseDashSlash();
+        }
+
+        return false;
+    }
+
+    // =========================================================
+    // ŞOK DALGASI
+    // =========================================================
+
+    private bool UseShockwave()
+    {
+        Vector2 center = player.transform.position + Vector3.up * 0.8f;
+
+        float radius = shockRadius * (1f + 0.1f * (Level - 1));
+
+        List<EnemyBase> list = CharmUtil.EnemiesInRadius(center, radius);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i];
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+
+            if (dir == 0f)
+                dir = 1f;
+
+            HitPercent(e, shockBalancePercent, shockHealthPercent, new Vector2(dir, 0f));
+
+            if (e == null || e.IsDead)
+                continue;
+
+            // Yetenek zırhı deler: zırhlı (kararlı) saldırıyı da keser.
+            BreakArmor(e);
+
+            if (e.IsAttackCommitted)
+                continue;
+
+            Rigidbody2D rb = e.GetComponent<Rigidbody2D>();
+
+            float pushScale = IsBoss(e) ? 0.3f : 1f;
+
+            if (rb != null)
+                rb.linearVelocity = new Vector2(dir * shockPush * pushScale * EnemyTime.Scale, 3f * pushScale);
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, shockInvulnerable);
+
+        SpawnRing(center, radius, AbilityInfo.Color(AbilityType.Shockwave));
+        Shake(0.5f);
+        HitStop.Request(0.05f, 0.1f);
+
+        return true;
+    }
+
+    // =========================================================
+    // GÖLGE ADIM
+    // =========================================================
+
+    private bool UseShadowStep()
+    {
+        EnemyBase target = FindStepTarget();
+
+        if (target == null)
+        {
+            NoCallout.Popup(
+                player.transform.position + Vector3.up * 2.4f,
+                "HEDEF YOK",
+                new Color(0.75f, 0.75f, 0.8f),
+                0.7f
+            );
+
+            return false;
+        }
+
+        float side = Mathf.Sign(target.transform.position.x - player.transform.position.x);
+
+        if (side == 0f)
+            side = player.facingDir;
+
+        // Önce arkası, olmazsa daha yakın arkası.
+        if (
+            !TryFindLanding(target, side, shadowBehind, out Vector3 landing) &&
+            !TryFindLanding(target, side, shadowBehind * 0.6f, out landing)
+        )
+        {
+            NoCallout.Popup(
+                player.transform.position + Vector3.up * 2.4f,
+                "YER YOK",
+                new Color(0.75f, 0.75f, 0.8f),
+                0.7f
+            );
+
+            return false;
+        }
+
+        Vector3 from = player.transform.position;
+
+        SpawnAfterImage(from);
+
+        if (player.rb != null)
+        {
+            player.rb.position = landing;
+            player.rb.linearVelocity = Vector2.zero;
+        }
+
+        player.transform.position = landing;
+
+        // Düşmana dön.
+        float face = Mathf.Sign(target.transform.position.x - landing.x);
+
+        if (face != 0f)
+        {
+            player.facingDir = face;
+
+            if (player.playerSprite != null)
+                player.playerSprite.flipX = face < 0f;
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, shadowInvulnerable);
+
+        HitPercent(target, shadowBalancePercent, shadowHealthPercent, new Vector2(face, 0f));
+
+        NoCallout.Popup(
+            target.transform.position + Vector3.up * 2.2f,
+            "ARKADA!",
+            AbilityInfo.Color(AbilityType.ShadowStep),
+            0.9f
+        );
+
+        Shake(0.35f);
+        HitStop.Request(0.06f, 0.05f);
+
+        return true;
+    }
+
+    private EnemyBase FindStepTarget()
+    {
+        Vector2 p = player.transform.position;
+
+        float range = shadowRange * (1f + 0.1f * (Level - 1));
+
+        List<EnemyBase> list = CharmUtil.EnemiesInRadius(p, range);
+
+        EnemyBase best = null;
+        float bestScore = float.MaxValue;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i];
+
+            Vector2 d = (Vector2)e.transform.position - p;
+
+            // Çok farklı yükseklikteki (platform üstü) düşmanı tercih etme.
+            if (Mathf.Abs(d.y) > 4f)
+                continue;
+
+            float score = d.magnitude;
+
+            // Baktığı yöndekiler öncelikli.
+            if (Mathf.Sign(d.x) == Mathf.Sign(player.facingDir))
+                score *= 0.7f;
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = e;
+            }
+        }
+
+        return best;
+    }
+
+    // Hedefin 'side' yönünde 'behind' kadar ötesinde zemin + boş yer ara.
+    private bool TryFindLanding(EnemyBase target, float side, float behind, out Vector3 landing)
+    {
+        landing = Vector3.zero;
+
+        if (player.col == null || player.Movement == null)
+            return false;
+
+        Collider2D enemyCol = target.GetComponent<Collider2D>();
+
+        float halfEnemy = enemyCol != null ? enemyCol.bounds.extents.x : 0.4f;
+
+        float x = target.transform.position.x + side * (halfEnemy + behind);
+
+        LayerMask ground = player.Movement.groundMask;
+        LayerMask solid = player.Movement.groundMask | player.Movement.wallMask;
+
+        float topY = target.transform.position.y + 3f;
+
+        RaycastHit2D hit = Physics2D.Raycast(new Vector2(x, topY), Vector2.down, 8f, ground);
+
+        if (hit.collider == null)
+            return false;   // çukur
+
+        Bounds b = player.col.bounds;
+
+        // Pivot ile collider altı arası.
+        float pivotToBottom = player.transform.position.y - b.min.y;
+        float pivotToCenter = b.center.y - player.transform.position.y;
+
+        float y = hit.point.y + pivotToBottom + 0.05f;
+
+        Vector2 center = new Vector2(x, y + pivotToCenter);
+        Vector2 size = new Vector2(b.size.x * 0.9f, b.size.y * 0.9f);
+
+        if (Physics2D.OverlapBox(center, size, 0f, solid) != null)
+            return false;
+
+        landing = new Vector3(x, y, player.transform.position.z);
+
+        return true;
+    }
+
+    // =========================================================
+    // BUZ NEFESİ
+    // =========================================================
+
+    private bool UseFrost()
+    {
+        float power = Power;
+
+        EnemyTime.RequestRamp(frostSlowDuration * (1f + 0.15f * (Level - 1)), frostSlowScale, 2f);
+
+        List<EnemyBase> list = EnemiesInFront(frostRange, frostHeight);
+
+        Color c = AbilityInfo.Color(AbilityType.Frost);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i];
+
+            HitPercent(e, frostBalancePercent, frostHealthPercent, new Vector2(player.facingDir, 0f));
+
+            if (e == null || e.IsDead)
+                continue;
+
+            BreakArmor(e);
+
+            e.StartAttackRecovery(frostFreeze * power);
+            e.PlayTintFlash(c, 0.5f);
+        }
+
+        SpawnBox(frostRange, frostHeight, c, 0.35f);
+
+        NoCallout.Popup(
+            player.transform.position + Vector3.up * 2.4f,
+            "ZAMAN DONDU",
+            c,
+            0.8f
+        );
+
+        Shake(0.25f);
+
+        return true;
+    }
+
+    // =========================================================
+    // ALEV DALGASI
+    // =========================================================
+
+    private bool UseFire()
+    {
+        float power = Power;
+
+        List<EnemyBase> list = EnemiesInFront(fireRange, fireHeight);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i];
+
+            HitPercent(e, fireHitBalancePercent, fireHitHealthPercent, new Vector2(player.facingDir, 0f));
+
+            if (e == null || e.IsDead)
+                continue;
+
+            float boss = IsBoss(e) ? bossMultiplier : 1f;
+            float staggered = e.IsStaggered ? staggeredBurnMultiplier : 1f;
+
+            /* burn: eski EnemyStatus kaldirildi */;
+        }
+
+        SpawnBox(fireRange, fireHeight, AbilityInfo.Color(AbilityType.Fire), 0.3f);
+        Shake(0.3f);
+
+        return true;
+    }
+
+    // =========================================================
+    // RÜZGÂR BİRİKİMİ
+    // =========================================================
+
+    private bool UseWindStore()
+    {
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || wc.Total <= 0)
+        {
+            NoCallout.Popup(
+                player.transform.position + Vector3.up * 2.4f,
+                "YÜK YOK",
+                new Color(0.75f, 0.75f, 0.8f),
+                0.7f
+            );
+
+            return false;
+        }
+
+        if (windSheathing)
+            return false;
+
+        StartCoroutine(WindSheath(wc));
+
+        return true;
+    }
+
+    private bool windSheathing;
+
+    // Kınına sokma: kilitli + savunmasız. Vurulursan bozulur (patlama yok).
+    private IEnumerator WindSheath(WindCharge wc)
+    {
+        windSheathing = true;
+
+        bool interrupted = false;
+
+        Action<PlayerDamageReport> onHurt = r =>
+        {
+            if (r.amount > 0 && r.kind != PlayerHitKind.BlockCost)
+                interrupted = true;
+        };
+
+        CombatEvents.PlayerDamaged += onHurt;
+
+        Color c = AbilityInfo.Color(AbilityType.WindStore);
+
+        NoCallout.Popup(
+            player.transform.position + Vector3.up * 2.4f,
+            "KINA...",
+            c,
+            windSheathTime
+        );
+
+        float t = 0f;
+
+        try
+        {
+            while (t < windSheathTime)
+            {
+                if (interrupted || player == null || (health != null && health.IsDead))
+                    break;
+
+                t += Time.deltaTime;
+
+                player.inputLocked = true;
+                player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+
+                if (player.rb != null)
+                    player.rb.linearVelocity = new Vector2(0f, player.rb.linearVelocity.y);
+
+                if (wc != null)
+                    wc.SetGlow(t / windSheathTime);
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            CombatEvents.PlayerDamaged -= onHurt;
+            windSheathing = false;
+
+            if (wc != null)
+                wc.SetGlow(0f);
+        }
+
+        if (interrupted)
+        {
+            if (player != null)
+            {
+                NoCallout.Popup(
+                    player.transform.position + Vector3.up * 2.4f,
+                    "KIN BOZULDU",
+                    new Color(1f, 0.5f, 0.5f),
+                    0.8f
+                );
+            }
+
+            yield break;
+        }
+
+        if (player == null || wc == null)
+            yield break;
+
+        player.inputLockTimer = 0f;
+        player.inputLocked = false;
+
+        wc.PlaySnap();
+
+        DetonateWind(wc);
+    }
+
+    private void DetonateWind(WindCharge wc)
+    {
+        Color c = AbilityInfo.Color(AbilityType.WindStore);
+
+        List<KeyValuePair<EnemyBase, int>> list = wc.Consume();
+
+        int total = 0;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            EnemyBase e = list[i].Key;
+            int stacks = list[i].Value;
+
+            if (e == null || e.IsDead)
+                continue;
+
+            total += stacks;
+
+            float dir = Mathf.Sign(e.transform.position.x - player.transform.position.x);
+
+            if (dir == 0f)
+                dir = 1f;
+
+            wc.PlayBurst(e, stacks);
+
+            HitPercent(e, windBalancePerStack * stacks, windHealthPerStack * stacks, new Vector2(dir, 0f));
+
+            if (e == null || e.IsDead)
+                continue;
+
+            e.PlayTintFlash(c, 0.25f);
+
+            NoCallout.PopupAbove(e, stacks.ToString(), c, 0.7f);
+        }
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, 0.2f);
+
+        wc.PlayWave();
+
+        CombatFlow.AddLink();
+
+        Shake(Mathf.Clamp(0.6f + total * 0.06f, 0.6f, 1.4f));
+        HitStop.Request(0.09f + Mathf.Min(0.1f, total * 0.012f), 0.05f);
+    }
+
+    // =========================================================
+    // ATILIM KESİĞİ
+    // İleri atıl (düşmanların içinden geçersin, dokunulmazsın), geçtiklerin
+    // işaretlenir; kısa gecikmeyle kesilirler. Gecikmede hasar alırsan
+    // işaretler dağılır (WindCharge yarıya indirir = tek işaret silinir).
+    // =========================================================
+
+    private bool dashSlashing;
+
+    private bool UseDashSlash()
+    {
+        WindCharge wc = GetComponent<WindCharge>();
+
+        if (wc == null || player.rb == null || dashSlashing)
+            return false;
+
+        StartCoroutine(DashSlashRoutine(wc));
+
+        return true;
+    }
+
+    private bool DashInterrupted()
+    {
+        return
+            MobileInput.GetMouseButtonDown(0) ||
+            MobileInput.GetMouseButtonDown(1) ||
+            MobileInput.GetKeyDown(KeyCode.Space) ||
+            MobileInput.GetKeyDown(KeyCode.LeftShift) ||
+            MobileInput.GetKeyDown(key) ||
+            MobileInput.GetKeyDown(specialKey);
+    }
+
+    private bool DashBlocked(Vector3 next)
+    {
+        if (player.col == null || player.Movement == null)
+            return false;
+
+        Bounds b = player.col.bounds;
+
+        Vector2 center = (Vector2)b.center + (Vector2)(next - player.transform.position) + Vector2.up * 0.12f;
+        Vector2 size = new Vector2(b.size.x * 0.8f, b.size.y * 0.8f);
+
+        LayerMask solid = player.Movement.groundMask | player.Movement.wallMask;
+
+        return Physics2D.OverlapBox(center, size, 0f, solid) != null;
+    }
+
+    private IEnumerator DashSlashRoutine(WindCharge wc)
+    {
+        dashSlashing = true;
+
+        Color c = AbilityInfo.Color(AbilityType.DashSlash);
+
+        float dir = player.facingDir >= 0f ? 1f : -1f;
+        float range = dashRange * (1f + 0.1f * (Level - 1));
+        float travelled = 0f;
+        float nextImage = 0f;
+
+        Vector3 start = player.transform.position;
+
+        HashSet<EnemyBase> passed = new HashSet<EnemyBase>();
+
+        bool lockedNow = true;
+
+        player.hitInvincibilityTimer = Mathf.Max(player.hitInvincibilityTimer, dashInvulnerable);
+
+        try
+        {
+            float elapsed = 0f;
+
+            while (travelled < range - 0.001f)
+            {
+                if (player == null || (health != null && health.IsDead))
+                    break;
+
+                lockedNow = elapsed < dashLockTime;
+
+                // Süzülme kısmında başka girdiler atılımı böler (kontrol hemen oyuncuya döner).
+                if (!lockedNow && (windSheathing || DashInterrupted()))
+                    break;
+
+                if (lockedNow)
+                {
+                    player.inputLocked = true;
+                    player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                }
+
+                // Ease-out (üstel yavaşlama): ilk karede çok uzağa fırlar, sona doğru süzülerek durur.
+                elapsed += Time.deltaTime;
+
+                float k = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, dashDuration));
+                float eased = 1f - Mathf.Pow(1f - k, dashGlide);
+
+                float budget = Mathf.Max(0f, range * eased - travelled);
+
+                bool blocked = false;
+
+                // Alt adımlar: hızlı atılımda ince duvarı / düşmanı atlamasın.
+                while (budget > 0.0001f)
+                {
+                    float sub = Mathf.Min(0.5f, budget);
+
+                    Vector3 pos = player.transform.position;
+                    Vector3 next = pos + new Vector3(dir * sub, 0f, 0f);
+
+                    if (DashBlocked(next))
+                    {
+                        blocked = true;
+                        break;
+                    }
+
+                    if (lockedNow)
+                    {
+                        player.inputLocked = true;
+                        player.inputLockTimer = Mathf.Max(player.inputLockTimer, 0.1f);
+                        player.rb.linearVelocity = Vector2.zero;
+                    }
+
+                    player.rb.position = next;
+                    player.transform.position = next;
+
+                    travelled += sub;
+                    budget -= sub;
+
+                    EnemyBase[] all = EnemyBase.All.ToArray();
+
+                    for (int i = 0; i < all.Length; i++)
+                    {
+                        EnemyBase e = all[i];
+
+                        if (e == null || e.IsDead || passed.Contains(e))
+                            continue;
+
+                        Vector3 ep = e.transform.position;
+
+                        if (Mathf.Abs(ep.y - next.y) > 3.5f)
+                            continue;
+
+                        if ((ep.x - pos.x) * dir >= -0.5f && (next.x - ep.x) * dir >= -0.5f)
+                        {
+                            passed.Add(e);
+                            if (dashCutDamage > 0)
+                            {
+                                DamageInfo cut = new DamageInfo { source = DamageSource.Ability, comboStep = 1, healthDamage = dashCutDamage, direction = new Vector2(dir, 0f), hitPosition = e.transform.position + Vector3.up };
+                                PlayerDamage.HitEnemy(e, cut);
+                            }
+                            wc.AddCharge(e, dashChargePerEnemy);
+
+                            NoCallout.PopupAbove(e, "+" + dashChargePerEnemy, c, 0.5f);
+                        }
+                    }
+
+                    if (Time.time >= nextImage)
+                    {
+                        nextImage = Time.time + 0.03f;
+                        SpawnAfterImage(pos, new Color(c.r, c.g, c.b, 0.55f));
+                    }
+                }
+
+                if (blocked)
+                    break;
+
+                yield return null;
+            }
+        }
+        finally
+        {
+            // Sadece kendi koyduğumuz kilidi aç (Kın kilidine dokunma).
+            if (player != null && lockedNow && !windSheathing)
+            {
+                player.inputLockTimer = 0f;
+                player.inputLocked = false;
+            }
+
+            dashSlashing = false;
+        }
+
+        if (player == null || wc == null)
+            yield break;
+
+        wc.PlayDashTrail(start, player.transform.position);
+        Shake(0.35f);
+
+        if (passed.Count > 0)
+            CombatFlow.AddLink();
+    }
+
+    // =========================================================
+    // YARDIMCILAR
+    // =========================================================
+
+    private HitResult HitPercent(EnemyBase e, float balancePercent, float healthPercent, Vector2 dir)
+    {
+        if (e == null || e.IsDead)
+            return default;
+
+        float scale = Power * (IsBoss(e) ? bossMultiplier : 1f);
+
+        EnemyBalance balance = e.GetComponent<EnemyBalance>();
+        Health h = e.GetComponent<Health>();
+
+        int bal =
+            balance != null
+                ? Mathf.Max(1, Mathf.RoundToInt(balance.MaxBalance * balancePercent * scale))
+                : 0;
+
+        int hp =
+            h != null
+                ? Mathf.Max(1, Mathf.RoundToInt(h.MaxHealth * healthPercent * scale))
+                : 0;
+
+        DamageInfo info = new DamageInfo
+        {
+            source = DamageSource.Ability,
+            comboStep = 0,
+            balanceDamage = bal,
+            healthDamage = hp,
+            direction = dir,
+            hitPosition = e.transform.position + Vector3.up
+        };
+
+        return PlayerDamage.HitEnemy(e, info);
+    }
+
+    // Kararlı saldırıyı keser (boss hariç). Normal vuruşlar artık
+    // uyarı boyunca kesemiyor; Şok ve Buz bunun cevabı.
+    private static void BreakArmor(EnemyBase e)
+    {
+        if (e == null || e.IsDead || IsBoss(e) || !e.IsAttackCommitted)
+            return;
+
+        e.InterruptWithHitStun(0.2f);
+
+        NoCallout.PopupAbove(e, "KESİLDİ", new Color(0.8f, 0.9f, 1f), 0.7f);
+    }
+
+    private static bool IsBoss(EnemyBase e)
+    {
+        return e != null && false;
+    }
+
+    // Oyuncunun baktığı yönde, kutu içindeki düşmanlar.
+    private List<EnemyBase> EnemiesInFront(float range, float height)
+    {
+        List<EnemyBase> result = new List<EnemyBase>();
+
+        float dir = player.facingDir >= 0f ? 1f : -1f;
+
+        Vector2 p = player.transform.position;
+
+        EnemyBase[] all = EnemyBase.All.ToArray();
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            EnemyBase e = all[i];
+
+            if (e == null || e.IsDead)
+                continue;
+
+            Vector2 d = (Vector2)e.transform.position - p;
+
+            float along = d.x * dir;
+
+            if (along < -0.6f || along > range)
+                continue;
+
+            if (Mathf.Abs(d.y) > height)
+                continue;
+
+            result.Add(e);
+        }
+
+        return result;
+    }
+
+    private void Shake(float force)
+    {
+        if (player.impulseSource != null)
+            player.impulseSource.GenerateImpulse(force);
+    }
+
+    private int SortingLayer => player.playerSprite != null ? player.playerSprite.sortingLayerID : 0;
+    private int SortingOrder => player.playerSprite != null ? player.playerSprite.sortingOrder + 5 : 50;
+
+    /// <summary>Genişleyen halka efekti (Ground Slam da kullanır).</summary>
+    public void SpawnRingFx(Vector2 center, float radius, Color color)
+    {
+        SpawnRing(center, radius, color);
+    }
+
+    // Genişleyen halka (Şok Dalgası).
+    private void SpawnRing(Vector2 center, float radius, Color color)
+    {
+        GameObject obj = new GameObject("AbilityRing");
+        obj.transform.position = center;
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = RingSprite();
+        sr.color = color;
+        sr.sortingLayerID = SortingLayer;
+        sr.sortingOrder = SortingOrder;
+
+        StartCoroutine(AnimateFx(obj.transform, sr, 0.3f, Vector3.one * 0.3f, Vector3.one * radius * 2f));
+    }
+
+    // Önde parlayan dikdörtgen (Buz / Alev).
+    private void SpawnBox(float range, float height, Color color, float life)
+    {
+        float dir = player.facingDir >= 0f ? 1f : -1f;
+
+        GameObject obj = new GameObject("AbilityWave");
+
+        obj.transform.position =
+            player.transform.position + new Vector3(dir * range * 0.5f, height * 0.35f, 0f);
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = SquareSprite();
+        sr.color = new Color(color.r, color.g, color.b, 0.55f);
+        sr.sortingLayerID = SortingLayer;
+        sr.sortingOrder = SortingOrder;
+
+        Vector3 start = new Vector3(range * 0.3f, height * 0.6f, 1f);
+        Vector3 end = new Vector3(range, height * 1.2f, 1f);
+
+        StartCoroutine(AnimateFx(obj.transform, sr, life, start, end));
+    }
+
+    public static bool oldSpriteGhosts = false;
+
+    // Işınlanmadan önceki yerde mor gölge.
+    private void SpawnAfterImage(Vector3 at, Color? tint = null)
+    {
+        // Eski pixel-art sprite gölgesi istenmiyor (Ronni mesh iskeleti kullanılıyor).
+        if (!oldSpriteGhosts) return;
+
+        if (player.playerSprite == null || player.playerSprite.sprite == null)
+            return;
+
+        GameObject obj = new GameObject("ShadowStepImage");
+
+        Transform src = player.playerSprite.transform;
+
+        obj.transform.position = src.position - player.transform.position + at;
+        obj.transform.localScale = src.lossyScale;
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = player.playerSprite.sprite;
+        sr.flipX = player.playerSprite.flipX;
+        sr.color = tint ?? new Color(0.6f, 0.35f, 1f, 0.7f);
+        sr.sortingLayerID = player.playerSprite.sortingLayerID;
+        sr.sortingOrder = player.playerSprite.sortingOrder - 1;
+
+        StartCoroutine(AnimateFx(obj.transform, sr, 0.35f, obj.transform.localScale, obj.transform.localScale));
+    }
+
+    private static IEnumerator AnimateFx(Transform t, SpriteRenderer sr, float life, Vector3 fromScale, Vector3 toScale)
+    {
+        float start = Time.unscaledTime;
+        Color c = sr.color;
+
+        while (t != null)
+        {
+            float k = Mathf.Clamp01((Time.unscaledTime - start) / life);
+
+            t.localScale = Vector3.Lerp(fromScale, toScale, 1f - (1f - k) * (1f - k));
+            sr.color = new Color(c.r, c.g, c.b, c.a * (1f - k));
+
+            if (k >= 1f)
+                break;
+
+            yield return null;
+        }
+
+        if (t != null)
+            Destroy(t.gameObject);
+    }
+
+    // 1 birimlik halka sprite'ı (kodla).
+    private static Sprite RingSprite()
+    {
+        if (ringSprite != null)
+            return ringSprite;
+
+        const int size = 64;
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+
+        float r = size * 0.5f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) / r;
+
+                float a = Mathf.Clamp01(1f - Mathf.Abs(d - 0.88f) / 0.12f);
+
+                // İçi hafif dolu.
+                if (d < 0.88f)
+                    a = Mathf.Max(a, 0.12f);
+
+                if (d > 1f)
+                    a = 0f;
+
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        }
+
+        tex.Apply();
+
+        ringSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+
+        return ringSprite;
+    }
+
+    // 1x1 birim beyaz kare, kenarlara doğru söner.
+    private static Sprite SquareSprite()
+    {
+        if (squareSprite != null)
+            return squareSprite;
+
+        const int size = 32;
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float ex = Mathf.Min(x, size - 1 - x) / (size * 0.25f);
+                float ey = Mathf.Min(y, size - 1 - y) / (size * 0.25f);
+
+                float a = Mathf.Clamp01(Mathf.Min(ex, ey));
+
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        }
+
+        tex.Apply();
+
+        squareSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+
+        return squareSprite;
+    }
+}

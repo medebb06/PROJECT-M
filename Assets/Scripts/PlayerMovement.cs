@@ -260,6 +260,17 @@ public class PlayerMovement : MonoBehaviour
     public float parryBurstSpeedMult = 4f;
     [Tooltip("Atilmanin suresi (sn); hiz bu surede kosu hizina iner.")]
     public float parryBurstTime = 0.16f;
+    [Tooltip("Atılmanın TOPLAM mesafesi (birim). Hız zirvesi bundan hesaplanır: her seferinde aynı adım (zincirde MoveChain ile azalır). Eski: ~6.7.")]
+    public float parryStepDistance = 4.5f;
+    private float burstPeakSpeed;
+
+    /// <summary>Başka bir hareket (infaz kayması) başlarsa atılma kesilir; hareketler toplanmaz.</summary>
+    public void CancelParryBurst()
+    {
+        parryBurstArmedUntil = -1f;
+        parryBurstEnd = -1f;
+        EndParryBurstFx();
+    }
 
     private float parryBurstArmedUntil = -1f;
     private float parryBurstEnd = -1f;
@@ -350,21 +361,28 @@ public class PlayerMovement : MonoBehaviour
         if (Time.time < parryBurstEnd)
         {
             float t = 1f - (parryBurstEnd - Time.time) / Mathf.Max(0.01f, parryBurstTime);
-            float speed = Mathf.Lerp(moveSpeed * parryBurstSpeedMult, moveSpeed, t * t);
+            float speed = Mathf.Lerp(burstPeakSpeed, moveSpeed * MoveChain.ExitSpeedMult, t * t);
             player.rb.linearVelocity = new Vector2(parryBurstDir * speed, player.rb.linearVelocity.y);
             return true;
         }
 
         if (Time.time < parryBurstArmedUntil &&
             player.isGrounded &&
+            !ExecutionSlide.Active &&
             Mathf.Abs(player.moveInput) > 0.1f)
         {
             parryBurstArmedUntil = -1f;
+
+            // Sabit adım: zirve hızı, hedef mesafeyi ve çıkış hızını verecek şekilde hesaplanır.
+            // Hız profili: Lerp(zirve, çıkış, t^2)  ->  mesafe = T * (zirve*2/3 + çıkış/3)
+            float exitV = moveSpeed * MoveChain.ExitSpeedMult;
+            float stepD = parryStepDistance * MoveChain.Begin(parryBurstTime);
+            burstPeakSpeed = Mathf.Max(exitV, (stepD / Mathf.Max(0.01f, parryBurstTime) - exitV / 3f) * 1.5f);
             parryBurstDir = Mathf.Sign(player.moveInput);
             parryBurstEnd = Time.time + parryBurstTime;
             BeginParryBurstFx();
             player.SpawnDust();
-            player.rb.linearVelocity = new Vector2(parryBurstDir * moveSpeed * parryBurstSpeedMult, player.rb.linearVelocity.y);
+            player.rb.linearVelocity = new Vector2(parryBurstDir * burstPeakSpeed, player.rb.linearVelocity.y);
             return true;
         }
 

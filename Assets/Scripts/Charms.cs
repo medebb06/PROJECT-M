@@ -18,11 +18,43 @@ public static class Charms
 
     private static readonly bool[] on = new bool[4];
 
-    public static bool Active(CharmType t) { return Enabled && on[(int)t]; }
+    // KUROYORU modu: tek vuruşta ölüm, 20 öldürmede bir +%2'lik charm seç, üst üste yığılır.
+    public static bool KuroyoruMode;
+    public const float PerPick = 0.02f;
+    private static readonly int[] kStacks = new int[4];
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { KuroyoruMode = false; for (int i = 0; i < 4; i++) { kStacks[i] = 0; on[i] = false; } }
+
+    public static int Stacks(CharmType t) { return kStacks[(int)t]; }
+    public static float Power(CharmType t) { return kStacks[(int)t] * PerPick; }
+    public static void AddStack(CharmType t) { kStacks[(int)t]++; }
+    public static void ClearStacks() { for (int i = 0; i < 4; i++) kStacks[i] = 0; }
+
+    public static bool Active(CharmType t) { return (Enabled && on[(int)t]) || kStacks[(int)t] > 0; }
     public static void Set(CharmType t, bool v) { on[(int)t] = v; }
     public static void Toggle(CharmType t) { on[(int)t] = !on[(int)t]; }
 
-    public static float StormMult { get { return Active(CharmType.Storm) ? 1.2f : 1f; } }
+    public static float StormMult
+    {
+        get
+        {
+            float m = (Enabled && on[(int)CharmType.Storm]) ? 1.2f : 1f;
+            return m + Power(CharmType.Storm);
+        }
+    }
+
+    // Kuroyoru'daki +%2 versiyonlar için kısa ad/açıklama.
+    public static string KDesc(CharmType t)
+    {
+        switch (t)
+        {
+            case CharmType.Poison: return "Vurduğun düşman zehirlenir: saniyede max canının %2'si";
+            case CharmType.Explosion: return "Ölen düşman patlar: onun max canının %2'si kadar çevreye hasar";
+            case CharmType.Blood: return "Verdiğin can hasarının %2'si kadar can kazanırsın";
+            default: return "Saldırı hızı +%2";
+        }
+    }
     
     
 
@@ -65,12 +97,11 @@ public class CharmManager : MonoBehaviour
     private Font font;
     private bool open;
     private float prevScale = 1f;
+    private float bloodAcc;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Boot()
     {
-        if (!Charms.Enabled) return;
-
         GameObject go = new GameObject("CharmManager");
         DontDestroyOnLoad(go);
         go.AddComponent<CharmManager>();
@@ -92,7 +123,7 @@ public class CharmManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab)) { if (open) Close(); else Open(); }
+        if (Charms.Enabled && Input.GetKeyDown(KeyCode.Tab)) { if (open) Close(); else Open(); }
         if (!open) return;
         if (Input.GetKeyDown(KeyCode.Escape)) Close();
         for (int i = 0; i < 4; i++)
@@ -116,10 +147,17 @@ public class CharmManager : MonoBehaviour
     private void OnKilled(EnemyBase e)
     {
         if (e == null || !Charms.Active(CharmType.Explosion)) return;
-        StartCoroutine(Explode(e.transform.position + Vector3.up * 0.8f, e));
+        int dmg = explodeDamage;
+        if (Charms.Stacks(CharmType.Explosion) > 0)
+        {
+            Health kh = e.GetComponent<Health>();
+            int mh = kh != null ? kh.MaxHealth : explodeDamage;
+            dmg = Mathf.Max(1, Mathf.RoundToInt(mh * Charms.Power(CharmType.Explosion)));
+        }
+        StartCoroutine(Explode(e.transform.position + Vector3.up * 0.8f, e, dmg));
     }
 
-    private IEnumerator Explode(Vector3 c, EnemyBase source)
+    private IEnumerator Explode(Vector3 c, EnemyBase source, int dmg)
     {
         GameObject ring = new GameObject("CharmExplosion");
         ring.transform.position = c;
@@ -143,7 +181,7 @@ public class CharmManager : MonoBehaviour
             {
                 source = DamageSource.Ability,
                 comboStep = 1,
-                healthDamage = explodeDamage,
+                healthDamage = dmg,
                 direction = new Vector2(dx == 0f ? 1f : Mathf.Sign(dx), 0f),
                 hitPosition = op + Vector3.up,
                 disallowCrit = true
@@ -169,14 +207,32 @@ public class CharmManager : MonoBehaviour
         {
             GameObject pl = GameObject.FindWithTag("Player");
             Health ph = pl != null ? pl.GetComponent<Health>() : null;
-            if (ph != null && !ph.IsDead) ph.Heal(Mathf.Max(1, Mathf.RoundToInt(result.amount * 0.35f)));
+            if (ph != null && !ph.IsDead)
+            {
+                if (Charms.Stacks(CharmType.Blood) > 0)
+                {
+                    // Kuroyoru: küçük oranlar kaybolmasın diye kesirli birikim.
+                    bloodAcc += result.amount * Charms.Power(CharmType.Blood);
+                    int whole = (int)bloodAcc;
+                    bloodAcc -= whole;
+                    if (whole > 0) ph.Heal(whole);
+                }
+                else ph.Heal(Mathf.Max(1, Mathf.RoundToInt(result.amount * 0.35f)));
+            }
         }
 
         if (Charms.Active(CharmType.Poison) && !enemy.IsDead)
         {
             PoisonStatus ps = enemy.GetComponent<PoisonStatus>();
             if (ps == null) ps = enemy.gameObject.AddComponent<PoisonStatus>();
-            ps.Apply(poisonTime, poisonTick, poisonTickDamage);
+            if (Charms.Stacks(CharmType.Poison) > 0)
+            {
+                Health eh = enemy.GetComponent<Health>();
+                int mh = eh != null ? eh.MaxHealth : 100;
+                int td = Mathf.Max(1, Mathf.RoundToInt(mh * Charms.Power(CharmType.Poison) * poisonTick));
+                ps.Apply(poisonTime, poisonTick, td, true);
+            }
+            else ps.Apply(poisonTime, poisonTick, poisonTickDamage);
         }
     }
 
@@ -215,13 +271,15 @@ public class CharmManager : MonoBehaviour
         {
             CharmType t = (CharmType)i;
             if (!Charms.Active(t)) continue;
-            GUI.Label(new Rect(14f, ly, 300f, 26f), Charms.Name(t), Style(22, Charms.Tint(t), TextAnchor.MiddleLeft));
+            int ks = Charms.Stacks(t);
+            string nm = ks > 0 ? Charms.Name(t) + "  x" + ks + "  (+%" + Mathf.RoundToInt(ks * Charms.PerPick * 100f) + ")" : Charms.Name(t);
+            GUI.Label(new Rect(14f, ly, 420f, 26f), nm, Style(22, Charms.Tint(t), TextAnchor.MiddleLeft));
             ly -= 26f;
         }
 
-        if (!open)
+        if (!open || !Charms.Enabled)
         {
-            GUI.Label(new Rect(14f, 34f, 300f, 22f), "[TAB] charm menüsü", Style(18, new Color(1f, 1f, 1f, 0.55f), TextAnchor.MiddleLeft));
+            if (Charms.Enabled) GUI.Label(new Rect(14f, 34f, 300f, 22f), "[TAB] charm menüsü", Style(18, new Color(1f, 1f, 1f, 0.55f), TextAnchor.MiddleLeft));
             return;
         }
 
@@ -266,12 +324,13 @@ public class PoisonStatus : MonoBehaviour
     private int tickDamage, stacks;
 
     // Her vuruş bir yığın ekler (süre yenilenir); tik hasarı yığınla çarpılır.
-    public void Apply(float time, float tick, int dmg)
+    public void Apply(float time, float tick, int dmg, bool noStack = false)
     {
         if (enemy == null) { enemy = GetComponent<EnemyBase>(); health = GetComponent<Health>(); }
         until = Time.time + time;
         tickEvery = tick; tickDamage = dmg;
-        if (Time.time - lastStack >= StackCooldown)
+        if (noStack) stacks = 1;
+        else if (Time.time - lastStack >= StackCooldown)
         {
             stacks = Mathf.Min(MaxStacks, stacks + 1);   // yığın hızı saldırı hızından bağımsız (Fırtına ile patlamasın)
             lastStack = Time.time;

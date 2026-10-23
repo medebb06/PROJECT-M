@@ -73,7 +73,9 @@ public class ExecutionSlide : MonoBehaviour
         Collider2D mine = player.GetComponent<Collider2D>();
         if (mine != null) half = mine.bounds.extents.x;
 
-        x1 = edge + dir * (half + PastEdge);
+        // Her zaman düşmanın arka kenarının ötesinde biter (içinde kalmaz); zincirde sadece "ötesi" kısalır.
+        float chainScale = MoveChain.Begin(Duration);
+        x1 = edge + dir * (half + PastEdge * chainScale);
 
         // oyuncunun tum govde collider'lari (pl.col atanmamis olabilir)
         myCols = pl.GetComponentsInChildren<Collider2D>();
@@ -108,6 +110,10 @@ public class ExecutionSlide : MonoBehaviour
         savedInterp = rb.interpolation;
         interpSaved = true;
         rb.interpolation = RigidbodyInterpolation2D.None;   // Update'ten konum yazarken interpolasyon titreme yapiyordu
+
+        // Kayma kazanır: devam eden / bekleyen parry atılması iptal (hareketler toplanmaz).
+        if (pl.Movement != null)
+            pl.Movement.CancelParryBurst();
 
         SlideCount++;
         finished = false;

@@ -62,7 +62,8 @@ public class GameFlow : MonoBehaviour
     {
         restarting = true;
 
-
+        Charms.KuroyoruMode = false;   // ana menüye dönünce Kuroyoru kapanır
+        Charms.ClearStacks();
 
         yield return ScreenFade.Instance.FadeTo(1f, 0.5f);
 
@@ -183,6 +184,7 @@ public class MainMenu : MonoBehaviour
     private static Row[] MainRows => new[]
     {
         new Row { label = "BAŞLA", kanji = "開始", kind = 0 },
+        new Row { label = "KUROYORU", kanji = "黒夜", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
@@ -525,8 +527,8 @@ public class MainMenu : MonoBehaviour
         fillRects = new RectTransform[n];
         knobRects = new RectTransform[n];
 
-        float top = p == Page.Main ? -30f : 110f;
-        float step = p == Page.Main ? -172f : (n > 7 ? -58f : -66f);
+        float top = p == Page.Main ? (n > 3 ? 100f : -30f) : 110f;
+        float step = p == Page.Main ? (n > 3 ? -140f : -172f) : (n > 7 ? -58f : -66f);
         bool compact = IsTestPage(p);
         bool dense = !compact && p != Page.Main && n > 7;
 
@@ -744,16 +746,23 @@ public class MainMenu : MonoBehaviour
         switch (i)
         {
             case 0:
-
-
+                startKuroyoru = false;
+                Charms.KuroyoruMode = false;
+                Charms.ClearStacks();
                 StartCoroutine(StartGame());
                 break;
 
             case 1:
-                BuildPage(Page.Settings);
+                // KUROYORU: sonsuz mod + tek vuruşta ölüm + 20 öldürmede +%2 charm seçimi.
+                startKuroyoru = true;
+                StartCoroutine(StartGame());
                 break;
 
             case 2:
+                BuildPage(Page.Settings);
+                break;
+
+            case 3:
                 GameSettings.Save();
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;
@@ -763,6 +772,8 @@ public class MainMenu : MonoBehaviour
                 break;
         }
     }
+
+    private bool startKuroyoru;
 
     private void Resume()
     {
@@ -888,7 +899,7 @@ public class MainMenu : MonoBehaviour
     {
         GameSettings.Save();
         BuildPage(Page.Main);
-        index = pauseMode ? 2 : 4;
+        index = 2;
     }
 
     private void RefreshValues()
@@ -1491,6 +1502,13 @@ public class MainMenu : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.45f);
 
         Active = false;
+
+        if (startKuroyoru)
+        {
+            EnemyArena arena = FindFirstObjectByType<EnemyArena>();
+            if (arena != null) arena.BeginKuroyoru();
+            else Debug.LogWarning("KUROYORU: sahnede EnemyArena yok, mod başlatılamadı.");
+        }
 
         yield return ScreenFade.Instance.FadeTo(0f, 1.4f);
 

@@ -12,7 +12,7 @@ public static class HitboxUtil
     /// 'mover' (oyuncu govdesi) 'obstacle' icindeyse YATAY olarak en yakin kenara tasir.
     /// Dondurulen: tasindi mi.
     /// </summary>
-    public static bool SeparateHorizontally(Rigidbody2D rb, Collider2D mover, Collider2D obstacle, float margin = 0.05f)
+    public static bool SeparateHorizontally(Rigidbody2D rb, Collider2D mover, Collider2D obstacle, float margin = 0.05f, float forceSide = 0f)
     {
         if (rb == null || mover == null || obstacle == null || !obstacle.enabled || obstacle.isTrigger)
             return false;
@@ -25,6 +25,8 @@ public static class HitboxUtil
         Bounds o = obstacle.bounds;
 
         float side = Mathf.Sign(m.center.x - o.center.x);
+        if (forceSide != 0f)
+            side = Mathf.Sign(forceSide);   // dash yönünde: düşmanın ARKASINA çıkar, geri fırlamaz
         if (side == 0f)
             side = 1f;
 
@@ -37,7 +39,7 @@ public static class HitboxUtil
     }
 
     /// <summary>Dash vb. sonrasi oyuncu bir dusmanin govdesinin icinde kaldiysa disari alir.</summary>
-    public static void EjectFromEnemies(PlayerController p)
+    public static void EjectFromEnemies(PlayerController p, float preferDir = 0f)
     {
         if (p == null || p.col == null || p.rb == null)
             return;
@@ -58,7 +60,7 @@ public static class HitboxUtil
             if (buf[i] == null)
                 continue;
 
-            if (SeparateHorizontally(p.rb, p.col, buf[i]))
+            if (SeparateHorizontally(p.rb, p.col, buf[i], 0.05f, preferDir))
                 Physics2D.SyncTransforms();
         }
     }
