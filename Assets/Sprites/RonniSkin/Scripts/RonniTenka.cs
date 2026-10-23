@@ -20,9 +20,9 @@ namespace RonniSkin
         [Tooltip("Parlamanın boyu (kaynak piksel).")] public float glintPx = 420f;
         [Header("Kına oturma parlaması")]
         [Tooltip("Kılıç kına oturduğu anda (tık) kının ağzında kısa bir parlama.")] public bool sheathGlint = true;
-        [Tooltip("Yıldız boyu (kaynak piksel).")] public float sheathGlintPx = 750f;
-        [Tooltip("Arkadaki yumuşak hale boyu (kaynak piksel).")] public float sheathHaloPx = 520f;
-        [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.6f;
+        [Tooltip("Yıldız boyu (kaynak piksel).")] public float sheathGlintPx = 1100f;
+        [Tooltip("Arkadaki yumuşak hale boyu (kaynak piksel).")] public float sheathHaloPx = 950f;
+        [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.7f;
         public Color sheathGlintColor = new Color(1f, 0.96f, 0.82f, 1f);
         [Header("Dönüş izi")]
         public bool smear = true;
@@ -30,15 +30,15 @@ namespace RonniSkin
         public Color smearColor = new Color(0.86f, 0.93f, 1f, 1f);
         [Header("Kan (düşman kanı: yeşil) — silkeleme anında")]
         public bool blood = true;
-        public int dropCount = 16;
+        public int dropCount = 22;
         [Tooltip("Düşman kanıyla aynı yeşil (SliceBloodFx). Her damla bunun açık/koyu tonunu alır.")]
         public Color dropColor = new Color(0.08f, 0.8f, 0.12f, 1f);
         [Tooltip("Rig birimi / sn (1 birim = 1000 kaynak piksel).")] public float dropSpeed = 6.5f;
         public float dropGravity = 16f, dropLife = 1.4f;
-        [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(40f, 90f);
+        [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(60f, 130f);
         [Header("Yerdeki kan lekeleri")]
         public bool groundSplats = true;
-        [Tooltip("Leke genişliği (kaynak piksel).")] public Vector2 splatPx = new Vector2(120f, 380f);
+        [Tooltip("Leke genişliği (kaynak piksel).")] public Vector2 splatPx = new Vector2(220f, 560f);
         [Tooltip("Lekenin yerde kalma süresi (sn); son 2.5 sn'de solar.")] public float splatLife = 6f;
 
         RonniSkinRig rig;
@@ -263,7 +263,7 @@ namespace RonniSkin
 
         void SpawnDrops(Transform root, float upp, string layer)
         {
-            if (dropSp == null) return;
+            if (circleHard == null) return;
             Vector3 tipDir = root.InverseTransformVector(-kblade.right).normalized;
             Vector3 swing = new Vector3(-tipDir.y, tipDir.x, 0f);      // saat yönü tersine savrulma yönü (aşağı)
             Vector3 fwd = new Vector3(-1f, -0.25f, 0f);                 // karakter sola bakar (rig yerel uzayı)
@@ -281,9 +281,9 @@ namespace RonniSkin
                 Vector3 ls = new Vector3(s, s * Random.Range(1.0f, 1.5f), 1f);
                 go.transform.localScale = Vector3.Scale(ls, new Vector3(Mathf.Abs(root.lossyScale.x), Mathf.Abs(root.lossyScale.y), 1f));
                 var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = dropSp; if (fxMat != null) sr.sharedMaterial = fxMat;
-                float shade = Random.Range(0.55f, 1.0f);
-                Color c = new Color(dropColor.r * shade * Random.Range(0.6f, 1.4f), dropColor.g * shade, dropColor.b * shade * Random.Range(0.6f, 1.4f), 1f);
+                sr.sprite = circleHard; if (fxMat != null) sr.sharedMaterial = fxMat;   // beyaz daire: renk tam uygulanır
+                float shade = Random.Range(0.45f, 0.9f);   // SliceBloodFx damla tonları
+                Color c = new Color(shade * Random.Range(0.05f, 0.14f) * dropColor.r / 0.08f, shade * dropColor.g / 0.8f, shade * Random.Range(0.08f, 0.2f) * dropColor.b / 0.12f, 1f);
                 sr.color = c;
                 sr.sortingLayerName = layer; sr.sortingOrder = order;
                 Vector3 vLocal = (swing * (0.6f + 0.6f * f) + fwd * 0.55f + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(-0.2f, 0.3f), 0f)) * dropSpeed * Random.Range(0.6f, 1.1f);
@@ -304,7 +304,7 @@ namespace RonniSkin
                 Vector3 p = d.t.position + d.v * dt;
                 if (p.y <= d.groundY)
                 {
-                    if (groundSplats) SpawnSplat(new Vector3(p.x, d.groundY + 0.02f, p.z), d);
+                    if (groundSplats) SpawnSplat(new Vector3(p.x, d.groundY + 0.06f, p.z), d);
                     Destroy(d.t.gameObject); drops.RemoveAt(i); continue;
                 }
                 if (d.age >= d.life) { Destroy(d.t.gameObject); drops.RemoveAt(i); continue; }
@@ -327,7 +327,8 @@ namespace RonniSkin
             go.transform.localScale = new Vector3(0.001f, 0.001f, 1f);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = circleHard; if (fxMat != null) sr.sharedMaterial = fxMat;
-            var c = d.c * 0.7f; c.a = 0.9f; sr.color = c;
+            float sh = Random.Range(0.35f, 0.7f);   // SliceBloodFx leke tonları
+            var c = new Color(sh * 0.06f * dropColor.r / 0.08f, sh * dropColor.g / 0.8f, sh * 0.1f * dropColor.b / 0.12f, 0.9f); sr.color = c;
             sr.sortingLayerName = d.layer; sr.sortingOrder = d.order;
             splats.Add(new Splat { sr = sr, age = 0f, w = Random.Range(splatPx.x, splatPx.y) * upp * sc });
         }
