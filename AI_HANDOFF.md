@@ -621,3 +621,12 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Saldırı squash/stretch güçlendirildi (RonniPlayerBridge): SquashTable ~%60-70 daha belirgin; FlowTable hazırlıkta daha geriye yaslanma (-0.07..-0.09) ve vuruşta daha ileri atılma (0.135..0.19, eğilme 9-11 derece); vuruş anı hitFlow 0.028->0.042, 3.2->4.5. Yedek: _backup_before_atk_stretch. Genel çarpanlar squashAmount/flowAmount inspector'dan ayarlanır.
 - Ruh emilim sesi şimdilik KAPALI: SoulSystem.cs içinde const bool AbsorbSfxOn = false (true yapınca açılır). Klipler Resources/SoulSfx'te duruyor.
 - Chiburi (Q) saldırı sırasında basılınca: Q anında combat.CancelAttack() (tampondaki/sıradaki saldırı silinir) + atkHoldT/atkRetT/atkFade/lastAtkFrames sıfırlanır; tenka karesi sırasında da bu durum ve saldırı kare sprite'ı (frameSR) temizlenir. Böylece chiburi bitince eski saldırının bir karesi oynamaz. RonniPlayerBridge (satır ~853-855, tenkaNow dalı). Yedek: _backup_before_chiburi_fix. Not: chiburi->idle geçişinde bir karelik renk tonu farkı gözlendi (frame-step), düzeltilmedi.
+
+
+## Arkadan vuruş = direkt can hasarı
+- Scripts/PlayerDamage.cs: `backHit` (Attack/Slam, düşman staggered değil, `info.direction.x * enemy.FacingDirection > 0` yani oyuncu düşmanın sırtında) ise posture katmanı atlanır, vuruş doğrudan CAN katmanına gider; "ARKADAN!" yazısı çıkar. Yedek: Assets/_VoiceBackup~/PlayerDamage.cs.before_backstab
+- Test edilmedi (oyun içinde elle denenmedi); derleme temiz.
+- Arkadan vuruş can hasarı x1.5 (`BackHitDamageMultiplier` sabiti, PlayerDamage.cs).
+
+## Düşman saldırı kararında yön kilidi
+- Scripts/Enemies/EnemyUnit.cs: `facingLocked` artık `lockFacingWhileAttacking` (varsayılan true) ile windup başından itibaren kilitli (eskiden yalnız commit sonrası). Çok vuruşlu saldırının ara vuruşlarında da FaceTarget çağrılmaz. Yedek: _VoiceBackup~/EnemyUnit.cs.before_facinglock. Işınlanma (teleportBehind) sonrası tek seferlik dönüş korunur. LegacyBoss/EnemyController'a dokunulmadı. Oyunda test edilmedi.

@@ -19,7 +19,7 @@ public class EnemyUnit : EnemyBase
     [Range(0.1f, 0.9f)] public float commitFraction = 0.55f;
     [Tooltip("Vuruştan bu kadar önce son uyarı (cue) çakar.")]
     public float cueLead = 0.14f;
-    [Tooltip("Hurt/Stagger/Recover içinde oyuncuya doğru dönmeyi bırak.")]
+    [Tooltip("Saldırı kararı (windup başı) verildikten sonra oyuncuya doğru dönmeyi bırak.")]
     public bool lockFacingWhileAttacking = true;
 
     [Header("Parry yavaşlatma")]
@@ -741,7 +741,8 @@ public class EnemyUnit : EnemyBase
         if (teleportPending && stateTime >= current.teleportVanish) DoTeleport();
         if (teleportPending) { HardStop(); return; }
         // Engellenemez saldırıda yön BAŞTAN kilitli: arkasına geçersen dönüp vurmaz.
-        bool facingLocked = current.unblockable || current.projectileSpeed > 0f || (lockFacingWhileAttacking && committedFired);
+        // Saldırı kararı verildiği an (windup başı) yön kilitli: oyuncu arkaya geçse de dönmez.
+        bool facingLocked = lockFacingWhileAttacking || current.unblockable || current.projectileSpeed > 0f;
         if (!facingLocked) FaceTarget();
 
         // Kararlı aşamaya kadar, oyuncu ÖNÜNDEyse menzili koru.
@@ -859,8 +860,8 @@ public class EnemyUnit : EnemyBase
             extraHitsDone++;
             SquashPunch(new Vector2(1.15f, 0.88f), 0.1f, 1f);
             // Parry sonrası oyuncu geride/arkada kaldıysa bile sıradaki vuruş gelsin: dön + menzile adım at.
-            FaceTarget();
-            float gapN = Mathf.Abs(DxToTarget) - current.hitReach * 0.8f;
+            if (!lockFacingWhileAttacking) FaceTarget();
+            float gapN = (lockFacingWhileAttacking && Mathf.Sign(DxToTarget) != facing) ? 0f : Mathf.Abs(DxToTarget) - current.hitReach * 0.8f;
             if (gapN > 0f && gapN < 5f) transform.position += new Vector3(Mathf.Sign(DxToTarget) * gapN, 0f, 0f);
             ResolveHit();
             if (state != UnitState.Active) return;

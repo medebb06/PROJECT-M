@@ -130,7 +130,14 @@ public static class PlayerDamage
         // DENGE KATMANI
         // =====================================================
 
-        if (balance != null && !balance.IsBroken && enemy.UsesPosture)
+        // ARKADAN VURUŞ: düşman oyuncuya sırtı dönükken düz vuruş posture'ı atlar, direkt cana gider.
+        bool backHit = (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
+            && !enemy.IsStaggered && Mathf.Abs(info.direction.x) > 0.1f
+            && info.direction.x * enemy.FacingDirection > 0f;
+        if (backHit)
+            CombatCallout.PopupAbove(enemy, "ARKADAN!", new Color(1f, 0.6f, 0.25f), 0.7f);
+
+        if (balance != null && !balance.IsBroken && enemy.UsesPosture && !backHit)
         {
             float sourceMultiplier =
                 info.source == DamageSource.Attack || info.source == DamageSource.Slam
@@ -248,6 +255,9 @@ public static class PlayerDamage
         if ((info.source == DamageSource.Attack || info.source == DamageSource.Slam) && enemy.UsesPosture)
             healthAmount = Mathf.Max(1, Mathf.RoundToInt(healthAmount * SpamHealthMult));
 
+        if (backHit)
+            healthAmount = Mathf.Max(1, Mathf.RoundToInt(healthAmount * BackHitDamageMultiplier));
+
         // Sersemlemiş düşman daha çabuk ölür (infaz barı boşken de bitirilebilsin).
         bool execKill = false;
 
@@ -309,6 +319,9 @@ public static class PlayerDamage
 
         return result;
     }
+
+    // Arkadan vuruş can hasarı çarpanı.
+    private const float BackHitDamageMultiplier = 1.5f;
 
     // Taban hasar -> stat değiştiricileri -> kritik -> tam sayı.
     private static int Resolve(
