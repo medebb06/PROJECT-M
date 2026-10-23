@@ -586,6 +586,11 @@ public class MainMenu : MonoBehaviour
         bool click = Input.GetMouseButtonDown(0) &&
             RectTransformUtility.RectangleContainsScreenPoint(rowRects[index], Input.mousePosition, null);
 
+        // Menu sesleri: satir degisince gezinme, onayda secim kliki.
+        if (page != sfxPrevPage) { sfxPrevPage = page; sfxPrevIndex = index; }
+        else if (index != sfxPrevIndex) { sfxPrevIndex = index; MenuSfx.Nav(); }
+        if (confirm || click) MenuSfx.Select();
+
         if (page == Page.Main)
         {
             if (confirm || click)
@@ -604,6 +609,8 @@ public class MainMenu : MonoBehaviour
     }
 
     private Vector3 lastMouse;
+    private Page sfxPrevPage = (Page)(-1);
+    private int sfxPrevIndex = -1;
 
     private void ActivateMain(int i)
     {
