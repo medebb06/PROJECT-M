@@ -496,6 +496,8 @@ namespace RonniSkin
         {
             if (player == null) return;
             bool defending = player.IsDefending();
+            // otomatik kılıç koyma için son giriş anı (tuş, fare tuşu, dokunuş, hareket, havada olmak)
+            if (lastInputT <= 0f || Input.anyKey || Input.touchCount > 0 || Mathf.Abs(player.moveInput) > 0.1f || !player.isGrounded || player.isDashing) lastInputT = Time.time;
             anim.grounded = player.isGrounded;
             anim.running = forceRun || (player.isGrounded && !defending && Mathf.Abs(player.moveInput) > 0.1f);
             if (forceRun) anim.grounded = true;
@@ -528,7 +530,29 @@ namespace RonniSkin
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
         [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.0f; float chiburiT = -1f; bool bladeCut;
         float chiForcedDur = -1f;
-        float ChiDur => chiForcedDur > 0f ? chiForcedDur : chiburiDur;
+        float ChiDur => chiForcedDur > 0f ? chiForcedDur : (TenkaReady() ? TenkaTotal : chiburiDur);
+        [Header("Tenka chiburi zamanlaması (sn)")]
+        [Tooltip("Hazırlık + kılıcı elde çevirme + kan silkeleme (hızlı).")] public float tenkaSpinTime = 0.8f;
+        [Tooltip("Kılıcı ters tutuşa çevirip kının ağzına getirme.")] public float tenkaRegripTime = 0.4f;
+        [Tooltip("Bıçağı kına sokma (yavaş, gerçekçi nōtō).")] public float tenkaInsertTime = 1.7f;
+        [Tooltip("Tsuba'nın oturması (tık) + elin dinlenmeye dönüşü.")] public float tenkaReleaseTime = 0.45f;
+        [Header("Otomatik kılıç koyma")]
+        [Tooltip("Kılıç çekikken, yerdeyken bir süre hiç giriş gelmezse tenka chiburi oynayıp kılıcı kınına koyar.")] public bool autoSheathe = true;
+        [Tooltip("Girişsiz bekleme süresi (sn).")] public float autoSheatheDelay = 2.5f;
+        float lastInputT;
+        float TenkaTotal => Mathf.Max(0.1f, tenkaSpinTime + tenkaRegripTime + tenkaInsertTime + tenkaReleaseTime);
+        // Gerçek zaman -> tenka klip fazı. Klip bölüm sınırları (klip sn, toplam 3.0): dönüş+silkeleme 0-1.60, ters tutuş 1.60-1.95, kına sokma 1.95-2.48, tık+bırakma 2.48-3.0.
+        float TenkaPhase(float t, float dur)
+        {
+            float s = dur / TenkaTotal;
+            float b1 = tenkaSpinTime * s, b2 = b1 + tenkaRegripTime * s, b3 = b2 + tenkaInsertTime * s;
+            float ct;
+            if (t <= b1) ct = Mathf.Lerp(0f, 1.60f, t / Mathf.Max(1e-4f, b1));
+            else if (t <= b2) ct = Mathf.Lerp(1.60f, 1.95f, (t - b1) / Mathf.Max(1e-4f, b2 - b1));
+            else if (t <= b3) ct = Mathf.Lerp(1.95f, 2.48f, (t - b2) / Mathf.Max(1e-4f, b3 - b2));
+            else ct = Mathf.Lerp(2.48f, 3.0f, (t - b3) / Mathf.Max(1e-4f, dur - b3));
+            return Mathf.Clamp01(ct / 3.0f);
+        }
         [Tooltip("Rage kilic koyma: donme/silkeleme kismi sureyin bu orani kadar (hizli).")] public float chiSpinTime = 0.3f;
         [Tooltip("Rage kilic koyma: donme kismi klibin bu fazinda biter; sonrasi kinina koyma (yavas).")] public float chiSpinPhase = 0.62f;
         // Rage'de zaman -> klip fazi: ilk kisim hizli, kinina koyma yavas. Normal (tus) kilic koymada dogrusal.
@@ -656,6 +680,10 @@ namespace RonniSkin
             if (blocking || parrying) { anim.SetAction("block", Time.time); return; }
 
             // ---- sheathe / draw on key (grounded, idle) ----
+            // kılıç çekikken uzun süre giriş yoksa: otomatik tenka chiburi + nōtō
+            if (autoSheathe && chiburiT < 0f && shClip == null && defClip == null && defAtk == null && anim.swordReady && player.isGrounded && !player.isDashing
+                && (combat == null || !combat.IsAttacking) && Mathf.Abs(player.moveInput) < 0.1f && Time.time - lastInputT >= autoSheatheDelay && TenkaReady())
+            { chiburiT = 0f; chiForcedDur = -1f; }
             // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
             if (chiburiT < 0f && shClip == null && MobileInput.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; }
             if (chiburiT >= 0f)
@@ -814,7 +842,7 @@ namespace RonniSkin
                     // Kare kare saldırıda Animator'ın ilk sprite'ı henüz gelmediyse eski (rig) saldırı pozunu bir an bile gösterme.
                     bool atkOn = mode == 0 && playerAtk != null && (frameClip ? FrameAtkActive() : ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip)));
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
-                    float dPh = defAtk != null ? defPhase : ChiPhase(chiburiT / Mathf.Max(0.1f, ChiDur));
+                    float dPh = defAtk != null ? defPhase : (TenkaReady() ? TenkaPhase(chiburiT, ChiDur) : ChiPhase(chiburiT / Mathf.Max(0.1f, ChiDur)));
                     bool tenkaNow = mode == 0 && dClip == "chiburi" && defAtk == null && atkClip == null && TenkaReady();
                     bool dOn = !tenkaNow && mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
                     // Kombo geçişi: yeni saldırının ilk sprite'ı henüz gelmediyse (kare kare) eski rig/idle pozu yerine son kareyi tut.

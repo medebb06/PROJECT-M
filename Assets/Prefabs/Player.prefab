@@ -204,7 +204,7 @@ MonoBehaviour:
   sizeMultiplier: 3
   offset: {x: 0, y: 0}
   mirrorSpriteColor: 1
-  sheatheKey: 9
+  sheatheKey: 113
   startDrawn: 1
   forceRun: 0
   useProfileRun: 1

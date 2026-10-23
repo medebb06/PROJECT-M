@@ -1,0 +1,35 @@
+AUTO START after 2,51s idle
+t=0,00 phase=0,005 clip=tenka
+t=0,11 phase=0,077 clip=tenka
+t=0,21 phase=0,148 clip=tenka
+t=0,32 phase=0,216 clip=tenka
+t=0,42 phase=0,283 clip=tenka
+t=0,52 phase=0,353 clip=tenka
+t=0,63 phase=0,423 clip=tenka
+t=0,73 phase=0,490 clip=tenka
+t=0,83 phase=0,544 clip=tenka
+t=0,93 phase=0,573 clip=tenka
+t=1,03 phase=0,604 clip=tenka
+t=1,14 phase=0,635 clip=tenka
+t=1,25 phase=0,656 clip=tenka
+t=1,36 phase=0,667 clip=tenka
+t=1,46 phase=0,677 clip=tenka
+t=1,56 phase=0,688 clip=tenka
+t=1,66 phase=0,699 clip=tenka
+t=1,76 phase=0,709 clip=tenka
+t=1,86 phase=0,720 clip=tenka
+t=1,96 phase=0,730 clip=tenka
+t=2,06 phase=0,741 clip=tenka
+t=2,17 phase=0,751 clip=tenka
+t=2,27 phase=0,762 clip=tenka
+t=2,37 phase=0,773 clip=tenka
+t=2,48 phase=0,784 clip=tenka
+t=2,58 phase=0,794 clip=tenka
+t=2,68 phase=0,805 clip=tenka
+t=2,78 phase=0,815 clip=tenka
+t=2,89 phase=0,826 clip=tenka
+t=2,99 phase=0,866 clip=tenka
+t=3,10 phase=0,905 clip=tenka
+t=3,20 phase=0,946 clip=tenka
+t=3,30 phase=0,985 clip=tenka
+END at 3,35 swordReady=False

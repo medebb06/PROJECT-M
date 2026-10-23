@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// YETENEK YUVASI (Sekiro protez aleti mantığı). Tek yuva, [Q] ile kullanılır.
+/// YETENEK YUVASI (Sekiro protez aleti mantığı). Tek yuva, [E] ile kullanılır.
 /// Parry'nin YERİNE değil YANINDA: bekleme süresi uzun, parry ve öldürme
 /// bekleme süresini kısaltır (şarj).
 ///
@@ -28,7 +28,7 @@ public class PlayerAbility : MonoBehaviour
     public static event Action<AbilityType> Used;
 
     [Header("Giriş")]
-    [Tooltip("Q: KIN. Her zaman aktif; düşmanlardaki biriken yükü patlatır.")]
+    [Tooltip("E: KIN. Her zaman aktif; düşmanlardaki biriken yükü patlatır.")]
     public KeyCode key = KeyCode.E;   // KIN (eskiden Q; Q artık kılıcı koyma / çekme)
 
     [Tooltip("Seçilen özel yetenek (Atılım Kesiği...). Kın yükü biriktirir.")]

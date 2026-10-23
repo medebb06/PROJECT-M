@@ -18,6 +18,10 @@ namespace RonniSkin
         [Header("Parlama")]
         public bool glint = true;
         [Tooltip("Parlamanın boyu (kaynak piksel).")] public float glintPx = 420f;
+        [Header("Kına oturma parlaması")]
+        [Tooltip("Kılıç kına oturduğu anda (tık) kının ağzında kısa bir parlama.")] public bool sheathGlint = true;
+        [Tooltip("Boyu (kaynak piksel).")] public float sheathGlintPx = 300f;
+        [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.4f;
         [Header("Dönüş izi")]
         public bool smear = true;
         [Range(0f, 1f)] public float smearAlpha = 0.5f;
@@ -36,7 +40,8 @@ namespace RonniSkin
         SpriteRenderer glintSR, smearSR;
         Sprite glintSp, smearSp, dropSp;
         Material fxMat;
-        bool active, wasDrop, cutOn;
+        bool active, wasDrop, cutOn, wasSheathed;
+        SpriteRenderer sheathSR; float sheathAge = -1f; Vector3 sheathPos;
         class Drop { public Transform t; public SpriteRenderer sr; public Vector3 v; public float age, life; }
         readonly List<Drop> drops = new List<Drop>();
 
@@ -54,7 +59,7 @@ namespace RonniSkin
         public void Stop()
         {
             if (!active) return;
-            active = false; wasDrop = false;
+            active = false; wasDrop = false; wasSheathed = false;
             if (rig == null) return;
             if (cutOn) { rig.SetPartWindow("idle_kilic", 0f, 1f, Color.white, Color.white); cutOn = false; }
             rig.SetActLayers(false);
@@ -104,9 +109,12 @@ namespace RonniSkin
         void LateUpdate()
         {
             UpdateDrops();
+            UpdateSheathGlint();
             if (!active || rig == null || kblade == null || fxFlags == null) return;
             float upp = rig.unitsPerPixel;
             bool front = fxFlags.localScale.x > 0.5f, sheathed = fxFlags.localScale.y > 0.5f;
+            if (sheathed && !wasSheathed && sheathGlint && rig.Shown && fxMouth != null) StartSheathGlint();
+            wasSheathed = sheathed;
             rig.SetActLayers(front);
 
             // bıçak kınının ağzında kırpılır (ağızdan içerisi görünmez)
@@ -163,6 +171,36 @@ namespace RonniSkin
             bool dropNow = fxTip != null && fxTip.localScale.x > 0.5f;
             if (dropNow && !wasDrop && blood && rig.Shown) SpawnDrops(root, upp, layer);
             wasDrop = dropNow;
+        }
+
+        // kılıç kına oturdu: kının ağzında kısa parlama (tenka bitip rig değişse de sönene kadar kalır)
+        void StartSheathGlint()
+        {
+            if (glintSp == null) return;
+            if (sheathSR == null) { sheathSR = MakeSR("Tenka_SheathGlint", glintSp); }
+            sheathSR.transform.SetParent(rig.transform, false);
+            sheathPos = rig.transform.InverseTransformPoint(fxMouth.position);
+            sheathAge = 0f;
+            int ord = rig.sortingOrderOffset + 300;
+            foreach (var p in rig.parts) if (p != null && p.name == "idle_tsuka") { var mr = p.GetComponent<MeshRenderer>(); if (mr != null) ord = mr.sortingOrder + 5; }
+            sheathSR.sortingLayerName = bladeMR != null ? bladeMR.sortingLayerName : rig.sortingLayerName;
+            sheathSR.sortingOrder = ord;
+            sheathSR.enabled = true;
+        }
+
+        void UpdateSheathGlint()
+        {
+            if (sheathSR == null || sheathAge < 0f) return;
+            sheathAge += Time.deltaTime;
+            float d = Mathf.Max(0.05f, sheathGlintTime), u = sheathAge / d;
+            if (u >= 1f) { sheathSR.enabled = false; sheathAge = -1f; return; }
+            float grow = Mathf.Clamp01(u / 0.18f), fade = 1f - Mathf.Clamp01((u - 0.35f) / 0.65f);
+            float s = grow * grow * (3f - 2f * grow) * (1f - 0.35f * Mathf.Clamp01((u - 0.35f) / 0.65f));
+            float upp = rig != null ? rig.unitsPerPixel : 0.001f;
+            sheathSR.transform.localPosition = sheathPos;
+            sheathSR.transform.localRotation = Quaternion.Euler(0f, 0f, 15f + 70f * u);
+            sheathSR.transform.localScale = Vector3.one * sheathGlintPx * upp * Mathf.Max(0.001f, s);
+            sheathSR.color = new Color(1f, 0.97f, 0.88f, fade);
         }
 
         void SpawnDrops(Transform root, float upp, string layer)
