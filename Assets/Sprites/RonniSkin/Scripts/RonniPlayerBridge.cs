@@ -22,7 +22,7 @@ namespace RonniSkin
         public Vector2 offset = Vector2.zero;
         public bool mirrorSpriteColor = true;
         [Header("Sheathe")]
-        [Tooltip("Key that sheathes / draws the katana while idle.")] public KeyCode sheatheKey = KeyCode.R;
+        [Tooltip("Key that sheathes / draws the katana while idle.")] public KeyCode sheatheKey = KeyCode.Q;
         [Tooltip("Start the level with the katana drawn (held in the back hand).")] public bool startDrawn = false;
         string shClip; float shStart;
         [Tooltip("Test: always play the run animation.")] public bool forceRun = false;
@@ -526,7 +526,7 @@ namespace RonniSkin
         [Header("Parry / Block (RonniAtk)")]
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
-        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 3.0f; float chiburiT = -1f; bool bladeCut;
+        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.0f; float chiburiT = -1f; bool bladeCut;
         float chiForcedDur = -1f;
         float ChiDur => chiForcedDur > 0f ? chiForcedDur : chiburiDur;
         [Tooltip("Rage kilic koyma: donme/silkeleme kismi sureyin bu orani kadar (hizli).")] public float chiSpinTime = 0.3f;
@@ -657,7 +657,7 @@ namespace RonniSkin
 
             // ---- sheathe / draw on key (grounded, idle) ----
             // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
-            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; }
+            if (chiburiT < 0f && shClip == null && MobileInput.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; }
             if (chiburiT >= 0f)
             {
                 if (chiForcedDur < 0f && (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded)) chiburiT = -1f;
@@ -668,7 +668,7 @@ namespace RonniSkin
                     else { anim.swordReady = true; shClip = null; return; }
                 }
             }
-            if (shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.HasClip("sheathe") && anim.HasClip("unsheathe"))
+            if (shClip == null && MobileInput.GetKeyDown(sheatheKey) && player.isGrounded && anim.HasClip("sheathe") && anim.HasClip("unsheathe"))
             {
                 shClip = anim.swordReady ? "sheathe" : "unsheathe"; shStart = Time.time;
                 anim.swordReady = shClip == "unsheathe";

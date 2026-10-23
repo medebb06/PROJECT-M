@@ -288,7 +288,7 @@ MonoBehaviour:
   blockRaise2: 0.18
   blockReturn2: 0.3
   idleDrawnPeriod2: 3.2
-  chiburiDur: 3
+  chiburiDur: 2
   chiSpinTime: 0.3
   chiSpinPhase: 0.62
   frameDash: 1

@@ -29,10 +29,10 @@ public class PlayerAbility : MonoBehaviour
 
     [Header("Giriş")]
     [Tooltip("Q: KIN. Her zaman aktif; düşmanlardaki biriken yükü patlatır.")]
-    public KeyCode key = KeyCode.Q;
+    public KeyCode key = KeyCode.E;   // KIN (eskiden Q; Q artık kılıcı koyma / çekme)
 
     [Tooltip("Seçilen özel yetenek (Atılım Kesiği...). Kın yükü biriktirir.")]
-    public KeyCode specialKey = KeyCode.E;
+    public KeyCode specialKey = KeyCode.None;   // şimdilik tuşu yok (eskiden E)
 
     [Header("Geçici test")]
     [Tooltip("true: tüm bekleme süreleri 0 (denge ayarı yapılana kadar).")]
@@ -338,7 +338,7 @@ private void OnEnemyHitFocus(EnemyBase enemy, DamageInfo info, HitResult result)
         if (!was && FocusFull && player != null)
         {
             LastReadyTime = Time.unscaledTime;
-            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "ODAK HAZIR [Q]", new Color(1f, 0.1f, 0.1f), 0.9f);
+            NoCallout.Popup(player.transform.position + Vector3.up * 2.4f, "ODAK HAZIR [E]", new Color(1f, 0.1f, 0.1f), 0.9f);
         }
     }
 
