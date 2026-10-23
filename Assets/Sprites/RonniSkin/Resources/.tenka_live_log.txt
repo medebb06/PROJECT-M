@@ -1,0 +1,13 @@
+0 el=0,10 chiburiT=0,10 swordReady=True shown=Ronni_DrawnIdle 
+1 el=0,56 chiburiT=0,56 swordReady=True shown=Ronni_DrawnIdle 
+2 el=0,80 chiburiT=0,80 swordReady=True shown=Ronni_DrawnIdle 
+3 el=1,11 chiburiT=1,11 swordReady=True shown=Ronni_DrawnIdle 
+4 el=1,43 chiburiT=1,43 swordReady=True shown=Ronni_DrawnIdle 
+5 el=1,79 chiburiT=1,79 swordReady=True shown=Ronni_DrawnIdle 
+6 el=2,11 chiburiT=2,11 swordReady=True shown=Ronni_DrawnIdle 
+7 el=2,40 chiburiT=2,40 swordReady=True shown=Ronni_DrawnIdle 
+8 el=2,56 chiburiT=2,56 swordReady=True shown=Ronni_DrawnIdle 
+9 el=2,76 chiburiT=2,76 swordReady=True shown=Ronni_DrawnIdle 
+10 el=2,96 chiburiT=2,96 swordReady=True shown=Ronni_DrawnIdle 
+11 el=3,26 chiburiT=-1,00 swordReady=False shown=Ronni_Idle 
+12 el=3,71 chiburiT=-1,00 swordReady=False shown=Ronni_Idle 

@@ -154,7 +154,7 @@ namespace RonniSkin
                     float a = Mathf.Atan2(tipDir.y, tipDir.x) * Mathf.Rad2Deg;
                     smearSR.transform.localPosition = root.InverseTransformPoint(kblade.position);
                     smearSR.transform.localRotation = Quaternion.Euler(0f, 0f, a);
-                    smearSR.transform.localScale = Vector3.one * (2f * bladeLength * upp);
+                    smearSR.transform.localScale = Vector3.one * (2f * bladeLength * upp * Mathf.Clamp(Mathf.Abs(kblade.localScale.x), 0.3f, 1f));   // perspektifle kısalan bıçağın ucunu izler
                     var c = smearColor; c.a = Mathf.Clamp01(sv) * smearAlpha; smearSR.color = c;
                     smearSR.sortingLayerName = layer; smearSR.sortingOrder = baseOrder - 1;
                 }
