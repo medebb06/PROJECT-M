@@ -130,14 +130,14 @@ public static class PlayerDamage
         // DENGE KATMANI
         // =====================================================
 
-        // ARKADAN VURUŞ: düşman oyuncuya sırtı dönükken düz vuruş posture'ı atlar, direkt cana gider.
+        // ARKADAN VURUŞ: posture'a önden gibi normal vurur; sadece can hasarına x1.5 uygulanır.
         bool backHit = (info.source == DamageSource.Attack || info.source == DamageSource.Slam)
             && !enemy.IsStaggered && Mathf.Abs(info.direction.x) > 0.1f
             && info.direction.x * enemy.FacingDirection > 0f;
         if (backHit)
             CombatCallout.PopupAbove(enemy, "ARKADAN!", new Color(1f, 0.6f, 0.25f), 0.7f);
 
-        if (balance != null && !balance.IsBroken && enemy.UsesPosture && !backHit)
+        if (balance != null && !balance.IsBroken && enemy.UsesPosture)
         {
             float sourceMultiplier =
                 info.source == DamageSource.Attack || info.source == DamageSource.Slam

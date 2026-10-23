@@ -638,3 +638,4 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Yedekler: Assets/_BackupTestKeys~/ (dosya adı = yol, '/' yerine '__').
 - Oyun modunda reflection ile test edildi (spawn, god, bar, kapatma); gerçek tuş basışı denenmedi.
 - TeleportToMouse (T = imlece ışınlan) kullanıcı isteğiyle GERİ ALINDI (yukarıdaki kaldırılanlar listesinden çıkar).
+- GÜNCELLEME: arkadan vuruş artık posture'ı ATLAMIYOR (önden gibi normal posture vurur). Arkadan sadece "ARKADAN!" yazısı ve can katmanına ulaşan hasarda x1.5 kaldı.
