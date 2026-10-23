@@ -142,9 +142,12 @@ public class Health : MonoBehaviour
         );
     }
 
+    /// <summary>Ölümsüzlük (I tuşu): açıkken hasar alınmaz.</summary>
+    [System.NonSerialized] public bool godMode;
+
     public void TakeDamage(int damage)
     {
-        if (IsDead)
+        if (IsDead || godMode)
             return;
 
         if (damage <= 0)

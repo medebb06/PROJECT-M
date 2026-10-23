@@ -555,10 +555,6 @@ public class TrainingDummy : MonoBehaviour
             RefreshText();
         }
 
-#if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.tKey.wasPressedThisFrame)
-            ResetStats();
-#endif
     }
 
     public void ResetStats()

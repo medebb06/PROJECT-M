@@ -276,10 +276,6 @@ public class TimeOfDay : MonoBehaviour
     {
         try
         {
-            if (Input.GetKeyDown(KeyCode.Period)) StepPreset(+1);
-            if (Input.GetKeyDown(KeyCode.Comma)) StepPreset(-1);
-            if (Input.GetKey(KeyCode.RightBracket)) SetHour(hour + Time.unscaledDeltaTime * 3f, true);
-            if (Input.GetKey(KeyCode.LeftBracket)) SetHour(hour - Time.unscaledDeltaTime * 3f, true);
         }
         catch (System.InvalidOperationException)
         {

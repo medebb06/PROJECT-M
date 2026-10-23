@@ -66,7 +66,6 @@ public class EncounterDirector : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.R)) { SceneManager.LoadScene(SceneManager.GetActiveScene().path); return; }
-        if (Input.GetKeyDown(KeyCode.K)) KillActive();
 
         Transform p = Player;
         if (p == null || index >= encounters.Count) return;

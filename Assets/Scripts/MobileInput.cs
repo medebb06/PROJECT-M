@@ -331,11 +331,6 @@ public class MobileInput : MonoBehaviour
 
     private void Update()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (!Application.isMobilePlatform && Input.GetKeyDown(KeyCode.F10))
-            ForceMobile = !ForceMobile;
-#endif
-
         if (!Active || !Visible())
         {
             ReleaseAll();

@@ -8,14 +8,6 @@ public class EnemySpawner : MonoBehaviour
     [Header("Optional")]
     public Transform spawnParent;
 
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            SpawnEnemyAtMouse();
-        }
-    }
-
     void SpawnEnemyAtMouse()
     {
         if (enemyPrefab == null)

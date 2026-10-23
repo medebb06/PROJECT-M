@@ -630,3 +630,11 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 
 ## Düşman saldırı kararında yön kilidi
 - Scripts/Enemies/EnemyUnit.cs: `facingLocked` artık `lockFacingWhileAttacking` (varsayılan true) ile windup başından itibaren kilitli (eskiden yalnız commit sonrası). Çok vuruşlu saldırının ara vuruşlarında da FaceTarget çağrılmaz. Yedek: _VoiceBackup~/EnemyUnit.cs.before_facinglock. Işınlanma (teleportBehind) sonrası tek seferlik dönüş korunur. LegacyBoss/EnemyController'a dokunulmadı. Oyunda test edilmedi.
+
+
+## Test tuşları temizlendi + P/O/I
+- Kalan tek test tuşları (Scripts/Enemies/EnemyArena.cs): **P** = sonsuz düşman döngüsü aç/kapa (sağ-sol sırayla, rastgele tip; kapatınca kalan düşmanlar ölür), **O** = yetenek barı hep dolu, **I** = ölümsüzlük (Health.godMode + PlayerDamageReceiver.GodMode). Üstte durum yazısı çıkar.
+- Kaldırılan tuşlar: EnemySpawner(P fare spawn), TeleportToMouse(T), RunCameraZoom(B), RainSystem(F3/F4), TimeOfDay(. , [ ]), MobileInput(F10), CameraZoom(Z/X), HordeMode(B/N/V/1-5), EncounterDirector(K), TrainingDummy(T), GiantWarriorEnemy TestKeys (#if false), EnemyArena eski tuşları (1-9, Tab, K, H, G, Y, U).
+- Yedekler: Assets/_BackupTestKeys~/ (dosya adı = yol, '/' yerine '__').
+- Oyun modunda reflection ile test edildi (spawn, god, bar, kapatma); gerçek tuş basışı denenmedi.
+- TeleportToMouse (T = imlece ışınlan) kullanıcı isteğiyle GERİ ALINDI (yukarıdaki kaldırılanlar listesinden çıkar).

@@ -1802,7 +1802,7 @@ public class GiantWarriorEnemy : MonoBehaviour
 
     void TestKeys()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if false   // test tuslari kaldirildi
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb == null) return;
         if (kb.uKey.wasPressedThisFrame) { testLock = Skill.None; ForceSkill(Skill.Sweep, false); }

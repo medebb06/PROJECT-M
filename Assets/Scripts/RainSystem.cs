@@ -484,8 +484,6 @@ public class RainSystem : MonoBehaviour
 
         if (hotkeys)
         {
-            if (Input.GetKeyDown(KeyCode.F3)) raining = !raining;
-            if (Input.GetKeyDown(KeyCode.F4)) StartBolt();
         }
 
         if (rainMat == null)

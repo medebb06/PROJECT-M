@@ -75,18 +75,7 @@ public class HordeMode : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.B)) running = !running;
-        if (Input.GetKeyDown(KeyCode.N)) KillAll();
-        if (Input.GetKeyDown(KeyCode.V)) passive = !passive;
         EnemyUnit.Passive = passive;
-        if (Time.timeScale > 0.01f)
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SpawnFixed("Duelist");
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SpawnFixed("Quick");
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SpawnFixed("Heavy");
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SpawnFixed("Leaper");
-            if (Input.GetKeyDown(KeyCode.Alpha5)) SpawnFixed("Archer");
-        }
         if (!running || Time.time < nextSpawn || entries.Count == 0) return;
 
         float k = Mathf.Clamp01((Time.time - startTime) / Mathf.Max(1f, rampSeconds));

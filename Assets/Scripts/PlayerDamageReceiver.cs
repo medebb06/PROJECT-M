@@ -170,6 +170,9 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
     // Düşman saldırısı bu tek vuruş için max canın yüzdesini (ağır vuruş) belirler; TakeDamage tüketir.
     [System.NonSerialized] public float hitPercentOverrideOnce;
 
+    /// <summary>Ölümsüzlük (I tuşu): açıkken hiçbir vuruş işlemez.</summary>
+    public static bool GodMode;
+
     public void TakeDamage(int damage, Vector2 hitDirection)
     {
         TakeDamage(
@@ -203,7 +206,7 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
         if (health == null)
             return;
 
-        if (player == null)
+        if (player == null || GodMode)
             return;
 
         // Dash i-frame'i VEYA hasar sonrası korumalı dönem.

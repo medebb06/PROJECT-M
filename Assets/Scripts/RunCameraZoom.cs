@@ -314,9 +314,6 @@ public class RunCameraZoom : MonoBehaviour
         bool moving = speed > 0.35f;
         bool air = player != null && !player.isGrounded;
         busyWhy = player == null ? "oyuncu yok" : inp ? "girdi (tuş/fare/kol)" : moving ? "hareket" : air ? "havada" : "";
-        // Test: B tuşu nefes modunu zorla aç/kapat (sebep ne olursa olsun).
-        if (Input.GetKeyDown(KeyCode.B))
-            forceBreath = !forceBreath;
 
         if (forceBreath || ForceCinematic)
             busyWhy = "";

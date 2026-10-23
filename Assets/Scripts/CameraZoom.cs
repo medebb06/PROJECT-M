@@ -17,14 +17,5 @@ public class CameraZoom : MonoBehaviour
 
     void Update()
     {
-        // Z tuşuna basınca uzaklaşır, X tuşuna basınca normale döner
-        if (Input.GetKeyDown(KeyCode.Z))
-        {
-            cam.orthographicSize = zoomedOutSize;
-        }
-        if (Input.GetKeyDown(KeyCode.X))
-        {
-            cam.orthographicSize = defaultSize;
-        }
     }
 }
