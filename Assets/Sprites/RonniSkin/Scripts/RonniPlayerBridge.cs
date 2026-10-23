@@ -175,8 +175,32 @@ namespace RonniSkin
         void OnAttackImpact(int step, float kick)
         {
             if (!frameSquash || frameSR == null || !frameSR.enabled) return;
-            sqCur.x += kick * squashAmount;
-            sqCur.y -= kick * 0.8f * squashAmount;
+            // Vuruş darbesi: yaylı sapma. Hit-stop'ta (deltaTime 0) olduğu gibi DONAR, sonra yaylanarak oturur
+            // (basık -> uzun -> hafif basık). Son kombo vuruşu daha güçlü.
+            float k = kick * hitKickMul * (step >= 4 ? 1.35f : 1f) * squashAmount;
+            k = Mathf.Min(k, hitKickMax);
+            hitSpr = new Vector2(k, -k * 0.85f);
+            hitSprVel = Vector2.zero;
+        }
+        [Header("Vuruş darbesi (yaylı squash)")]
+        [Tooltip("Vuruş darbesi çarpanı (CombatImpactFeedback.hitKick x bu). 1 = eski, 2.5 = belirgin.")] public float hitKickMul = 2.5f;
+        [Tooltip("Tek vuruşta en fazla ölçek sapması.")] public float hitKickMax = 0.28f;
+        [Tooltip("Yay hızı (rad/s). Büyük = daha hızlı titrer.")] public float hitSprOmega = 30f;
+        [Tooltip("Sönüm (0..1). Küçük = daha çok yaylanır.")] [Range(0.1f, 1f)] public float hitSprZeta = 0.34f;
+        Vector2 hitSpr, hitSprVel;
+        void TickHitSpring()
+        {
+            if (hitSpr == Vector2.zero && hitSprVel == Vector2.zero) return;
+            float dt = Mathf.Min(Time.deltaTime, 0.033f);
+            if (dt <= 0f) return;   // hit-stop: sapma donuk kalır
+            int steps = Mathf.Clamp(Mathf.CeilToInt(dt / 0.008f), 1, 5);
+            float h = dt / steps, w2 = hitSprOmega * hitSprOmega, c = 2f * hitSprZeta * hitSprOmega;
+            for (int i = 0; i < steps; i++)
+            {
+                hitSprVel += (-w2 * hitSpr - c * hitSprVel) * h;
+                hitSpr += hitSprVel * h;
+            }
+            if (hitSpr.sqrMagnitude < 1e-6f && hitSprVel.sqrMagnitude < 1e-4f) { hitSpr = Vector2.zero; hitSprVel = Vector2.zero; }
         }
         Vector2 SquashTarget(Sprite s)
         {
@@ -310,7 +334,8 @@ namespace RonniSkin
             Vector2 sqT = SquashTarget(s);
             if (!sqWas) { sqCur = sqT; sqWas = true; }
             else sqCur = Vector2.Lerp(sqCur, sqT, 1f - Mathf.Exp(-squashSpeed * Time.deltaTime));
-            frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x, L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y, 1f);
+            TickHitSpring();
+            frameSR.transform.localScale = new Vector3(L / (Mathf.Abs(ls.x) > 1e-6f ? ls.x : 1f) * sqCur.x * (1f + hitSpr.x), L / (Mathf.Abs(ls.y) > 1e-6f ? Mathf.Abs(ls.y) : 1f) * sqCur.y * (1f + hitSpr.y), 1f);
             UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
             Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_") || s.name.StartsWith("ParryRev_")) off += parryOffset; if (s.name.StartsWith("ParryHD_")) off.x += parryAlignPx * rig.unitsPerPixel * Mathf.Abs(r.transform.lossyScale.y) * frameAtkPxScale; off.x += guardOffX; guardOffX = 0f;
