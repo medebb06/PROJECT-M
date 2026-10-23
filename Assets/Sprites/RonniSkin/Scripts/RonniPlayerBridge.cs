@@ -141,6 +141,30 @@ namespace RonniSkin
             { new Vector2(1.08f, 0.92f), new Vector2(1.18f, 0.90f), new Vector2(1.07f, 0.96f), Vector2.one },   // Attack3: gerilme -> saplama
             { new Vector2(1.05f, 0.95f), new Vector2(0.97f, 1.05f), new Vector2(1.16f, 0.90f), Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
         };
+        // ---- Kare kare hareket akışı: sprite kareleri arasında karakter yaslanır, öne atılır, geri oturur (sprite'lara dokunmadan) ----
+        [Header("Kare kare hareket akışı (lunge / yaslanma)")]
+        [Tooltip("Saldırı karelerinde karakteri hazırlıkta hafif geri yaslayıp vuruşta öne atar, sonra yumuşakça oturtur.")] public bool frameFlow = true;
+        [Tooltip("Genel şiddet çarpanı (0 = kapalı, 1 = varsayılan, 2 = abartılı).")] [Range(0f, 2f)] public float flowAmount = 1f;
+        [Tooltip("Hedef pozisyona oturma hızı. Büyük = daha sert.")] public float flowSpeed = 24f;
+        Vector3 flowCur;
+        // [saldırı, kare] = (ileri kayma, yukarı kayma: sprite boyunun oranı; öne eğilme: derece). Kare 1 hazırlık (geri yaslan), 2 vuruş (öne at), 3 devam, 4 otur.
+        static readonly Vector3[,] FlowTable =
+        {
+            { new Vector3(-0.035f, 0f, -3f), new Vector3(0.085f, 0f, 6f),    new Vector3(0.055f, 0f, 3f),   new Vector3(0.012f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack1
+            { new Vector3(-0.035f, 0f, -2.5f), new Vector3(0.095f, 0f, 6f),  new Vector3(0.06f, 0f, 3f),    new Vector3(0.012f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack2
+            { new Vector3(-0.055f, 0f, -3.5f), new Vector3(0.12f, 0f, 7f),   new Vector3(0.085f, 0f, 4f),   new Vector3(0.015f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack3 (saplama)
+            { new Vector3(-0.035f, 0f, -2f), new Vector3(0.045f, 0.05f, 0f), new Vector3(0.08f, 0.03f, 4f), new Vector3(0.12f, 0f, 8f), new Vector3(0.04f, 0f, 2f), Vector3.zero, Vector3.zero },   // Attack4 (sıçrama -> büyük kesim)
+        };
+        Vector3 FlowTarget(Sprite s)
+        {
+            if (!frameFlow || s == null) return Vector3.zero;
+            string n = s.name;   // "Attack2HD_3"
+            if (n.Length < 11 || !n.StartsWith("Attack")) return Vector3.zero;
+            int a = n[6] - '1', k = n[n.Length - 1] - '1';
+            if (a < 0 || a >= FlowTable.GetLength(0) || k < 0 || k >= FlowTable.GetLength(1)) return Vector3.zero;
+            return FlowTable[a, k] * flowAmount;
+        }
+        Quaternion blendRot = Quaternion.identity;
         void OnEnable() { CombatImpactFeedback.AttackImpact += OnAttackImpact; }
         // Vuruş anı: donma sırasında görünsün diye anında uygula (sonra yumuşakça hedefe döner).
         void OnAttackImpact(int step, float kick)
@@ -261,12 +285,13 @@ namespace RonniSkin
             if (blendPrev != null && blendPrev != s && frameSR.enabled && ((frameBlendAtk4 && s.name.StartsWith("Attack4HD") && blendPrev.name.StartsWith("Attack4HD")) || (parryBlend && s.name.StartsWith("ParryHD_") && blendPrev.name.StartsWith("ParryHD_"))))
             {
                 var ai = new GameObject("~atk_afterimage");
-                ai.transform.position = blendPos; ai.transform.localScale = blendScale;
+                ai.transform.position = blendPos; ai.transform.localScale = blendScale; ai.transform.rotation = blendRot;
                 var air = ai.AddComponent<SpriteRenderer>();
                 air.sprite = blendPrev; air.flipX = blendFlip; air.sharedMaterial = frameSR.sharedMaterial;
                 air.sortingLayerID = blendLayer; air.sortingOrder = blendOrder - 1;
                 ai.AddComponent<FrameAfterImage>().Init(air, frameBlendAlpha, frameBlendTime);
             }
+            bool flowWasOn = frameSR.enabled;
             frameWant = true; frameFading = false;
             frameSR.enabled = true;
             frameSR.sprite = s;
@@ -284,8 +309,12 @@ namespace RonniSkin
             UpdateGlow(s, frameSR.color.a);
             float fx = frameSR.flipX ? -1f : 1f;
             Vector2 off = frameAtkOffset; if (s.name.StartsWith("ParryHD_") || s.name.StartsWith("ParryRev_")) off += parryOffset; if (s.name.StartsWith("ParryHD_")) off.x += parryAlignPx * rig.unitsPerPixel * Mathf.Abs(r.transform.lossyScale.y) * frameAtkPxScale; off.x += guardOffX; guardOffX = 0f;
-            frameSR.transform.position = r.transform.position + new Vector3(off.x * fx, off.y, 0f);
-            blendPrev = s; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
+            float flowH = L * s.rect.height / Mathf.Max(1f, s.pixelsPerUnit);
+            Vector3 flowT = FlowTarget(s);
+            if (!flowWasOn) flowCur = Vector3.zero; else flowCur = Vector3.Lerp(flowCur, flowT, 1f - Mathf.Exp(-flowSpeed * Time.deltaTime));
+            frameSR.transform.rotation = Quaternion.Euler(0f, 0f, -flowCur.z * fx);
+            frameSR.transform.position = r.transform.position + new Vector3(off.x * fx + flowCur.x * fx * flowH, off.y + flowCur.y * flowH, 0f);
+            blendPrev = s; blendRot = frameSR.transform.rotation; blendPos = frameSR.transform.position; blendScale = frameSR.transform.lossyScale; blendFlip = frameSR.flipX; blendOrder = frameSR.sortingOrder; blendLayer = frameSR.sortingLayerID;
         }
         bool atkWasOn, atkHoldIdle; float atkFade, atkHoldT, atkRetT;
         RonniSkinRig fadeTop; int fadeTopBase;
@@ -572,7 +601,8 @@ namespace RonniSkin
         float chiForcedDur = -1f;
         float ChiDur => chiForcedDur > 0f ? chiForcedDur : (TenkaReady() ? TenkaTotal : chiburiDur);
         [Header("Tenka chiburi zamanlaması (sn)")]
-        [Tooltip("Hazırlık + kılıcı elde çevirme + kan silkeleme (hızlı).")] public float tenkaSpinTime = 0.8f;
+        [Tooltip("Hazırlık + kılıcı elde çevirme (hızlı). Eski klipte dönüş bölümü 1.60 klip-sn idi; süre klipteki yeni dönüş bölümüne (1.21 klip-sn) orantılı uygulanır, yani hız eskisiyle aynı.")] public float tenkaSpinTime = 0.8f;
+        [Tooltip("Dönüş bitince yukarıdan aşağı tek seferlik yarım ay savurma: kaldır + vur + dinlen (sn).")] public float tenkaSlashSec = 0.42f;
         [Tooltip("Kılıcı ters tutuşa çevirip kının ağzına getirme.")] public float tenkaRegripTime = 0.4f;
         [Tooltip("Bıçağı kına sokma (yavaş, gerçekçi nōtō).")] public float tenkaInsertTime = 1.7f;
         [Tooltip("Tsuba'nın oturması (tık) + elin dinlenmeye dönüşü.")] public float tenkaReleaseTime = 0.45f;
@@ -580,18 +610,23 @@ namespace RonniSkin
         [Tooltip("Kılıç çekikken, yerdeyken bir süre hiç giriş gelmezse tenka chiburi oynayıp kılıcı kınına koyar.")] public bool autoSheathe = true;
         [Tooltip("Girişsiz bekleme süresi (sn).")] public float autoSheatheDelay = 2.5f;
         float lastInputT;
-        float TenkaTotal => Mathf.Max(0.1f, tenkaSpinTime + tenkaRegripTime + tenkaInsertTime + tenkaReleaseTime);
-        // Gerçek zaman -> tenka klip fazı. Klip bölüm sınırları (klip sn, toplam 3.0): dönüş+silkeleme 0-1.60, ters tutuş 1.60-1.95, kına sokma 1.95-2.48, tık+bırakma 2.48-3.0.
+        // Tenka klibi: 103 kare, 3.4382 klip-sn. Bölüm sınırları (klip sn): dönüş 0-1.2135, savurma (kaldır + vur + dinlen) 1.2135-2.0382, ters tutuş 2.0382-2.3882, kına sokma 2.3882-2.9181, tık+bırakma 2.9181-3.4382.
+        // (Klibi TenkaClipRebuild üretir; sınırlar oradaki rapordan alındı.)
+        const float TenkaClipDur = 3.4382f, TenkaClipSpin = 1.2135f, TenkaClipSlash = 2.0382f, TenkaClipRegrip = 2.3882f, TenkaClipInsert = 2.9181f;
+        float TenkaSpinReal => tenkaSpinTime * (TenkaClipSpin / 1.60f);   // eski klipte dönüş bölümü 1.60 klip-sn idi: aynı hız
+        float TenkaTotal => Mathf.Max(0.1f, TenkaSpinReal + tenkaSlashSec + tenkaRegripTime + tenkaInsertTime + tenkaReleaseTime);
+        // Gerçek zaman -> tenka klip fazı.
         float TenkaPhase(float t, float dur)
         {
             float s = dur / TenkaTotal;
-            float b1 = tenkaSpinTime * s, b2 = b1 + tenkaRegripTime * s, b3 = b2 + tenkaInsertTime * s;
+            float b1 = TenkaSpinReal * s, b2 = b1 + tenkaSlashSec * s, b3 = b2 + tenkaRegripTime * s, b4 = b3 + tenkaInsertTime * s;
             float ct;
-            if (t <= b1) ct = Mathf.Lerp(0f, 1.60f, t / Mathf.Max(1e-4f, b1));
-            else if (t <= b2) ct = Mathf.Lerp(1.60f, 1.95f, (t - b1) / Mathf.Max(1e-4f, b2 - b1));
-            else if (t <= b3) ct = Mathf.Lerp(1.95f, 2.48f, (t - b2) / Mathf.Max(1e-4f, b3 - b2));
-            else ct = Mathf.Lerp(2.48f, 3.0f, (t - b3) / Mathf.Max(1e-4f, dur - b3));
-            return Mathf.Clamp01(ct / 3.0f);
+            if (t <= b1) ct = Mathf.Lerp(0f, TenkaClipSpin, t / Mathf.Max(1e-4f, b1));
+            else if (t <= b2) ct = Mathf.Lerp(TenkaClipSpin, TenkaClipSlash, (t - b1) / Mathf.Max(1e-4f, b2 - b1));
+            else if (t <= b3) ct = Mathf.Lerp(TenkaClipSlash, TenkaClipRegrip, (t - b2) / Mathf.Max(1e-4f, b3 - b2));
+            else if (t <= b4) ct = Mathf.Lerp(TenkaClipRegrip, TenkaClipInsert, (t - b3) / Mathf.Max(1e-4f, b4 - b3));
+            else ct = Mathf.Lerp(TenkaClipInsert, TenkaClipDur, (t - b4) / Mathf.Max(1e-4f, dur - b4));
+            return Mathf.Clamp01(ct / TenkaClipDur);
         }
         [Tooltip("Rage kilic koyma: donme/silkeleme kismi sureyin bu orani kadar (hizli).")] public float chiSpinTime = 0.3f;
         [Tooltip("Rage kilic koyma: donme kismi klibin bu fazinda biter; sonrasi kinina koyma (yavas).")] public float chiSpinPhase = 0.62f;

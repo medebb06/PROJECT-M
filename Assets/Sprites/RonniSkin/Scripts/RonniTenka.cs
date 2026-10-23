@@ -166,7 +166,7 @@ namespace RonniSkin
             if (sheathed && !wasSheathSfx && sfx && rig.Shown) PlaySheath();
             wasSheathSfx = sheathed;
             bool swingNow = fxTip != null && fxTip.localScale.y > 0.5f && !sheathed;
-            if (swingNow && !wasSwing && sfx && rig.Shown && Time.time - lastSwingT > 1.5f) PlaySwing();
+            if (swingNow && !wasSwing && sfx && rig.Shown && Time.time - lastSwingT > 0.45f) PlaySwing();
             if (!swingNow && swingSrc != null && swingSrc.isPlaying) { swingSrc.volume = Mathf.MoveTowards(swingSrc.volume, 0f, Time.deltaTime * 9f); if (swingSrc.volume <= 0.001f) swingSrc.Stop(); }   // sallama bitti: ses de biter
             wasSwing = swingNow;
 
@@ -216,7 +216,9 @@ namespace RonniSkin
                     float a = Mathf.Atan2(tipDir.y, tipDir.x) * Mathf.Rad2Deg;
                     smearSR.transform.localPosition = root.InverseTransformPoint(kblade.position);
                     smearSR.transform.localRotation = Quaternion.Euler(0f, 0f, a);
-                    smearSR.transform.localScale = Vector3.one * (2f * bladeLength * upp * Mathf.Clamp(Mathf.Abs(kblade.localScale.x), 0.3f, 1f));   // perspektifle kısalan bıçağın ucunu izler
+                    float smearSc = 2f * bladeLength * upp * Mathf.Clamp(Mathf.Abs(kblade.localScale.x), 0.3f, 1f);   // perspektifle kısalan bıçağın ucunu izler
+                    bool ccwSwing = fxGlint != null && fxGlint.localScale.y < -0.5f;   // klip: fxGlint.sy = -1 -> saat yönü tersine savurma (yukarıdan aşağı vuruş): iz bıçağın gerisine yatsın
+                    smearSR.transform.localScale = new Vector3(smearSc, ccwSwing ? -smearSc : smearSc, 1f);
                     var c = smearColor; c.a = Mathf.Clamp01(sv) * smearAlpha; smearSR.color = c;
                     smearSR.sortingLayerName = layer; smearSR.sortingOrder = baseOrder - 1;
                 }
