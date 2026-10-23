@@ -628,6 +628,7 @@ public class PlayerCombatController : MonoBehaviour
         if (execAttack)
             player.SetAttackAnimationSpeed(executionSpeedMult);
 
+        PlayerGrunt.Play();   // saldırı sesi: her vuruşta "hah!"
         currentState.Enter();
     }
 
