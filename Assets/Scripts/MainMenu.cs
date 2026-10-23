@@ -258,6 +258,7 @@ public class MainMenu : MonoBehaviour
     private Sprite brushSprite, scrimSprite, dotSprite;
     private float canvasW = 3840f, canvasH = 2160f;
     private bool decorInit, brushInit;
+    private float startOut;   // Start geçişi: 0..1, arayüzü söndürür
     private const int EmberN = 46;
     private RectTransform[] embers;
     private Image[] emberImgs;
@@ -645,9 +646,9 @@ public class MainMenu : MonoBehaviour
         Cursor.visible = true;
 
         // Giriş görünümleri.
-        titleGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 0.5f) / 1.0f));
-        menuGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.1f) / 0.8f));
-        decoGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.4f) / 1.0f));
+        titleGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 0.5f) / 1.0f)) * (1f - startOut);
+        menuGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.1f) / 0.8f)) * (1f - startOut);
+        decoGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.4f) / 1.0f)) * (1f - startOut);
 
         AnimateDecor();
 
@@ -1424,13 +1425,59 @@ public class MainMenu : MonoBehaviour
     // OYUNU BAŞLAT
     // =========================================================
 
+    private IEnumerator StartTransition()
+    {
+        const float dur = 0.95f;
+
+        RectTransform crt = (RectTransform)transform;
+        float W = crt.rect.width, H = crt.rect.height;
+
+        Image wipe = NewImage("InkWipe", transform, Color.black, brushSprite);
+        wipe.rectTransform.anchorMin = wipe.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        wipe.rectTransform.sizeDelta = new Vector2(W * 1.7f, H * 1.5f);
+        wipe.rectTransform.anchoredPosition = new Vector2(-1.35f * W, 0f);
+        wipe.transform.SetAsLastSibling();
+
+        Vector2 brushBase = brushRt != null ? brushRt.sizeDelta : Vector2.zero;
+        Vector2 menuPos = menuRoot.anchoredPosition;
+
+        float t = 0f;
+
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / dur);
+
+            // 0..0.45: seçilen madde parlar, arayüz sola kayıp söner.
+            float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k / 0.45f));
+            startOut = a;
+            menuRoot.anchoredPosition = menuPos + new Vector2(-170f * a, 0f);
+
+            if (brushRt != null)
+            {
+                brushRt.sizeDelta = new Vector2(brushBase.x * (1f + 0.35f * a), brushBase.y);
+                brushImg.color = Color.Lerp(new Color(Vermilion.r, Vermilion.g, Vermilion.b, 0.92f), new Color(1f, 0.82f, 0.74f, 1f), a);
+            }
+
+            // 0.3..1: mürekkep darbesi soldan sağa ekranı kaplar.
+            float w = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((k - 0.3f) / 0.7f));
+            wipe.rectTransform.anchoredPosition = new Vector2(Mathf.Lerp(-1.35f * W, 0f, w), 0f);
+
+            yield return null;
+        }
+
+        startOut = 1f;
+    }
+
     private IEnumerator StartGame()
     {
         starting = true;
 
         MenuSfx.StartGame();   // giris sesi: Start'a basinca calar, oyun ekran kararirken bu sesle acilir
 
-        yield return ScreenFade.Instance.FadeTo(1f, 1.1f);
+        // Menü sola kayıp söner, siyah mürekkep darbesi ekranı siler, sonra tam kararır.
+        yield return StartTransition();
+        yield return ScreenFade.Instance.FadeTo(1f, 0.25f);
 
         // Menüyü gizle, oyuncuyu bırak.
         canvas.enabled = false;
