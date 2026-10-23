@@ -201,6 +201,8 @@ public class SoulFx : MonoBehaviour
         sfx = gameObject.AddComponent<AudioSource>();
         sfx.playOnAwake = false; sfx.spatialBlend = 0f;
         bellClip = MakeBell();
+        var absorbFile = Resources.Load<AudioClip>("SoulSfx/soul_absorb");   // gerçek ruh emilim sesi (yoksa kodla üretilen çan)
+        if (absorbFile != null) bellClip = absorbFile;
         releaseClip = MakeRelease();
         loseClip = MakeLose();
 
@@ -273,6 +275,8 @@ public class SoulFx : MonoBehaviour
         float dt = Time.deltaTime;
         AcquirePlayer();
 
+        if (Time.time >= nextScan) ScanSwordParts();
+        PickLiveSword();
         Vector2 hilt, tip, atkEnd; bool haveSword = GetSword(out hilt, out tip, out atkEnd);
         Vector2 target = haveSword ? Vector2.Lerp(hilt, tip, AbsorbAlong) : Vector2.zero;
 
@@ -309,7 +313,120 @@ public class SoulFx : MonoBehaviour
         atkBlend = Mathf.MoveTowards(atkBlend, attacking ? 1f : 0f, dt * 12f);
 
         BuildMesh(haveSword, hilt, tip, atkEnd);
+        SetBladeGlow(bladeI);
         UpdateHud(dt);
+    }
+
+    // ===================================================================
+    // KILIÇ PARLAMASI: rig parçasının (metal bıçak) kendi mesh'ine ikinci "soul" materyali
+    // ===================================================================
+    // Bıçak (metal) parçaları; kınlı durumda bıçak görünmediği için kılıç/kın parçası daha hafif parlar.
+    static readonly string[] BladePartNames = { "idle_kilic", "atk_blade" };
+    static readonly string[] SheathPartNames = { "idle_katana", "katana", "katana_sheathed" };
+    const float BladeGlowK = 2.6f;     // HDR çarpanı (Bloom'u besler)
+    const float SheathGlowMul = 0.85f; // kınlı kılıç parçası bıçaktan daha az parlar
+
+    class SwordPart { public RonniSkin.RonniSoftPart part; public MeshRenderer r; public MeshFilter f; public Material m; public bool blade; }
+    readonly List<SwordPart> swordParts = new List<SwordPart>();
+    Shader bladeShader; float nextScan; SwordPart liveSword; float bladeI;
+
+    void ScanSwordParts()
+    {
+        nextScan = Time.time + 0.5f;
+        for (int i = swordParts.Count - 1; i >= 0; i--)
+            if (swordParts[i].part == null) { if (swordParts[i].m != null) Destroy(swordParts[i].m); swordParts.RemoveAt(i); }
+        if (bladeShader == null)
+        {
+            bladeShader = Resources.Load<Shader>("Shaders/SoulBlade");
+            if (bladeShader == null) bladeShader = Shader.Find("ProjectM/SoulBlade");
+            if (bladeShader == null) { nextScan = Time.time + 5f; return; }
+        }
+        var all = FindObjectsByType<RonniSkin.RonniSoftPart>(FindObjectsInactive.Include);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var p = all[i];
+            if (p == null) continue;
+            bool blade = System.Array.IndexOf(BladePartNames, p.name) >= 0;
+            bool sheath = !blade && System.Array.IndexOf(SheathPartNames, p.name) >= 0;
+            if (!blade && !sheath) continue;
+            bool have = false;
+            for (int k = 0; k < swordParts.Count; k++) if (swordParts[k].part == p) { have = true; break; }
+            if (have) continue;
+            var r = p.GetComponent<MeshRenderer>(); var f = p.GetComponent<MeshFilter>();
+            if (r == null || f == null || r.sharedMaterial == null) continue;
+            var orig = r.sharedMaterial;
+            var m = new Material(bladeShader) { name = "SoulBlade_" + p.name, mainTexture = orig.mainTexture };
+            m.SetFloat("_Glow", 0f);
+            r.sharedMaterials = new Material[] { orig, m };   // 2. materyal aynı mesh'i toplamalı (additive) çizer
+            swordParts.Add(new SwordPart { part = p, r = r, f = f, m = m, blade = blade });
+        }
+    }
+
+    static bool PartVisible(SwordPart s) { return s.part != null && s.r != null && s.r.enabled && s.r.gameObject.activeInHierarchy; }
+
+    void PickLiveSword()
+    {
+        liveSword = null;
+        for (int i = 0; i < swordParts.Count; i++)
+        {
+            var s = swordParts[i];
+            if (!PartVisible(s)) continue;
+            if (s.blade) { liveSword = s; return; }
+            if (liveSword == null) liveSword = s;
+        }
+    }
+
+    /// <summary>Görünen kılıç parçasının kabza ve uç noktaları (dünya, parçanın anlık mesh'inden: animasyonu izler).</summary>
+    bool RigSword(out Vector2 hilt, out Vector2 tip)
+    {
+        hilt = tip = Vector2.zero;
+        if (liveSword == null || liveSword.f == null || pl == null) return false;
+        var mesh = liveSword.f.sharedMesh;
+        if (mesh == null) return false;
+        var v = mesh.vertices; var uv = mesh.uv;
+        if (v.Length < 3 || uv.Length != v.Length) return false;
+        Matrix4x4 M = liveSword.r.transform.localToWorldMatrix;
+        Vector3 A, B;
+        if (liveSword.blade)
+        {
+            float lo = float.MaxValue, hi = float.MinValue;
+            for (int i = 0; i < uv.Length; i++) { lo = Mathf.Min(lo, uv[i].x); hi = Mathf.Max(hi, uv[i].x); }
+            float mid = (lo + hi) * 0.5f; Vector3 sa = Vector3.zero, sb = Vector3.zero; int na = 0, nb = 0;
+            for (int i = 0; i < v.Length; i++)
+            {
+                Vector3 w = M.MultiplyPoint3x4(v[i]);
+                if (uv[i].x <= mid) { sa += w; na++; } else { sb += w; nb++; }
+            }
+            if (na == 0 || nb == 0) return false;
+            A = sa / na; B = sb / nb;
+            // kabza = gövdeye yakın uç
+            float s = Mathf.Max(0.01f, Mathf.Abs(pl.transform.lossyScale.y));
+            Vector3 chest = pl.transform.position + Vector3.up * 2.0f * s;
+            if ((B - chest).sqrMagnitude < (A - chest).sqrMagnitude) { Vector3 tmp = A; A = B; B = tmp; }
+        }
+        else
+        {
+            // kılıç/kın çizimi: kabza sol-üst köşe (u küçük, v büyük), uç sağ-alt köşe
+            int ia = 0, ib = 0; float mn = float.MaxValue, mx = float.MinValue;
+            for (int i = 0; i < uv.Length; i++) { float k = uv[i].x - uv[i].y; if (k < mn) { mn = k; ia = i; } if (k > mx) { mx = k; ib = i; } }
+            A = M.MultiplyPoint3x4(v[ia]); B = M.MultiplyPoint3x4(v[ib]);
+        }
+        hilt = A; tip = B;
+        return true;
+    }
+
+    void SetBladeGlow(float I)
+    {
+        Color glow = Color.Lerp(MidCol, CoreCol, Mathf.Clamp01(I * 0.8f));
+        float g = I > 0.02f ? (1.0f + 0.9f * Mathf.Clamp(I, 0f, 1.3f)) * BladeGlowK : 0f;
+        for (int i = 0; i < swordParts.Count; i++)
+        {
+            var s = swordParts[i];
+            if (s.m == null) continue;
+            s.m.SetFloat("_Glow", s.blade ? g : g * SheathGlowMul);
+            s.m.SetColor("_Tint", glow);
+            s.m.SetColor("_Core", CoreCol);
+        }
     }
 
     void AcquirePlayer()
@@ -342,6 +459,8 @@ public class SoulFx : MonoBehaviour
         Vector2 p = pl.transform.position;
         hilt = p + new Vector2(HiltLocal.x * f, HiltLocal.y) * s;
         tip = p + new Vector2(TipLocal.x * f, TipLocal.y) * s;
+        Vector2 rh, rt;
+        if (RigSword(out rh, out rt)) { hilt = rh; tip = rt; }   // görünen kılıç parçasından (animasyonu izler); yoksa yukarıdaki sabit noktalar
         if (pl.attackPoint != null)
         {
             Vector2 a = pl.attackPoint.position;
@@ -504,6 +623,7 @@ public class SoulFx : MonoBehaviour
     // ===================================================================
     void BuildMesh(bool haveSword, Vector2 hilt, Vector2 tip, Vector2 atkEnd)
     {
+        bladeI = 0f;
         if (mr == null || !mr.enabled || mat == null) return;
         vs.Clear(); cs.Clear(); uv0.Clear(); uv1.Clear(); tris.Clear();
 
@@ -518,22 +638,8 @@ public class SoulFx : MonoBehaviour
                 float idle = Souls.Count > 0 ? 0.05f : 0.0f;
                 float flick = 0.92f + 0.08f * Mathf.Sin(Time.time * 7.3f) * Mathf.Sin(Time.time * 3.1f + 1.3f);
                 float I = (idle + charge * 0.62f + pulse * 0.9f) * flick;
-                if (I > 0.02f)
-                {
-                    // Çubuk: kabza sapından (biraz yukarı) kın ucunun ötesine; saldırıda saldırı noktasına uzanır.
-                    Vector2 sd = (hilt - tip); sd = sd.sqrMagnitude > 1e-4f ? sd.normalized : Vector2.right;
-                    Vector2 a = hilt + sd * 0.42f;
-                    Vector2 b = Vector2.Lerp(tip - sd * 0.35f, atkEnd, atkBlend);
-                    float sat = Mathf.Clamp01(I);
-                    Color glow = Color.Lerp(MidCol, CoreCol, Mathf.Clamp01(I * 0.8f));
-
-                    // kabza parlaması
-                    AddBlob(Vector2.Lerp(hilt, tip, 0.12f), 1.3f + 1.5f * I, glow, 0.55f * sat);
-                    // yumuşak hale (kılıç boyunca)
-                    AddBar(a, b, 0.55f + 0.5f * I, glow, 0.50f * sat);
-                    // ince sıcak çekirdek (bıçak çizgisi)
-                    AddBar(a, b, 0.14f + 0.08f * I, CoreCol, Mathf.Clamp01(0.30f + 0.7f * I));
-                }
+                // Parlama artık kılıç parçasının kendi materyaliyle çizilir (SetBladeGlow); burada sadece şiddet hesaplanır.
+                if (I > 0.02f) bladeI = I;
             }
 
             // --- ruhlar ---

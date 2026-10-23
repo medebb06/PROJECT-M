@@ -602,3 +602,14 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Kod: `MenuSfx.StartGame()` (yeni; `StartVolume` 1.0, menü tıklarının AudioSource'unu kullanır, ignoreListenerPause açık). `MainMenu.StartGame()` coroutine'inin ilk satırında çağrılır: Start'a basınca ses çalar, ekran 1.1 sn'de kararır, 0.45 sn sonra 1.4 sn'de açılır (zamanlama değişmedi). Duraklatma menüsünden 'Devam' ve ana menüye dönüş etkilenmez (yalnızca ana menü Start).
 - Not: MenuSfx.Select() tıkı Start'a basınca da hâlâ çalıyor (kısa klik, ses ile üst üste). İstenirse Start için kapatılır.
 - Doğrulandı: derleme hatasız; Play'de ActivateMain(0) ile Start tetiklendi, AudioSource çalıyor (isPlaying), menü kapandı, oyuncu kontrolü açıldı, konsolda hata yok. Doğrulanmadı: kulakla ses/zamanlama hissi. Yedek: _backup_before_start_sfx (MenuSfx.cs, MainMenu.cs). Git commit/push YAPILMADI.
+
+
+## Ruh (soul) kılıç parlaması — materyal tabanlı (güncel)
+- Eski çubuk/blob parlaması KALDIRILDI. Parlama artık kılıç rig parçasının (idle_kilic, atk_blade; kınlıyken idle_katana/katana/katana_sheathed daha hafif) mesh'ine EK 2. materyal (ProjectM/SoulBlade, additive) olarak çizilir -> animasyonu ve kılıç şeklini birebir izler.
+- SoulSystem.cs: ScanSwordParts (0.5 sn'de bir parçaları bulup materyal ekler), PickLiveSword, RigSword (ruh çekim hedefi artık görünen kılıç parçasının mesh'inden), SetBladeGlow (_Glow/_Tint/_Core her kare). BladeGlowK ile parlaklık ayarlanır.
+- Bilinen sınır: kare-sprite saldırılar (Attack1-4 HD, ParryHD, DashHD) tüm vücut sprite'ı olduğu için bıçak ayrı değil; o anlarda parlama kapalı, ruh hedefi eski sabit noktalara döner.
+- Yeni idle denemesi (idle_katana_frames vb.) bırakıldı, eski idle geri getirildi; yukarıdaki 'Yeni kılıç çekik idle' bölümü GEÇERSİZ.
+- Değişen dosyalar: Assets/Resources/Shaders/SoulBlade.shader (yeni), Assets/Scripts/SoulSystem.cs.
+- Güncelleme (koşu): koşu rig'inde kılıç tek parça sprite (Ronni_Run/katana, koyu düz renk) olduğu için parlama düz mavi görünüyordu. SoulBlade.shader artık kırmızı sap ve siyah kulpu maskeler, kenar çizgisi (rim) ve akan dalga ile degrade verir; SheathGlowMul 0.85. Dosyalar: SoulBlade.shader, SoulSystem.cs.
+- Not: play'den çıkar çıkmaz yapılan device_commit_files bazen kalıcı olmuyor; yazdıktan sonra dosya içeriğini doğrula.
+- Ruh emilim sesi: Assets/Resources/SoulSfx/soul_absorb.mp3 (preview_8'den kadın sesi temizlenip kırpıldı, 2.4 sn). SoulSystem.cs bu klibi bellClip olarak yükler (Absorb'da calar, zincirde perde yükselir); dosya yoksa kodla üretilen çan kullanılır.
