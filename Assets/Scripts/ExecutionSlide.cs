@@ -11,9 +11,9 @@ public class ExecutionSlide : MonoBehaviour
     public static int SlideCount;
 
     public static bool Enabled = true;
-    public static float Duration = 0.16f;      // kayma süresi (sn, gerçek zaman)
-    public static float PastEdge = 1.0f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
-    public static float GhostGap = 0.03f;
+    public static float Duration = 0.65f;      // kayma süresi (sn, gerçek zaman) — uzun, süzülerek
+    public static float PastEdge = 4.5f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
+    public static float GhostGap = 0.05f;
     public static float HoldTime = 0.12f;   // kayma bittikten sonra da hedef alinamaz / hasar almaz kalir
 
     private PlayerController pl;
@@ -23,6 +23,8 @@ public class ExecutionSlide : MonoBehaviour
     private float x0, x1, age, ghostT;
     private bool finished;
     private bool fxEnded;
+    private RigidbodyInterpolation2D savedInterp;
+    private bool interpSaved;
     private static ExecutionSlide current;
 
     public static void Play(PlayerController player, Transform enemy, float dir)
@@ -103,6 +105,10 @@ public class ExecutionSlide : MonoBehaviour
 
         SetIgnore(true);
 
+        savedInterp = rb.interpolation;
+        interpSaved = true;
+        rb.interpolation = RigidbodyInterpolation2D.None;   // Update'ten konum yazarken interpolasyon titreme yapiyordu
+
         SlideCount++;
         finished = false;
         fxEnded = false;
@@ -138,11 +144,13 @@ private void Update()
         }
 
         float k = Mathf.Clamp01(age / Mathf.Max(0.02f, Duration));
-        float e = 1f - Mathf.Pow(1f - k, 5f);   // hizli baslar, yumusak durur
+        float e = (1f - Mathf.Pow(1f - k, 2.6f)) * Mathf.SmoothStep(0.45f, 1f, Mathf.Clamp01(k / 0.14f));   // kısa ivmelenme, sonra uzun süzülerek yavaşlama
 
         if (k < 1f)
         {
-            rb.position = new Vector2(Mathf.Lerp(x0, x1, e), rb.position.y);
+            Vector2 np = new Vector2(Mathf.Lerp(x0, x1, e), rb.position.y);
+            rb.position = np;
+            pl.transform.position = new Vector3(np.x, pl.transform.position.y, pl.transform.position.z);
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
 
             ghostT -= Time.unscaledDeltaTime;
@@ -158,6 +166,9 @@ private void Update()
             // Kayma bitti: oyuncu ARTIK serbest (eskiden HoldTime boyunca pozisyona çivileniyordu,
             // dash / saldırı / hareket çalışmıyordu). Sadece dokunulmazlık kısa süre daha sürer.
             rb.position = new Vector2(x1, rb.position.y);
+            pl.transform.position = new Vector3(x1, pl.transform.position.y, pl.transform.position.z);
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            RestoreInterp();
             Active = false;
 
             if (!fxEnded)
@@ -166,6 +177,12 @@ private void Update()
                 DashFx.End(pl);
             }
         }
+    }
+
+    private void RestoreInterp()
+    {
+        if (interpSaved && rb != null) rb.interpolation = savedInterp;
+        interpSaved = false;
     }
 
     private void SetIgnore(bool on)
@@ -192,6 +209,7 @@ private void Finish()
         if (current == this) current = null;
 
         SetIgnore(false);
+        RestoreInterp();
 
         if (pl != null)
         {
