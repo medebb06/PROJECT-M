@@ -40,6 +40,9 @@ namespace RonniSkin
         [Tooltip("Kılıç çekikken dururken görünen çizim klasörü (Resources/<klasör>, 'idle' klibi). Boş = eski RonniAtk 'idle_drawn' klibi.")]
         public string drawnIdleFolder = "RonniIdleKatana";
         RonniSkinRig rigDrawn; RonniClipPlayer playerDrawn; Vector3 baseDrawn = Vector3.one; bool drawnWant;
+        [Tooltip("Kılıcı koyarken (R / rage) kılıç çekik idle çizimiyle tenka chiburi + sakate nōtō oynat (RonniIdleKatana 'tenka' klibi). Kapalı = eski RonniAtk chiburi.")]
+        public bool useTenka = true;
+        RonniTenka tenka; bool tenkaOn, tenkaFrame; float tenkaPh;
         [Header("Yerinde zıplama (idle gövde + zıplama bacakları)")]
         [Tooltip("Yatay hareket olmadan zıplarken kullanılan karma çizim (Resources/<klasör>, 'air' klibi). Boş = kapalı.")] public string standJumpFolder = "RonniJump";
         [Tooltip("Saldırı smear parlaklığı (HDR; Impact Mat _Color ≈ 8.5). Bloom varsa parlar.")] public float smearGlow = 6f;
@@ -436,6 +439,8 @@ namespace RonniSkin
             }
 
             // Attack1: kılıç çekili karma çizim
+            tenka = GetComponent<RonniTenka>();
+            if (tenka == null) tenka = gameObject.AddComponent<RonniTenka>();
             if (!string.IsNullOrEmpty(drawnIdleFolder))
             {
                 MakeProfile(drawnIdleFolder, "Ronni_DrawnIdle", out rigDrawn, out playerDrawn);
@@ -521,7 +526,7 @@ namespace RonniSkin
         [Header("Parry / Block (RonniAtk)")]
         public float parryRaise9 = 0.07f, parryHold5 = 0.35f, parryReturn5 = 0.30f, blockRaise2 = 0.18f, blockReturn2 = 0.3f;
         public float idleDrawnPeriod2 = 3.2f; bool idleDrawnOn;
-        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 2.6f; float chiburiT = -1f; bool bladeCut;
+        [Tooltip("Kılıcı koyma tuşunda oynayan chiburi + noto süresi (sn).")] public float chiburiDur = 3.0f; float chiburiT = -1f; bool bladeCut;
         float chiForcedDur = -1f;
         float ChiDur => chiForcedDur > 0f ? chiForcedDur : chiburiDur;
         [Tooltip("Rage kilic koyma: donme/silkeleme kismi sureyin bu orani kadar (hizli).")] public float chiSpinTime = 0.3f;
@@ -537,6 +542,21 @@ namespace RonniSkin
         /// <summary>Disaridan (Rage execute) kilic koyma animasyonunu verilen surede oynatir; hareket/zemin iptal etmez.</summary>
         public void CancelSheathe() { chiburiT = -1f; chiForcedDur = -1f; }
         public void BeginSheathe(float dur) { chiForcedDur = Mathf.Max(0.1f, dur); chiburiT = 0f; anim.swordReady = true; }
+        bool TenkaReady() { return useTenka && rigDrawn != null && rigDrawn.IsBuilt && playerDrawn != null && playerDrawn.HasClip("tenka"); }
+        /// Tenka bitti ya da kesildi: kılıç çekik idle'ı eski hâline getir; sonuna kadar oynadıysa normal idle'ı aynı fazdan başlat (dikişsiz geçiş).
+        void EndTenka()
+        {
+            bool done = tenkaPh > 0.97f;
+            tenkaOn = false;
+            if (tenka != null) tenka.Stop();
+            if (playerDrawn != null) { playerDrawn.clip = "idle"; playerDrawn.manual01 = -1f; }
+            if (done && playerIdle != null && playerIdle.HasClip("idle"))
+            {
+                playerIdle.clip = "idle";
+                playerIdle.Restart(Mathf.Repeat(3.0f / 3.2f, 1f));
+                playerIdle.ForceUpdate();
+            }
+        }
         // chiburi: kılıç kına ucundan girerken bıçağın kınının ağzından ötesi görünmez (klip fazı 0.74 -> 0.93)
         static float ChiBladeU(float p) { const float t0 = 0.74f, t1 = 0.93f; if (p <= t0) return 1f; if (p >= t1) return 0f; float u = (p - t0) / (t1 - t0); return 1f - u * u * (3f - 2f * u); }
         string defAtk; bool wasOldSucc; float defParryFrom; float defAtkT, defRelT, defFrom, defPhase, blockKick; bool defRel, defWasOn;
@@ -637,7 +657,7 @@ namespace RonniSkin
 
             // ---- sheathe / draw on key (grounded, idle) ----
             // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
-            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && playerAtk != null && playerAtk.HasClip("chiburi")) { chiburiT = 0f; chiForcedDur = -1f; }
+            if (chiburiT < 0f && shClip == null && Input.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; }
             if (chiburiT >= 0f)
             {
                 if (chiForcedDur < 0f && (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded)) chiburiT = -1f;
@@ -795,7 +815,8 @@ namespace RonniSkin
                     bool atkOn = mode == 0 && playerAtk != null && (frameClip ? FrameAtkActive() : ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip)));
                     string dClip = defAtk != null ? defAtk : (chiburiT >= 0f ? "chiburi" : null);
                     float dPh = defAtk != null ? defPhase : ChiPhase(chiburiT / Mathf.Max(0.1f, ChiDur));
-                    bool dOn = mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
+                    bool tenkaNow = mode == 0 && dClip == "chiburi" && defAtk == null && atkClip == null && TenkaReady();
+                    bool dOn = !tenkaNow && mode == 0 && dClip != null && atkClip == null && playerAtk != null && playerAtk.HasClip(dClip);
                     // Kombo geçişi: yeni saldırının ilk sprite'ı henüz gelmediyse (kare kare) eski rig/idle pozu yerine son kareyi tut.
                     bool framePend = mode == 0 && frameClip && !atkOn && frameLast != null && frameSR != null && frameSR.enabled && !frameFading;
                     Color bcc = originalSprite != null ? originalSprite.color : Color.white;
@@ -822,6 +843,15 @@ namespace RonniSkin
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
                         atkHoldIdle = true; atkFade = 0f; atkHoldT = 0f; atkRetT = 0f; lastAtkFrames = true;
                         ShowFrame(frameLast);
+                    }
+                    else if (tenkaNow)
+                    {
+                        // tenka chiburi + sakate nōtō: kılıç çekik idle çizimi üzerinde (aynı pozdan başlar, normal idle pozunda biter)
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
+                        if (!tenkaOn) { rigDrawn.SetColor(bcc, true); tenkaOn = true; }
+                        drawnWant = true; tenkaFrame = true; idleDrawnOn = false; atkWasOn = false; defWasOn = false;
+                        playerDrawn.clip = "tenka"; playerDrawn.manual01 = dPh; tenkaPh = dPh;
+                        if (tenka != null) tenka.Drive(rigDrawn);
                     }
                     else if (dOn)
                     {
@@ -910,6 +940,8 @@ namespace RonniSkin
                     }
                 }
                 if (rigDrawn != null && rigDrawn.IsBuilt) rigDrawn.SetShown(drawnWant);
+                if (tenkaOn && !tenkaFrame) EndTenka();
+                tenkaFrame = false;
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
