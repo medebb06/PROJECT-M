@@ -36,6 +36,10 @@ namespace RonniSkin
         public string idleFolder = "RonniIdle";
         [Tooltip("Idle çiziminin boyu (1 = Ronni ile aynı boy).")] public float idleScale = 1f;
         RonniSkinRig rigIdle; RonniClipPlayer playerIdle; Vector3 baseIdle = Vector3.one;
+        [Header("Kılıç çekik idle (R ile kılıç çekilince)")]
+        [Tooltip("Kılıç çekikken dururken görünen çizim klasörü (Resources/<klasör>, 'idle' klibi). Boş = eski RonniAtk 'idle_drawn' klibi.")]
+        public string drawnIdleFolder = "RonniIdleKatana";
+        RonniSkinRig rigDrawn; RonniClipPlayer playerDrawn; Vector3 baseDrawn = Vector3.one; bool drawnWant;
         [Header("Yerinde zıplama (idle gövde + zıplama bacakları)")]
         [Tooltip("Yatay hareket olmadan zıplarken kullanılan karma çizim (Resources/<klasör>, 'air' klibi). Boş = kapalı.")] public string standJumpFolder = "RonniJump";
         [Tooltip("Saldırı smear parlaklığı (HDR; Impact Mat _Color ≈ 8.5). Bloom varsa parlar.")] public float smearGlow = 6f;
@@ -432,6 +436,17 @@ namespace RonniSkin
             }
 
             // Attack1: kılıç çekili karma çizim
+            if (!string.IsNullOrEmpty(drawnIdleFolder))
+            {
+                MakeProfile(drawnIdleFolder, "Ronni_DrawnIdle", out rigDrawn, out playerDrawn);
+                if (rigDrawn != null)
+                {
+                    rigDrawn.transform.localScale *= idleScale;
+                    baseDrawn = rigDrawn.transform.localScale;
+                    playerDrawn.clip = "idle"; playerDrawn.autoGlance = false; playerDrawn.autoBlink = false;
+                }
+            }
+
             if (!string.IsNullOrEmpty(attackFolder))
             {
                 MakeProfile(attackFolder, "Ronni_Attack", out rigAtk, out playerAtk);
@@ -668,6 +683,7 @@ namespace RonniSkin
                     if (rigBR != null && rigBR != rigBL) rigBR.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                     if (rigRun != null) rigRun.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                     if (rigIdle != null) rigIdle.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
+                    if (rigDrawn != null) rigDrawn.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                     if (rigJump != null) rigJump.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                     if (rigAtk != null) rigAtk.SetSorting(best.sortingLayerName, best.sortingOrder + OrderBoost);
                 }
@@ -680,6 +696,7 @@ namespace RonniSkin
                 if (rigBR != null && rigBR != rigBL && rigBR.IsBuilt) rigBR.SetColor(originalSprite.color, true);
                 if (rigRun != null && rigRun.IsBuilt) rigRun.SetColor(originalSprite.color, true);
                 if (rigIdle != null && rigIdle.IsBuilt) rigIdle.SetColor(originalSprite.color, true);
+                if (rigDrawn != null && rigDrawn.IsBuilt) rigDrawn.SetColor(originalSprite.color, true);
                 if (rigJump != null && rigJump.IsBuilt) rigJump.SetColor(originalSprite.color, true);
                 if (rigAtk != null && rigAtk.IsBuilt) rigAtk.SetColor(originalSprite.color, true);
             }
@@ -768,6 +785,7 @@ namespace RonniSkin
                 }
                 // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
                 if (atkHoldIdle && (atkClip != null || mode != 0 || !anim.ActionActive)) atkHoldIdle = false;
+                drawnWant = false;
                 bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && (!anim.ActionActive || atkHoldIdle) && shClip == null;
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
@@ -854,16 +872,17 @@ namespace RonniSkin
                             if (atkFade > 0f) { atkFade = 0f; }
                             RestoreFadeTop();
                             // kılıç çekikken (R ile / saldırı sonrası) dururken nefes alan "kılıç çekik idle"
-                            bool dIdle = mode == 0 && idleNow && anim.swordReady && playerAtk != null && playerAtk.HasClip("idle_drawn");
+                            bool useNewDrawn = rigDrawn != null && rigDrawn.IsBuilt;
+                            bool dIdle = mode == 0 && idleNow && anim.swordReady && (useNewDrawn || (playerAtk != null && playerAtk.HasClip("idle_drawn")));
                             if (dIdle)
                             {
                                 if (rigIdle != null) rigIdle.SetShown(false); rig.SetShown(false); idleNow = false;
                                 bool firstDrawn = !idleDrawnOn;
-                                if (firstDrawn) rigAtk.SetColor(bc, true);
+                                if (firstDrawn) { if (useNewDrawn) rigDrawn.SetColor(bc, true); else rigAtk.SetColor(bc, true); }
                                 idleDrawnOn = true;
-                                rigAtk.SetShown(true); playerAtk.clip = "idle_drawn";
-                                playerAtk.manual01 = (Time.time % idleDrawnPeriod2) / idleDrawnPeriod2;
-                                if (firstDrawn) playerAtk.ForceUpdate();
+                                if (useNewDrawn) { drawnWant = true; rigAtk.SetShown(false); } else { rigAtk.SetShown(true); playerAtk.clip = "idle_drawn"; }
+                                if (!useNewDrawn) playerAtk.manual01 = (Time.time % idleDrawnPeriod2) / idleDrawnPeriod2;
+                                if (firstDrawn) { if (useNewDrawn) { playerDrawn.clip = "idle"; playerDrawn.Restart(0f); playerDrawn.ForceUpdate(); } else playerAtk.ForceUpdate(); }
                                 rigAtk.SetPartWindow("atk_smear", 0f, 0f, Color.clear, Color.clear);
                             }
                             else { idleDrawnOn = false; rigAtk.SetShown(false); (idleNow ? rigIdle : rig).SetColor(bc, true); }
@@ -890,6 +909,7 @@ namespace RonniSkin
                         rigIdle.SetColor(fi, true);
                     }
                 }
+                if (rigDrawn != null && rigDrawn.IsBuilt) rigDrawn.SetShown(drawnWant);
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);
                 if (vid != visualId) { if (visualId >= 0) popT = 0f; visualId = vid; }
@@ -956,6 +976,7 @@ namespace RonniSkin
                 if (rig != null) rig.SetShown(false);
                 if (rigIdle != null) rigIdle.SetShown(false);
                 if (rigAtk != null) rigAtk.SetShown(false);
+                if (rigDrawn != null) rigDrawn.SetShown(false);
                 if (rigRun != null) rigRun.SetShown(false);
                 if (rigJump != null) rigJump.SetShown(false);
                 if (rigBL != null) rigBL.SetShown(false);
@@ -1019,6 +1040,7 @@ namespace RonniSkin
             if (rigRun != null) rigRun.transform.localScale = (visualId > 0 && rigB == rigRun) ? Vector3.Scale(baseRun, sc) : baseRun;
             if (rigIdle != null) rigIdle.transform.localScale = visualId <= 0 ? Vector3.Scale(baseIdle, sc) : baseIdle;
             if (rigAtk != null) rigAtk.transform.localScale = visualId <= 0 ? Vector3.Scale(baseAtk, sc) : baseAtk;
+            if (rigDrawn != null) rigDrawn.transform.localScale = visualId <= 0 ? Vector3.Scale(baseDrawn, sc) : baseDrawn;
             if (rigJump != null) rigJump.transform.localScale = (visualId > 0 && rigB == rigJump) ? Vector3.Scale(baseJump, sc) : baseJump;
         }
 

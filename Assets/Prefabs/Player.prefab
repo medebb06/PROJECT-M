@@ -807,6 +807,7 @@ MonoBehaviour:
     m_Bits: 1024
   defenseController: {fileID: 3163970550787977671}
   inputBufferTime: 0.2
+  executionSpeedMult: 1.8
   comboResetTime: 0.4
   comboCancelPoint: 0.8
   maxAirAttacks: 2
@@ -818,6 +819,9 @@ MonoBehaviour:
   downAttackBoxSize: {x: 1.4, y: 1.7}
   downAttackBalanceMultiplier: 1.2
   pogoBounceVelocity: 30
+  swordTipStart: 3.6
+  swordTipEnd: 5.8
+  swordTipHeight: 3.6
   hitBoxSize: {x: 10, y: 4}
   hitVFXInsideAmount: 2
   hitVFXForwardOffset: 0.56
