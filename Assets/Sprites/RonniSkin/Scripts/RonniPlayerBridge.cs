@@ -850,9 +850,9 @@ namespace RonniSkin
             // kılıç çekikken uzun süre giriş yoksa: otomatik tenka chiburi + nōtō
             if (autoSheathe && chiburiT < 0f && shClip == null && defClip == null && defAtk == null && anim.swordReady && player.isGrounded && !player.isDashing
                 && (combat == null || !combat.IsAttacking) && Mathf.Abs(player.moveInput) < 0.1f && Time.time - lastInputT >= autoSheatheDelay && TenkaReady())
-            { chiburiT = 0f; chiForcedDur = -1f; }
+            { chiburiT = 0f; chiForcedDur = -1f; if (combat != null) combat.CancelAttack(); atkHoldT = 0f; atkRetT = 0f; atkFade = 0f; lastAtkFrames = false; }
             // kılıç çekikken koyma tuşu: chiburi (kan silkeleme) + noto (kınına koyma)
-            if (chiburiT < 0f && shClip == null && MobileInput.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; }
+            if (chiburiT < 0f && shClip == null && MobileInput.GetKeyDown(sheatheKey) && player.isGrounded && anim.swordReady && (TenkaReady() || (playerAtk != null && playerAtk.HasClip("chiburi")))) { chiburiT = 0f; chiForcedDur = -1f; if (combat != null) combat.CancelAttack(); atkHoldT = 0f; atkRetT = 0f; atkFade = 0f; lastAtkFrames = false; }
             if (chiburiT >= 0f)
             {
                 if (chiForcedDur < 0f && (Mathf.Abs(player.moveInput) >= 0.1f || !player.isGrounded)) chiburiT = -1f;
@@ -1132,6 +1132,8 @@ namespace RonniSkin
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
                         if (!tenkaOn) { rigDrawn.SetColor(bcc, true); tenkaOn = true; }
                         drawnWant = true; tenkaFrame = true; idleDrawnOn = false; atkWasOn = false; defWasOn = false;
+                        atkHoldT = 0f; atkRetT = 0f; atkFade = 0f; lastAtkFrames = false;   // chiburi bitince eski saldırının tutma/dönüş karesi tekrar oynamasın
+                        if (frameSR != null && frameSR.enabled) { frameFading = false; frameSR.enabled = false; if (glowSR != null) glowSR.enabled = false; }
                         playerDrawn.clip = "tenka"; playerDrawn.manual01 = dPh; tenkaPh = dPh;
                         if (tenka != null) { tenka.quiet = false; tenka.Drive(rigDrawn); }
                     }
