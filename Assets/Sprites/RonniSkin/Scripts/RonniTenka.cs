@@ -33,7 +33,7 @@ namespace RonniSkin
         public int dropCount = 22;
         [Tooltip("Düşman kanıyla aynı yeşil (SliceBloodFx). Her damla bunun açık/koyu tonunu alır.")]
         public Color dropColor = new Color(0.08f, 0.8f, 0.12f, 1f);
-        [Tooltip("Rig birimi / sn (1 birim = 1000 kaynak piksel).")] public float dropSpeed = 6.5f;
+        [Tooltip("Rig birimi / sn (1 birim = 1000 kaynak piksel).")] public float dropSpeed = 3.4f;
         public float dropGravity = 16f, dropLife = 1.4f;
         [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(60f, 130f);
         [Header("Yerdeki kan lekeleri")]
