@@ -125,7 +125,12 @@ public static class RonniEditPreview
         {
             scaleMul = br.idleScale;
 
-            if (br.startDrawn && !string.IsNullOrEmpty(br.attackFolder) && HasClip(br.attackFolder, "idle_drawn"))
+            if (br.startDrawn && !string.IsNullOrEmpty(br.drawnIdleFolder) && HasClip(br.drawnIdleFolder, "idle"))
+            {
+                // yeni kılıç çekik idle (RonniIdleKatana)
+                folder = br.drawnIdleFolder; clip = "idle";
+            }
+            else if (br.startDrawn && !string.IsNullOrEmpty(br.attackFolder) && HasClip(br.attackFolder, "idle_drawn"))
             {
                 folder = br.attackFolder; clip = "idle_drawn"; clipPeriod = Mathf.Max(0.1f, br.idleDrawnPeriod2);
             }

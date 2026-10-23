@@ -62,6 +62,14 @@ namespace RonniSkin
         [Tooltip("Eski çizim aileleri: bu klasörlerdeki parçalar önce yeni idle renklerine çevrilir. Listede olmayan klasörler (ör. RonniIdleKatana) zaten yeni renklerdedir.")]
         public List<Family> families = new List<Family>();
 
+        [Header("Kare kare çizimler (saldırı 1-4 / dash / parry)")]
+        [Tooltip("Kare kare çizimleri gösteren SpriteRenderer'ın adı (RonniPlayerBridge oluşturur).")]
+        public string frameRendererName = "Ronni_Atk1Frames";
+        [Tooltip("Resources altında bölge haritalarının klasörü. Her doku için <doku adı>_id haritası aranır.")]
+        public string frameMapFolder = "RonniFrameMaps";
+        [Tooltip("Kare kare çizimler için Resources'taki materyal (ProjectM/RonniFrameLit).")]
+        public string frameMaterialName = "RonniFrameLit";
+
         // ---------------- runtime ----------------
         [NonSerialized] int version = 1;
         readonly Dictionary<RonniSkinRig, int> applied = new Dictionary<RonniSkinRig, int>();
@@ -69,11 +77,11 @@ namespace RonniSkin
         int lastChildCount = -1; float nextScan, nextRefresh;
 
         void Reset() { ResetDefaults(); }
-        void OnValidate() { version++; if (categories == null || categories.Count == 0) ResetDefaults(); }
+        void OnValidate() { version++; if (categories == null || categories.Count == 0) ResetDefaults(); else EnsureFramesFamily(); }
         /// Kodla değer değiştirdikten sonra çağır (inspector zaten otomatik yapar).
         public void MarkDirty() { version++; }
 
-        void Awake() { if (categories == null || categories.Count == 0) ResetDefaults(); }
+        void Awake() { if (categories == null || categories.Count == 0) ResetDefaults(); else EnsureFramesFamily(); }
 
         void LateUpdate()
         {
@@ -81,10 +89,16 @@ namespace RonniSkin
             {
                 lastChildCount = transform.childCount; nextScan = Time.unscaledTime + 1f;
                 rigs.Clear(); GetComponentsInChildren(true, rigs);
+                if (frameSR == null)
+                {
+                    srBuf.Clear(); GetComponentsInChildren(true, srBuf);
+                    for (int i = 0; i < srBuf.Count; i++) if (srBuf[i] != null && srBuf[i].name == frameRendererName) { frameSR = srBuf[i]; break; }
+                }
             }
             // Materyal başka bir sistem tarafından değiştirilirse diye ara sıra yeniden uygula.
             bool refresh = Time.unscaledTime >= nextRefresh;
-            if (refresh) nextRefresh = Time.unscaledTime + 2f;
+            if (refresh) { nextRefresh = Time.unscaledTime + 2f; frameApplied = -1; }
+            UpdateFrames();
             for (int i = 0; i < rigs.Count; i++)
             {
                 var r = rigs[i];
@@ -220,7 +234,95 @@ namespace RonniSkin
             if (m.HasProperty("_Color")) m.SetColor("_Color", Color.white);
         }
 
+        // ---------------- kare kare çizimler ----------------
+        // Bölge haritası değeri / 20 = kategori: 1 haori dış, 2 haori iç, 3 gövde, 4 kemer, 5 pantolon, 6 ayak (tabi), 7 sandalet bağı, 8 kın, 9 ten.
+        static readonly string[] FrameIds = { null, "HaoriOuter", "HaoriInner", "Gi", "Belt", "Pants", "Feet", "Feet2", "Saya", "Skin" };
+        public const string FramesFamilyKey = "#frames";
+        readonly List<SpriteRenderer> srBuf = new List<SpriteRenderer>();
+        readonly Dictionary<string, Texture2D> mapCache = new Dictionary<string, Texture2D>();
+        readonly Vector4[] catA = new Vector4[12], catB = new Vector4[12], catT = new Vector4[12];
+        SpriteRenderer frameSR; Material frameMat; Texture lastFrameTex; bool frameHasMap; int frameApplied = -1;
+
+        Category FindCat(string id)
+        {
+            if (categories == null) return null;
+            for (int i = 0; i < categories.Count; i++) if (categories[i] != null && categories[i].id == id) return categories[i];
+            return null;
+        }
+
+        void UpdateFrames()
+        {
+            if (frameSR == null) return;
+            if (frameMat == null || frameSR.sharedMaterial != frameMat)
+            {
+                if (frameMat == null)
+                {
+                    var src = Resources.Load<Material>(frameMaterialName);
+                    if (src == null) return;
+                    frameMat = new Material(src) { name = "Ronni_FrameLit (palet)" };
+                }
+                frameSR.sharedMaterial = frameMat; frameApplied = -1; lastFrameTex = null;
+            }
+            var tex = frameSR.sprite != null ? frameSR.sprite.texture : null;
+            if (tex != lastFrameTex)
+            {
+                lastFrameTex = tex;
+                Texture2D map = null;
+                if (tex != null && !mapCache.TryGetValue(tex.name, out map)) { map = Resources.Load<Texture2D>(frameMapFolder + "/" + tex.name + "_id"); mapCache[tex.name] = map; }
+                frameMat.SetTexture("_RcIdMap", map);
+                frameHasMap = map != null; frameApplied = -1;
+            }
+            if (frameApplied == version) return;
+            frameApplied = version;
+            var fam = FamilyOf(FramesFamilyKey);
+            bool any = false;
+            for (int id = 0; id < 12; id++) { catA[id] = Vector4.zero; catB[id] = new Vector4(1f, 1f, 0f, 0f); catT[id] = Vector4.one; }
+            if (paletteOn)
+            {
+                for (int id = 1; id < FrameIds.Length; id++)
+                {
+                    string key = FrameIds[id]; bool second = key == "Feet2";
+                    var c = FindCat(second ? "Feet" : key);
+                    if (c == null || !c.enabled) continue;
+                    var b = EntryOf(fam, key);
+                    Xf x = second ? AddUser(b != null ? FromSlot(b) : Identity(), c.secondaryDefault, c.secondaryColor, c.hueOffset, c.satMul, c.valMul)
+                                  : AddUser(b != null ? FromSlot(b) : Identity(), c.defaultColor, c.color, c.hueOffset, c.satMul, c.valMul);
+                    bool on = !IsIdentity(x);
+                    float hue = x.abs ? Mathf.Repeat(x.hue, 360f) : Mathf.DeltaAngle(0f, x.hue);
+                    catA[id] = new Vector4(hue, x.abs ? 1f : 0f, x.sm, x.sa);
+                    catB[id] = new Vector4(x.g, x.vm, on ? 1f : 0f, 0f);
+                    catT[id] = new Vector4(c.tint.r, c.tint.g, c.tint.b, 1f);
+                    if (on || c.tint != Color.white) any = true;
+                }
+            }
+            frameMat.SetVectorArray("_RcCatA", catA);
+            frameMat.SetVectorArray("_RcCatB", catB);
+            frameMat.SetVectorArray("_RcCatT", catT);
+            frameMat.SetFloat("_RcIdOn", any && frameHasMap ? 1f : 0f);
+        }
+
         // ---------------- defaults ----------------
+        /// Eski sahnelerde kayıtlı palette kare kare ailesi yoksa ekler.
+        void EnsureFramesFamily()
+        {
+            if (families == null) families = new List<Family>();
+            if (FamilyOf(FramesFamilyKey) == null) AddFramesFamily();
+        }
+
+        void AddFramesFamily()
+        {
+            Family f;
+            f = new Family { name = "Kare kare (saldırı, dash, parry)", folders = new[] { FramesFamilyKey } }; families.Add(f);
+            E(f, "HaoriOuter", -121.0858f, false, 0.5838f, 0f, 1f, 0.3005f, false, 0f, 0f, 0f);
+            E(f, "HaoriInner", -124.199f, false, 0.8627f, 0f, 1f, 0.3899f, false, 0f, 0f, 0f);
+            E(f, "Gi", 229.0909f, true, 0f, 0.1089f, 1f, 1.0464f, false, 0f, 0f, 0f);
+            E(f, "Belt", -168.7779f, false, 1.6745f, 0f, 1f, 0.4089f, false, 0f, 0f, 0f);
+            E(f, "Pants", -163.3297f, false, 0.222f, 0f, 1f, 0.2229f, false, 0f, 0f, 0f);
+            E(f, "Feet", -147.323f, false, 0.1204f, 0f, 1f, 0.8916f, false, 0f, 0f, 0f);
+            E(f, "Feet2", 1.1177f, false, 0f, 0f, 1f, 0.1234f, false, 0f, 0f, 0f);
+            E(f, "Saya", -148.08f, false, 0f, 0f, 1f, 0.2794f, false, 0f, 0f, 0f);
+        }
+
         static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out Color c); return c; }
 
         Category Cat(string id, string name, string hex, string[] kw, string[] ex)
@@ -291,6 +393,7 @@ namespace RonniSkin
             E(f, "Feet", -149.3755f, false, 0.1686f, 0f, 1f, 0.869f, true, 0.0611f, 0.05f, 0.02f);
             E(f, "Feet2", 36.7503f, false, 0.0248f, 0f, 1f, 0.1243f, true, 0.9583f, 0.04f, 0.02f);
             E(f, "HaoriInner", -114.2102f, false, 0.8821f, 0f, 1f, 0.4051f, true, 0.9778f, 0.045f, 0.02f);
+            AddFramesFamily();
             version++;
         }
     }
