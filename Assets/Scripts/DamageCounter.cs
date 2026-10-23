@@ -108,7 +108,7 @@ public class DamageCounter : MonoBehaviour
             style.fontStyle = FontStyle.Bold;
             style.clipping = TextClipping.Overflow;
             style.wordWrap = false;
-            Font pf = Resources.Load<Font>("Pixeltype");
+            Font pf = GameFont.Or(Resources.Load<Font>("Pixeltype"));
             if (pf != null) style.font = pf;
         }
 

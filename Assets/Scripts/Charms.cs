@@ -80,7 +80,7 @@ public class CharmManager : MonoBehaviour
     {
         CombatEvents.EnemyKilled += OnKilled;
         CombatEvents.EnemyHit += OnHit;
-        font = Resources.Load<Font>("Pixeltype");
+        font = GameFont.Or(Resources.Load<Font>("Pixeltype"));
     }
 
     private void OnDisable()

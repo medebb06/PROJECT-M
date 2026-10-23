@@ -251,6 +251,18 @@ public class MainMenu : MonoBehaviour
     private Text titleText, subtitleText;
     private Image sealImage;
 
+    // ---- mürekkep tasarımı ----
+    private RectTransform titleRoot, titleNameRt, sealRt, lineRt, brushRt;
+    private Image brushImg;
+    private CanvasGroup decoGroup;
+    private Sprite brushSprite, scrimSprite, dotSprite;
+    private float canvasW = 3840f, canvasH = 2160f;
+    private bool decorInit, brushInit;
+    private const int EmberN = 46;
+    private RectTransform[] embers;
+    private Image[] emberImgs;
+    private float[] emberX, emberY, emberSpeed, emberPhase, emberSway, emberAmp;
+
     public static void OpenPause()
     {
         if (Active)
@@ -292,6 +304,9 @@ public class MainMenu : MonoBehaviour
 
         white = MakeWhite();
         vignette = MakeVignette();
+        brushSprite = MakeBrush();
+        scrimSprite = MakeScrim();
+        dotSprite = MakeDot();
 
         BuildCanvas();
         BuildPage(Page.Main);
@@ -343,12 +358,41 @@ public class MainMenu : MonoBehaviour
         if (MobileInput.Active)
             scaler.referenceResolution = new Vector2(3840f, 2160f) / MobileInput.MenuMul; // telefon: menü büyük
 
-        // Koyu örtü + kenar karartması.
-        Image bg = NewImage("Ink", transform, Ink, null);
+        // Koyu örtü (hafif) + soldan mürekkep geçişi + kenar karartması.
+        Image bg = NewImage("Ink", transform, new Color(Ink.r, Ink.g, Ink.b, pauseMode ? 0.62f : 0.26f), null);
         Stretch(bg.rectTransform);
+
+        Image scrim = NewImage("Scrim", transform, new Color(1f, 1f, 1f, pauseMode ? 0.95f : 1f), scrimSprite);
+        Stretch(scrim.rectTransform);
 
         Image vig = NewImage("Vignette", transform, new Color(1f, 1f, 1f, 1f), vignette);
         Stretch(vig.rectTransform);
+
+        // Kıvılcımlar (ateş külü).
+        GameObject eg = new GameObject("Embers");
+        eg.transform.SetParent(transform, false);
+        Stretch(eg.AddComponent<RectTransform>());
+        embers = new RectTransform[EmberN];
+        emberImgs = new Image[EmberN];
+        emberX = new float[EmberN]; emberY = new float[EmberN]; emberSpeed = new float[EmberN];
+        emberPhase = new float[EmberN]; emberSway = new float[EmberN]; emberAmp = new float[EmberN];
+
+        for (int i = 0; i < EmberN; i++)
+        {
+            bool gold = Random.value < 0.35f;
+            Image im = NewImage("E" + i, eg.transform, gold ? new Color(0.95f, 0.82f, 0.5f, 0f) : new Color(1f, 0.55f, 0.2f, 0f), dotSprite);
+            float sz = Random.Range(6f, 20f);
+            im.rectTransform.anchorMin = im.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            im.rectTransform.sizeDelta = new Vector2(sz, sz);
+            embers[i] = im.rectTransform;
+            emberImgs[i] = im;
+            emberX[i] = Random.Range(-1900f, 1900f);
+            emberY[i] = Random.Range(-1000f, 900f);
+            emberSpeed[i] = Random.Range(40f, 130f);
+            emberPhase[i] = Random.Range(0f, 6.28f);
+            emberSway[i] = Random.Range(20f, 90f);
+            emberAmp[i] = Random.Range(0.35f, 0.95f);
+        }
 
         // Sinematik şeritler.
         Image top = NewImage("BarTop", transform, new Color(0f, 0f, 0f, 0.92f), null);
@@ -369,13 +413,16 @@ public class MainMenu : MonoBehaviour
         titleGroup = tg.AddComponent<CanvasGroup>();
         RectTransform trt = tg.AddComponent<RectTransform>();
         Stretch(trt);
+        titleRoot = trt;
 
-        Text jp = subtitleText = NewText("Subtitle", tg.transform, "影 の 刃", 28, Gold, TextAnchor.MiddleCenter, fontRegular);
+        Text jp = subtitleText = NewText("Subtitle", tg.transform, "影 の 刃", 36, Gold, TextAnchor.MiddleCenter, fontRegular);
         Place(jp.rectTransform, new Vector2(0f, 372f), new Vector2(900f, 70f));
 
-        Text title = titleText = NewText("Name", tg.transform, "PROJECT M", 92, Paper, TextAnchor.MiddleCenter, fontBold);
+        Text title = titleText = NewText("Name", tg.transform, "PROJECT   M", 92, Paper, TextAnchor.MiddleCenter, fontBold);
         Place(title.rectTransform, new Vector2(-20f, 262f), new Vector2(1400f, 220f));
-        AddShadow(title.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -6f));
+        AddShadow(title.gameObject, new Color(0f, 0f, 0f, 0.85f), new Vector2(0f, -7f));
+        AddShadow(title.gameObject, new Color(Vermilion.r, Vermilion.g, Vermilion.b, 0.12f), new Vector2(0f, -12f));
+        titleNameRt = title.rectTransform;
 
         float pw = title.preferredWidth;
 
@@ -383,13 +430,15 @@ public class MainMenu : MonoBehaviour
         Image seal = sealImage = NewImage("Seal", tg.transform, Vermilion, null);
         Place(seal.rectTransform, new Vector2(-20f + pw * 0.5f + 78f, 292f), new Vector2(96f, 96f));
         seal.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -5f);
+        sealRt = seal.rectTransform;
 
         Text sealText = NewText("SealText", seal.transform, "斬", 40, Paper, TextAnchor.MiddleCenter, fontBold);
         Stretch(sealText.rectTransform);
 
-        // Ayraç.
-        Image line = NewImage("Line", tg.transform, new Color(Gold.r, Gold.g, Gold.b, 0.55f), null);
-        Place(line.rectTransform, new Vector2(0f, 150f), new Vector2(620f, 2f));
+        // Ayraç (soldan sağa çizilir).
+        Image line = NewImage("Line", tg.transform, new Color(Gold.r, Gold.g, Gold.b, 0.6f), null);
+        Place(line.rectTransform, new Vector2(0f, 150f), new Vector2(760f, 2f));
+        lineRt = line.rectTransform;
 
         Image dia = NewImage("LineDiamond", tg.transform, Vermilion, null);
         Place(dia.rectTransform, new Vector2(0f, 150f), new Vector2(14f, 14f));
@@ -402,19 +451,43 @@ public class MainMenu : MonoBehaviour
         menuRoot = mg.AddComponent<RectTransform>();
         Stretch(menuRoot);
 
-        // Alt ipucu + sürüm.
-        Text hint = NewText("Hint", transform, "W / S  GEZİN        ENTER  SEÇ        R  YENİDEN BAŞLAT", 26, PaperDim, TextAnchor.MiddleCenter, fontRegular);
-        Place(hint.rectTransform, new Vector2(0f, -470f), new Vector2(1600f, 40f));
+        // Sağ kenarda dikey yazı.
+        GameObject dg = new GameObject("Deco");
+        dg.transform.SetParent(transform, false);
+        decoGroup = dg.AddComponent<CanvasGroup>();
+        Stretch(dg.AddComponent<RectTransform>());
 
-        Text ver = NewText("Ver", transform, "DEMO", 24, PaperDim, TextAnchor.MiddleRight, fontRegular);
+        Text vert = NewText("Vertical", dg.transform, "影\nの\n刃", 72, new Color(Gold.r, Gold.g, Gold.b, 0.6f), TextAnchor.MiddleCenter, fontRegular);
+        vert.lineSpacing = 0.95f;
+        vert.rectTransform.anchorMin = vert.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        vert.rectTransform.pivot = new Vector2(1f, 0.5f);
+        vert.rectTransform.anchoredPosition = new Vector2(-150f, 230f);
+        vert.rectTransform.sizeDelta = new Vector2(140f, 420f);
+
+        Image vline = NewImage("VerticalLine", dg.transform, new Color(Vermilion.r, Vermilion.g, Vermilion.b, 0.75f), null);
+        vline.rectTransform.anchorMin = vline.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        vline.rectTransform.pivot = new Vector2(1f, 0.5f);
+        vline.rectTransform.anchoredPosition = new Vector2(-300f, 230f);
+        vline.rectTransform.sizeDelta = new Vector2(3f, 380f);
+
+        // Alt ipucu (sol altta) + sürüm.
+        Text hint = NewText("Hint", transform, "W / S  GEZİN      ◆      ENTER  SEÇ      ◆      R  YENİDEN BAŞLAT", 34, new Color(Paper.r, Paper.g, Paper.b, 0.62f), TextAnchor.MiddleLeft, fontRegular);
+        hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0.2f, 0f);
+        hint.rectTransform.pivot = new Vector2(0f, 0f);
+        hint.rectTransform.anchoredPosition = new Vector2(0f, 140f);
+        hint.rectTransform.sizeDelta = new Vector2(1800f, 50f);
+        AddShadow(hint.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -3f));
+
+        Text ver = NewText("Ver", transform, "DEMO", 30, PaperDim, TextAnchor.MiddleRight, fontRegular);
         ver.rectTransform.anchorMin = new Vector2(1f, 0f);
         ver.rectTransform.anchorMax = new Vector2(1f, 0f);
         ver.rectTransform.pivot = new Vector2(1f, 0f);
-        ver.rectTransform.anchoredPosition = new Vector2(-40f, 100f);
-        ver.rectTransform.sizeDelta = new Vector2(300f, 36f);
+        ver.rectTransform.anchoredPosition = new Vector2(-60f, 140f);
+        ver.rectTransform.sizeDelta = new Vector2(300f, 44f);
 
         titleGroup.alpha = 0f;
         menuGroup.alpha = 0f;
+        decoGroup.alpha = 0f;
     }
 
     private void BuildPage(Page p)
@@ -424,6 +497,18 @@ public class MainMenu : MonoBehaviour
 
         for (int i = menuRoot.childCount - 1; i >= 0; i--)
             Destroy(menuRoot.GetChild(i).gameObject);
+
+        brushRt = null; brushImg = null; brushInit = false;
+
+        if (p == Page.Main)
+        {
+            // Seçili satırın arkasındaki kırmızı fırça darbesi (en altta çizilir).
+            brushImg = NewImage("Brush", menuRoot, new Color(Vermilion.r, Vermilion.g, Vermilion.b, 0.92f), brushSprite);
+            brushRt = brushImg.rectTransform;
+            brushRt.anchorMin = brushRt.anchorMax = new Vector2(0.2f, 0.5f);
+            brushRt.pivot = new Vector2(0f, 0.5f);
+            brushRt.sizeDelta = new Vector2(600f, 124f);
+        }
 
         if (IsTestPage(p))
             BuildTestRows(p);
@@ -439,8 +524,8 @@ public class MainMenu : MonoBehaviour
         fillRects = new RectTransform[n];
         knobRects = new RectTransform[n];
 
-        float top = p == Page.Main ? 40f + (n - 3) * 42f : 110f;
-        float step = p == Page.Main ? -84f : (n > 7 ? -58f : -66f);
+        float top = p == Page.Main ? -30f : 110f;
+        float step = p == Page.Main ? -172f : (n > 7 ? -58f : -66f);
         bool compact = IsTestPage(p);
         bool dense = !compact && p != Page.Main && n > 7;
 
@@ -456,18 +541,35 @@ public class MainMenu : MonoBehaviour
             GameObject row = new GameObject("Row" + i);
             row.transform.SetParent(menuRoot, false);
             RectTransform rrt = row.AddComponent<RectTransform>();
-            Place(rrt, new Vector2(0f, top + step * i), new Vector2(p == Page.Main ? 760f : 1100f, 96f));
+            if (p == Page.Main)
+            {
+                rrt.anchorMin = rrt.anchorMax = new Vector2(0.2f, 0.5f);
+                rrt.pivot = new Vector2(0f, 0.5f);
+                rrt.anchoredPosition = new Vector2(0f, top + step * i);
+                rrt.sizeDelta = new Vector2(900f, 124f);
+            }
+            else
+            {
+                Place(rrt, new Vector2(0f, top + step * i), new Vector2(1100f, 96f));
+            }
+
             rowRects[i] = rrt;
 
             if (p == Page.Main)
             {
-                Text label = NewText("Label", row.transform, rows[i].label, 28, PaperDim, TextAnchor.MiddleCenter, fontBold);
-                Place(label.rectTransform, new Vector2(0f, 10f), new Vector2(760f, 76f));
-                AddShadow(label.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -3f));
+                Text label = NewText("Label", row.transform, rows[i].label, 72, PaperDim, TextAnchor.MiddleLeft, fontBold);
+                label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                label.rectTransform.pivot = new Vector2(0f, 0.5f);
+                label.rectTransform.anchoredPosition = new Vector2(-46f, 26f);
+                label.rectTransform.sizeDelta = new Vector2(900f, 100f);
+                AddShadow(label.gameObject, new Color(0f, 0f, 0f, 0.8f), new Vector2(0f, -4f));
                 labelTexts[i] = label;
 
-                Text kj = NewText("Kanji", row.transform, rows[i].kanji, 20, PaperDim, TextAnchor.MiddleCenter, fontRegular);
-                Place(kj.rectTransform, new Vector2(0f, -34f), new Vector2(400f, 34f));
+                Text kj = NewText("Kanji", row.transform, rows[i].kanji, 34, PaperDim, TextAnchor.MiddleLeft, fontRegular);
+                kj.rectTransform.anchorMin = kj.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                kj.rectTransform.pivot = new Vector2(0f, 0.5f);
+                kj.rectTransform.anchoredPosition = new Vector2(-40f, -62f);
+                kj.rectTransform.sizeDelta = new Vector2(500f, 46f);
                 kanjiTexts[i] = kj;
             }
             else
@@ -524,6 +626,7 @@ public class MainMenu : MonoBehaviour
             d.sizeDelta = new Vector2(16f, 16f);
             d.anchorMin = d.anchorMax = new Vector2(0.5f, 0.5f);
             d.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            d.gameObject.SetActive(p != Page.Main);
         }
 
         RefreshValues();
@@ -544,6 +647,9 @@ public class MainMenu : MonoBehaviour
         // Giriş görünümleri.
         titleGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 0.5f) / 1.0f));
         menuGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.1f) / 0.8f));
+        decoGroup.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 1.4f) / 1.0f));
+
+        AnimateDecor();
 
         // Oyuncu menü boyunca kilitli.
         if (player == null)
@@ -559,7 +665,12 @@ public class MainMenu : MonoBehaviour
         }
 
         if (starting || age < 1.2f)
+        {
+            if (!starting)
+                UpdateVisuals(CurRows());
+
             return;
+        }
 
         Row[] rows = CurRows();
         int n = rows.Length;
@@ -828,9 +939,24 @@ public class MainMenu : MonoBehaviour
             valueTexts[row].text = text;
     }
 
+    private static float Ease01(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return 1f - (1f - t) * (1f - t) * (1f - t);
+    }
+
+    private static float EaseOutBack(float t)
+    {
+        t = Mathf.Clamp01(t) - 1f;
+        return 1f + 2.70158f * t * t * t + 1.70158f * t * t;
+    }
+
     private void UpdateVisuals(Row[] rows)
     {
+        float dt = Time.unscaledDeltaTime;
+        float k = 1f - Mathf.Exp(-16f * dt);
         float breathe = 0.85f + 0.15f * Mathf.Sin(Time.unscaledTime * 3f);
+        bool main = page == Page.Main;
 
         int cnt = Mathf.Min(rows.Length, labelTexts.Length);
 
@@ -841,29 +967,132 @@ public class MainMenu : MonoBehaviour
             if (labelTexts[i] != null)
             {
                 labelTexts[i].color = Color.Lerp(labelTexts[i].color, sel ? Paper : PaperDim, 0.35f);
-                labelTexts[i].rectTransform.localScale = Vector3.Lerp(labelTexts[i].rectTransform.localScale, Vector3.one * (sel ? 1.06f : 1f), 0.3f);
+                labelTexts[i].rectTransform.localScale = Vector3.Lerp(labelTexts[i].rectTransform.localScale, Vector3.one * (sel ? (main ? 1.08f : 1.06f) : 1f), 0.3f);
+
+                if (main)
+                {
+                    // Satırlar soldan sırayla kayarak girer; seçili olan sağa doğru ilerler.
+                    float e = pauseMode ? 1f : Ease01((age - 1.1f - 0.14f * i) / 0.6f);
+                    float x = 56f + (sel ? 34f : 0f) - (1f - e) * 110f;
+                    Vector2 p = labelTexts[i].rectTransform.anchoredPosition;
+                    p.x = Mathf.Lerp(p.x, x, k);
+                    labelTexts[i].rectTransform.anchoredPosition = p;
+
+                    if (kanjiTexts[i] != null)
+                    {
+                        Vector2 q = kanjiTexts[i].rectTransform.anchoredPosition;
+                        q.x = Mathf.Lerp(q.x, x + 6f, k);
+                        kanjiTexts[i].rectTransform.anchoredPosition = q;
+                    }
+                }
             }
 
             if (kanjiTexts[i] != null)
                 kanjiTexts[i].color = Color.Lerp(kanjiTexts[i].color, sel ? Gold : PaperDim, 0.35f);
         }
 
-        // Baklavalar seçili satırın yanında.
-        if (diamondL != null && rowRects[index] != null)
+        // Fırça darbesi seçili satırı izler.
+        if (main && brushRt != null && index < rowRects.Length && labelTexts[index] != null)
         {
-            float half = page == Page.Main
-                ? labelTexts[index].preferredWidth * 0.5f + 52f
-                : 540f;
+            float tw = labelTexts[index].preferredWidth * 1.08f + 230f;
+            Vector2 tp = new Vector2(-34f, rowRects[index].anchoredPosition.y);
+            Vector2 ts = new Vector2(tw, 124f);
 
+            if (!brushInit)
+            {
+                brushRt.anchoredPosition = tp;
+                brushRt.sizeDelta = new Vector2(0f, 124f);
+                brushInit = true;
+            }
+
+            brushRt.anchoredPosition = Vector2.Lerp(brushRt.anchoredPosition, tp, k);
+            brushRt.sizeDelta = Vector2.Lerp(brushRt.sizeDelta, ts, k);
+
+            Color c = Vermilion;
+            c.a = 0.9f * (0.9f + 0.1f * breathe);
+            brushImg.color = c;
+        }
+
+        // Ayarlar sayfalarında: baklavalar seçili satırın yanında.
+        if (!main && diamondL != null && rowRects[index] != null)
+        {
+            float half = 540f;
             Vector2 c = rowRects[index].anchoredPosition;
-            float y = c.y + (page == Page.Main ? 10f : 0f);
 
-            diamondL.anchoredPosition = new Vector2(-half, y);
-            diamondR.anchoredPosition = new Vector2(half, y);
+            diamondL.anchoredPosition = new Vector2(-half, c.y);
+            diamondR.anchoredPosition = new Vector2(half, c.y);
 
             Vector3 s = Vector3.one * breathe;
             diamondL.localScale = s;
             diamondR.localScale = s;
+        }
+    }
+
+    // Başlık yerleşimi, giriş animasyonları ve kıvılcımlar.
+    private void AnimateDecor()
+    {
+        float dt = Time.unscaledDeltaTime;
+        RectTransform crt = (RectTransform)transform;
+        canvasW = crt.rect.width;
+        canvasH = crt.rect.height;
+
+        bool main = page == Page.Main;
+        float sc = main ? 1.7f : 1f;
+        float pw = titleText.preferredWidth;
+        float x0 = -canvasW * 0.3f;
+        float tx = main ? x0 + sc * (20f + pw * 0.5f) : 0f;
+        float ty = main ? -110f : 0f;
+        float k = 1f - Mathf.Exp(-9f * dt);
+
+        if (!decorInit)
+        {
+            titleRoot.localScale = Vector3.one * sc;
+            titleRoot.anchoredPosition = new Vector2(tx, ty);
+            decorInit = true;
+        }
+
+        titleRoot.localScale = Vector3.Lerp(titleRoot.localScale, Vector3.one * sc, k);
+        titleRoot.anchoredPosition = Vector2.Lerp(titleRoot.anchoredPosition, new Vector2(tx, ty), k);
+
+        // Başlık mürekkep gibi yerine oturur.
+        float e = pauseMode ? 1f : Ease01((age - 0.5f) / 1.3f);
+        titleNameRt.localScale = Vector3.one * Mathf.Lerp(1.1f, 1f, e);
+        titleNameRt.anchoredPosition = new Vector2(-20f, 262f + (1f - e) * 26f);
+
+        // Mühür damga gibi vurur.
+        float st = pauseMode ? 1f : (age - 1.5f) / 0.3f;
+        sealRt.localScale = st <= 0f ? Vector3.zero : Vector3.one * Mathf.Lerp(2.4f, 1f, EaseOutBack(st));
+
+        // Ayraç soldan sağa çizilir.
+        float le = pauseMode ? 1f : Ease01((age - 1.0f) / 0.9f);
+        lineRt.sizeDelta = new Vector2(760f * le, 2f);
+
+        // Kıvılcımlar yukarı süzülür.
+        if (embers == null)
+            return;
+
+        float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((age - 0.8f) / 1.5f));
+        float t = Time.unscaledTime;
+        float yMin = -canvasH * 0.46f, yMax = canvasH * 0.44f;
+
+        for (int i = 0; i < EmberN; i++)
+        {
+            emberY[i] += emberSpeed[i] * dt;
+
+            if (emberY[i] > yMax)
+            {
+                emberY[i] = yMin - Random.Range(0f, 160f);
+                emberX[i] = Random.Range(-canvasW * 0.5f, canvasW * 0.5f);
+            }
+
+            float p = Mathf.Clamp01((emberY[i] - yMin) / (yMax - yMin));
+            float a = Mathf.Sin(p * Mathf.PI) * emberAmp[i] * (0.65f + 0.35f * Mathf.Sin(t * 5f + emberPhase[i])) * fade;
+
+            embers[i].anchoredPosition = new Vector2(emberX[i] + Mathf.Sin(t * 0.7f + emberPhase[i]) * emberSway[i], emberY[i]);
+
+            Color c = emberImgs[i].color;
+            c.a = a;
+            emberImgs[i].color = c;
         }
     }
 
@@ -1287,6 +1516,104 @@ public class MainMenu : MonoBehaviour
         t.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
         t.Apply();
         return Sprite.Create(t, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 2f);
+    }
+
+    private static float SS(float e0, float e1, float x)
+    {
+        float t = Mathf.Clamp01((x - e0) / (e1 - e0));
+        return t * t * (3f - 2f * t);
+    }
+
+    // Fırça darbesi: dalgalı kenar, kuru fırça çizgileri, kaba uçlar.
+    private static Sprite MakeBrush()
+    {
+        const int W = 512, H = 96;
+
+        Texture2D t = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color[] px = new Color[W * H];
+
+        for (int y = 0; y < H; y++)
+        {
+            float v = (y / (H - 1f) - 0.5f) * 2f;
+
+            for (int x = 0; x < W; x++)
+            {
+                float u = x / (W - 1f);
+                float thick = 0.8f + 0.14f * (Mathf.PerlinNoise(u * 5f, 3.1f) - 0.5f) * 2f;
+                float bristle = Mathf.PerlinNoise(u * 2.5f + 7f, y * 0.45f);
+                float edge = Mathf.Abs(v) + (bristle - 0.5f) * 0.4f * (0.35f + u);
+                float a = Mathf.Clamp01((thick - edge) / 0.14f);
+
+                float startR = 0.05f + 0.07f * Mathf.PerlinNoise(9f, y * 0.2f);
+                a *= SS(0f, startR, u);
+
+                float endR = 0.86f + 0.1f * Mathf.PerlinNoise(4f, y * 0.3f);
+                a *= 1f - SS(endR - 0.14f, endR + 0.1f, u + (bristle - 0.5f) * 0.14f);
+
+                a *= 0.86f + 0.14f * bristle;
+                px[y * W + x] = new Color(1f, 1f, 1f, a);
+            }
+        }
+
+        t.SetPixels(px);
+        t.Apply();
+
+        return Sprite.Create(t, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    // Soldan sağa solan mürekkep lekesi: yazıların arkasını karartır.
+    private static Sprite MakeScrim()
+    {
+        const int W = 512, H = 256;
+
+        Texture2D t = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+        Color[] px = new Color[W * H];
+
+        for (int y = 0; y < H; y++)
+        {
+            float v = y / (H - 1f);
+            float vert = 0.65f + 0.35f * Mathf.Sin(v * Mathf.PI);
+
+            for (int x = 0; x < W; x++)
+            {
+                float u = x / (W - 1f);
+                float wob = (Mathf.PerlinNoise(u * 3f, v * 3f + 5f) - 0.5f) * 0.22f;
+                float a = (1f - SS(0.02f, 0.66f, u + wob)) * 0.86f * vert;
+                px[y * W + x] = new Color(0f, 0f, 0f, a);
+            }
+        }
+
+        t.SetPixels(px);
+        t.Apply();
+
+        return Sprite.Create(t, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    // Yumuşak yuvarlak nokta (kıvılcım).
+    private static Sprite MakeDot()
+    {
+        const int S = 32;
+
+        Texture2D t = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        t.wrapMode = TextureWrapMode.Clamp;
+
+        for (int y = 0; y < S; y++)
+        {
+            for (int x = 0; x < S; x++)
+            {
+                float dx = (x + 0.5f) / S * 2f - 1f;
+                float dy = (y + 0.5f) / S * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = 1f - SS(0f, 1f, r);
+                t.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+            }
+        }
+
+        t.Apply();
+
+        return Sprite.Create(t, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), 100f);
     }
 
     // Kenarlara doğru kararan radyal gradyan.

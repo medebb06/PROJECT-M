@@ -2,7 +2,7 @@
 using UnityEngine.UI;
 
 /// <summary>
-/// OYUN YAZI TIPI (KG Perfect Penmanship): Resources/UI/KGPerfectPenmanship.otf (yedekler: Hoshiko_Satsuki, Knight_Souls).
+/// OYUN YAZI TIPI (Hoshiko Satsuki, Turkce harfler eklenmis): Resources/UI/Hoshiko_Satsuki.ttf (yedekler: KGPerfectPenmanship, Knight_Souls).
 /// Tum yazilarda kullanilir: OnGUI (GUI.skin.font), UI Text, TextMesh (kritik sayilari, callout'lar) ve
 /// kodla kurulan stiller (GameFont.Get / Or). Font yoksa hicbir sey degismez.
 /// Not: font buyuk harflidir (kucuk harfler kucuk-buyuk harf gibi gorunur).
@@ -17,8 +17,8 @@ public static class GameFont
         if (!tried)
         {
             tried = true;
-            font = Resources.Load<Font>("UI/KGPerfectPenmanship");
-            if (font == null) font = Resources.Load<Font>("UI/Hoshiko_Satsuki");
+            font = Resources.Load<Font>("UI/Hoshiko_Satsuki");
+            if (font == null) font = Resources.Load<Font>("UI/KGPerfectPenmanship");
             if (font == null) font = Resources.Load<Font>("UI/Knight_Souls");
             if (font == null) Debug.LogWarning("[GameFont] Resources/UI/KGPerfectPenmanship bulunamadi: varsayilan font kullanilacak.");
         }

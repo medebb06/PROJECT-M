@@ -366,7 +366,7 @@ private void TickFocusTest()
 
     private void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint) return;   // Layout/Input olaylarında çizme (GC azalt)
+        if (Event.current.type != EventType.Repaint) return; if (MainMenu.Active) return;   // Layout/Input olaylarında çizme (GC azalt)
         string keys = "";
         for (int i = 0; i < entries.Count && i < 5; i++) keys += (i + 1) + "=" + entries[i].label + "  ";
         GUI.Label(new Rect(10, 10, 1100, 22),
