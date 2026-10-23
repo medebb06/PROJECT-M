@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace RonniSkin
@@ -20,30 +20,40 @@ namespace RonniSkin
         [Tooltip("Parlamanın boyu (kaynak piksel).")] public float glintPx = 420f;
         [Header("Kına oturma parlaması")]
         [Tooltip("Kılıç kına oturduğu anda (tık) kının ağzında kısa bir parlama.")] public bool sheathGlint = true;
-        [Tooltip("Boyu (kaynak piksel).")] public float sheathGlintPx = 300f;
-        [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.4f;
+        [Tooltip("Yıldız boyu (kaynak piksel).")] public float sheathGlintPx = 750f;
+        [Tooltip("Arkadaki yumuşak hale boyu (kaynak piksel).")] public float sheathHaloPx = 520f;
+        [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.6f;
+        public Color sheathGlintColor = new Color(1f, 0.96f, 0.82f, 1f);
         [Header("Dönüş izi")]
         public bool smear = true;
         [Range(0f, 1f)] public float smearAlpha = 0.5f;
         public Color smearColor = new Color(0.86f, 0.93f, 1f, 1f);
-        [Header("Kan damlaları")]
+        [Header("Kan (düşman kanı: yeşil) — silkeleme anında")]
         public bool blood = true;
-        public int dropCount = 10;
-        public Color dropColor = new Color(0.42f, 0.03f, 0.05f, 1f);
+        public int dropCount = 16;
+        [Tooltip("Düşman kanıyla aynı yeşil (SliceBloodFx). Her damla bunun açık/koyu tonunu alır.")]
+        public Color dropColor = new Color(0.08f, 0.8f, 0.12f, 1f);
         [Tooltip("Rig birimi / sn (1 birim = 1000 kaynak piksel).")] public float dropSpeed = 6.5f;
-        public float dropGravity = 16f, dropLife = 0.6f;
-        [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(30f, 70f);
+        public float dropGravity = 16f, dropLife = 1.4f;
+        [Tooltip("Damla boyu (kaynak piksel).")] public Vector2 dropPx = new Vector2(40f, 90f);
+        [Header("Yerdeki kan lekeleri")]
+        public bool groundSplats = true;
+        [Tooltip("Leke genişliği (kaynak piksel).")] public Vector2 splatPx = new Vector2(120f, 380f);
+        [Tooltip("Lekenin yerde kalma süresi (sn); son 2.5 sn'de solar.")] public float splatLife = 6f;
 
         RonniSkinRig rig;
         Transform kblade, fxGlint, fxTip, fxMouth, fxFlags;
         MeshRenderer bladeMR;
         SpriteRenderer glintSR, smearSR;
         Sprite glintSp, smearSp, dropSp;
+        static Sprite circleHard, circleSoft;
         Material fxMat;
         bool active, wasDrop, cutOn, wasSheathed;
-        SpriteRenderer sheathSR; float sheathAge = -1f; Vector3 sheathPos;
-        class Drop { public Transform t; public SpriteRenderer sr; public Vector3 v; public float age, life; }
+        SpriteRenderer sheathSR, haloSR; float sheathAge = -1f; Vector3 sheathPos;
+        class Drop { public Transform t; public SpriteRenderer sr; public Vector3 v; public float age, life, g, groundY; public Color c; public int order; public string layer; }
         readonly List<Drop> drops = new List<Drop>();
+        class Splat { public SpriteRenderer sr; public float age, w; }
+        readonly List<Splat> splats = new List<Splat>();
 
         public bool Active { get { return active; } }
 
@@ -84,6 +94,8 @@ namespace RonniSkin
             glintSp = glintSp ?? MakeSprite("RonniTenka/tenka_glint");
             smearSp = smearSp ?? MakeSprite("RonniTenka/tenka_smear");
             dropSp = dropSp ?? MakeSprite("RonniTenka/tenka_drop");
+            if (circleHard == null) circleHard = MakeCircle(64, 0.82f);
+            if (circleSoft == null) circleSoft = MakeCircle(128, 0f);
             if (glintSR != null) Destroy(glintSR.gameObject);
             if (smearSR != null) Destroy(smearSR.gameObject);
             glintSR = MakeSR("Tenka_Glint", glintSp);
@@ -97,6 +109,23 @@ namespace RonniSkin
             return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), tex.width);   // 1 birim genişlik
         }
 
+        // SliceBloodFx ile aynı daire (1 birim çap)
+        static Sprite MakeCircle(int size, float hardness)
+        {
+            var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) / r;
+                    float a = Mathf.Clamp01((1f - d) / Mathf.Max(0.02f, 1f - hardness));
+                    a = a * a * (3f - 2f * a);
+                    t.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            t.Apply();
+            return Sprite.Create(t, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        }
+
         SpriteRenderer MakeSR(string name, Sprite sp)
         {
             var go = new GameObject(name);
@@ -106,9 +135,17 @@ namespace RonniSkin
             return sr;
         }
 
+        int TopOrder()
+        {
+            int o = rig.sortingOrderOffset + 100;
+            foreach (var p in rig.parts) if (p != null) { var mr = p.GetComponent<MeshRenderer>(); if (mr != null && mr.sortingOrder > o) o = mr.sortingOrder; }
+            return o;
+        }
+
         void LateUpdate()
         {
             UpdateDrops();
+            UpdateSplats();
             UpdateSheathGlint();
             if (!active || rig == null || kblade == null || fxFlags == null) return;
             float upp = rig.unitsPerPixel;
@@ -167,7 +204,7 @@ namespace RonniSkin
                     smearSR.sortingLayerName = layer; smearSR.sortingOrder = baseOrder - 1;
                 }
             }
-            // kan damlaları: silkeleme anında bir kez
+            // kan: silkeleme anında bir kez
             bool dropNow = fxTip != null && fxTip.localScale.x > 0.5f;
             if (dropNow && !wasDrop && blood && rig.Shown) SpawnDrops(root, upp, layer);
             wasDrop = dropNow;
@@ -177,15 +214,19 @@ namespace RonniSkin
         void StartSheathGlint()
         {
             if (glintSp == null) return;
-            if (sheathSR == null) { sheathSR = MakeSR("Tenka_SheathGlint", glintSp); }
+            if (sheathSR == null) sheathSR = MakeSR("Tenka_SheathGlint", glintSp);
+            if (haloSR == null) haloSR = MakeSR("Tenka_SheathHalo", circleSoft);
             sheathSR.transform.SetParent(rig.transform, false);
+            haloSR.transform.SetParent(rig.transform, false);
             sheathPos = rig.transform.InverseTransformPoint(fxMouth.position);
+            sheathPos.z = -0.05f;
             sheathAge = 0f;
-            int ord = rig.sortingOrderOffset + 300;
-            foreach (var p in rig.parts) if (p != null && p.name == "idle_tsuka") { var mr = p.GetComponent<MeshRenderer>(); if (mr != null) ord = mr.sortingOrder + 5; }
-            sheathSR.sortingLayerName = bladeMR != null ? bladeMR.sortingLayerName : rig.sortingLayerName;
-            sheathSR.sortingOrder = ord;
-            sheathSR.enabled = true;
+            int ord = TopOrder() + 20;                          // elin / kolun da üstünde
+            string layer = bladeMR != null ? bladeMR.sortingLayerName : rig.sortingLayerName;
+            haloSR.sortingLayerName = layer; haloSR.sortingOrder = ord;
+            sheathSR.sortingLayerName = layer; sheathSR.sortingOrder = ord + 1;
+            sheathSR.enabled = true; haloSR.enabled = true;
+            UpdateSheathGlint();
         }
 
         void UpdateSheathGlint()
@@ -193,14 +234,31 @@ namespace RonniSkin
             if (sheathSR == null || sheathAge < 0f) return;
             sheathAge += Time.deltaTime;
             float d = Mathf.Max(0.05f, sheathGlintTime), u = sheathAge / d;
-            if (u >= 1f) { sheathSR.enabled = false; sheathAge = -1f; return; }
-            float grow = Mathf.Clamp01(u / 0.18f), fade = 1f - Mathf.Clamp01((u - 0.35f) / 0.65f);
-            float s = grow * grow * (3f - 2f * grow) * (1f - 0.35f * Mathf.Clamp01((u - 0.35f) / 0.65f));
-            float upp = rig != null ? rig.unitsPerPixel : 0.001f;
+            if (u >= 1f || rig == null) { sheathSR.enabled = false; if (haloSR != null) haloSR.enabled = false; sheathAge = -1f; return; }
+            float grow = Mathf.Clamp01(u / 0.12f); grow = grow * grow * (3f - 2f * grow);
+            float tail = Mathf.Clamp01((u - 0.3f) / 0.7f);
+            float fade = 1f - tail * tail;
+            float s = grow * (1.15f - 0.55f * tail);
+            float upp = rig.unitsPerPixel;
             sheathSR.transform.localPosition = sheathPos;
-            sheathSR.transform.localRotation = Quaternion.Euler(0f, 0f, 15f + 70f * u);
+            sheathSR.transform.localRotation = Quaternion.Euler(0f, 0f, 15f + 50f * u);
             sheathSR.transform.localScale = Vector3.one * sheathGlintPx * upp * Mathf.Max(0.001f, s);
-            sheathSR.color = new Color(1f, 0.97f, 0.88f, fade);
+            var c = sheathGlintColor; c.a = fade; sheathSR.color = c;
+            if (haloSR != null)
+            {
+                haloSR.transform.localPosition = sheathPos;
+                haloSR.transform.localScale = Vector3.one * sheathHaloPx * upp * Mathf.Max(0.001f, grow * (0.8f + 0.4f * u));
+                var h = sheathGlintColor; h.a = 0.55f * fade; haloSR.color = h;
+            }
+        }
+
+        float GroundY()
+        {
+            // oyuncunun ayak hizası: collider'ın altı (tenka sadece yerdeyken oynar)
+            var col = GetComponentInParent<Collider2D>();
+            if (col == null) col = GetComponentInChildren<Collider2D>();
+            if (col != null) return col.bounds.min.y;
+            return rig != null ? rig.transform.position.y : transform.position.y;
         }
 
         void SpawnDrops(Transform root, float upp, string layer)
@@ -210,20 +268,27 @@ namespace RonniSkin
             Vector3 swing = new Vector3(-tipDir.y, tipDir.x, 0f);      // saat yönü tersine savrulma yönü (aşağı)
             Vector3 fwd = new Vector3(-1f, -0.25f, 0f);                 // karakter sola bakar (rig yerel uzayı)
             float tipX = (bladeTLeft - gripT) * upp;
+            float gY = GroundY();
+            float gWorld = dropGravity * Mathf.Abs(root.lossyScale.y);
+            int order = TopOrder() + 10;
             for (int i = 0; i < dropCount; i++)
             {
                 float f = Mathf.Lerp(0.45f, 1f, (i + Random.value) / dropCount);
                 Vector3 w = kblade.TransformPoint(new Vector3(tipX * f, 0f, 0f));
-                var go = new GameObject("Tenka_Drop");
-                go.transform.SetParent(root, false);
-                go.transform.localPosition = root.InverseTransformPoint(w);
+                var go = new GameObject("Tenka_Drop");               // dünya uzayında: karakter yürüse de kan yerinde kalır
+                go.transform.position = new Vector3(w.x, w.y, root.position.z);
                 float s = Random.Range(dropPx.x, dropPx.y) * upp;
-                go.transform.localScale = new Vector3(s, s * Random.Range(1.0f, 1.5f), 1f);
+                Vector3 ls = new Vector3(s, s * Random.Range(1.0f, 1.5f), 1f);
+                go.transform.localScale = Vector3.Scale(ls, new Vector3(Mathf.Abs(root.lossyScale.x), Mathf.Abs(root.lossyScale.y), 1f));
                 var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = dropSp; if (fxMat != null) sr.sharedMaterial = fxMat; sr.color = dropColor;
-                sr.sortingLayerName = layer; sr.sortingOrder = rig.sortingOrderOffset + 400;
-                Vector3 v = (swing * (0.6f + 0.6f * f) + fwd * 0.55f + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(-0.2f, 0.3f), 0f)) * dropSpeed * Random.Range(0.6f, 1.1f);
-                drops.Add(new Drop { t = go.transform, sr = sr, v = v, age = 0f, life = dropLife * Random.Range(0.7f, 1.2f) });
+                sr.sprite = dropSp; if (fxMat != null) sr.sharedMaterial = fxMat;
+                float shade = Random.Range(0.55f, 1.0f);
+                Color c = new Color(dropColor.r * shade * Random.Range(0.6f, 1.4f), dropColor.g * shade, dropColor.b * shade * Random.Range(0.6f, 1.4f), 1f);
+                sr.color = c;
+                sr.sortingLayerName = layer; sr.sortingOrder = order;
+                Vector3 vLocal = (swing * (0.6f + 0.6f * f) + fwd * 0.55f + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(-0.2f, 0.3f), 0f)) * dropSpeed * Random.Range(0.6f, 1.1f);
+                Vector3 v = root.TransformVector(vLocal); v.z = 0f;
+                drops.Add(new Drop { t = go.transform, sr = sr, v = v, age = 0f, life = dropLife * Random.Range(0.8f, 1.2f), g = gWorld, groundY = gY, c = c, order = rig.sortingOrderOffset - 2, layer = layer });
             }
         }
 
@@ -235,11 +300,50 @@ namespace RonniSkin
                 var d = drops[i];
                 if (d.t == null) { drops.RemoveAt(i); continue; }
                 d.age += dt;
+                d.v.y -= d.g * dt;
+                Vector3 p = d.t.position + d.v * dt;
+                if (p.y <= d.groundY)
+                {
+                    if (groundSplats) SpawnSplat(new Vector3(p.x, d.groundY + 0.02f, p.z), d);
+                    Destroy(d.t.gameObject); drops.RemoveAt(i); continue;
+                }
                 if (d.age >= d.life) { Destroy(d.t.gameObject); drops.RemoveAt(i); continue; }
-                d.v.y -= dropGravity * dt;
-                d.t.localPosition += d.v * dt;
-                float a = 1f - Mathf.Clamp01((d.age - d.life * 0.6f) / (d.life * 0.4f));
-                var c = dropColor; c.a = a; d.sr.color = c;
+                d.t.position = p;
+                // damla hız yönüne uzar
+                float ang = Mathf.Atan2(d.v.y, d.v.x) * Mathf.Rad2Deg + 90f;
+                d.t.rotation = Quaternion.Euler(0f, 0f, ang);
+                float a = 1f - Mathf.Clamp01((d.age - d.life * 0.75f) / (d.life * 0.25f));
+                var c = d.c; c.a = a; d.sr.color = c;
+            }
+        }
+
+        void SpawnSplat(Vector3 pos, Drop d)
+        {
+            if (circleHard == null) return;
+            float upp = rig != null ? rig.unitsPerPixel : 0.001f;
+            float sc = rig != null ? Mathf.Abs(rig.transform.lossyScale.x) : 1f;
+            var go = new GameObject("Tenka_BloodSplat");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(0.001f, 0.001f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = circleHard; if (fxMat != null) sr.sharedMaterial = fxMat;
+            var c = d.c * 0.7f; c.a = 0.9f; sr.color = c;
+            sr.sortingLayerName = d.layer; sr.sortingOrder = d.order;
+            splats.Add(new Splat { sr = sr, age = 0f, w = Random.Range(splatPx.x, splatPx.y) * upp * sc });
+        }
+
+        void UpdateSplats()
+        {
+            float dt = Time.deltaTime;
+            for (int i = splats.Count - 1; i >= 0; i--)
+            {
+                var s = splats[i];
+                if (s.sr == null) { splats.RemoveAt(i); continue; }
+                s.age += dt;
+                if (s.age >= splatLife) { Destroy(s.sr.gameObject); splats.RemoveAt(i); continue; }
+                float g = Mathf.Clamp01(s.age / 0.12f); g = 1f - (1f - g) * (1f - g);
+                s.sr.transform.localScale = new Vector3(s.w * g, s.w * 0.22f * g, 1f);
+                var c = s.sr.color; c.a = 0.9f * Mathf.Clamp01((splatLife - s.age) / 2.5f); s.sr.color = c;
             }
         }
 
