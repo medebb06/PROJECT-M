@@ -121,6 +121,7 @@ GameObject:
   - component: {fileID: 9087282568792326975}
   - component: {fileID: 1170000420337042426}
   - component: {fileID: 7756061466116606015}
+  - component: {fileID: 9092456662443276147}
   m_Layer: 3
   m_Name: Ronni
   m_TagString: Untagged
@@ -212,6 +213,7 @@ MonoBehaviour:
   runScale: 1
   idleFolder: RonniIdle
   idleScale: 1
+  drawnIdleFolder: RonniIdleKatana
   standJumpFolder: RonniJump
   smearGlow: 6
   atkCutStart: 0.42
@@ -293,6 +295,519 @@ MonoBehaviour:
   dashCoilScale: {x: 1.1, y: 0.86}
   dashStretchScale: {x: 1.38, y: 0.82}
   dashEndScale: {x: 0.92, y: 1.08}
+--- !u!114 &9092456662443276147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5006777874225356017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4c81a719c21f084290b2c9d33cdd286, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RonniSkin.RonniPalette
+  paletteOn: 1
+  categories:
+  - name: "Haori (d\u0131\u015F)"
+    id: HaoriOuter
+    enabled: 1
+    color: {r: 0.05882353, g: 0.06666667, b: 0.1254902, a: 1}
+    defaultColor: {r: 0.05882353, g: 0.06666667, b: 0.1254902, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - haori
+    - sag_kol
+    - sol_kol
+    - coat
+    - sleeve
+    - arm_near
+    - arm_far
+    - arm_l
+    - arm_r
+    exclude:
+    - _ic
+    - sleeve_in
+    - arm_far_fore
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: "Haori (i\xE7 astar)"
+    id: HaoriInner
+    enabled: 1
+    color: {r: 0.023529412, g: 0.03137255, b: 0.07450981, a: 1}
+    defaultColor: {r: 0.023529412, g: 0.03137255, b: 0.07450981, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - haori_ic
+    - kol_ic
+    - sleeve_in
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: "G\xF6vde (gi)"
+    id: Gi
+    enabled: 1
+    color: {r: 0.7058824, g: 0.72156864, b: 0.7921569, a: 1}
+    defaultColor: {r: 0.7058824, g: 0.72156864, b: 0.7921569, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - govde
+    - torso
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Kemer
+    id: Belt
+    enabled: 1
+    color: {r: 0.19215687, g: 0.09803922, b: 0.09411765, a: 1}
+    defaultColor: {r: 0.19215687, g: 0.09803922, b: 0.09411765, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - kemer
+    - belt
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Pantolon
+    id: Pants
+    enabled: 1
+    color: {r: 0.03529412, g: 0.03529412, b: 0.03137255, a: 1}
+    defaultColor: {r: 0.03529412, g: 0.03529412, b: 0.03137255, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - bacak
+    - leg
+    - shin
+    - thigh
+    - crotch
+    - hem
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Ayak (tabi)
+    id: Feet
+    enabled: 1
+    color: {r: 0.68235296, g: 0.6862745, b: 0.7254902, a: 1}
+    defaultColor: {r: 0.68235296, g: 0.6862745, b: 0.7254902, a: 1}
+    hasSecondary: 1
+    secondaryName: "Sandalet ba\u011F\u0131"
+    secondaryColor: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}
+    secondaryDefault: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}
+    keywords:
+    - ayak
+    - foot
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: "K\u0131n"
+    id: Saya
+    enabled: 1
+    color: {r: 0.05490196, g: 0.05490196, b: 0.05490196, a: 1}
+    defaultColor: {r: 0.05490196, g: 0.05490196, b: 0.05490196, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - saya
+    - idle_kin
+    - sheathed
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: "Sa\xE7"
+    id: Hair
+    enabled: 1
+    color: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}
+    defaultColor: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - sac
+    - hair
+    - bangs
+    - sidelock
+    - fringe
+    - kuyruk
+    - ponytail
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: Ten (kafa / boyun)
+    id: Skin
+    enabled: 1
+    color: {r: 0.8039216, g: 0.5647059, b: 0.40392157, a: 1}
+    defaultColor: {r: 0.8039216, g: 0.5647059, b: 0.40392157, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - boyun
+    - kafa
+    - neck
+    - head
+    exclude:
+    - fill_
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  - name: "\u015Eapka"
+    id: Hat
+    enabled: 1
+    color: {r: 0.5372549, g: 0.42745098, b: 0.28235295, a: 1}
+    defaultColor: {r: 0.5372549, g: 0.42745098, b: 0.28235295, a: 1}
+    hasSecondary: 0
+    secondaryName: 
+    secondaryColor: {r: 1, g: 1, b: 1, a: 1}
+    secondaryDefault: {r: 1, g: 1, b: 1, a: 1}
+    keywords:
+    - hat
+    exclude: []
+    hueOffset: 0
+    satMul: 1
+    valMul: 1
+    tint: {r: 1, g: 1, b: 1, a: 1}
+  families:
+  - name: Eski idle ailesi (idle, saldiri, ziplama, kosu)
+    folders:
+    - RonniIdle
+    - RonniAtk
+    - RonniJump
+    - RonniRunVivid
+    - RonniRun
+    entries:
+    - category: HaoriOuter
+      slot:
+        hue: -125.4829
+        hueAbsolute: 0
+        satMul: 0.6726
+        satAdd: 0
+        gamma: 1
+        valMul: 0.3274
+        mask: 1
+        maskHue: 0
+        maskRange: 0.045
+        maskSoft: 0.02
+    - category: HaoriInner
+      slot:
+        hue: -128.956
+        hueAbsolute: 0
+        satMul: 0.8555
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4832
+        mask: 1
+        maskHue: 0
+        maskRange: 0.045
+        maskSoft: 0.02
+    - category: Gi
+      slot:
+        hue: 228.2905
+        hueAbsolute: 1
+        satMul: 0
+        satAdd: 0.1082
+        gamma: 1
+        valMul: 1.0305
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Belt
+      slot:
+        hue: -172.8275
+        hueAbsolute: 0
+        satMul: 2.0025
+        satAdd: 0
+        gamma: 1
+        valMul: 0.434
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Pants
+      slot:
+        hue: -176.9325
+        hueAbsolute: 0
+        satMul: 0.2285
+        satAdd: 0
+        gamma: 1
+        valMul: 0.2145
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Saya
+      slot:
+        hue: -173.0253
+        hueAbsolute: 0
+        satMul: 0.0179
+        satAdd: 0
+        gamma: 1
+        valMul: 0.2821
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Feet
+      slot:
+        hue: -152.0258
+        hueAbsolute: 0
+        satMul: 0.1108
+        satAdd: 0
+        gamma: 1
+        valMul: 0.9205
+        mask: 1
+        maskHue: 0.0667
+        maskRange: 0.045
+        maskSoft: 0.02
+    - category: Feet2
+      slot:
+        hue: 26.2665
+        hueAbsolute: 0
+        satMul: 0.0174
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1797
+        mask: 1
+        maskHue: 0.9944
+        maskRange: 0.035
+        maskSoft: 0.015
+  - name: On profil (RonniSkin)
+    folders:
+    - RonniSkin
+    entries:
+    - category: HaoriOuter
+      slot:
+        hue: -113.614
+        hueAbsolute: 0
+        satMul: 0.7979
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4097
+        mask: 1
+        maskHue: 0.9778
+        maskRange: 0.045
+        maskSoft: 0.02
+    - category: Gi
+      slot:
+        hue: 228.2905
+        hueAbsolute: 1
+        satMul: 0
+        satAdd: 0.1082
+        gamma: 1
+        valMul: 2.6707
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Belt
+      slot:
+        hue: 158.1003
+        hueAbsolute: 0
+        satMul: 1.3931
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4899
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Pants
+      slot:
+        hue: 179.6253
+        hueAbsolute: 0
+        satMul: 0.2931
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1079
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Saya
+      slot:
+        hue: 133.4563
+        hueAbsolute: 0
+        satMul: 0.0147
+        satAdd: 0
+        gamma: 1
+        valMul: 0.2147
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Feet
+      slot:
+        hue: -150.822
+        hueAbsolute: 0
+        satMul: 0.1763
+        satAdd: 0
+        gamma: 1
+        valMul: 0.8468
+        mask: 1
+        maskHue: 0.0611
+        maskRange: 0.05
+        maskSoft: 0.02
+    - category: Feet2
+      slot:
+        hue: 36.2097
+        hueAbsolute: 0
+        satMul: 0.0242
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1211
+        mask: 1
+        maskHue: 0.9583
+        maskRange: 0.04
+        maskSoft: 0.02
+    - category: HaoriInner
+      slot:
+        hue: -113.614
+        hueAbsolute: 0
+        satMul: 0.7979
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4097
+        mask: 1
+        maskHue: 0.9778
+        maskRange: 0.045
+        maskSoft: 0.02
+  - name: Yan profil (RonniSkinB / BR)
+    folders:
+    - RonniSkinB
+    - RonniSkinBR
+    entries:
+    - category: HaoriOuter
+      slot:
+        hue: -114.2102
+        hueAbsolute: 0
+        satMul: 0.8821
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4051
+        mask: 1
+        maskHue: 0.9778
+        maskRange: 0.045
+        maskSoft: 0.02
+    - category: Gi
+      slot:
+        hue: 228.2905
+        hueAbsolute: 1
+        satMul: 0
+        satAdd: 0.1082
+        gamma: 1
+        valMul: 2.0784
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Belt
+      slot:
+        hue: 144.816
+        hueAbsolute: 0
+        satMul: 1.0973
+        satAdd: 0
+        gamma: 1
+        valMul: 0.6173
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Pants
+      slot:
+        hue: 165.0586
+        hueAbsolute: 0
+        satMul: 0.4261
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1099
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Saya
+      slot:
+        hue: 0
+        hueAbsolute: 0
+        satMul: 1
+        satAdd: -0.0904
+        gamma: 1
+        valMul: 0.2214
+        mask: 0
+        maskHue: 0
+        maskRange: 0
+        maskSoft: 0
+    - category: Feet
+      slot:
+        hue: -149.3755
+        hueAbsolute: 0
+        satMul: 0.1686
+        satAdd: 0
+        gamma: 1
+        valMul: 0.869
+        mask: 1
+        maskHue: 0.0611
+        maskRange: 0.05
+        maskSoft: 0.02
+    - category: Feet2
+      slot:
+        hue: 36.7503
+        hueAbsolute: 0
+        satMul: 0.0248
+        satAdd: 0
+        gamma: 1
+        valMul: 0.1243
+        mask: 1
+        maskHue: 0.9583
+        maskRange: 0.04
+        maskSoft: 0.02
+    - category: HaoriInner
+      slot:
+        hue: -114.2102
+        hueAbsolute: 0
+        satMul: 0.8821
+        satAdd: 0
+        gamma: 1
+        valMul: 0.4051
+        mask: 1
+        maskHue: 0.9778
+        maskRange: 0.045
+        maskSoft: 0.02
 --- !u!1 &6518560691318549444
 GameObject:
   m_ObjectHideFlags: 0

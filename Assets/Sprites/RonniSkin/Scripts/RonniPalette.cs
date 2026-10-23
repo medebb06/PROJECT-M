@@ -1,0 +1,297 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace RonniSkin
+{
+    /// Ronni renk paleti.
+    /// Bütün parça rig'lerini (normal idle, kılıç çekik idle, koşu, saldırı, zıplama, ön ve yan profil) kategori bazında
+    /// yeniden renklendirir. Dokulara dokunmaz: sadece parça materyallerindeki shader parametrelerini (ProjectM/CharacterLit) ayarlar.
+    ///  1) Taban dönüşümü: eski çizim aileleri (kırmızı haori) yeni idle renklerine çevrilir.
+    ///  2) Senin rengin: her kategoride seçtiğin renk, varsayılana (yeni idle rengine) göre bütün rig'lere birlikte uygulanır.
+    [DisallowMultipleComponent]
+    [DefaultExecutionOrder(300)]
+    public class RonniPalette : MonoBehaviour
+    {
+        [Tooltip("Kapalıyken bütün çizimler orijinal dokularıyla görünür.")]
+        public bool paletteOn = true;
+
+        [Serializable]
+        public class Slot
+        {
+            [Tooltip("Ton kaydırma (derece) ya da 'mutlak' açıksa doğrudan ton.")] public float hue;
+            public bool hueAbsolute;
+            public float satMul = 1f, satAdd = 0f, gamma = 1f, valMul = 1f;
+            [Tooltip("Sadece belirli bir tondaki pikselleri değiştir (ör. koldaki ten rengi ele dokunmamak için).")] public bool mask;
+            [Range(0f, 1f)] public float maskHue;
+            [Range(0f, 0.5f)] public float maskRange = 0.045f;
+            [Range(0f, 0.5f)] public float maskSoft = 0.02f;
+        }
+
+        [Serializable] public class FamilyEntry { public string category; public Slot slot = new Slot(); }
+
+        [Serializable]
+        public class Family
+        {
+            public string name;
+            [Tooltip("Bu ailenin Resources klasörleri (RonniSkinRig.resourceFolder).")] public string[] folders;
+            public List<FamilyEntry> entries = new List<FamilyEntry>();
+        }
+
+        [Serializable]
+        public class Category
+        {
+            public string name;
+            [Tooltip("İç anahtar (taban dönüşümündeki kategori adı).")] public string id;
+            public bool enabled = true;
+            [Tooltip("Bu kategorinin rengi. Varsayılan = yeni idle'daki renk.")] public Color color = Color.white;
+            public Color defaultColor = Color.white;
+            public bool hasSecondary;
+            public string secondaryName;
+            [Tooltip("İkinci bölgenin rengi (ör. ayakta sandalet bağı). Eski çizimlerde ayrı bölge olarak uygulanır.")] public Color secondaryColor = Color.white;
+            public Color secondaryDefault = Color.white;
+            [Tooltip("Parça adında bunlardan biri geçerse bu kategoriye girer (küçük harf).")] public string[] keywords;
+            [Tooltip("Parça adında bunlardan biri geçerse bu kategoriye girmez.")] public string[] exclude;
+            [Range(-180f, 180f)] public float hueOffset = 0f;
+            [Range(0f, 3f)] public float satMul = 1f;
+            [Range(0f, 3f)] public float valMul = 1f;
+            [Tooltip("Ek çarpma rengi (beyaz = etkisiz).")] public Color tint = Color.white;
+        }
+
+        public List<Category> categories = new List<Category>();
+        [Tooltip("Eski çizim aileleri: bu klasörlerdeki parçalar önce yeni idle renklerine çevrilir. Listede olmayan klasörler (ör. RonniIdleKatana) zaten yeni renklerdedir.")]
+        public List<Family> families = new List<Family>();
+
+        // ---------------- runtime ----------------
+        [NonSerialized] int version = 1;
+        readonly Dictionary<RonniSkinRig, int> applied = new Dictionary<RonniSkinRig, int>();
+        readonly List<RonniSkinRig> rigs = new List<RonniSkinRig>();
+        int lastChildCount = -1; float nextScan, nextRefresh;
+
+        void Reset() { ResetDefaults(); }
+        void OnValidate() { version++; if (categories == null || categories.Count == 0) ResetDefaults(); }
+        /// Kodla değer değiştirdikten sonra çağır (inspector zaten otomatik yapar).
+        public void MarkDirty() { version++; }
+
+        void Awake() { if (categories == null || categories.Count == 0) ResetDefaults(); }
+
+        void LateUpdate()
+        {
+            if (transform.childCount != lastChildCount || Time.unscaledTime >= nextScan)
+            {
+                lastChildCount = transform.childCount; nextScan = Time.unscaledTime + 1f;
+                rigs.Clear(); GetComponentsInChildren(true, rigs);
+            }
+            // Materyal başka bir sistem tarafından değiştirilirse diye ara sıra yeniden uygula.
+            bool refresh = Time.unscaledTime >= nextRefresh;
+            if (refresh) nextRefresh = Time.unscaledTime + 2f;
+            for (int i = 0; i < rigs.Count; i++)
+            {
+                var r = rigs[i];
+                if (r == null || !r.IsBuilt) continue;
+                var id = r;
+                int stamp = version * 1000 + r.parts.Count;
+                if (!refresh && applied.TryGetValue(id, out int v) && v == stamp) continue;
+                ApplyRig(r); applied[id] = stamp;
+            }
+        }
+
+        struct Xf { public float hue; public bool abs; public float sm, sa, g, vm; public bool mask; public float mc, mr, ms; }
+        static Xf Identity() { return new Xf { sm = 1f, g = 1f, vm = 1f }; }
+        static Xf FromSlot(Slot s)
+        {
+            return new Xf { hue = s.hue, abs = s.hueAbsolute, sm = s.satMul, sa = s.satAdd, g = s.gamma, vm = s.valMul, mask = s.mask, mc = s.maskHue, mr = s.maskRange, ms = s.maskSoft };
+        }
+        static bool IsIdentity(Xf x)
+        {
+            return !x.abs && Mathf.Abs(Mathf.DeltaAngle(0f, x.hue)) < 0.01f && Mathf.Abs(x.sm - 1f) < 1e-3f && Mathf.Abs(x.sa) < 1e-3f && Mathf.Abs(x.g - 1f) < 1e-3f && Mathf.Abs(x.vm - 1f) < 1e-3f;
+        }
+
+        /// Varsayılan renkten (d) seçilen renge (c) giden ayarı taban dönüşümünün üstüne ekler.
+        static Xf AddUser(Xf b, Color d, Color c, float hueOff, float satMulX, float valMulX)
+        {
+            var r = b;
+            float diff = Mathf.Abs(d.r - c.r) + Mathf.Abs(d.g - c.g) + Mathf.Abs(d.b - c.b);
+            if (diff > 0.003f)
+            {
+                Color.RGBToHSV(d, out float hd, out float sd, out float vd);
+                Color.RGBToHSV(c, out float hc, out float sc, out float vc);
+                float vm = vd > 0.004f ? Mathf.Clamp(vc / vd, 0f, 40f) : (vc > 0.004f ? 40f : 1f);
+                r.vm *= vm;
+                if (sd >= 0.12f)
+                {
+                    float sm = Mathf.Clamp(sc / sd, 0f, 8f);
+                    if (sc > 0.02f) r.hue += Mathf.DeltaAngle(hd * 360f, hc * 360f);
+                    r.sm *= sm; r.sa *= sm;
+                }
+                else
+                {
+                    // Varsayılan rengi neredeyse gri/siyah: tonu doğrudan seçilen tona ayarla, doygunluğu ekle.
+                    r.abs = true; r.hue = hc * 360f;
+                    r.sa += sc - sd;
+                }
+            }
+            r.hue += hueOff; r.sm *= satMulX; r.sa *= satMulX; r.vm *= valMulX;
+            return r;
+        }
+
+        Family FamilyOf(string folder)
+        {
+            if (families == null || string.IsNullOrEmpty(folder)) return null;
+            for (int i = 0; i < families.Count; i++)
+            {
+                var f = families[i]; if (f == null || f.folders == null) continue;
+                for (int k = 0; k < f.folders.Length; k++) if (f.folders[k] == folder) return f;
+            }
+            return null;
+        }
+        static Slot EntryOf(Family f, string cat)
+        {
+            if (f == null || f.entries == null) return null;
+            for (int i = 0; i < f.entries.Count; i++) if (f.entries[i] != null && f.entries[i].category == cat) return f.entries[i].slot;
+            return null;
+        }
+
+        /// Parça adından kategori (bulamazsa null).
+        public Category CategoryOf(string partName)
+        {
+            if (categories == null) return null;
+            string n = partName.ToLowerInvariant();
+            for (int i = 0; i < categories.Count; i++)
+            {
+                var c = categories[i]; if (c == null || c.keywords == null) continue;
+                bool hit = false;
+                for (int k = 0; k < c.keywords.Length; k++) if (!string.IsNullOrEmpty(c.keywords[k]) && n.Contains(c.keywords[k].ToLowerInvariant())) { hit = true; break; }
+                if (!hit) continue;
+                bool ex = false;
+                if (c.exclude != null) for (int k = 0; k < c.exclude.Length; k++) if (!string.IsNullOrEmpty(c.exclude[k]) && n.Contains(c.exclude[k].ToLowerInvariant())) { ex = true; break; }
+                if (!ex) return c;
+            }
+            return null;
+        }
+
+        public void ApplyRig(RonniSkinRig r)
+        {
+            var fam = FamilyOf(r.resourceFolder);
+            for (int i = 0; i < r.parts.Count; i++)
+            {
+                var p = r.parts[i]; if (p == null) continue;
+                var mr = p.GetComponent<MeshRenderer>(); if (mr == null) continue;
+                var m = mr.sharedMaterial; if (m == null || !m.HasProperty("_RcOn")) continue;
+                var c = paletteOn ? CategoryOf(p.name) : null;
+                if (c == null || !c.enabled) { Clear(m); continue; }
+                var b1 = EntryOf(fam, c.id);
+                Xf x1 = AddUser(b1 != null ? FromSlot(b1) : Identity(), c.defaultColor, c.color, c.hueOffset, c.satMul, c.valMul);
+                bool on2 = false; Xf x2 = Identity();
+                if (c.hasSecondary)
+                {
+                    var b2 = EntryOf(fam, c.id + "2");
+                    if (b2 != null) { x2 = AddUser(FromSlot(b2), c.secondaryDefault, c.secondaryColor, c.hueOffset, c.satMul, c.valMul); on2 = true; }
+                }
+                bool on1 = !IsIdentity(x1);
+                m.SetFloat("_RcOn", on1 || on2 ? 1f : 0f);
+                if (!on1) x1 = Identity();
+                SetSlot(m, "_Rc", x1, true);
+                m.SetFloat("_Rc2On", on2 ? 1f : 0f);
+                if (on2) SetSlot(m, "_Rc2", x2, false);
+                var t = c.tint; t.a = 1f;
+                if (m.HasProperty("_Color")) m.SetColor("_Color", t);
+            }
+        }
+
+        static void SetSlot(Material m, string pre, Xf x, bool hasMaskToggle)
+        {
+            float hue = x.abs ? Mathf.Repeat(x.hue, 360f) : Mathf.DeltaAngle(0f, x.hue);
+            m.SetFloat(pre + "Hue", hue);
+            m.SetFloat(pre + "HueAbs", x.abs ? 1f : 0f);
+            m.SetFloat(pre + "SatMul", x.sm);
+            m.SetFloat(pre + "SatAdd", x.sa);
+            m.SetFloat(pre + "Gamma", x.g);
+            m.SetFloat(pre + "ValMul", x.vm);
+            if (hasMaskToggle) m.SetFloat(pre + "MaskOn", x.mask ? 1f : 0f);
+            m.SetFloat(pre + "MaskHue", x.mc);
+            m.SetFloat(pre + "MaskRange", x.mr);
+            m.SetFloat(pre + "MaskSoft", x.ms);
+        }
+
+        static void Clear(Material m)
+        {
+            m.SetFloat("_RcOn", 0f); m.SetFloat("_Rc2On", 0f);
+            if (m.HasProperty("_Color")) m.SetColor("_Color", Color.white);
+        }
+
+        // ---------------- defaults ----------------
+        static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out Color c); return c; }
+
+        Category Cat(string id, string name, string hex, string[] kw, string[] ex)
+        {
+            var c = new Category { id = id, name = name, defaultColor = Hex(hex), color = Hex(hex), keywords = kw, exclude = ex ?? new string[0] };
+            categories.Add(c); return c;
+        }
+
+        static void E(Family f, string cat, float hue, bool abs, float sm, float sa, float g, float vm, bool mask, float mc, float mr, float ms)
+        {
+            f.entries.Add(new FamilyEntry { category = cat, slot = new Slot { hue = hue, hueAbsolute = abs, satMul = sm, satAdd = sa, gamma = g, valMul = vm, mask = mask, maskHue = mc, maskRange = mr, maskSoft = ms } });
+        }
+
+        /// Renkleri yeni idle renklerine döndürür (anahtar kelimeler ve taban dönüşümleri kalır).
+        [ContextMenu("Renkleri varsayılana (yeni idle) döndür")]
+        public void ResetColors()
+        {
+            foreach (var c in categories)
+            {
+                c.color = c.defaultColor; c.secondaryColor = c.secondaryDefault;
+                c.hueOffset = 0f; c.satMul = 1f; c.valMul = 1f; c.tint = Color.white; c.enabled = true;
+            }
+            version++;
+        }
+
+        [ContextMenu("Her şeyi sıfırla (kategoriler + taban dönüşümleri)")]
+        public void ResetDefaults()
+        {
+            categories = new List<Category>();
+            Cat("HaoriOuter", "Haori (dış)", "0f1120", new[] { "haori", "sag_kol", "sol_kol", "coat", "sleeve", "arm_near", "arm_far", "arm_l", "arm_r" }, new[] { "_ic", "sleeve_in", "arm_far_fore" });
+            Cat("HaoriInner", "Haori (iç astar)", "060813", new[] { "haori_ic", "kol_ic", "sleeve_in" }, null);
+            Cat("Gi", "Gövde (gi)", "b4b8ca", new[] { "govde", "torso" }, null);
+            Cat("Belt", "Kemer", "311918", new[] { "kemer", "belt" }, null);
+            Cat("Pants", "Pantolon", "090908", new[] { "bacak", "leg", "shin", "thigh", "crotch", "hem" }, null);
+            var feet = Cat("Feet", "Ayak (tabi)", "aeafb9", new[] { "ayak", "foot" }, null);
+            feet.hasSecondary = true; feet.secondaryName = "Sandalet bağı"; feet.secondaryDefault = Hex("0a0a0a"); feet.secondaryColor = feet.secondaryDefault;
+            Cat("Saya", "Kın", "0e0e0e", new[] { "saya", "idle_kin", "sheathed" }, null);
+            Cat("Hair", "Saç", "0a0a0a", new[] { "sac", "hair", "bangs", "sidelock", "fringe", "kuyruk", "ponytail" }, null);
+            Cat("Skin", "Ten (kafa / boyun)", "cd9067", new[] { "boyun", "kafa", "neck", "head" }, new[] { "fill_" });
+            Cat("Hat", "Şapka", "896d48", new[] { "hat" }, null);
+
+            families = new List<Family>();
+            Family f;
+            f = new Family { name = "Eski idle ailesi (idle, saldiri, ziplama, kosu)", folders = new[] { "RonniIdle", "RonniAtk", "RonniJump", "RonniRunVivid", "RonniRun" } }; families.Add(f);
+            E(f, "HaoriOuter", -125.4829f, false, 0.6726f, 0f, 1f, 0.3274f, true, 0f, 0.045f, 0.02f);
+            E(f, "HaoriInner", -128.956f, false, 0.8555f, 0f, 1f, 0.4832f, true, 0f, 0.045f, 0.02f);
+            E(f, "Gi", 228.2905f, true, 0f, 0.1082f, 1f, 1.0305f, false, 0f, 0f, 0f);
+            E(f, "Belt", -172.8275f, false, 2.0025f, 0f, 1f, 0.434f, false, 0f, 0f, 0f);
+            E(f, "Pants", -176.9325f, false, 0.2285f, 0f, 1f, 0.2145f, false, 0f, 0f, 0f);
+            E(f, "Saya", -173.0253f, false, 0.0179f, 0f, 1f, 0.2821f, false, 0f, 0f, 0f);
+            E(f, "Feet", -152.0258f, false, 0.1108f, 0f, 1f, 0.9205f, true, 0.0667f, 0.045f, 0.02f);
+            E(f, "Feet2", 26.2665f, false, 0.0174f, 0f, 1f, 0.1797f, true, 0.9944f, 0.035f, 0.015f);
+            f = new Family { name = "On profil (RonniSkin)", folders = new[] { "RonniSkin" } }; families.Add(f);
+            E(f, "HaoriOuter", -113.614f, false, 0.7979f, 0f, 1f, 0.4097f, true, 0.9778f, 0.045f, 0.02f);
+            E(f, "Gi", 228.2905f, true, 0f, 0.1082f, 1f, 2.6707f, false, 0f, 0f, 0f);
+            E(f, "Belt", 158.1003f, false, 1.3931f, 0f, 1f, 0.4899f, false, 0f, 0f, 0f);
+            E(f, "Pants", 179.6253f, false, 0.2931f, 0f, 1f, 0.1079f, false, 0f, 0f, 0f);
+            E(f, "Saya", 133.4563f, false, 0.0147f, 0f, 1f, 0.2147f, false, 0f, 0f, 0f);
+            E(f, "Feet", -150.822f, false, 0.1763f, 0f, 1f, 0.8468f, true, 0.0611f, 0.05f, 0.02f);
+            E(f, "Feet2", 36.2097f, false, 0.0242f, 0f, 1f, 0.1211f, true, 0.9583f, 0.04f, 0.02f);
+            E(f, "HaoriInner", -113.614f, false, 0.7979f, 0f, 1f, 0.4097f, true, 0.9778f, 0.045f, 0.02f);
+            f = new Family { name = "Yan profil (RonniSkinB / BR)", folders = new[] { "RonniSkinB", "RonniSkinBR" } }; families.Add(f);
+            E(f, "HaoriOuter", -114.2102f, false, 0.8821f, 0f, 1f, 0.4051f, true, 0.9778f, 0.045f, 0.02f);
+            E(f, "Gi", 228.2905f, true, 0f, 0.1082f, 1f, 2.0784f, false, 0f, 0f, 0f);
+            E(f, "Belt", 144.816f, false, 1.0973f, 0f, 1f, 0.6173f, false, 0f, 0f, 0f);
+            E(f, "Pants", 165.0586f, false, 0.4261f, 0f, 1f, 0.1099f, false, 0f, 0f, 0f);
+            E(f, "Saya", 0f, false, 1f, -0.0904f, 1f, 0.2214f, false, 0f, 0f, 0f);
+            E(f, "Feet", -149.3755f, false, 0.1686f, 0f, 1f, 0.869f, true, 0.0611f, 0.05f, 0.02f);
+            E(f, "Feet2", 36.7503f, false, 0.0248f, 0f, 1f, 0.1243f, true, 0.9583f, 0.04f, 0.02f);
+            E(f, "HaoriInner", -114.2102f, false, 0.8821f, 0f, 1f, 0.4051f, true, 0.9778f, 0.045f, 0.02f);
+            version++;
+        }
+    }
+}

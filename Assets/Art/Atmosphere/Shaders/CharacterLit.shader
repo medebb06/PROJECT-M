@@ -11,15 +11,26 @@ Shader "ProjectM/CharacterLit"
         _Color ("Tint", Color) = (1,1,1,1)
         [Toggle] _PMA ("Doku premultiplied (Spine)", Float) = 0
         [Toggle] _RcOn ("Yeniden renk acik", Float) = 0
-        _RcHue ("Ton kaydirma (derece)", Range(-180,180)) = 0
-        _RcSatMul ("Doygunluk carpani", Range(0,6)) = 1
+        _RcHue ("Ton (derece)", Range(-360,360)) = 0
+        _RcSatMul ("Doygunluk carpani", Range(0,8)) = 1
         _RcSatAdd ("Doygunluk ekle", Range(-1,1)) = 0
         _RcGamma ("Parlaklik gamma", Range(0.2,4)) = 1
-        _RcValMul ("Parlaklik carpani", Range(0,8)) = 1
+        _RcValMul ("Parlaklik carpani", Range(0,40)) = 1
         [Toggle] _RcMaskOn ("Sadece belirli tonu etkile", Float) = 0
         _RcMaskHue ("Maske ton merkezi (0-1)", Range(0,1)) = 0
         _RcMaskRange ("Maske genisligi (0-0.5)", Range(0,0.5)) = 0.06
         _RcMaskSoft ("Maske yumusakligi (0-0.5)", Range(0,0.5)) = 0.03
+        [Toggle] _RcHueAbs ("Ton mutlak (kaydirma degil)", Float) = 0
+        [Toggle] _Rc2On ("Ikinci renk acik", Float) = 0
+        _Rc2Hue ("2: Ton (derece)", Range(-360,360)) = 0
+        [Toggle] _Rc2HueAbs ("2: Ton mutlak", Float) = 0
+        _Rc2SatMul ("2: Doygunluk carpani", Range(0,8)) = 1
+        _Rc2SatAdd ("2: Doygunluk ekle", Range(-1,1)) = 0
+        _Rc2Gamma ("2: Parlaklik gamma", Range(0.2,4)) = 1
+        _Rc2ValMul ("2: Parlaklik carpani", Range(0,40)) = 1
+        _Rc2MaskHue ("2: Maske ton merkezi", Range(0,1)) = 0
+        _Rc2MaskRange ("2: Maske genisligi", Range(0,0.5)) = 0.04
+        _Rc2MaskSoft ("2: Maske yumusakligi", Range(0,0.5)) = 0.02
         _PointLit ("Mesale isigi dolgu", Range(0,3)) = 0.7
         _FireRim ("Ates kenar isigi", Range(0,4)) = 1.8
         _FireRimWidth ("Kenar kalinligi (birim)", Range(0.01,0.5)) = 0.09
@@ -74,6 +85,17 @@ Shader "ProjectM/CharacterLit"
                 half _RcMaskHue;
                 half _RcMaskRange;
                 half _RcMaskSoft;
+                half _RcHueAbs;
+                half _Rc2On;
+                half _Rc2Hue;
+                half _Rc2HueAbs;
+                half _Rc2SatMul;
+                half _Rc2SatAdd;
+                half _Rc2Gamma;
+                half _Rc2ValMul;
+                half _Rc2MaskHue;
+                half _Rc2MaskRange;
+                half _Rc2MaskSoft;
             CBUFFER_END
 
             struct Attributes
@@ -111,29 +133,47 @@ Shader "ProjectM/CharacterLit"
             }
 
             // Ronni palet sistemi: HSV tabanli yeniden renklendirme (golge/cizgi detayi korunur).
-            half3 PMRecolor(half3 c0)
+            float3 PMRgbToHsv(float3 c)
             {
-                float3 c = c0;
                 float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
                 float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
                 float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
                 float d = q.x - min(q.w, q.y);
                 float e = 1.0e-10;
-                float3 hsv = float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-                float3 hsv0 = hsv;
-                hsv.x = frac(hsv.x + _RcHue / 360.0);
-                hsv.y = saturate(hsv.y * _RcSatMul + _RcSatAdd);
-                hsv.z = saturate(pow(max(hsv.z, 1e-5), _RcGamma) * _RcValMul);
+                return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+            }
+
+            // xyz = yeni renk, w = maske agirligi (0 = dokunma)
+            float4 PMRecolorSlot(float3 hsv0, float hue, float hueAbs, float sm, float sa, float g, float vm, float maskOn, float mc, float mr, float ms)
+            {
+                float3 hsv = hsv0;
+                hsv.x = hueAbs > 0.5 ? frac(hue / 360.0) : frac(hsv.x + hue / 360.0);
+                hsv.y = saturate(hsv.y * sm + sa);
+                hsv.z = saturate(pow(max(hsv.z, 1e-5), g) * vm);
                 float3 rgb = saturate(abs(frac(hsv.x + float3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0);
                 float3 outc = hsv.z * lerp(float3(1, 1, 1), rgb, hsv.y);
-                if (_RcMaskOn > 0.5)
+                float w = 1.0;
+                if (maskOn > 0.5)
                 {
-                    float dh = abs(frac(hsv0.x - _RcMaskHue + 0.5) - 0.5);
-                    float w = 1.0 - smoothstep(_RcMaskRange, _RcMaskRange + max(_RcMaskSoft, 0.0001), dh);
+                    float dh = abs(frac(hsv0.x - mc + 0.5) - 0.5);
+                    w = 1.0 - smoothstep(mr, mr + max(ms, 0.0001), dh);
                     w *= smoothstep(0.08, 0.2, hsv0.y);
-                    outc = lerp(c, outc, w);
                 }
-                return half3(outc);
+                return float4(outc, w);
+            }
+
+            half3 PMRecolor(half3 c0)
+            {
+                float3 c = c0;
+                float3 hsv0 = PMRgbToHsv(c);
+                float4 a = PMRecolorSlot(hsv0, _RcHue, _RcHueAbs, _RcSatMul, _RcSatAdd, _RcGamma, _RcValMul, _RcMaskOn, _RcMaskHue, _RcMaskRange, _RcMaskSoft);
+                float3 r = lerp(c, a.xyz, a.w);
+                if (_Rc2On > 0.5)
+                {
+                    float4 b = PMRecolorSlot(hsv0, _Rc2Hue, _Rc2HueAbs, _Rc2SatMul, _Rc2SatAdd, _Rc2Gamma, _Rc2ValMul, 1.0, _Rc2MaskHue, _Rc2MaskRange, _Rc2MaskSoft);
+                    r = lerp(r, b.xyz, b.w);
+                }
+                return half3(r);
             }
 
             half4 frag(Varyings i) : SV_Target
