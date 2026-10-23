@@ -8,18 +8,24 @@ using UnityEngine;
 /// </summary>
 public class HitClickAudio : MonoBehaviour
 {
-    public enum HitSet { Keyboard, Fire, Both, Ice }
+    public enum HitSet { Keyboard, Fire, Both, Ice, Impact }
 
     [Header("Düşmana vuruş")]
     [Tooltip("Cana vuruş sesi: klavye / ateş çıtırtısı / ikisi karışık.")]
-    public HitSet hitSet = HitSet.Fire;
+    public HitSet hitSet = HitSet.Impact;
     public bool enableHit = true;
     [Range(0f, 1f)] public float hitVolume = 1f;
     public Vector2 hitPitch = new Vector2(0.62f, 0.74f);
     [Tooltip("Buz catirtisi (ice_XX) icin pitch.")]
     public Vector2 icePitch = new Vector2(0.92f, 1.06f);
 
+    [Tooltip("Impact seti: Resources/HitSfx (temizlenmis vurus sesleri) icin pitch.")]
+    public Vector2 impactPitch = new Vector2(0.97f, 1.03f);
+    [Range(0f, 1.5f)] public float impactVolume = 1f;
+
     [Header("Posture (denge) vuruşu - tahta adım sesleri")]
+    [Tooltip("Acik: armora (posture) vururken tahta adim yerine HitSfx vurus sesi calar.")]
+    public bool postureUsesImpact = true;
     public bool enableStep = true;
     [Range(0f, 1f)] public float stepVolume = 1f;
     public Vector2 stepPitch = new Vector2(0.93f, 1.06f);
@@ -43,9 +49,9 @@ public class HitClickAudio : MonoBehaviour
     // Ates varyasyonlarindan sadece TOK/KALIN olanlar (500 Hz alti enerjisi >%78); ince olanlar elendi.
     static readonly string[] ThickFire = { "fire_05", "fire_10", "fire_08", "fire_07" };
 
-    AudioClip[] hit, hurt, fire, both, step, brk, ice;
+    AudioClip[] hit, hurt, fire, both, step, brk, ice, impact;
     AudioSource src;
-    int lastIce = -1, lastBrk = -1, lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1;
+    int lastIce = -1, lastBrk = -1, lastStep = -1, lastFire = -1, lastBoth = -1, lastHit = -1, lastHurt = -1, lastImpact = -1;
     float lastT = -10f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -81,6 +87,7 @@ public class HitClickAudio : MonoBehaviour
             else if (c.name.StartsWith("ice_")) ic.Add(c);
         }
 
+        impact = Resources.LoadAll<AudioClip>("HitSfx");
         ice = ic.ToArray();
         brk = bk.ToArray();
         step = st.ToArray();
@@ -123,7 +130,13 @@ public class HitClickAudio : MonoBehaviour
     public static void PlayEnemyPostureHit()
     {
         if (instance != null && instance.enableStep)
-            instance.Play(instance.step, ref instance.lastStep, instance.stepVolume, instance.stepPitch);
+            instance.PlayPostureHit();
+    }
+
+void PlayPostureHit()
+    {
+        if (postureUsesImpact && impact != null && impact.Length > 0) Play(impact, ref lastImpact, impactVolume, impactPitch, false, false);
+        else Play(step, ref lastStep, stepVolume, stepPitch);
     }
 
 void PlayHealthHitSound()
@@ -133,6 +146,7 @@ void PlayHealthHitSound()
 
     void PlayHit()
     {
+        if (hitSet == HitSet.Impact && impact != null && impact.Length > 0) { Play(impact, ref lastImpact, impactVolume, impactPitch, false, false); return; }
         if (hitSet == HitSet.Ice && ice != null && ice.Length > 0) Play(ice, ref lastIce, hitVolume, icePitch);
         else if (hitSet == HitSet.Fire) Play(fire, ref lastFire, hitVolume, hitPitch);
         else if (hitSet == HitSet.Both) Play(both, ref lastBoth, hitVolume, hitPitch);
@@ -145,7 +159,7 @@ void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
         // Posture (denge) vuruşu: tahta adım sesi.
         if (r.hit && r.onBalance && r.amount > 0)
         {
-            if (enableStep && !r.brokeBalance) Play(step, ref lastStep, stepVolume, stepPitch); // kırılma anında break sesi çalar
+            if (enableStep && !r.brokeBalance) PlayPostureHit(); // kırılma anında break sesi çalar
             return;
         }
 
@@ -160,7 +174,7 @@ void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
         Play(hurt, ref lastHurt, hurtVolume, hurtPitch);
     }
 
-    void Play(AudioClip[] set, ref int last, float vol, Vector2 pitch, bool force = false)
+    void Play(AudioClip[] set, ref int last, float vol, Vector2 pitch, bool force = false, bool boost = true)
     {
         if (set == null || set.Length == 0 || src == null) return;
         if (!force && Time.unscaledTime - lastT < minInterval) return;
@@ -171,6 +185,6 @@ void OnEnemyHit(EnemyBase e, DamageInfo d, HitResult r)
         last = i;
 
         src.pitch = Random.Range(pitch.x, pitch.y);
-        src.PlayOneShot(set[i], vol * masterBoost);
+        src.PlayOneShot(set[i], boost ? vol * masterBoost : vol);
     }
 }

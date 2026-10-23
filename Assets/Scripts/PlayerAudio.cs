@@ -29,6 +29,18 @@ public class PlayerAudio : MonoBehaviour
     [Tooltip("Kılıç savurma sesi seviyesi.")]
     public float wooshVol = 0.1f;
 
+    [Header("Duz Vurus Kilic Sesleri (Resources/SlashSfx)")]
+    public bool slashOn = true;
+    [Range(0f, 1.5f)] public float slashVol = 0.9f;
+    [Tooltip("Acik ise eski woosh calmaz, sadece slash sesi calar.")]
+    public bool slashReplacesWoosh = false;
+    [Range(0f, 0.2f)] public float slashPitchJitter = 0.06f;
+
+    AudioClip[] slashSet;
+    AudioSource slashSrc;
+    int lastSlash = -1;
+
+
     [Header("Woosh Kuyruğu (ses tık diye kesilmesin)")]
     [Tooltip("Klibin sonuna eklenen yumuşak sönme süresi (sn). 0 = eski davranış.")]
     [Range(0f, 0.6f)] public float wooshTail = 0.22f;
@@ -59,6 +71,12 @@ public class PlayerAudio : MonoBehaviour
         sfxSource.playOnAwake = false;
 
         jumpSet = Resources.LoadAll<AudioClip>("JumpSfx");
+
+        slashSet = Resources.LoadAll<AudioClip>("SlashSfx");
+        slashSrc = gameObject.AddComponent<AudioSource>();
+        slashSrc.playOnAwake = false;
+        slashSrc.spatialBlend = 0f;
+
 
         wooshSoft[1] = SoftEnd(attack1WooshClip);
         wooshSoft[2] = SoftEnd(attack2WooshClip);
@@ -207,8 +225,28 @@ public class PlayerAudio : MonoBehaviour
     // ATTACK WOOSH (SFX)
     // =========================================================
 
+    // Her duz vurusta 5 slash sesinden biri (art arda ayni cikmaz, hafif pitch farki).
+    void PlaySlash()
+    {
+        if (!slashOn || slashSet == null || slashSet.Length == 0 || slashSrc == null)
+            return;
+
+        int i = Random.Range(0, slashSet.Length);
+        if (slashSet.Length > 1 && i == lastSlash)
+            i = (i + 1 + Random.Range(0, slashSet.Length - 1)) % slashSet.Length;
+        lastSlash = i;
+
+        slashSrc.pitch = 1f + Random.Range(-slashPitchJitter, slashPitchJitter);
+        slashSrc.PlayOneShot(slashSet[i], slashVol);
+    }
+
     public void PlayAttackWoosh(int attackStep)
     {
+        PlaySlash();
+
+        if (slashOn && slashReplacesWoosh && slashSet != null && slashSet.Length > 0)
+            return;
+
         AudioClip clip = null;
 
         switch (attackStep)

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RonniSkin
@@ -23,6 +23,11 @@ namespace RonniSkin
         [Tooltip("Yıldız boyu (kaynak piksel).")] public float sheathGlintPx = 1100f;
         [Tooltip("Arkadaki yumuşak hale boyu (kaynak piksel).")] public float sheathHaloPx = 950f;
         [Tooltip("Süresi (sn).")] public float sheathGlintTime = 0.7f;
+        [Header("Ses (Resources/TenkaSfx)")]
+        [Tooltip("Savurma (chiburi) sesi: dönüş izi başlayınca çalar; kına oturunca kına sesi. Kapalı = sessiz.")] public bool sfx = true;
+        [Range(0f, 1f)] public float swingVolume = 0.9f, sheathVolume = 1f;
+        [Tooltip("Kına oturma sesinin başı bu kadar atlanır (sn): tık, kılıç kına oturduğu karede duyulsun.")] public float sheathSkip = 0.11f;
+
         public Color sheathGlintColor = new Color(1f, 0.96f, 0.82f, 1f);
         [Header("Dönüş izi")]
         public bool smear = true;
@@ -49,6 +54,9 @@ namespace RonniSkin
         static Sprite circleHard, circleSoft;
         Material fxMat;
         bool active, wasDrop, cutOn, wasSheathed;
+        bool wasSwing, wasSheathSfx; float lastSwingT = -99f;
+        AudioSource swingSrc, sheathSrc; AudioClip swingClip, sheathClip;
+
         SpriteRenderer sheathSR, haloSR; float sheathAge = -1f; Vector3 sheathPos;
         class Drop { public Transform t; public SpriteRenderer sr; public Vector3 v; public float age, life, g, groundY; public Color c; public int order; public string layer; }
         readonly List<Drop> drops = new List<Drop>();
@@ -70,6 +78,8 @@ namespace RonniSkin
         {
             if (!active) return;
             active = false; wasDrop = false; wasSheathed = false;
+            wasSwing = false; wasSheathSfx = false; if (swingSrc != null && swingSrc.isPlaying) swingSrc.Stop();
+
             if (rig == null) return;
             if (cutOn) { rig.SetPartWindow("idle_kilic", 0f, 1f, Color.white, Color.white); cutOn = false; }
             rig.SetActLayers(false);
@@ -153,6 +163,12 @@ namespace RonniSkin
             if (sheathed && !wasSheathed && sheathGlint && rig.Shown && fxMouth != null) StartSheathGlint();
             wasSheathed = sheathed;
             rig.SetActLayers(front);
+            if (sheathed && !wasSheathSfx && sfx && rig.Shown) PlaySheath();
+            wasSheathSfx = sheathed;
+            bool swingNow = fxTip != null && fxTip.localScale.y > 0.5f && !sheathed;
+            if (swingNow && !wasSwing && sfx && rig.Shown && Time.time - lastSwingT > 1.5f) PlaySwing();
+            wasSwing = swingNow;
+
 
             // bıçak kınının ağzında kırpılır (ağızdan içerisi görünmez)
             bool cut = !sheathed && fxMouth != null && fxMouth.localScale.x > 0.5f;
@@ -211,6 +227,28 @@ namespace RonniSkin
         }
 
         // kılıç kına oturdu: kının ağzında kısa parlama (tenka bitip rig değişse de sönene kadar kalır)
+        AudioSource MakeSrc() { var s = gameObject.AddComponent<AudioSource>(); s.playOnAwake = false; s.loop = false; s.spatialBlend = 0f; return s; }
+
+        // savurma: dönüş izi başlayınca (klipte ~0.6 sn) çalar; 1 sn'lik klibin son savurması silkeleme anına denk gelir
+        void PlaySwing()
+        {
+            if (swingClip == null) swingClip = Resources.Load<AudioClip>("TenkaSfx/tenka_swing");
+            if (swingClip == null) return;
+            if (swingSrc == null) swingSrc = MakeSrc();
+            swingSrc.clip = swingClip; swingSrc.volume = swingVolume; swingSrc.time = 0f; swingSrc.Play();
+            lastSwingT = Time.time;
+        }
+
+        // kılıç kına tam oturdu anı (sheathed bayrağı)
+        void PlaySheath()
+        {
+            if (sheathClip == null) sheathClip = Resources.Load<AudioClip>("TenkaSfx/tenka_sheath");
+            if (sheathClip == null) return;
+            if (sheathSrc == null) sheathSrc = MakeSrc();
+            sheathSrc.clip = sheathClip; sheathSrc.volume = sheathVolume;
+            sheathSrc.time = Mathf.Clamp(sheathSkip, 0f, sheathClip.length * 0.5f); sheathSrc.Play();
+        }
+
         void StartSheathGlint()
         {
             if (glintSp == null) return;
