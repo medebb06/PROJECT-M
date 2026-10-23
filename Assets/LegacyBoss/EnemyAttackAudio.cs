@@ -35,7 +35,7 @@ public class EnemyAttackAudio : MonoBehaviour
 
     [Header("Yumuşak uyarı (Resources/EnemyWarn)")]
     [Tooltip("Klasörde klip varsa normal uyarıda bunlardan biri rastgele çalar (eski uyarı sesi yerine).")]
-    [SerializeField] private float softVolume = 0.8f;
+    [SerializeField] private float softVolume = 0.22f;
     [SerializeField] private Vector2 softPitch = new Vector2(0.94f, 1.08f);
     [Tooltip("Engellenemez saldırıda aynı ses bu çarpanla daha tiz çalar.")]
     [SerializeField] private float unblockablePitchMul = 1.25f;

@@ -668,6 +668,8 @@ public class EnemyUnit : EnemyBase
         HardStop();   // koşu hızını taşıyıp kayma
 
         if (telegraph != null) telegraph.StartWarning(a.unblockable, a.windup);
+        if (!a.followUpOnly) EnemyWarnSfx.Play(transform.position, a.unblockable);   // uyari sesi (dikkat)
+        PlayerDangerRing.Warn(this, a);   // oyuncu menzildeyse govdede iceri kuculen hare
         if (a.unblockable) PlayTintFlash(Color.white, 0.15f);
         SetState(UnitState.Windup);
         if (a.teleportBehind) BeginVanish();
@@ -1258,6 +1260,7 @@ public class EnemyUnit : EnemyBase
 
     // Çok vuruşlu saldırı başlamışsa (ilk vuruş atıldı, sıradakiler bekliyor) sersemletme/iptal yok: her vuruş ayrı parry ister.
     private bool MultiHitCommitted { get { return state == UnitState.Active && current != null && current.hits > 1 && hitDone && extraHitsDone < current.hits - 1; } }
+    public bool IsInWindup { get { return state == UnitState.Windup; } }
     private bool ArmorActive { get { return current != null && current.armored && (state == UnitState.Windup || state == UnitState.Active); } }
 
     // ---- Yer şoku (slamJump)
