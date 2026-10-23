@@ -425,7 +425,7 @@ public static partial class TenkaClipRebuild
         // mevcut dosyada tenka klibinin yerini bul ve değiştir (diğer klipler aynen kalır)
         int s0 = curText.IndexOf("{\"name\":\"tenka\",\"duration\"", StringComparison.Ordinal);
         int e0i = curText.IndexOf("{\"name\":\"block\",\"duration\"", StringComparison.Ordinal);
-        if (s0 >= 0) { int a1i = curText.IndexOf("{\"name\":\"attack1\",\"duration\"", s0 + 10, StringComparison.Ordinal); if (a1i > s0 && a1i < e0i) e0i = a1i; }   // attack1 klibi (RunAttack1) tenka'dan sonra gelir
+        if (s0 >= 0) { foreach (System.Text.RegularExpressions.Match mm in System.Text.RegularExpressions.Regex.Matches(curText, "\\{\"name\":\"[A-Za-z0-9_]+\",\"duration\"")) if (mm.Index > s0 + 10) { if (mm.Index < e0i) e0i = mm.Index; break; } }   // tenka'dan sonra gelen ilk klip (attack1/unsheathe/guard_break araya girebilir)
         if (s0 < 0 || e0i < s0) return "HATA: mevcut dosyada tenka klibi bulunamadı.";
         int closeIdx = curText.LastIndexOf('}', e0i - 1);
         if (closeIdx < s0) return "HATA: tenka klip sonu bulunamadı.";

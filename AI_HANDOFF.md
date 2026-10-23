@@ -590,3 +590,15 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Git commit/push YAPILMADI.
 
 - (2026-10-23, sonra) Attack1 rig prototipi KULLANICI İSTEĞİYLE KAPATILDI: `useRigAttack1` varsayılan false (animasyon beğenilmedi, akışkanlık beğenildi). Eski el çizimi kare + frameFlow akışı aktif. Rig kodu ve `attack1` klibi duruyor, kullanılmıyor. Plan: kullanıcı yeni ara kareleri çizecek.
+
+## Eski şapkalı rig (RonniSkin) kalıntıları temizlendi (2026-10-23)
+- Bulgu: Ana rig `RonniSkin` (hasır şapkalı eski karakter) oyunda şu durumlarda görünüyordu: (1) Q ile kılıç çekme `unsheathe` (~0.5 sn), (2) denge kırılması `guard_break` (~0.45 sn + solma sırasında ~0.1 sn kare). Başka durumda şapkalı rig çıkmıyor (koşu/zıplama/dash RonniRunVivid/RonniJump, atak el çizimi kareler, blok/parry yeni rig). RonniSkinB/BR (şapkalı profil) sadece rigRun yoksa yedek; kullanılmıyor.
+- Çözüm: `RonniIdleKatana/ronni_anims.json`a `unsheathe` (tenka kına sokma bölümünün tersi + idle'a oturma, sakate batto) ve `guard_break` (geriye savrulma, kılıç havaya, çömelme) klipleri eklendi (üretici: `Assets/Editor/TenkaClipRebuildExtras.cs`, menü Tools > Ronni > Rebuild Unsheathe + GuardBreak Clips). Bridge'te `rigActNow` dalı (rigAtkNow ile aynı dal) bu aksiyonları kılıç çekik rig'inde oynatır; `hatSuppress` aksiyon bitince eski rig'in solma karesini engeller.
+- Denetim aracı: `Assets/Editor/RigAudit.cs` (Play modunda girdileri sırayla tetikler, hangi rig'in göründüğünü raporlar). Denetimde RonniSkin artık hiçbir adımda görünmedi.
+- Doğrulanmadı: koşu/zıplama/dash durumları denetim girdisiyle tetiklenemedi (kod okunarak şapkasız rig kullandıkları görüldü); klip görünümü/his (özellikle guard_break) oyunda gerçek hızda izlenmedi. Yedek: _backup_before_hat_fix. Git commit/push YAPILMADI.
+
+## Menü giriş sesi: Start'a basınca (2026-10-23)
+- Kaynak: kullanıcının `preview_5.mp3` dosyası (5.96 sn). Kadın vokali 3.055 sn'de girip ~4.2 sn'ye kadar sürüyordu (spektrogramda harmonik çizgiler); vuruş 0.2-0.4 sn, kuyruğu 2.7 sn'de -60 dBFS altına iniyor. Kesim: ilk 2.85 sn, son 0.4 sn yumuşak (qsin) fade-out, 44.1 kHz stereo 16-bit WAV (mp3 yeniden sıkıştırılmadı). Dosya: `Assets/Resources/MenuSfx/menu_start.wav`.
+- Kod: `MenuSfx.StartGame()` (yeni; `StartVolume` 1.0, menü tıklarının AudioSource'unu kullanır, ignoreListenerPause açık). `MainMenu.StartGame()` coroutine'inin ilk satırında çağrılır: Start'a basınca ses çalar, ekran 1.1 sn'de kararır, 0.45 sn sonra 1.4 sn'de açılır (zamanlama değişmedi). Duraklatma menüsünden 'Devam' ve ana menüye dönüş etkilenmez (yalnızca ana menü Start).
+- Not: MenuSfx.Select() tıkı Start'a basınca da hâlâ çalıyor (kısa klik, ses ile üst üste). İstenirse Start için kapatılır.
+- Doğrulandı: derleme hatasız; Play'de ActivateMain(0) ile Start tetiklendi, AudioSource çalıyor (isPlaying), menü kapandı, oyuncu kontrolü açıldı, konsolda hata yok. Doğrulanmadı: kulakla ses/zamanlama hissi. Yedek: _backup_before_start_sfx (MenuSfx.cs, MainMenu.cs). Git commit/push YAPILMADI.

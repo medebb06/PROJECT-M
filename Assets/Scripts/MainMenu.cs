@@ -1199,6 +1199,8 @@ public class MainMenu : MonoBehaviour
     {
         starting = true;
 
+        MenuSfx.StartGame();   // giris sesi: Start'a basinca calar, oyun ekran kararirken bu sesle acilir
+
         yield return ScreenFade.Instance.FadeTo(1f, 1.1f);
 
         // Menüyü gizle, oyuncuyu bırak.

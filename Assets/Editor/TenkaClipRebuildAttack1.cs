@@ -223,9 +223,7 @@ public static partial class TenkaClipRebuild
         if (blockIdx < 0) return "HATA: block klibi bulunamadı.";
         int tenkaIdx = cur.IndexOf("{\"name\":\"tenka\",\"duration\"", StringComparison.Ordinal);
         int a1Idx = cur.IndexOf("{\"name\":\"attack1\",\"duration\"", Math.Max(0, tenkaIdx), StringComparison.Ordinal);
-        string result;
-        if (a1Idx > tenkaIdx && a1Idx < blockIdx) result = cur.Substring(0, a1Idx) + sb + "," + cur.Substring(blockIdx);
-        else result = cur.Substring(0, blockIdx) + sb + "," + cur.Substring(blockIdx);
+        string result = PutClip(cur, "attack1", sb.ToString());
         rep.AppendLine(string.Format(inv, "attack1: kare={0} süre={1:0.000}s, dosya {2} -> {3}", NF, duration, cur.Length, result.Length));
         if (write)
         {

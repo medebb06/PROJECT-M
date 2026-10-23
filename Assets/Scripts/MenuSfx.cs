@@ -14,7 +14,7 @@ public static class MenuSfx
     static int lastNav = -1, lastSel = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { nav = sel = null; src = null; lastNav = lastSel = -1; }
+    static void Reset() { nav = sel = null; src = null; startClip = null; lastNav = lastSel = -1; }
 
     static void Init()
     {
@@ -22,12 +22,8 @@ public static class MenuSfx
         var all = Resources.LoadAll<AudioClip>("MenuSfx");
         var n = new System.Collections.Generic.List<AudioClip>();
         var s = new System.Collections.Generic.List<AudioClip>();
-        foreach (var c in all)
-        {
-            if (c.name.StartsWith("menu_nav")) n.Add(c);
-            else if (c.name.StartsWith("menu_sel")) s.Add(c);
-        }
-        nav = n.ToArray(); sel = s.ToArray();
+        
+        
         if (src == null)
         {
             var go = new GameObject("MenuSfx");
@@ -47,6 +43,19 @@ public static class MenuSfx
         last = i;
         src.pitch = pitch;
         src.PlayOneShot(set[i], vol);
+    }
+
+    /// <summary>START'a basinca calan giris sesi (Resources/MenuSfx/menu_start). Menu tiklarindan bagimsiz, tam seviyede.</summary>
+    public static float StartVolume = 1f;
+    static AudioClip startClip;
+    public static void StartGame()
+    {
+        Init();
+        if (src == null) return;
+        if (startClip == null) startClip = Resources.Load<AudioClip>("MenuSfx/menu_start");
+        if (startClip == null) return;
+        src.pitch = 1f;
+        src.PlayOneShot(startClip, StartVolume);
     }
 
     public static void Nav() { Init(); Play(nav, ref lastNav, NavVolume, Random.Range(NavPitch.x, NavPitch.y)); }

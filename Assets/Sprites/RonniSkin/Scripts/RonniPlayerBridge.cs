@@ -45,7 +45,7 @@ namespace RonniSkin
         RonniTenka tenka; bool tenkaOn, tenkaFrame; float tenkaPh;
         [Header("Rig saldırı prototipi")]
         [Tooltip("Attack1'i el çizimi kareler yerine RonniIdleKatana rig'inin 'attack1' klibiyle oynat (prototip). Kapalı = eski kare kare saldırı.")] public bool rigAttack1Proto = false;
-        float rigAtkT = -1f, rigAtkLastProg, drawnFadeDefault = -1f; bool rigAtkBlock;
+        float rigAtkT = -1f, rigAtkLastProg, drawnFadeDefault = -1f, hatSuppress = -1f; bool rigAtkBlock;
         const float RigAtk1Dur = 0.9f;   // klip süresi (TenkaClipRebuild.RunAttack1 ile aynı)
         bool RigAtk1Ready() { return rigAttack1Proto && rigDrawn != null && rigDrawn.IsBuilt && playerDrawn != null && playerDrawn.HasClip("attack1"); }
         [Header("Yerinde zıplama (idle gövde + zıplama bacakları)")]
@@ -933,7 +933,8 @@ namespace RonniSkin
                 // dururken (aksiyon / kılıç çekme yok) ön görünüm yerine nefes alan idle çizimi görünür
                 if (atkHoldIdle && (atkClip != null || mode != 0 || !anim.ActionActive)) atkHoldIdle = false;
                 drawnWant = false;
-                bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && (!anim.ActionActive || atkHoldIdle) && shClip == null;
+                if (hatSuppress > 0f) hatSuppress -= Time.deltaTime;   // yeni rig'de oynayan aksiyon bitince eski şapkalı rig'in solma karesi görünmesin
+                bool idleNow = mode == 0 && rigIdle != null && rigIdle.IsBuilt && (!anim.ActionActive || atkHoldIdle || hatSuppress > 0f) && shClip == null;
                 if (rigIdle != null && rigIdle.IsBuilt) { rigIdle.SetShown(idleNow); rig.SetShown(mode == 0 && !idleNow); }
                 if (rigAtk != null && rigAtk.IsBuilt)
                 {
@@ -950,6 +951,14 @@ namespace RonniSkin
                         if (rigInt) { rigAtkT = -1f; rigAtkBlock = atkClip != null; }
                         else { rigAtkT += Time.deltaTime; if (rigAtkT >= RigAtk1Dur) rigAtkT = -1f; else rigAtkNow = true; }
                     }
+                    // ---- eski şapkalı RonniSkin rig'inde kalan iki aksiyon (kılıç çekme, denge kırılması) yeni rig'de oynasın
+                    string rigActClip = null; float rigActPh = 0f;
+                    if (!rigAtkNow && mode == 0 && rigDrawn != null && rigDrawn.IsBuilt && playerDrawn != null)
+                    {
+                        if (defClip == "guard_break" && playerDrawn.HasClip("guard_break")) { rigActClip = "guard_break"; rigActPh = Mathf.Clamp01((Time.time - defStart) / 0.45f); }
+                        else if (shClip == "unsheathe" && playerDrawn.HasClip("unsheathe")) { rigActClip = "unsheathe"; rigActPh = Mathf.Clamp01((Time.time - shStart) / 0.5f); }
+                    }
+                    bool rigActNow = rigActClip != null;
                     bool frameClip = !rigAtkNow && (atkClip == "attack1" && frameAttack1) || (atkClip == "attack2" && frameAttack2) || (atkClip == "attack3" && frameAttack3) || (atkClip == "attack4" && frameAttack4);
                     // Kare kare saldırıda Animator'ın ilk sprite'ı henüz gelmediyse eski (rig) saldırı pozunu bir an bile gösterme.
                     bool atkOn = !rigAtkNow && mode == 0 && playerAtk != null && (frameClip ? FrameAtkActive() : ((atkClip == "attack1" || atkClip == "attack2" || atkClip == "attack3") && playerAtk.HasClip(atkClip)));
@@ -1054,15 +1063,16 @@ namespace RonniSkin
                         playerDrawn.clip = "tenka"; playerDrawn.manual01 = dPh; tenkaPh = dPh;
                         if (tenka != null) { tenka.quiet = false; tenka.Drive(rigDrawn); }
                     }
-                    else if (rigAtkNow)
+                    else if (rigAtkNow || rigActNow)
                     {
                         // rig attack1 (prototip): kılıç çekik rig'inde 'attack1' klibi (tenka ile aynı düzen: bitince EndTenka idle'a döndürür)
                         rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
                         if (!tenkaOn) { rigDrawn.SetColor(bcc, true); tenkaOn = true; }
                         drawnWant = true; tenkaFrame = true; idleDrawnOn = false; atkWasOn = false; defWasOn = false; atkHoldIdle = true;
+                        if (rigActNow) hatSuppress = 0.25f;
                         if (drawnFadeDefault < 0f) drawnFadeDefault = playerDrawn.fadeTime;
                         playerDrawn.fadeTime = 0.02f;   // hazırlık karesi eski duruşla bulanmasın
-                        playerDrawn.clip = "attack1"; playerDrawn.manual01 = Mathf.Clamp01(rigAtkT / RigAtk1Dur); tenkaPh = 0f;
+                        playerDrawn.clip = rigAtkNow ? "attack1" : rigActClip; playerDrawn.manual01 = rigAtkNow ? Mathf.Clamp01(rigAtkT / RigAtk1Dur) : rigActPh; tenkaPh = 0f;
                         if (tenka != null) { tenka.quiet = true; tenka.Drive(rigDrawn); }
                     }
                     else if (dOn)
