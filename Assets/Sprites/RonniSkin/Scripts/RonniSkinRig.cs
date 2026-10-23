@@ -17,7 +17,7 @@ namespace RonniSkin
         public Vector2Int skinGrid = new Vector2Int(8, 14);
 
         [Serializable] class BoneData { public string name; public string parent; public float x; public float y; }
-        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public float actOrder = -1f; public bool hidden; public int[] grid; public float pinOuter = -1f; public float pinInner = -1f; public float pinPow = 1.2f; }
+        [Serializable] class PartData { public string name; public float x; public float y; public float w; public float h; public int order; public string[] bones; public float wPow = 4f; public float wFall = 0.12f; public float runOrder = -1f; public float actOrder = -1f; public bool hidden; public int[] grid; public float pinOuter = -1f; public float pinInner = -1f; public float pinPow = 1.2f; public string image; public string[] mapFrom; public string[] mapTo; }
         [Serializable] class RigData { public BoneData[] bones; public PartData[] parts; public float[] origin; public float heightPx; }
 
         public readonly List<RonniSoftPart> parts = new List<RonniSoftPart>();
@@ -34,6 +34,9 @@ namespace RonniSkin
         /// While the katana is drawn both hands come in front of the body.
         public void SetActLayers(bool on) { if (on == actLayers) return; actLayers = on; ApplyOrders(); }
         bool runLayers;
+        string[] frontParts;
+        /// Verilen parçaları (sırasıyla) her şeyin, başın da önüne çizer; null = normal sıra.
+        public void SetFrontParts(string[] names) { if (names == frontParts) return; frontParts = names; ApplyOrders(); }
         public void SetSorting(string layer, int offset)
         {
             sortingLayerName = layer; sortingOrderOffset = offset; ApplyOrders();
@@ -50,7 +53,8 @@ namespace RonniSkin
                 var mr = parts[i] != null ? parts[i].GetComponent<MeshRenderer>() : null;
                 if (mr == null) continue;
                 mr.sortingLayerName = sortingLayerName;
-                mr.sortingOrder = sortingOrderOffset + (actLayers ? actOrderList[i] : runLayers ? runOrderList[i] : baseOrder[i]);
+                int fi = frontParts != null ? System.Array.IndexOf(frontParts, parts[i].name) : -1;
+                mr.sortingOrder = sortingOrderOffset + (fi >= 0 ? 400 + fi * 2 : actLayers ? actOrderList[i] : runLayers ? runOrderList[i] : baseOrder[i]);
             }
         }
         /// Son verilen renk alfası (CharacterRim: solan çizimin kenar ışığını gizlemek için).
@@ -98,7 +102,7 @@ namespace RonniSkin
             if (sh == null) sh = Shader.Find("Sprites/Default");
             foreach (var pd in data.parts)
             {
-                var tex = Resources.Load<Texture2D>(resourceFolder + "/" + pd.name);
+                var tex = Resources.Load<Texture2D>(resourceFolder + "/" + (string.IsNullOrEmpty(pd.image) ? pd.name : pd.image));
                 if (tex == null) { Debug.LogWarning("Ronni: missing texture " + pd.name); continue; }
                 var go = new GameObject(pd.name);
                 go.transform.SetParent(partsRoot, false);
@@ -108,9 +112,30 @@ namespace RonniSkin
                 bool skinned = bl.Count > 1;
                 Vector3 min = ToLocal(pd.x, pd.y + pd.h), max = ToLocal(pd.x + pd.w, pd.y);
                 var mat = new Material(sh) { mainTexture = tex, name = "Ronni_" + pd.name };
+                System.Func<Vector3, Vector3> remap = null;
+                if (pd.mapFrom != null && pd.mapTo != null && pd.mapFrom.Length == 3 && pd.mapTo.Length == 3)
+                {
+                    // Kopya parça: kaynak kol zincirine göre çizilmiş görseli hedef kol zincirine taşır (aynı şekil, başka kol).
+                    Vector3[] J = new Vector3[3], K = new Vector3[3];
+                    for (int q = 0; q < 3; q++) { J[q] = abs[pd.mapFrom[q]]; K[q] = abs[pd.mapTo[q]]; }
+                    remap = P =>
+                    {
+                        int bi = 0; float bd = float.MaxValue, bt = 0f, btc = 0f;
+                        for (int q = 0; q < 2; q++)
+                        {
+                            Vector3 sv = J[q + 1] - J[q]; float t = Vector3.Dot(P - J[q], sv) / Mathf.Max(1e-8f, sv.sqrMagnitude);
+                            float tc = Mathf.Clamp01(t); float d = Vector3.Distance(P, J[q] + sv * tc);
+                            if (d < bd) { bd = d; bi = q; bt = t; btc = tc; }
+                        }
+                        Vector3 s0 = J[bi + 1] - J[bi]; Vector3 ns = new Vector3(-s0.y, s0.x, 0f).normalized; float dd = Vector3.Dot(P - J[bi], ns);
+                        float tt = (bi == 0 && bt < 0f) || (bi == 1 && bt > 1f) ? bt : btc;
+                        Vector3 dv = K[bi + 1] - K[bi]; Vector3 nd = new Vector3(-dv.y, dv.x, 0f).normalized;
+                        return K[bi] + dv * tt + nd * dd;
+                    };
+                }
                 sp.Init(this, tex, mat, bl.ToArray(), min, max,
                         skinned ? (pd.grid != null && pd.grid.Length == 2 ? pd.grid[0] : skinGrid.x) : 1, skinned ? (pd.grid != null && pd.grid.Length == 2 ? pd.grid[1] : skinGrid.y) : 1,
-                        sortingLayerName, sortingOrderOffset + pd.order * 10, pd.wPow > 0 ? pd.wPow : 4f, pd.wFall > 0 ? pd.wFall : 0.12f);
+                        sortingLayerName, sortingOrderOffset + pd.order * 10, pd.wPow > 0 ? pd.wPow : 4f, pd.wFall > 0 ? pd.wFall : 0.12f, remap);
                 if (skinned && pd.pinOuter >= 0f && pd.pinInner >= 0f) sp.SetPin(ToLocal(pd.pinOuter, 0f).x, ToLocal(pd.pinInner, 0f).x, pd.pinPow);
                 if (pd.hidden) sp.SetVisible(false);
             }

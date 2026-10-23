@@ -805,6 +805,105 @@
    "wPow": 4,
    "wFall": 0.12,
    "hidden": false
+  },
+  {
+   "name": "blk_kol",
+   "x": 3311,
+   "y": 1234,
+   "w": 571,
+   "h": 825,
+   "order": 7,
+   "runOrder": 7,
+   "actOrder": 7,
+   "bones": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "grid": [
+    8,
+    10
+   ],
+   "image": "idle_sol_kol",
+   "mapFrom": [
+    "armL1",
+    "armL2",
+    "armL_end"
+   ],
+   "mapTo": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ]
+  },
+  {
+   "name": "blk_kol_ic",
+   "x": 3414,
+   "y": 1786,
+   "w": 465,
+   "h": 285,
+   "order": 1,
+   "runOrder": 1,
+   "actOrder": 1,
+   "bones": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "grid": [
+    6,
+    6
+   ],
+   "image": "idle_sol_kol_ic",
+   "mapFrom": [
+    "armL1",
+    "armL2",
+    "armL_end"
+   ],
+   "mapTo": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ]
+  },
+  {
+   "name": "blk_el",
+   "x": 3449,
+   "y": 1729,
+   "w": 319,
+   "h": 663,
+   "order": 2,
+   "runOrder": 2,
+   "actOrder": 20.2,
+   "bones": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ],
+   "wPow": 4,
+   "wFall": 0.12,
+   "hidden": true,
+   "grid": [
+    5,
+    8
+   ],
+   "image": "idle_sol_el",
+   "mapFrom": [
+    "armL1",
+    "armL2",
+    "armL_end"
+   ],
+   "mapTo": [
+    "armR1",
+    "armR2",
+    "armR_end"
+   ]
   }
  ]
 }

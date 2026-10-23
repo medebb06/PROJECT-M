@@ -189,6 +189,27 @@ namespace RonniSkin
         [Tooltip("Parry kareleri arasında önceki karenin soluk izi (geçiş yumuşar).")] public bool parryBlend = true;
         [Tooltip("Parry karelerini (ParryHD_*) saldırı kareleriyle aynı hizaya getiren yatay düzeltme (sayfa pikseli). ParryHD pivotu arka ayakta, saldırı kareleri gövde altında: -177 = kafa/gövde rig ile aynı yerde kalır, block/parry'de karakter öne kaymaz.")] public float parryAlignPx = -177f;
         bool guardWant, guardSqOn; float guardT = -1f, guardHitT = -1f, parryTryT = -1f, guardOffX; Vector2 guardSq = Vector2.one;
+        [Header("Block (Spine rig: RonniIdleKatana 'block' / 'block_hit')")]
+        [Tooltip("Block'u kılıç çekik idle rig'inde iki elli 'block' klibiyle oynat (kare kare koruma yerine).")] public bool rigBlock = true;
+        [Tooltip("Block kaldırma hızı (1 = klip hızı).")] public float blockSpeed = 1f;
+        [Tooltip("Bırakınca kılıcı indirme hızı (klip hızının katı).")] public float blockReleaseSpeed = 1.6f;
+        public float blockClipDur = 0.5f, blockGuardT = 0.29f, blockHitDur = 0.2333f, blockSwapT = 0.0333f, blockFrontT = 0.1333f;
+        static readonly string[] BlockFront = { "idle_kilic", "idle_kilic_tsuka", "idle_sol_kol_ic", "idle_sol_el", "idle_sol_kol" };
+        static readonly string[] BlockOrig = { "idle_sag_kol", "idle_sag_kol_ic", "idle_sag_el" }, BlockCopy = { "blk_kol", "blk_kol_ic", "blk_el" };
+        bool blockOn, blockFrame, blockSwapOn, blockFrontOn; float blockRelT = -1f, blockPh;
+        bool BlockRigReady() { return rigBlock && rigDrawn != null && rigDrawn.IsBuilt && playerDrawn != null && playerDrawn.HasClip("block"); }
+        void BlockLayers(bool swap, bool front)
+        {
+            if (rigDrawn == null) return;
+            if (swap != blockSwapOn) { blockSwapOn = swap; for (int i = 0; i < BlockOrig.Length; i++) { rigDrawn.SetVisible(BlockOrig[i], !swap); rigDrawn.SetVisible(BlockCopy[i], swap); } }
+            if (front != blockFrontOn) { blockFrontOn = front; rigDrawn.SetFrontParts(front ? BlockFront : null); }
+        }
+        void EndBlock()
+        {
+            blockOn = false; blockRelT = -1f; blockPh = 0f;
+            BlockLayers(false, false);
+            if (playerDrawn != null) { playerDrawn.clip = "idle"; playerDrawn.manual01 = -1f; }
+        }
         bool GuardFrames() { return frameGuard && ParrySprite(0) != null && !ParryRevOn(); }
         Sprite ParrySprite(int i)
         {
@@ -653,7 +674,7 @@ namespace RonniSkin
             else if (parrying && !wasParrying && defClip != "parry_success") StartDef("parry");
             wasParrying = parrying;
             // ---- v2: kare kare koruma (block / parry denemesi) ----
-            if (GuardFrames())
+            if (GuardFrames() || BlockRigReady())
             {
                 if (defClip != "guard_break") defClip = null;   // eski parry / block_hit aksiyonları (ana rig) koruma karesinin altından/arkasından görünmesin
                 bool g = blocking || parrying;
@@ -675,7 +696,7 @@ namespace RonniSkin
                 // Sadece BASARILI parry'de oynar (tusa basmak tek basina animasyon baslatmaz).
                 if (pSucc) { parryFrameT = 0f; parryFrameEnd = (ParryRevOn() ? parryRevFrameTime * 3f : parryF1Time + parryF2Time) + parryHoldAfterSuccess; }
             }
-            if (!GuardFrames() && playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
+            if (!GuardFrames() && !BlockRigReady() && playerAtk != null && playerAtk.HasClip("parry") && playerAtk.HasClip("block") && defClip != "guard_break")
             {
                 defClip = null;   // eski parry / block_hit klipleri bunun üstüne binmesin
                 float dtd = Time.deltaTime;
@@ -887,6 +908,7 @@ namespace RonniSkin
                     Color bcc = originalSprite != null ? originalSprite.color : Color.white;
                     if (bladeCut && !(dOn && dClip == "chiburi")) { rigAtk.SetPartWindow("atk_blade", 0f, 1f, bcc, bcc); bladeCut = false; }
                     bool pfOn = false;
+                    if (!guardWant && blockOn && blockRelT == -1f) blockRelT = 0f;
                     if (parryFrameT >= 0f)
                     {
                         if (mode != 0 || atkClip != null || player.isDashing || !frameParry) parryFrameT = -1f;
@@ -910,6 +932,35 @@ namespace RonniSkin
                         }
                         ShowFrame(ParrySprite(pi));
                         guardSqOn = false;
+                    }
+                    else if (BlockRigReady() && mode == 0 && atkClip == null && !player.isDashing && (guardWant || (blockOn && blockRelT >= 0f)))
+                    {
+                        // BLOCK: kılıç çekik idle rig'i, iki elle kılıç başın üstünde (Spine'da yapılan 'block' / 'block_hit')
+                        rig.SetShown(false); if (rigIdle != null) rigIdle.SetShown(false); rigAtk.SetShown(false); idleNow = false;
+                        atkWasOn = false; defWasOn = false; atkHoldT = 0f; atkRetT = 0f; atkFade = 0f; lastAtkFrames = false; idleDrawnOn = false;
+                        if (!blockOn) { rigDrawn.SetColor(bcc, true); blockOn = true; blockPh = 0f; anim.swordReady = true; }
+                        drawnWant = true; blockFrame = true;
+                        string bcl = "block"; float bph;
+                        if (guardWant)
+                        {
+                            blockRelT = -1f;
+                            float gt = Mathf.Max(0f, guardT) * blockSpeed;
+                            float hold = Mathf.Max(0.05f, blockClipDur - blockGuardT);
+                            if (guardHitT >= 0f && playerDrawn.HasClip("block_hit") && gt >= blockGuardT)
+                            { bcl = "block_hit"; bph = Mathf.Clamp01(guardHitT / Mathf.Max(0.01f, blockHitDur)); blockPh = blockGuardT; }
+                            else { blockPh = gt < blockClipDur ? gt : blockGuardT + Mathf.Repeat(gt - blockGuardT, hold); bph = blockPh / blockClipDur; }
+                        }
+                        else
+                        {
+                            // bırakınca: kılıcı aynı yoldan geri indir
+                            blockRelT += Time.deltaTime;
+                            blockPh = Mathf.Max(0f, Mathf.Min(blockPh, blockGuardT) - Time.deltaTime * blockReleaseSpeed);
+                            bph = blockPh / blockClipDur;
+                            if (blockPh <= 0f) blockRelT = -2f;
+                        }
+                        playerDrawn.clip = bcl; playerDrawn.manual01 = bph;
+                        float lt = bcl == "block" ? blockPh : blockClipDur;
+                        BlockLayers(lt >= blockSwapT, lt >= blockFrontT);
                     }
                     else if (guardWant && mode == 0 && atkClip == null && !player.isDashing && GuardFrames())
                     {
@@ -1037,6 +1088,8 @@ namespace RonniSkin
                 }
                 if (rigDrawn != null && rigDrawn.IsBuilt) rigDrawn.SetShown(drawnWant);
                 if (tenkaOn && !tenkaFrame) EndTenka();
+                if (blockOn && (!blockFrame || blockRelT == -2f)) EndBlock();
+                blockFrame = false;
                 tenkaFrame = false;
                 UpdateWait(idleNow);
                 int vid = mode == 0 ? 0 : (right ? 2 : 1);

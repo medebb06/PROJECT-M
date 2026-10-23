@@ -10,7 +10,7 @@ namespace RonniSkin
         RonniSkinRig rig; Transform[] joints; Mesh mesh;
         Vector3[] bindVerts, outVerts; int[] wIdx; float[] wVal; int nInf; Matrix4x4[] bindInv; int nBones;
 
-        public void Init(RonniSkinRig r, Texture2D tex, Material mat, Transform[] chain, Vector3 min, Vector3 max, int cols, int rows, string layer, int order, float wPow = 4f, float wFall = 0.12f)
+        public void Init(RonniSkinRig r, Texture2D tex, Material mat, Transform[] chain, Vector3 min, Vector3 max, int cols, int rows, string layer, int order, float wPow = 4f, float wFall = 0.12f, System.Func<Vector3, Vector3> remap = null)
         {
             rig = r; joints = chain; qMin = min; qMax = max;
             nBones = Mathf.Max(1, chain.Length - 1);
@@ -27,6 +27,7 @@ namespace RonniSkin
                 {
                     int i = y * (cols + 1) + x; float u = (float)x / cols, v = (float)y / rows;
                     bindVerts[i] = new Vector3(Mathf.Lerp(min.x, max.x, u), Mathf.Lerp(min.y, max.y, v), 0);
+                    if (remap != null) bindVerts[i] = remap(bindVerts[i]);
                     uv[i] = new Vector2(u, v); col[i] = Color.white;
                 }
             var tris = new int[cols * rows * 6]; int t = 0;
