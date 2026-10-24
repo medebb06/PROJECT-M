@@ -148,6 +148,7 @@ public class PlayerController : MonoBehaviour
 
     public bool CanGroundSlam => Time.time >= slamReadyTime;
     [HideInInspector] public float dashCooldownTimer;
+    [HideInInspector] public float dashPressDir;   // dash tuşuna BASILDIĞI andaki yön (tampondayken tuş bırakılsa da korunur)
     [HideInInspector] public bool dashPressed;
     [HideInInspector] public float dashBufferTimer;
     [HideInInspector] public bool jumpConsumed;
@@ -552,6 +553,10 @@ public class PlayerController : MonoBehaviour
         if (attackFacingLocked)
             return;
 
+        // Dash sırasında yön değişmez; dash bitince oyuncu istediği yöne döner.
+        if (isDashing)
+            return;
+
         // Duvar ziplamasi: karakter ziplama yonune baksin (duvara dogru tusa basilsa da cevirme).
         if (facingLockTimer > 0f)
         {
@@ -682,6 +687,11 @@ public class PlayerController : MonoBehaviour
         // dash eski baktığın yöne gidiyordu. Tuşu doğrudan oku.
         float live = MobileInput.GetAxisRaw("Horizontal");
         float input = Mathf.Abs(live) > 0.1f ? live : moveInput;
+
+        // Dash tuşuna basıldığı andaki yön önceliklidir: dash tamponda bekleyip geç başlasa da
+        // (bekleme, saldırı kilidi...) tuş bırakılmış olsa bile basıştaki yöne gider.
+        if (Mathf.Abs(dashPressDir) > 0.1f)
+            input = dashPressDir;
 
         if (Mathf.Abs(input) > 0.1f)
         {

@@ -264,10 +264,14 @@ public class PlayerCombatController : MonoBehaviour
         {
             // PARRY → SALDIRI: başarılı parry'den hemen sonra saldırı
             // savunmayı keser ve ANINDA başlar (riposte akışı).
+            // DASH → SALDIRI: dash'ten hemen sonra (yeniden basılan / tamponlanan blok-parry yüzünden)
+            // savunmaya girilmişse saldırı onu keser: yön dönmeyi ve vuruşu geciktirmesin.
+            bool justDashed = Time.unscaledTime - ExecutionSlide.LastDashEnd < PostDashAttackPriority;
+
             if (
                 bufferTimer > 0f &&
-                defenseController.RecentlyParried &&
-                !defenseController.InParryRecovery
+                ((defenseController.RecentlyParried &&
+                !defenseController.InParryRecovery) || justDashed)
             )
             {
                 defenseController.CancelDefense();
@@ -492,6 +496,19 @@ public class PlayerCombatController : MonoBehaviour
     // CANCEL
     // =========================================================
 
+    // Dash bitince çağrılır: dash'ten hemen önce / dash sırasında basılan saldırı kaybolmasın,
+    // önceki saldırının bekleme süresi dash sonrası vuruşu geciktirmesin.
+    // Dash bittikten sonra bu süre (sn) içinde saldırı, blok/parry'yi keser.
+    public float PostDashAttackPriority = 0.5f;
+
+    public void OnDashEnded()
+    {
+        nextAttackAllowedTime = 0f;
+
+        if (Time.time - LastAttackPressTime < 0.45f)
+            bufferTimer = Mathf.Max(bufferTimer, Mathf.Max(inputBufferTime, player.minInputBuffer));
+    }
+
     public void CancelAttack()
     {
         bufferTimer = 0f;
@@ -628,7 +645,11 @@ public class PlayerCombatController : MonoBehaviour
         if (execAttack)
             player.SetAttackAnimationSpeed(executionSpeedMult);
 
-        if (player.Movement != null) player.Movement.DisarmParryBurst();   // saldırı, parry atılma hakkını yakar
+        if (player.Movement != null)
+        {
+            player.Movement.DisarmParryBurst();   // saldırı, parry atılma hakkını yakar
+            player.Movement.CancelParryBurst();   // zaten başlamış atılma da kesilir (atılma + saldırı kayması toplanmasın)
+        }
         PlayerGrunt.Play();   // saldırı sesi: her vuruşta "hah!"
         currentState.Enter();
     }

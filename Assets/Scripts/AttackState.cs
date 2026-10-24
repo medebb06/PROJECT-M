@@ -147,7 +147,7 @@ public class AttackState : ICombatState
             float baseDistance = moveDistance;
 
             moveDistance +=
-                Mathf.Min(Mathf.Abs(vx) * player.attackMomentumCarry, player.attackMomentumMax);
+                MoveChain.Spend(Mathf.Min(Mathf.Abs(vx) * player.attackMomentumCarry, player.attackMomentumMax), 0f);   // ortak mesafe bütçesinden
 
             // Tasinan mesafe ayni kisa pencereye sikismasin (kosarken isinlanma / cok hizli vurus hissi):
             // kayma hizi duran vurusla ayni kalsin, pencere mesafeyle orantili uzasin.

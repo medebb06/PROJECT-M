@@ -695,3 +695,49 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Sorun: dash ile dusmanin icinden gecip donup vurunca tekrar arkasina firlama (buyuk ihtimalle ExecutionSlide, tam sebep canli dogrulanmadi).
 - ExecutionSlide.Play: dash sirasinda ya da dash bitiminden sonra ExecutionSlide.DashSuppress (0.8 sn) icinde kayma baslamaz. DashState.Exit LastDashEnd'i yazar.
 - Degisen: ExecutionSlide.cs, DashState.cs. Yedek: Assets/_BackupExecSuppress~/. Test: sadece derleme.
+
+## Hareket sistemleri cakisma duzeltmeleri
+- Saldiri baslayinca aktif parry atilmasi da iptal (PlayerCombatController: DisarmParryBurst + CancelParryBurst).
+- Infaz kaymasi (ExecutionSlide) 'ustu' kismini MoveChain.Spend butcesinden harciyor (min 1.5); saldiri momentum tasimasi da (AttackState). Kayma yarida kesilirse (dash) HitboxUtil.EjectFromEnemies ile disari alinir.
+- Zaman tabani BILINCLI degistirilmedi: slide unscaled (hit-stop'ta akmasi tasarim), dash/atilma/saldiri scaled (fizikle tutarli kalsin diye).
+- Degisen: PlayerCombatController.cs, ExecutionSlide.cs, AttackState.cs. Yedek: Assets/_BackupArbiter~/. Test: derleme temiz, play'de infaz kaymasi baslatildi (x1 hesabi dogru); gercek tus ile kombinasyon testi EDILMEDI.
+
+## Dash bitisinde fırlama + dash'te yon kilidi
+- DashState.Exit: dusmanin icinde bittiyse artik EN YAKIN kenara cikar (eskiden dash yonunde karsi kenara, gövde genisligi kadar fazla fırlatıyordu).
+- PlayerController.HandleFacing: isDashing iken yuz yonu degismez; dash bitince degisir.
+- Degisen: DashState.cs, PlayerController.cs. Yedek: Assets/_BackupDashFacing~/. Test: sadece derleme.
+
+## Dash ayari
+- DashState.DistanceScale 1.45 -> 1.75 (mesafe ~%20 artti, ~14 birim). Bekleme: DashState.CooldownMult = 2 (dashCooldown x dashCooldownScale x 2). Yedek: Assets/_BackupDashTune~/. Test: derleme.
+
+- DUZELTME: sahnedeki dashCooldown 0.12 x scale 0.7 = 0.084 sn idi (cok kisa). Carpan yerine DashState.MinCooldown = 0.45 sn (dash sonrasi en az bu kadar bekleme).
+
+## Dash sonrasi saldiri duyarliligi
+- Sebep: DashState.Enter -> CancelAttack() saldiri tamponunu (bufferTimer) sifirliyor; ayrica onceki saldirinin nextAttackAllowedTime'i dash sonrasi vurusu geciktirebiliyordu.
+- Cozum: PlayerCombatController.OnDashEnded(): nextAttackAllowedTime=0; son 0.45 sn icinde saldiri tusuna basildiysa tampon yenilenir. DashState.Exit cagirir.
+- Degisen: PlayerCombatController.cs, DashState.cs. Yedek: Assets/_BackupResponsive~/. Test: play'de simule (tampon dash'te 0 -> sonra 0.3, bekleme 0); gercek tusla test EDILMEDI.
+
+## Saldiri dash'i her an boler
+- DashState.Update: saldiri tusu (sol tik) dash'i bekleme noktasi olmadan ANINDA keser (attackCancel). Ziplama/parry hala dashCancelPoint'te (0.35). Tusa dash'ten ONCE basilmis (tampon) saldiri dash'i kesmez.
+- Degisen: DashState.cs. Yedek: Assets/_BackupAttackCancel~/. Test: sadece derleme.
+
+- GERI ALINDI: 'saldiri dash'i her an boler' (attackCancel) kaldirildi; DashState eski haline (dashCancelPoint 0.35) dondu. Dash sonrasi tampon/bekleme duzeltmesi (OnDashEnded) duruyor.
+
+## Dash: dusmanin arkasinda bitis + kisaltma
+- DashState.DistanceScale 1.75 -> 1.45. MinCooldown 0.45 -> 0.25.
+- DashState.PassLandDistance: dash yonunde, dikey fark <=3 en yakin dusman varsa ve icinden gecmeye yetiyorsa dash dusmanin ARKA KENARININ PassGap (1.0) + oyuncu yari genisligi kadar otesinde biter (min 3 birim). Yetmiyorsa normal gider. Amac: dash ile arkaya gecip donunce tam kilic menzilinde ol, cok otede kalma / icinde sikisip firlama.
+- Degisen: DashState.cs. Yedek: Assets/_BackupPassLand~/. Test: play'de hesap (dusman arka kenarinin 2.1 birim otesinde bitiyor); gercek tusla test EDILMEDI.
+
+## Infaz kaymasi (ExecutionSlide) GECICI KAPALI
+- ExecutionSlide.Enabled = false (hareket oncelik sorunlari cozulene kadar). Geri acmak icin ExecutionSlide.cs'de Enabled = true. Isik flasi hala oynar, sadece kayma yok.
+- Yedek: Assets/_BackupExecOff~/.
+
+## Dash sonrasi saldiri blok/parry'yi keser
+- Sorun: blok basiliyken dash -> doner -> vur; dash sirasinda/hemen sonra basilan blok (tampon) parry'ye sokup yuz yonu donmeyi (HandleFacing IsDefending'de return) ve saldiriyi kilitliyordu.
+- Cozum: PlayerCombatController: dash bittikten sonra PostDashAttackPriority (0.5 sn) icinde saldiri tusu defense'i keser (CancelDefense).
+- Degisen: PlayerCombatController.cs. Yedek: Assets/_BackupBlockPriority~/. Test: play'de simule (kontrol: kilitli kalir; dash sonrasi penceresinde defending=false). Gercek tusla test EDILMEDI.
+
+## Dash yonu: basis anindaki yon
+- Sorun: dash yonu DashState.Enter'da (dash gercekten basladiginda) canli tustan okunuyordu; dash tamponda bekleyip (bekleme/kilit) gec baslarsa tus birakilmis olabiliyor ve eski yone gidiyordu (hizlanma/yavaslama ile ilgisi yok, tus ham okunuyor).
+- Cozum: PlayerInputHandler dash tusuna basildiginda yonu PlayerController.dashPressDir'e yazar (tampon surerken yeni yon tusu varsa guncellenir, tampon bitince sifirlanir); GetDashDirection onu onceler; DashState.Enter kullanip sifirlar.
+- Degisen: PlayerController.cs, PlayerInputHandler.cs, DashState.cs. Yedek: Assets/_BackupDashDir~/. Test: play'de dashPressDir=-1 iken facing sagdayken dash sola gitti. Gercek tusla test EDILMEDI.

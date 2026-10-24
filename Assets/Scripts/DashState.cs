@@ -29,6 +29,9 @@ public class DashState : IPlayerState
     public const float DurationScale = 2.5f;
 
     // Dash mesafesi çarpanı (dashDistance * bu).
+    // Dash'ten sonra EN AZ bu kadar sn beklenir (Inspector'daki dashCooldown çok kısa; spam'i bu keser).
+    public static float MinCooldown = 0.25f;
+
     public const float DistanceScale = 1.45f;
 
     // Havada tek dash: yere degene kadar ikinci dash yok (PlayerMovement.GroundCheck sifirlar).
@@ -91,11 +94,15 @@ public class DashState : IPlayerState
         blendTimer = 0f;
 
         dir = player.GetDashDirection();
+        player.dashPressDir = 0f;   // basış yönü kullanıldı
 
         speed = player.dashDistance * DistanceScale / (player.dashTime * DurationScale);
         float chainScale = MoveChain.Begin(player.dashTime * DurationScale);   // zincirde art arda hareket: mesafe azalır
         float planned = player.dashDistance * DistanceScale * chainScale;
-        // (Dash düşman konumundan bağımsızdır: önde düşman olsa da tam mesafe gider.)
+        // Önde (mesafe içinde) düşman varsa dash onun İÇİNDEN geçip hemen ARKASINDA biter:
+        // dönüp vurunca tam kılıç menzilinde olursun (çok ötede kalmaz, içinde sıkışıp fırlamaz).
+        float landAt = PassLandDistance(planned);
+        if (landAt < planned) { chainScale *= landAt / planned; planned = landAt; }
         float granted = MoveChain.Spend(planned, 3f);   // dash+saldırı spamında toplam mesafe bütçesi
         if (granted < planned) chainScale *= granted / planned;
         speed *= chainScale;
@@ -145,26 +152,42 @@ public class DashState : IPlayerState
         SpawnGhost();
     }
 
-    // Dash düşmanın ÖNÜNDE durur: bu mesafeye kadar yaklaşır (kılıç menzili), arkasına geçmez.
-    public static float MagnetGap = 1.5f;
-    // Düşman zaten bu kadar yakınsa (durulacak mesafe < MinMagnet) dash kısalmaz: içinden geçip arkaya çıkılabilir.
-    public static float MinMagnet = 0.5f;
+    // Düşmanın içinden geçip arkasında bitiş: düşmanın arka kenarının bu kadar ötesinde (oyuncu yarı genişliğine EK) durur.
+    public static float PassGap = 1.0f;
+    // Bu mesafeden (düşman merkezine) yakın düşmanlar için de aynı kural geçerli (çok yakınsa dash çok kısa kalmasın: en az bu kadar gider).
+    public static float MinPassDistance = 3f;
 
-    private float ApproachLimit(float planned)
+    private float PassLandDistance(float planned)
     {
-        float limit = planned;
+        float sgn = dir >= 0f ? 1f : -1f;
         Vector3 pp = player.transform.position;
+        float half = player.col != null ? player.col.bounds.extents.x : 0.5f;
+
+        EnemyBase best = null;
+        float bestDx = float.MaxValue;
         for (int i = 0; i < EnemyBase.All.Count; i++)
         {
             EnemyBase e = EnemyBase.All[i];
             if (e == null || e.IsDead) continue;
-            float dx = (e.transform.position.x - pp.x) * (dir >= 0f ? 1f : -1f);
+            float dx = (e.transform.position.x - pp.x) * sgn;
             if (dx <= 0f || Mathf.Abs(e.transform.position.y - pp.y) > 3f) continue;
-            float stop = dx - MagnetGap;
-            if (stop < MinMagnet) continue;
-            if (stop < limit) limit = stop;
+            if (dx < bestDx) { bestDx = dx; best = e; }
         }
-        return limit;
+        if (best == null) return planned;
+
+        // düşmanın arka kenarı (dash yönünde en uzak collider ucu)
+        float edge = bestDx;
+        Collider2D[] cols = best.GetComponentsInChildren<Collider2D>();
+        for (int i = 0; i < cols.Length; i++)
+        {
+            if (cols[i] == null || cols[i].isTrigger || !cols[i].enabled) continue;
+            Bounds bb = cols[i].bounds;
+            float far = (sgn > 0f ? bb.max.x - pp.x : pp.x - bb.min.x);
+            if (far > edge) edge = far;
+        }
+
+        float land = Mathf.Max(MinPassDistance, edge + half + PassGap);
+        return land < planned ? land : planned;   // içinden geçecek kadar mesafe yoksa dash normal gider
     }
 
     public void Exit()
@@ -185,9 +208,9 @@ public class DashState : IPlayerState
 
         // Dash bir dusmanin (ozellikle genis boss govdesinin) icinde bittiyse fizigin yavas
         // itmesini bekleme: en yakin kenara hemen al.
-        HitboxUtil.EjectFromEnemies(player, dir);   // düşmanın içinde bittiyse dash yönünde (arkasına) çık
+        HitboxUtil.EjectFromEnemies(player);   // düşmanın içinde bittiyse EN YAKIN kenara çık (karşı tarafa fırlatma, dash mesafesi şişmesin)
 
-        player.dashCooldownTimer = player.dashCooldown * player.dashCooldownScale;
+        player.dashCooldownTimer = Mathf.Max(player.dashCooldown * player.dashCooldownScale, MinCooldown);
 
         // Sonda: durma ani SIKISMA (squash) + son iz.
         DashFx.End(player);
@@ -198,6 +221,10 @@ public class DashState : IPlayerState
         vel.x = dir * player.moveSpeed * (endedByCancel ? MoveChain.ExitSpeedMult : DashExitSpeedNatural);
 
         player.SetVelocity(vel);
+
+        PlayerCombatController afterCombat = player.GetComponent<PlayerCombatController>();
+        if (afterCombat != null)
+            afterCombat.OnDashEnded();
 
         player.StartCoroutine(UnlockAttack());
     }

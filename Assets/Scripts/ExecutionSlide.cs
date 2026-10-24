@@ -10,7 +10,7 @@ public class ExecutionSlide : MonoBehaviour
     public static bool Active;
     public static int SlideCount;
 
-    public static bool Enabled = true;
+    public static bool Enabled = false;   // GEÇİCİ KAPALI (hareket öncelik sorunları çözülene kadar). Açmak için true yap.
     public static float Duration = 0.65f;      // kayma süresi (sn, gerçek zaman) — uzun, süzülerek
     public static float PastEdge = 4.5f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
     public static float GhostGap = 0.05f;
@@ -23,7 +23,7 @@ public class ExecutionSlide : MonoBehaviour
     private Rigidbody2D rb;
     private Collider2D[] ignored;
     private Collider2D[] myCols;
-    private float x0, x1, age, ghostT;
+    private float x0, x1, age, ghostT, slideDir = 1f;
     private bool finished;
     private bool fxEnded;
     private RigidbodyInterpolation2D savedInterp;
@@ -81,7 +81,9 @@ public class ExecutionSlide : MonoBehaviour
 
         // Her zaman düşmanın arka kenarının ötesinde biter (içinde kalmaz); zincirde sadece "ötesi" kısalır.
         float chainScale = MoveChain.Begin(Duration);
-        x1 = edge + dir * (half + PastEdge * chainScale);
+        float past = MoveChain.Spend(PastEdge * chainScale, 1.5f);   // ortak mesafe bütçesinden (dash / saldırı ile aynı havuz)
+        slideDir = dir;
+        x1 = edge + dir * (half + past);
 
         // oyuncunun tum govde collider'lari (pl.col atanmamis olabilir)
         myCols = pl.GetComponentsInChildren<Collider2D>();
@@ -225,6 +227,8 @@ private void Finish()
 
         if (pl != null)
         {
+            // Kayma yarıda kesildiyse (dash vb.) düşmanın içinde kalma: çarpışma açılınca fizik fırlatmasın.
+            if (!pl.isDashing) HitboxUtil.EjectFromEnemies(pl, slideDir);
             ReleaseInvincible();
 
             if (!fxEnded && !pl.isDashing)

@@ -41,11 +41,23 @@ public class PlayerInputHandler : MonoBehaviour
         if (MobileInput.GetKeyDown(KeyCode.LeftShift))
         {
             player.dashBufferTimer = Mathf.Max(player.dashBufferTime, player.minInputBuffer);
+
+            // Basış anındaki yön tuşu (yoksa sıfır: dash başlarken canlı tuşa / baktığın yöne bakar).
+            float pressAxis = MobileInput.GetAxisRaw("Horizontal");
+            player.dashPressDir = Mathf.Abs(pressAxis) > 0.1f ? Mathf.Sign(pressAxis) : 0f;
         }
         else if (player.dashBufferTimer > 0f)
         {
+            // Tampon sürerken yön tuşuna sonradan basıldıysa (sola + dash neredeyse aynı anda) en son yönü al.
+            float axisNow = MobileInput.GetAxisRaw("Horizontal");
+            if (Mathf.Abs(axisNow) > 0.1f)
+                player.dashPressDir = Mathf.Sign(axisNow);
+
             // Gerçek zaman: hit-stop tamponu eritmesin.
             player.dashBufferTimer -= Time.unscaledDeltaTime;
+
+            if (player.dashBufferTimer <= 0f)
+                player.dashPressDir = 0f;
         }
 
         // Dash bekleme süresi kilitliyken de akar.
