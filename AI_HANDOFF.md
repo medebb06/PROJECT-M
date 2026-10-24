@@ -811,3 +811,15 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Gozler artik KEMIK/zincir degil, ayri sprite: idle_yuz.png sadece kaslar; idle_gozA.png / idle_gozB.png yeni goz parcalari (ronni_rig.json'a part eklendi, bones=[eyeA]/[eyeB], eyeA/eyeB kemikleri goz merkezine tasindi, eyeA2/eyeB2 kaldirildi). Klip: eyeA/eyeB sy olcegi (eyeClosedScale=0.93 -> ince cizgi) cokme boyunca kapanir, dogrulunca acilir; kaslar etkilenmez.
 - Omuz: TenkaClipRebuild leftShoulderClamp 25->14, leftSleeveFollow=0.4 (sol kolluk omuz donusunun %40'ini izler) -> sivri omuz kosesi azaldi.
 - Yedekler: Assets/_BackupChiburi~ (orijinal ronni_rig.json/anims/yuz.png, script v2/v3). Edit modu TenkaPreview ile gorsel kontrol; canli oyunda test yok. tenka_prev_*.png gecici dosyalar silinebilir.
+
+
+## Chiburi: kilic dondurme 2 tur -> 1 tur
+- TenkaClipRebuild.spinTurns=1 (grip kemigi kare 11..36 acisi unwrap edilip olceklendi, bitis pozu ayni). Klip yeniden uretildi. Yedek: Assets/_BackupChiburi2~. Sadece onizleme ile dogrulandi, oyunda gercek denenmedi.
+
+
+## Chiburi: spin 2 tur, ters yon
+- TenkaClipRebuild.spinTurns=-2 (grip +729 derece, orijinalin tersi). Not: static deger Editor'de; kalici yapmak icin dosyadaki varsayilani -2 yap.
+
+
+## Chiburi: spin egilmesinde bas dik
+- TenkaClipRebuild: spin lean'de head -= lean*1.5 (belly 0.5 + chest 1.0 tamamen telafi); savurma gecisindeki spin kismi da ayni. Klip yeniden uretildi. Yedek: Assets/_BackupChiburi2~/TenkaClipRebuild_prevHead.cs. Sadece onizleme.

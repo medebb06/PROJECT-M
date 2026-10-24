@@ -37,6 +37,7 @@ public static partial class TenkaClipRebuild
     public static float eyeImpactClose = 0f;        // vuruş anında ekstra kapanma
     public static float leftShoulderClamp = 14f;       // sol (kına) kolunun omuz sapması üst sınırı (derece): büyükse omuz sivri çıkar
     public static float leftSleeveFollow = 0.4f;       // sol kolluk omuz dönüşünün bu kadarını izler (azalınca omuz köşesi çıkmaz)
+    public static float spinTurns = -2f;                 // kılıç döndürme tur sayısı (orijinal 2)
     public static float spinLean = 16f;                 // dönüş (spin) sırasında öne eğilme (derece); savurmaya girerken geri yaslanmaya yumuşakça döner
     public static float cutPower = 1.7f;                // kesme ivmesi (büyük = daha geç hızlanır)
 
@@ -210,6 +211,18 @@ public static partial class TenkaClipRebuild
                     else { float t = SS((i - 36) / (float)(S + 1)); a[c][i] = Mathf.Lerp(Old(tr, c, 36), Old(tr, c, 48), t); }
                 }
         }
+        // kılıç döndürme: orijinal 2 tur (grip, kare 11..36) -> spinTurns tur
+        {
+            var g = Arr("grip")[0];
+            float u = g[11], prev = g[11], rest = g[11];
+            var un = new float[37]; for (int i = 0; i <= 11; i++) un[i] = g[i];
+            for (int i = 12; i <= 36; i++) { float d = Wrap(g[i] - prev); u += d; prev = g[i]; un[i] = u; }
+            float total = un[36] - un[11];                       // ~ -711
+            float turns = Mathf.Round(Mathf.Abs(total) / 360f);  // 2
+            float sg = Mathf.Sign(total); float endWanted = 360f * spinTurns * sg + (total - 360f * turns * sg);
+            float k = endWanted / total;
+            for (int i = 12; i <= 36; i++) g[i] = Wrap(un[11] + (un[i] - un[11]) * k);
+        }
         // yeni kemikler (bacaklar)
         foreach (var nb in new[] { "legR", "legL", "footR", "footL" }) Arr(nb);
 
@@ -250,7 +263,7 @@ public static partial class TenkaClipRebuild
             float lean = spinLean * SS(i / 10f);
             Arr("chest")[0][i] += lean;
             Arr("belly")[0][i] += lean * 0.5f;
-            Arr("head")[0][i] -= lean * 0.4f;
+            Arr("head")[0][i] -= lean * 1.5f;   // baş dik kalsın: belly(0.5)+chest(1.0) eğilmesini tamamen geri al
         }
 
         // ---- 3) gövde: geriye yaslanma -> vuruşta öne eğilme -> dinlenme
@@ -263,10 +276,11 @@ public static partial class TenkaClipRebuild
             else if (s <= 15) add = Mathf.Lerp(-4f, 7f, Mathf.Pow((s - 8) / 7f, cutPower));
             else if (s <= 18) add = Mathf.Lerp(7f, 6.5f, (s - 15) / 3f);
             else add = Mathf.Lerp(6.5f, 0f, SS((s - 18) / (float)(S + 1 - 18)));
-            add += spinLean * (1f - SS(s / 6f));   // spin eğilmesi savurma hazırlığında yumuşakça çözülür
+            float spinPart = spinLean * (1f - SS(s / 6f));
+            add += spinPart;   // spin eğilmesi savurma hazırlığında yumuşakça çözülür
             Arr("chest")[0][i] += add;
             Arr("belly")[0][i] += add * 0.5f;
-            Arr("head")[0][i] -= add * 0.4f;
+            Arr("head")[0][i] -= (add - spinPart) * 0.4f + spinPart * 1.5f;
         }
 
         // ---- 4) çömelme zarfı + bacaklar
