@@ -52,6 +52,13 @@ public class ParallaxEffect : MonoBehaviour
     [Tooltip("Boş bırakılırsa Main Camera.")]
     public Transform cameraTransform;
 
+    [Header("Sabit referans kamera (yukarı çıkan map için)")]
+    [Tooltip("Açıkken referans, oyunun başladığı kameradan DEĞİL aşağıdaki sabit köy-başlangıç konumundan alınır. " +
+             "Böylece oyuncuyu plato/checkpoint gibi yüksekte başlatsan da katmanlar (dağ, bulut, ağaç) aynı yerde görünür.")]
+    public bool fixedReferenceCamera = true;
+    [Tooltip("Katmanların 'doğru' göründüğü kamera konumu (köy başlangıcı).")]
+    public Vector2 referenceCamPos = new Vector2(-16.95f, 0.65f);
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
@@ -112,7 +119,9 @@ public class ParallaxEffect : MonoBehaviour
         Vector3 cam = cameraTransform.position;
         Vector3 me = transform.position;
 
-        refCam = new Vector2(reference == Reference.PlacedPosition ? me.x : cam.x, cam.y);
+        float refX = reference == Reference.PlacedPosition ? me.x : (fixedReferenceCamera ? referenceCamPos.x : cam.x);
+        float refY = fixedReferenceCamera ? referenceCamPos.y : cam.y;
+        refCam = new Vector2(refX, refY);
         appliedOffset = Vector2.zero;
         initialized = true;
         return true;
