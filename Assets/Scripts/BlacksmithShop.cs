@@ -91,7 +91,7 @@ public class BlacksmithShop : MonoBehaviour
 
     private bool CanInteract()
     {
-        if (MainMenu.Active || KuroyoruPicker.IsOpen) return false;
+        if (MainMenu.Active || KuronamiPicker.IsOpen) return false;
         if (Time.timeScale < 0.01f && !open) return false;
         if (player == null) return false;
         if (!player.canControl && !open) return false;
@@ -437,7 +437,7 @@ public class BlacksmithShop : MonoBehaviour
         }
 
         // Alt ipucu + kapat
-        Text(new Rect(panel.x + 40f, panel.yMax - 54f, pw - 460f, 30f), "1-4: satın al   •   kalıcıdır   •   Kuroyoru'da etkisiz", 20, new Color(1f, 1f, 1f, 0.4f * fade), TextAnchor.MiddleLeft, false);
+        Text(new Rect(panel.x + 40f, panel.yMax - 54f, pw - 460f, 30f), "1-4: satın al   •   kalıcıdır   •   Kuronami'de etkisiz", 20, new Color(1f, 1f, 1f, 0.4f * fade), TextAnchor.MiddleLeft, false);
         // SIFIRLA (iki tıkla onay, ruh iadesi yok)
         Rect rs = new Rect(panel.xMax - 400f, panel.yMax - 62f, 190f, 42f);
         bool armed = Time.unscaledTime < resetArmedUntil;

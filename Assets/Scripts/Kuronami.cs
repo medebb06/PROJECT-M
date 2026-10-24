@@ -1,11 +1,11 @@
 using UnityEngine;
 
-// KUROYORU modu: her 20 öldürmede oyun durur, 4 charm'ın +%2'lik versiyonundan biri seçilir.
+// KURONAMI modu: her 20 öldürmede oyun durur, 4 charm'ın +%2'lik versiyonundan biri seçilir.
 // Aynı charm tekrar tekrar seçilebilir (yığılır). Seçim: 1-4 tuşu ya da tıkla.
-public class KuroyoruPicker : MonoBehaviour
+public class KuronamiPicker : MonoBehaviour
 {
     public static bool IsOpen { get; private set; }
-    private static KuroyoruPicker inst;
+    private static KuronamiPicker inst;
 
     private Font font;
     private float openedAt;
@@ -16,7 +16,7 @@ public class KuroyoruPicker : MonoBehaviour
     {
         if (IsOpen) return;
         if (inst == null)
-            inst = new GameObject("~KuroyoruPicker").AddComponent<KuroyoruPicker>();
+            inst = new GameObject("~KuronamiPicker").AddComponent<KuronamiPicker>();
         inst.DoOpen();
     }
 
@@ -80,7 +80,7 @@ public class KuroyoruPicker : MonoBehaviour
         GUI.DrawTexture(panel, Texture2D.whiteTexture);
         GUI.color = old;
 
-        GUI.Label(new Rect(panel.x, panel.y + 12f, w, 40f), "KUROYORU  -  CHARM SEÇ", Style(34, Color.white, TextAnchor.MiddleCenter));
+        GUI.Label(new Rect(panel.x, panel.y + 12f, w, 40f), (Charms.EasyMode ? "KOLAY MOD  -  CHARM SEÇ" : "KURONAMI  -  CHARM SEÇ"), Style(34, Color.white, TextAnchor.MiddleCenter));
         GUI.Label(new Rect(panel.x, panel.y + 54f, w, 24f), "1-4 ya da tıkla   •   her seçim +%" + Mathf.RoundToInt(Charms.PerPick * 100f) + ", yığılır", Style(18, new Color(1f, 1f, 1f, 0.6f), TextAnchor.MiddleCenter));
 
         bool ready = Time.unscaledTime - openedAt >= 0.35f;

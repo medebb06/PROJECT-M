@@ -63,7 +63,7 @@ public class EnemyArena : MonoBehaviour
         if (MainMenu.Active) return;
 
         // P: sonsuz düşman döngüsü | O: yetenek barı hep dolu | I: ölümsüzlük (hepsi aç/kapa)
-        if (Input.GetKeyDown(KeyCode.P) && !Charms.KuroyoruMode) ToggleEndless();
+        if (Input.GetKeyDown(KeyCode.P) && !Charms.WaveMode) ToggleEndless();
         if (Input.GetKeyDown(KeyCode.O)) ToggleInfiniteBar();
         if (Input.GetKeyDown(KeyCode.I)) ToggleGod();
     }
@@ -98,12 +98,12 @@ public class EnemyArena : MonoBehaviour
     private void ToggleGod()
     {
         godMode = !godMode;
-        PlayerDamageReceiver.GodMode = godMode;
+        PlayerDamageReceiver.GodMode = godMode || Charms.EasyMode;   // Kolay modda [I] kapansa da hasar yok
         Transform p = Player;
         Health ph = p != null ? p.GetComponent<Health>() : null;
         if (ph != null)
         {
-            ph.godMode = godMode;
+            ph.godMode = godMode || Charms.EasyMode;
             if (godMode && !ph.IsDead) ph.Heal(ph.MaxHealth);
         }
     }
@@ -115,27 +115,68 @@ public class EnemyArena : MonoBehaviour
     private void Start()
     {
         if (disableRain) SetRain(false);
-        if (Charms.KuroyoruMode) BeginKuroyoru();   // KUROYORU'da R ile yeniden başlayınca mod devam eder
+        if (Charms.EasyMode) BeginEasy(); else if (Charms.KuronamiMode) BeginKuronami();   // KURONAMI'de R ile yeniden başlayınca mod devam eder
     }
 
-    [Header("Kuroyoru modu")]
+    [Header("Kuronami modu")]
     [Tooltip("Kaç öldürmede bir charm seçimi çıkar.")]
-    public int kuroyoruKillsPerPick = 20;
+    [UnityEngine.Serialization.FormerlySerializedAs("kuroyoruKillsPerPick")]
+    public int kuronamiKillsPerPick = 20;
     [Tooltip("Mod başlayınca ilk düşmanın gelmesine kadar bekleme (gerçek sn).")]
-    public float kuroyoruStartGrace = 2.5f;
+    [UnityEngine.Serialization.FormerlySerializedAs("kuroyoruStartGrace")]
+    public float kuronamiStartGrace = 2.5f;
 
     // Sonsuz mod + tek vuruşta ölüm + her 20 öldürmede +%2 charm seçimi.
-    public void BeginKuroyoru()
+    public void BeginKuronami()
     {
         KillAll();   // (mod bayrağı henüz kapalı: eski düşmanlar sayılmasın)
         Charms.ClearStacks();
-        Charms.KuroyoruMode = true;
+        Charms.KuronamiMode = true;
+        Charms.EasyMode = false;
         focusTest = false;
         queue.Clear();
         endless = true;
         kills = 0;
         aliveEndless = 0;
-        nextEndlessAt = Time.unscaledTime + kuroyoruStartGrace;
+        nextEndlessAt = Time.unscaledTime + kuronamiStartGrace;
+        endlessSide = -1;
+        endlessOver = false;
+    }
+
+    [Header("Kolay mod")]
+    [Tooltip("Kolay mod başlayınca ilk düşmanın gelmesine kadar bekleme (gerçek sn).")]
+    public float easyStartGrace = 2.5f;
+    [Tooltip("Kolay modda iki doğuş arası en az bekleme (gerçek sn). Sonsuz/Kuronami'de 1.2.")]
+    public float easySpawnGap = 2f;
+    [Tooltip("Kolay modda başta aynı anda en fazla düşman.")]
+    public int easyStartMax = 2;
+    [Tooltip("Kolay modda aynı anda en fazla düşman (üst sınır).")]
+    public int easyMaxCap = 3;
+    [Tooltip("Kolay modda kaç öldürmede bir aynı anda gelen düşman sayısı +1 artar.")]
+    public int easyKillsPerExtraEnemy = 10;
+
+    // KOLAY MOD: Kuronami gibi sonsuz döngü ama charm yok, hasar almayız ve düşmanlar seyrek gelir.
+    // Kolay Mod yıldızı (EasyModeTrigger) kesilince çağrılır; R ile yeniden başlayınca Start() mod devam ettirir.
+    public void BeginEasy()
+    {
+        KillAll();   // (mod bayrağı henüz kapalı: eski düşmanlar sayılmasın)
+        Charms.ClearStacks();
+        Charms.KuronamiMode = false;
+        Charms.EasyMode = true;
+        PlayerDamageReceiver.GodMode = true;
+        Transform p = Player;
+        Health ph = p != null ? p.GetComponent<Health>() : null;
+        if (ph != null)
+        {
+            ph.godMode = true;
+            if (!ph.IsDead) ph.Heal(ph.MaxHealth);
+        }
+        focusTest = false;
+        queue.Clear();
+        endless = true;
+        kills = 0;
+        aliveEndless = 0;
+        nextEndlessAt = Time.unscaledTime + easyStartGrace;
         endlessSide = -1;
         endlessOver = false;
     }
@@ -145,7 +186,7 @@ public class EnemyArena : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.6f);   // son öldürmenin efekti bitsin
         Transform p = Player;
         Health ph = p != null ? p.GetComponent<Health>() : null;
-        if (Charms.KuroyoruMode && (ph == null || !ph.IsDead)) KuroyoruPicker.Open();
+        if (Charms.KuronamiMode && (ph == null || !ph.IsDead)) KuronamiPicker.Open();
     }
 
     private void SetRain(bool on)
@@ -238,17 +279,21 @@ public class EnemyArena : MonoBehaviour
     private void TickEndless()
     {
         if (!endless || entries.Count == 0) return;
-        if (KuroyoruPicker.IsOpen) return;
+        if (KuronamiPicker.IsOpen) return;
         Transform p = Player;
         if (p == null) return;
         Health ph = p.GetComponent<Health>();
         if (ph != null && ph.IsDead) { endlessOver = true; return; }
         endlessOver = false;
 
-        int max = Mathf.Min(endlessMaxCap, endlessStartMax + kills / Mathf.Max(1, killsPerExtraEnemy));
+        bool easy = Charms.EasyMode;
+        int startMax = easy ? easyStartMax : endlessStartMax;
+        int maxCap = easy ? easyMaxCap : endlessMaxCap;
+        int perExtra = easy ? easyKillsPerExtraEnemy : killsPerExtraEnemy;
+        int max = Mathf.Min(maxCap, startMax + kills / Mathf.Max(1, perExtra));
         if (aliveEndless >= max) return;
         if (Time.unscaledTime < nextEndlessAt) return;
-        nextEndlessAt = Time.unscaledTime + endlessSpawnGap;
+        nextEndlessAt = Time.unscaledTime + (easy ? easySpawnGap : endlessSpawnGap);
 
         // gecerli (prefab'i olan) rastgele tip
         int idx = -1;
@@ -273,9 +318,10 @@ public class EnemyArena : MonoBehaviour
     {
         aliveEndless = Mathf.Max(0, aliveEndless - 1);
         kills++;
-        if (Charms.KuroyoruMode && kuroyoruKillsPerPick > 0 && kills % kuroyoruKillsPerPick == 0)
+        if (Charms.EasyMode) nextEndlessAt = Mathf.Max(nextEndlessAt, Time.unscaledTime + easySpawnGap);   // Kolay mod: her öldürmeden sonra da nefes payı
+        if (Charms.KuronamiMode && kuronamiKillsPerPick > 0 && kills % kuronamiKillsPerPick == 0)
             StartCoroutine(OpenPickerSoon());
-        if (Charms.KuroyoruMode) return;   // tek vuruşta öldüğümüz için can doldurmaya gerek yok
+        if (Charms.WaveMode) return;   // tek vuruşta öldüğümüz için can doldurmaya gerek yok
         Transform p = Player;
         if (p == null) return;
         Health ph = p.GetComponent<Health>();
@@ -436,10 +482,14 @@ private void TickFocusTest()
         big.normal.textColor = Color.white;
 
         string line = "";
-        if (endless && Charms.KuroyoruMode)
+        if (endless && Charms.KuronamiMode)
         {
-            int per = Mathf.Max(1, kuroyoruKillsPerPick);
-            line += "KUROYORU   Öldürme: " + kills + "   |   sonraki charm: " + (per - kills % per) + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
+            int per = Mathf.Max(1, kuronamiKillsPerPick);
+            line += "KURONAMI   Öldürme: " + kills + "   |   sonraki charm: " + (per - kills % per) + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
+        }
+        else if (endless && Charms.EasyMode)
+        {
+            line += "KOLAY MOD   Öldürme: " + kills;
         }
         else if (endless) line += "SONSUZ MOD   Öldürme: " + kills + (endlessOver ? "   -  öldün, [R] ile yeniden başla" : "");
         if (bar) line += (line.Length > 0 ? "   |   " : "") + "BAR FULL";

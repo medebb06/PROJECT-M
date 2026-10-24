@@ -14,6 +14,9 @@ public class PlayerWeapon : MonoBehaviour
 {
     public static PlayerWeapon Instance { get; private set; }
 
+    /// <summary>Her savuruşta (vuruş olsun olmasın): merkez, kutu boyutu, yön. Dünyadaki kesilebilir nesneler (Kolay Mod yıldızı) dinler.</summary>
+    public static event System.Action<Vector2, Vector2, Vector2> Swung;
+
     public WeaponType Current { get; private set; } = WeaponType.Sword;
 
     [Header("Kesik izi")]
@@ -35,6 +38,7 @@ public class PlayerWeapon : MonoBehaviour
     private static void ResetStatics()
     {
         Instance = null;
+        Swung = null;
     }
 
     public static PlayerWeapon Ensure(GameObject playerObject)
@@ -117,6 +121,8 @@ public class PlayerWeapon : MonoBehaviour
 
     public void OnSwing(int comboStep, Vector2 center, Vector2 box, Vector2 dir, bool hitSomething)
     {
+        if (Swung != null) Swung(center, box, dir);
+
         SpawnSlash(center, box, dir, comboStep);
 
         if (Current == WeaponType.Greatsword && comboStep == 4)

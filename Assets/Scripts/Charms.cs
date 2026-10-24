@@ -18,14 +18,19 @@ public static class Charms
 
     private static readonly bool[] on = new bool[4];
 
-    // KUROYORU modu: tek vuruşta ölüm, 20 öldürmede bir +%2'lik charm seç, üst üste yığılır.
-    public static bool KuroyoruMode;
+    // KURONAMI modu: tek vuruşta ölüm, 20 öldürmede bir +%2'lik charm seç, üst üste yığılır.
+    public static bool KuronamiMode;
+
+    // KOLAY MOD: Kuronami'nin aynısı (sonsuz döngü, 20 öldürmede +%2 charm seçimi) ama hasar almayız ve düşmanlar seyrek gelir.
+    public static bool EasyMode;
+    /// <summary>Kuronami ya da Kolay Mod açık mı (ikisi de sonsuz dalga modu).</summary>
+    public static bool WaveMode { get { return KuronamiMode || EasyMode; } }
     public const float PerPick = 0.02f;
     private static readonly int[] kStacks = new int[4];
 
     // =====================================================================
     // DEMİRCİ (kalıcı): ruhla charm seviyesi al (+%1 / seviye, yığılır), 2 slota tak.
-    // Sadece TAKILI charm'ın seviyesi etki eder. Kuroyoru modunda devre dışı.
+    // Sadece TAKILI charm'ın seviyesi etki eder. Kuronami modunda devre dışı.
     // =====================================================================
     // ANA ŞALTER: false iken demirci mağazası açılmaz, satın alınan charm etkisizdir ve her oyun başında seviyeler sıfırlanır.
     public static readonly bool ShopEnabled = false;
@@ -74,7 +79,7 @@ public static class Charms
 
     public static int ShopEquippedLevel(CharmType t)
     {
-        if (KuroyoruMode || !ShopEnabled) return 0;
+        if (WaveMode || !ShopEnabled) return 0;
         return ShopEquipped(t) ? shopLvl[(int)t] : 0;
     }
 
@@ -136,7 +141,7 @@ public static class Charms
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { KuroyoruMode = false; shopLoaded = false; for (int i = 0; i < 4; i++) { kStacks[i] = 0; on[i] = false; } }
+    private static void ResetStatics() { KuronamiMode = false; EasyMode = false; shopLoaded = false; for (int i = 0; i < 4; i++) { kStacks[i] = 0; on[i] = false; } }
 
     public static int Stacks(CharmType t) { return kStacks[(int)t] + ShopEquippedLevel(t); }
     public static float Power(CharmType t) { return kStacks[(int)t] * PerPick + ShopEquippedLevel(t) * ShopPerLevel; }
@@ -156,7 +161,7 @@ public static class Charms
         }
     }
 
-    // Kuroyoru'daki +%2 versiyonlar için kısa ad/açıklama.
+    // Kuronami'deki +%2 versiyonlar için kısa ad/açıklama.
     public static string KDesc(CharmType t)
     {
         switch (t)
@@ -324,7 +329,7 @@ public class CharmManager : MonoBehaviour
             {
                 if (Charms.Stacks(CharmType.Blood) > 0)
                 {
-                    // Kuroyoru: küçük oranlar kaybolmasın diye kesirli birikim.
+                    // Kuronami: küçük oranlar kaybolmasın diye kesirli birikim.
                     bloodAcc += result.amount * Charms.Power(CharmType.Blood);
                     int whole = (int)bloodAcc;
                     bloodAcc -= whole;

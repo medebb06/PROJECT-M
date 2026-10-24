@@ -62,7 +62,8 @@ public class GameFlow : MonoBehaviour
     {
         restarting = true;
 
-        Charms.KuroyoruMode = false;   // ana menüye dönünce Kuroyoru kapanır
+        Charms.KuronamiMode = false;   // ana menüye dönünce Kuronami kapanır
+        Charms.EasyMode = false;       // Kolay mod da kapanır
         Charms.ClearStacks();
 
         yield return ScreenFade.Instance.FadeTo(1f, 0.5f);
@@ -85,6 +86,11 @@ public class GameFlow : MonoBehaviour
     private IEnumerator Restart()
     {
         restarting = true;
+
+        // R: oyun yeniden başlar, Kuronami / Kolay Mod'dan çıkılır (yıldızlar yine görünür).
+        Charms.KuronamiMode = false;
+        Charms.EasyMode = false;
+        Charms.ClearStacks();
 
         yield return ScreenFade.Instance.FadeTo(1f, 0.35f);
 
@@ -184,7 +190,7 @@ public class MainMenu : MonoBehaviour
     private static Row[] MainRows => new[]
     {
         new Row { label = "BAŞLA", kanji = "開始", kind = 0 },
-        new Row { label = "KUROYORU", kanji = "黒夜", kind = 0 },
+        new Row { label = "KURONAMI", kanji = "黒波", kind = 0 },
         new Row { label = "AYARLAR", kanji = "設定", kind = 0 },
         new Row { label = "ÇIKIŞ", kanji = "終了", kind = 0 },
     };
@@ -746,15 +752,16 @@ public class MainMenu : MonoBehaviour
         switch (i)
         {
             case 0:
-                startKuroyoru = false;
-                Charms.KuroyoruMode = false;
+                startKuronami = false;
+                Charms.EasyMode = false;
+                Charms.KuronamiMode = false;
                 Charms.ClearStacks();
                 StartCoroutine(StartGame());
                 break;
 
             case 1:
-                // KUROYORU: sonsuz mod + tek vuruşta ölüm + 20 öldürmede +%2 charm seçimi.
-                startKuroyoru = true;
+                // KURONAMI: sonsuz mod + tek vuruşta ölüm + 20 öldürmede +%2 charm seçimi.
+                startKuronami = true;
                 StartCoroutine(StartGame());
                 break;
 
@@ -773,7 +780,7 @@ public class MainMenu : MonoBehaviour
         }
     }
 
-    private bool startKuroyoru;
+    private bool startKuronami;
 
     private void Resume()
     {
@@ -1503,11 +1510,11 @@ public class MainMenu : MonoBehaviour
 
         Active = false;
 
-        if (startKuroyoru)
+        if (startKuronami)
         {
             EnemyArena arena = FindFirstObjectByType<EnemyArena>();
-            if (arena != null) arena.BeginKuroyoru();
-            else Debug.LogWarning("KUROYORU: sahnede EnemyArena yok, mod başlatılamadı.");
+            if (arena != null) arena.BeginKuronami();
+            else Debug.LogWarning("KURONAMI: sahnede EnemyArena yok, mod başlatılamadı.");
         }
 
         yield return ScreenFade.Instance.FadeTo(0f, 1.4f);

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // Vurulunca uygulanan slow-mo profili.
 // Ağır başlar, zamanla normal hıza döner:
@@ -261,8 +261,8 @@ public class PlayerDamageReceiver : MonoBehaviour, IDamageable
                 damage = Mathf.Max(1, Mathf.CeilToInt(health.MaxHealth * hitPct));
         }
 
-        // KUROYORU: aldığımız her hasar öldürür.
-        if (Charms.KuroyoruMode && damage > 0)
+        // KURONAMI: aldığımız her hasar öldürür.
+        if (Charms.KuronamiMode && damage > 0)
             damage = Mathf.Max(damage, health.CurrentHealth);
 
         int healthBefore = health.CurrentHealth;
