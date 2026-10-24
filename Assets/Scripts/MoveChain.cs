@@ -49,5 +49,27 @@ public static class MoveChain
         return Scale[depth];
     }
 
+    // ---- MESAFE BÜTÇESİ: dash + saldırı atılması art arda gelince toplam kayma sınırlı kalır. ----
+    // Bütçe zamanla dolar; tek bir dash tam güçte kalır, spamda mesafe bütçenin elverdiği kadar olur.
+    public static float Budget = 18f;     // tam doluyken harcanabilecek toplam mesafe (birim)
+    public static float Regen = 11f;      // saniyede dolan mesafe (birim/sn)
+    private static float budgetNow = 18f;
+    private static float budgetTime = -99f;
+
+    /// <summary>İstenen kayma mesafesini ister; bütçenin izin verdiğini (en az minGrant) döndürür ve bütçeden düşer.</summary>
+    public static float Spend(float want, float minGrant)
+    {
+        if (!Enabled || want <= 0f)
+            return want;
+
+        float now = Time.unscaledTime;
+        budgetNow = Mathf.Min(Budget, budgetNow + Mathf.Max(0f, now - budgetTime) * Regen);
+        budgetTime = now;
+
+        float granted = Mathf.Min(want, Mathf.Max(minGrant, budgetNow));
+        budgetNow = Mathf.Max(0f, budgetNow - granted);
+        return granted;
+    }
+
     public static int Depth { get { return depth; } }
 }

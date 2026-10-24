@@ -37471,6 +37471,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2243877206713795939, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
+      propertyPath: kuroyoruStartGrace
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2243877206713795939, guid: 5e4811657464aec42aa08723a22c6da2, type: 3}
       propertyPath: kuroyoruKillsPerPick
       value: 5
       objectReference: {fileID: 0}

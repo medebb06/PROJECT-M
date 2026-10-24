@@ -93,7 +93,12 @@ public class DashState : IPlayerState
         dir = player.GetDashDirection();
 
         speed = player.dashDistance * DistanceScale / (player.dashTime * DurationScale);
-        speed *= MoveChain.Begin(player.dashTime * DurationScale);   // zincirde art arda hareket: mesafe azalır
+        float chainScale = MoveChain.Begin(player.dashTime * DurationScale);   // zincirde art arda hareket: mesafe azalır
+        float planned = player.dashDistance * DistanceScale * chainScale;
+        // (Dash düşman konumundan bağımsızdır: önde düşman olsa da tam mesafe gider.)
+        float granted = MoveChain.Spend(planned, 3f);   // dash+saldırı spamında toplam mesafe bütçesi
+        if (granted < planned) chainScale *= granted / planned;
+        speed *= chainScale;
 
         // collision layer save
         originalLayer = player.gameObject.layer;
@@ -140,8 +145,31 @@ public class DashState : IPlayerState
         SpawnGhost();
     }
 
+    // Dash düşmanın ÖNÜNDE durur: bu mesafeye kadar yaklaşır (kılıç menzili), arkasına geçmez.
+    public static float MagnetGap = 1.5f;
+    // Düşman zaten bu kadar yakınsa (durulacak mesafe < MinMagnet) dash kısalmaz: içinden geçip arkaya çıkılabilir.
+    public static float MinMagnet = 0.5f;
+
+    private float ApproachLimit(float planned)
+    {
+        float limit = planned;
+        Vector3 pp = player.transform.position;
+        for (int i = 0; i < EnemyBase.All.Count; i++)
+        {
+            EnemyBase e = EnemyBase.All[i];
+            if (e == null || e.IsDead) continue;
+            float dx = (e.transform.position.x - pp.x) * (dir >= 0f ? 1f : -1f);
+            if (dx <= 0f || Mathf.Abs(e.transform.position.y - pp.y) > 3f) continue;
+            float stop = dx - MagnetGap;
+            if (stop < MinMagnet) continue;
+            if (stop < limit) limit = stop;
+        }
+        return limit;
+    }
+
     public void Exit()
     {
+        ExecutionSlide.LastDashEnd = Time.unscaledTime;
         player.isDashing = false;
         player.canControl = true;
         player.isInvincible = false;

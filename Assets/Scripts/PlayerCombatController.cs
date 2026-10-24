@@ -616,7 +616,7 @@ public class PlayerCombatController : MonoBehaviour
             enemyLayer,
             comboStep,
             OnAttackEnd,
-            attackMoveDistance * lunge,
+            MoveChain.Spend(attackMoveDistance * lunge, 0.25f),
             attackMoveSpeed,
             attackMoveCurve,
             attackDuration,

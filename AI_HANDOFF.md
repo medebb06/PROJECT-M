@@ -674,3 +674,24 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Degisen dosyalar: Scripts/Kuroyoru.cs (yeni, KuroyoruPicker), Scripts/Charms.cs, Scripts/MainMenu.cs, Scripts/Enemies/EnemyArena.cs, Scripts/PlayerDamageReceiver.cs. Yedekler: Assets/_BackupKuroyoru~/ (PlayerDamageReceiver yedegi GodMode satirlarindan ONCEKI eski kopya; guncel dosyada GodMode var).
 - Charms.Enabled hala false (TAB menusu kapali); charm etkileri Kuroyoru yiginlariyla calisir. CharmManager artik her zaman olusur.
 - Test: derleme temiz; play modunda menu->KUROYORU akisi, secim ekrani, yigilma (FIRTINA x2 = 1.04, ZEHIR x1), tek vuruşta olum dogrulandi. Ses/his ve gercek tus basimi, zehir/patlama/kan etkilerinin oyunda gorunumu test EDILMEDI.
+
+
+## Dash: dusmanin onunde dur + zincir sikilastirma
+- DashState: dash yonunde, dikey fark <=3 olan en yakin dusman varsa dash, dusmanin DashState.MagnetGap (1.5) onunde biter (arkasina gecmez). Dusman zaten cok yakinsa (durulacak mesafe < MinMagnet 0.5, yani ~2 birimden yakin) dash kisalmaz: icinden gecip arkaya cikmak hala mumkun.
+- MoveChain: ChainWindow 0.35 -> 0.6, Scale {1,.88,.75,.65} -> {1,.7,.55,.45}. Dash-saldiri-dash spaminda mesafe daha hizli kisalir.
+- Degisen: Scripts/DashState.cs, Scripts/MoveChain.cs. Yedek: Assets/_BackupDashMagnet~/.
+- Test: derleme temiz; 4 birim onde dusmanla dash hizi/mesafesi hesabi dogrulandi (2.54 birim = 4.04-1.5). Gercek tus basimiyla spam ve his test EDILMEDI.
+
+
+## Hareket mesafe BUTCESI (dash + saldiri spami)
+- MoveChain.Spend(want, minGrant): toplam kayma butcesi. Budget 18 birim, Regen 11 birim/sn. Dash (min 3 birim) ve saldiri lunge'u (PlayerCombatController, min 0.25) ayni butceden harcar. Tek dash tam guc (11.6), spamda butce bittikce mesafe kisalir, durunca dolar.
+- MoveChain ChainWindow/Scale eski degerlerine donduruldu (0.35 / 1,.88,.75,.65). Dusman onunde durma (DashState.MagnetGap 1.5) duruyor.
+- Degisen: MoveChain.cs, DashState.cs, PlayerCombatController.cs. Yedek: Assets/_BackupBudget~/.
+- Test: derleme temiz, Spend aritmetigi dogrulandi (ayni anda 5 dash: 11.6, 6.4, 3, 3, 3). Gercek tus spami ve his test EDILMEDI.
+
+- DUZELTME: dusman onunde durma (DashState.ApproachLimit) dash'ten KALDIRILDI, dash dusman konumundan bagimsiz (eskisi gibi). Butce (MoveChain.Spend) duruyor.
+
+## Dash sonrasi infaz kaymasi bastirma
+- Sorun: dash ile dusmanin icinden gecip donup vurunca tekrar arkasina firlama (buyuk ihtimalle ExecutionSlide, tam sebep canli dogrulanmadi).
+- ExecutionSlide.Play: dash sirasinda ya da dash bitiminden sonra ExecutionSlide.DashSuppress (0.8 sn) icinde kayma baslamaz. DashState.Exit LastDashEnd'i yazar.
+- Degisen: ExecutionSlide.cs, DashState.cs. Yedek: Assets/_BackupExecSuppress~/. Test: sadece derleme.

@@ -14,6 +14,9 @@ public class ExecutionSlide : MonoBehaviour
     public static float Duration = 0.65f;      // kayma süresi (sn, gerçek zaman) — uzun, süzülerek
     public static float PastEdge = 4.5f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
     public static float GhostGap = 0.05f;
+    // Dash bitince bu kadar sn içinde infaz kayması başlamaz (dash ile geçtiğin düşmana dönüp vurunca tekrar arkasına fırlama).
+    public static float DashSuppress = 0.8f;
+    public static float LastDashEnd = -99f;
     public static float HoldTime = 0.12f;   // kayma bittikten sonra da hedef alinamaz / hasar almaz kalir
 
     private PlayerController pl;
@@ -33,6 +36,9 @@ public class ExecutionSlide : MonoBehaviour
         if (enemy != null) GameplayLightFlash.Burst((Vector2)enemy.position + Vector2.up * 1.6f, new Color(1f, 0.93f, 0.8f), 3.4f, 12f, 0.45f);
 
         if (!Enabled || Active || player == null || enemy == null || player.rb == null)
+            return;
+
+        if (player.isDashing || Time.unscaledTime - LastDashEnd < DashSuppress)
             return;
 
         dir = dir >= 0f ? 1f : -1f;
