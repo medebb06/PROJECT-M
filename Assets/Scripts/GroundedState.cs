@@ -82,6 +82,10 @@ public class GroundedState : IPlayerState
         // FALL
         // =====================================================
 
+        // EĞİM: eğimli zemindeyse kaymaya geç (daire zemin kontrolü eğimde kaçırabilir, bu yüzden düşmeden önce bakılır).
+        if (SlopeSlide.TryEnter(player, sm))
+            return;
+
         if (!player.IsGrounded())
         {
             sm.ChangeState(

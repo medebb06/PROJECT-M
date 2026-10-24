@@ -177,6 +177,9 @@ public class PlayerMovement : MonoBehaviour
     {
         TickParryBurst();
 
+        if (player != null && player.slideCarryTimer > 0f)
+            player.slideCarryTimer = Mathf.Max(0f, player.slideCarryTimer - Time.deltaTime);
+
         jumpBufferCounter =
             Mathf.Max(
                 0f,
@@ -437,6 +440,10 @@ public class PlayerMovement : MonoBehaviour
             if (moving && vx * targetSpeed < 0f)
                 accelerationRate *= airTurnMultiplier;
 
+            // KAYMA MOMENTUMU: kayarken zıplayınca / kopunca yatay hız hemen sönmesin.
+            if (player.slideCarryTimer > 0f && vx * targetSpeed >= 0f && Mathf.Abs(vx) > Mathf.Abs(targetSpeed))
+                accelerationRate *= player.Slide != null ? player.Slide.airCarryDecelMul : 1f;
+
             // control = airControl -> tam; (duvar zıplaması 0..airControl arası geçiş yapar)
             accelerationRate *= Mathf.Clamp01(control / Mathf.Max(0.01f, airControl));
         }
@@ -572,6 +579,10 @@ public class PlayerMovement : MonoBehaviour
                 groundCheckRadius,
                 groundMask
             );
+
+        // Eğimde kayarken (mıknatıs) zemin her zaman "temas var" sayılır; daire kontrolü eğimde kaçırabilir.
+        if (SlideState.Active)
+            groundedNow = true;
 
         // =====================================================
         // LAND

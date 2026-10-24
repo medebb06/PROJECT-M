@@ -341,6 +341,19 @@ public class DashState : IPlayerState
             fall = -AirFallSpeed * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(AirFallStart, 1f, p));
         vel.y = fall;
 
+        // EĞİMDE DASH: yüzeyi izler (yamaçtan havaya fırlamaz / yamaca gömülmez); yatay hız aynı kalır.
+        RaycastHit2D slopeHit;
+        if (SlopeSlide.Probe(player, 0.3f, out slopeHit))
+        {
+            float slopeAngle = Vector2.Angle(slopeHit.normal, Vector2.up);
+            if (slopeAngle >= 5f && slopeAngle <= 75f)
+            {
+                Vector2 tg = new Vector2(slopeHit.normal.y, -slopeHit.normal.x);
+                if (tg.x * vel.x < 0f) tg = -tg;   // dash yönüne bakan teğet
+                if (Mathf.Abs(tg.x) > 0.2f) vel = tg * (vel.x / tg.x);
+            }
+        }
+
         player.SetVelocity(vel);
     }
 

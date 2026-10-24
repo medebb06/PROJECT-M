@@ -166,6 +166,8 @@ public class PlayerController : MonoBehaviour
     public float moveInput;
     public bool jumpHeld;
     public bool isGrounded;
+    // Kayma (eğim) bırakılınca yatay hızın korunduğu kalan süre (PlayerMovement hava hareketi okur).
+    [HideInInspector] public float slideCarryTimer;
     public float facingDir = 1f;
     [HideInInspector] public float facingLockTimer;   // >0 iken HandleFacing yonu degistirmez (duvar ziplamasi)
 
@@ -190,6 +192,9 @@ public class PlayerController : MonoBehaviour
     private PlayerCombatController combat;
 
     public PlayerMovement Movement => movement;
+
+    /// <summary>Eğimde kayma ayarları (yoksa otomatik eklenir).</summary>
+    public SlopeSlide Slide { get; private set; }
 
     public float MoveSpeed => movement != null
         ? movement.moveSpeed
@@ -278,6 +283,11 @@ public class PlayerController : MonoBehaviour
             movement = gameObject.AddComponent<PlayerMovement>();
 
         movement.Initialize(this);
+
+        Slide = GetComponent<SlopeSlide>();
+
+        if (Slide == null)
+            Slide = gameObject.AddComponent<SlopeSlide>();
 
         inputHandler = GetComponent<PlayerInputHandler>();
 
@@ -587,6 +597,7 @@ public class PlayerController : MonoBehaviour
             return;
 
         if (!isGrounded ||
+            SlideState.Active ||
             !canControl ||
             isDashing ||
             inputLocked ||
