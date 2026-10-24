@@ -749,3 +749,17 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Dash tamponu en az kalan bekleme + 0.1 sn (PlayerInputHandler): bekleme tamponu asarsa tus yutulmaz.
 - Hasar/olumde tampon: PlayerHurtState zaten CancelAttack ile temizliyor; degisiklik gerekmedi.
 - Degisen: PlayerCombatController.cs, PlayerMovement.cs, PlayerInputHandler.cs, DashState.cs. Yedek: Assets/_BackupFlow~/. Test: derleme + play'de yon (basis yonu -1 -> facing -1). Gercek tusla test EDILMEDI.
+
+
+## Infaz kaymasi tekrar acildi
+- Scripts/ExecutionSlide.cs: Enabled=true. DashSuppress (dash bitiminden 0.8sn) korundu; dash slide'i keser; MoveChain butcesi ortak. Yedek: Assets/_BackupExecOn~ (Enabled=false hali).
+- Denetim: isInvincible sizintisi yok (DashState Exit false yaziyor), derleme temiz. Gercek tus testi YAPILMADI (kullanici denemeli), ses test edilmedi.
+
+
+## Dash yon bekleme penceresi
+- PlayerInputHandler: Shift'e yon tusu olmadan basilirsa DashDirWindow=0.07sn (unscaled) yon beklenir; yon gelirse dash hemen o yone. PlayerController.dashDirWait; TryDashInterrupt ve PlayerHurtState dash iptali de bekler. Yon tusu basista varsa gecikme yok. Dash ortasinda yon degismez (onceden kapali).
+- Yedek: Assets/_BackupDashDirWait~. Gercek tus testi yapilmadi.
+
+
+## Infaz kaymasi kisaltildi
+- ExecutionSlide: PastEdge 4.5->2.5, Duration 0.65->0.5 (savrulma/uzak firlama azaldi). Saldiri miknatisi (magnetRange 3.2, max 2.6, kilic ucunda durur) oldugu gibi birakildi. Yedek: Assets/_BackupSlideShort~. Gercek tus testi yok.

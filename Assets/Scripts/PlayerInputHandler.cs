@@ -19,6 +19,9 @@ public class PlayerInputHandler : MonoBehaviour
         defense = controller.GetComponent<PlayerDefenseController>();
     }
 
+    /// <summary>Shift'e yön tuşu olmadan basılınca yön girişi için beklenen süre (sn, gerçek zaman).</summary>
+    public static float DashDirWindow = 0.07f;
+
     public void ReadInput()
     {
         // =====================================================
@@ -46,19 +49,31 @@ public class PlayerInputHandler : MonoBehaviour
             // Basış anındaki yön tuşu (yoksa sıfır: dash başlarken canlı tuşa / baktığın yöne bakar).
             float pressAxis = MobileInput.GetAxisRaw("Horizontal");
             player.dashPressDir = Mathf.Abs(pressAxis) > 0.1f ? Mathf.Sign(pressAxis) : 0f;
+
+            // Yön tuşu yoksa çok kısa bekle: shift'ten hemen sonra basılan yön (dash + sağ) dash'in yönü olsun.
+            player.dashDirWait = player.dashPressDir == 0f ? DashDirWindow : 0f;
         }
         else if (player.dashBufferTimer > 0f)
         {
             // Tampon sürerken yön tuşuna sonradan basıldıysa (sola + dash neredeyse aynı anda) en son yönü al.
             float axisNow = MobileInput.GetAxisRaw("Horizontal");
             if (Mathf.Abs(axisNow) > 0.1f)
+            {
                 player.dashPressDir = Mathf.Sign(axisNow);
+                player.dashDirWait = 0f;
+            }
+
+            if (player.dashDirWait > 0f)
+                player.dashDirWait -= Time.unscaledDeltaTime;
 
             // Gerçek zaman: hit-stop tamponu eritmesin.
             player.dashBufferTimer -= Time.unscaledDeltaTime;
 
             if (player.dashBufferTimer <= 0f)
+            {
                 player.dashPressDir = 0f;
+                player.dashDirWait = 0f;
+            }
         }
 
         // Dash bekleme süresi kilitliyken de akar.
@@ -104,6 +119,7 @@ public class PlayerInputHandler : MonoBehaviour
 
         player.dashPressed =
             player.dashBufferTimer > 0f &&
+            player.dashDirWait <= 0f &&
             !(LockDashWhileParrying && defense != null && defense.IsParrying);
     }
 }

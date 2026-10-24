@@ -172,6 +172,7 @@ public class PlayerHurtState : IPlayerState
             timer > 0f &&
             timer <= lockDuration * (1f - player.hurtDashCancelAfter) &&
             player.dashBufferTimer > 0f &&
+            player.dashDirWait <= 0f &&
             player.dashCooldownTimer <= 0f &&
             (player.GetComponent<Health>() == null || !player.GetComponent<Health>().IsDead)
         )

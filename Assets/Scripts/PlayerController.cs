@@ -151,6 +151,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float dashPressDir;   // dash tuşuna BASILDIĞI andaki yön (tampondayken tuş bırakılsa da korunur)
     [HideInInspector] public bool dashPressed;
     [HideInInspector] public float dashBufferTimer;
+    [HideInInspector] public float dashDirWait;   // >0: dash tuşuna yön olmadan basıldı, yön girişi bekleniyor
     [HideInInspector] public bool jumpConsumed;
     [HideInInspector] public bool inputLocked;
 
@@ -329,7 +330,7 @@ public class PlayerController : MonoBehaviour
     // (odak / kın / yetenek atılımı), kontrol kilidi... Normal durumlar dash'i kendi state'lerinde zaten işler.
     private void TryDashInterrupt()
     {
-        if (isDashing || dashBufferTimer <= 0f || dashCooldownTimer > 0f)
+        if (isDashing || dashBufferTimer <= 0f || dashCooldownTimer > 0f || dashDirWait > 0f)
             return;
 
         if (Time.timeScale <= 0.01f || MainMenu.Active)
@@ -715,6 +716,7 @@ public class PlayerController : MonoBehaviour
         jumpHeld = false;
         dashPressed = false;
         dashBufferTimer = 0f;
+        dashDirWait = 0f;
 
         // Posture kırıldığı anda mevcut
         // block / parry state'ini kapat.

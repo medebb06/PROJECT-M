@@ -10,9 +10,9 @@ public class ExecutionSlide : MonoBehaviour
     public static bool Active;
     public static int SlideCount;
 
-    public static bool Enabled = false;   // GEÇİCİ KAPALI (hareket öncelik sorunları çözülene kadar). Açmak için true yap.
-    public static float Duration = 0.65f;      // kayma süresi (sn, gerçek zaman) — uzun, süzülerek
-    public static float PastEdge = 4.5f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
+    public static bool Enabled = true;
+    public static float Duration = 0.5f;      // kayma süresi (sn, gerçek zaman) — uzun, süzülerek
+    public static float PastEdge = 2.5f;       // düşman gövdesinin ARKA KENARININ bu kadar ötesinde durur (birim)
     public static float GhostGap = 0.05f;
     // Dash bitince bu kadar sn içinde infaz kayması başlamaz (dash ile geçtiğin düşmana dönüp vurunca tekrar arkasına fırlama).
     public static float DashSuppress = 0.8f;
