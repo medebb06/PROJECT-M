@@ -180,7 +180,7 @@ public class PlayerMovement : MonoBehaviour
         jumpBufferCounter =
             Mathf.Max(
                 0f,
-                jumpBufferCounter - Time.deltaTime
+                jumpBufferCounter - Time.unscaledDeltaTime
             );
 
         wallJumpBufferCounter =

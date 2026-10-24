@@ -240,7 +240,7 @@ public class PlayerCombatController : MonoBehaviour
 
     void Update()
     {
-        bufferTimer -= Time.deltaTime;
+        bufferTimer -= Time.unscaledDeltaTime;   // gerçek zaman: hit-stop tamponu dondurmasın (dash/parry ile aynı)
         comboTimer -= Time.deltaTime;
 
         // =====================================================
@@ -250,7 +250,20 @@ public class PlayerCombatController : MonoBehaviour
         // Saldırı tuşu savunmadayken de tampona yazılır (eskiden siliniyordu:
         // parry'den hemen sonra basılan saldırı kayboluyordu).
         if (MobileInput.GetMouseButtonDown(0))
+        {
             LastAttackPressTime = Time.time;
+
+            // Basış anındaki yön (yoksa 0: saldırı başlarken canlı tuşa bakılır).
+            float pressAxis = MobileInput.GetAxisRaw("Horizontal");
+            attackPressDir = Mathf.Abs(pressAxis) > 0.1f ? Mathf.Sign(pressAxis) : 0f;
+        }
+        else if (bufferTimer > 0f)
+        {
+            // Tampon sürerken yön tuşuna sonradan basıldıysa en son yönü al.
+            float axisNow = MobileInput.GetAxisRaw("Horizontal");
+            if (Mathf.Abs(axisNow) > 0.1f)
+                attackPressDir = Mathf.Sign(axisNow);
+        }
 
         if (MobileInput.GetMouseButtonDown(0))
             bufferTimer = Mathf.Max(
@@ -429,14 +442,27 @@ public class PlayerCombatController : MonoBehaviour
 
     // Yeni vuruş başlarken basılı yön tuşuna dön (kombo ortasında arkaya
     // dönebilmek için; saldırı sırasında yön kilitli olduğundan).
+    private float attackPressDir;   // saldırı tuşuna basıldığı andaki yön
+
     private void FaceInputDirection()
     {
-        if (Mathf.Abs(player.moveInput) < 0.1f)
+        // Öncelik: basış anındaki yön, sonra canlı tuş, sonra moveInput.
+        // (moveInput kontrol kilitliyken sıfırlanır; dash'ten hemen sonra eski yöne vurmasın.)
+        float dirNow = attackPressDir;
+        attackPressDir = 0f;
+
+        if (Mathf.Abs(dirNow) < 0.1f)
+        {
+            float live = MobileInput.GetAxisRaw("Horizontal");
+            dirNow = Mathf.Abs(live) > 0.1f ? live : player.moveInput;
+        }
+
+        if (Mathf.Abs(dirNow) < 0.1f)
         {
             return;
         }
 
-        player.facingDir = Mathf.Sign(player.moveInput);
+        player.facingDir = Mathf.Sign(dirNow);
 
         if (player.playerSprite != null)
             player.playerSprite.flipX = player.facingDir < 0f;

@@ -741,3 +741,11 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 - Sorun: dash yonu DashState.Enter'da (dash gercekten basladiginda) canli tustan okunuyordu; dash tamponda bekleyip (bekleme/kilit) gec baslarsa tus birakilmis olabiliyor ve eski yone gidiyordu (hizlanma/yavaslama ile ilgisi yok, tus ham okunuyor).
 - Cozum: PlayerInputHandler dash tusuna basildiginda yonu PlayerController.dashPressDir'e yazar (tampon surerken yeni yon tusu varsa guncellenir, tampon bitince sifirlanir); GetDashDirection onu onceler; DashState.Enter kullanip sifirlar.
 - Degisen: PlayerController.cs, PlayerInputHandler.cs, DashState.cs. Yedek: Assets/_BackupDashDir~/. Test: play'de dashPressDir=-1 iken facing sagdayken dash sola gitti. Gercek tusla test EDILMEDI.
+
+## Akicilik duzeltmeleri (tampon / yon / zaman tabani)
+- Saldiri yonu: PlayerCombatController.attackPressDir = saldiri tusuna basildigi andaki yon (tampon surerken yeni yon tusu guncellenir); FaceInputDirection once onu, sonra canli tusu, sonra moveInput'u kullanir (moveInput kilitliyken 0'dir; dash sonrasi eski yone vurmasin).
+- Tampon zaman tabani: saldiri tamponu (bufferTimer) ve ziplama tamponu (jumpBufferCounter) artik unscaled (hit-stop dondurmaz); dash/parry zaten oyleydi.
+- Dash sonrasi saldiri kilidi 1 kare gecikmesiz (DashState.UnlockAttack).
+- Dash tamponu en az kalan bekleme + 0.1 sn (PlayerInputHandler): bekleme tamponu asarsa tus yutulmaz.
+- Hasar/olumde tampon: PlayerHurtState zaten CancelAttack ile temizliyor; degisiklik gerekmedi.
+- Degisen: PlayerCombatController.cs, PlayerMovement.cs, PlayerInputHandler.cs, DashState.cs. Yedek: Assets/_BackupFlow~/. Test: derleme + play'de yon (basis yonu -1 -> facing -1). Gercek tusla test EDILMEDI.

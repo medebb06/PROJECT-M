@@ -40,7 +40,8 @@ public class PlayerInputHandler : MonoBehaviour
 
         if (MobileInput.GetKeyDown(KeyCode.LeftShift))
         {
-            player.dashBufferTimer = Mathf.Max(player.dashBufferTime, player.minInputBuffer);
+            // Tampon en az kalan bekleme + pay kadar sürsün: bekleme tamponu aşarsa dash tuşu yutulmasın.
+            player.dashBufferTimer = Mathf.Max(player.dashBufferTime, player.minInputBuffer, player.dashCooldownTimer + 0.1f);
 
             // Basış anındaki yön tuşu (yoksa sıfır: dash başlarken canlı tuşa / baktığın yöne bakar).
             float pressAxis = MobileInput.GetAxisRaw("Horizontal");

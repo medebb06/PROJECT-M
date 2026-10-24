@@ -231,9 +231,9 @@ public class DashState : IPlayerState
 
     IEnumerator UnlockAttack()
     {
-        yield return null;
-
+        // Dash biter bitmez saldırı serbest (eskiden 1 kare bekliyordu).
         player.isAttackLocked = false;
+        yield break;
     }
 
     // Dash'in ilk bu kadarında ters yön tuşuna basılırsa dash anında o yöne döner (yön değiştirme tepkisi).
