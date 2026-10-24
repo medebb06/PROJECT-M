@@ -697,7 +697,7 @@ private void SpawnFocusFx(float scaleMul, Color color)
         }
 
         // Girdi tamponu: kilitliyken / başka eylem sürerken basılan Q/E kaybolmasın.
-        if (MobileInput.GetKeyDown(key))
+        if (MobileInput.GetKeyDown(key) && !BlacksmithShop.BlocksKey)
             bufferedKin = Time.unscaledTime;
 
         if (HasAbility && MobileInput.GetKeyDown(specialKey))

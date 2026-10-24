@@ -84,7 +84,7 @@ MonoBehaviour:
     active: 0.15
     recovery: 1.3
     cooldown: 1
-    damage: 2
+    damage: 4
     unblockable: 0
     hitReach: 7.6209993
     hitHeight: 4.8
@@ -161,7 +161,7 @@ MonoBehaviour:
     active: 0.15
     recovery: 1.2
     cooldown: 1
-    damage: 2
+    damage: 4
     unblockable: 0
     hitReach: 7.6209993
     hitHeight: 4.8
@@ -238,7 +238,7 @@ MonoBehaviour:
     active: 0.25
     recovery: 1.2
     cooldown: 3
-    damage: 2
+    damage: 4
     unblockable: 1
     hitReach: 8.620999
     hitHeight: 4.2000003
@@ -315,7 +315,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.1
     cooldown: 5
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 16.621
     hitHeight: 0.48000002
@@ -392,7 +392,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.1
     cooldown: 1
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 16.621
     hitHeight: 0.48000002
@@ -469,7 +469,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.9
     cooldown: 1
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 16.621
     hitHeight: 0.48000002
@@ -546,7 +546,7 @@ MonoBehaviour:
     active: 0.2
     recovery: 1.5
     cooldown: 6
-    damage: 2
+    damage: 4
     unblockable: 1
     hitReach: 7.6209993
     hitHeight: 3.6000001
@@ -623,7 +623,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 1
     cooldown: 6
-    damage: 3
+    damage: 6
     unblockable: 0
     hitReach: 5.1210003
     hitHeight: 8.400001

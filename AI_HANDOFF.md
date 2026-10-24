@@ -763,3 +763,51 @@ Bilgi (degistirilmedi): wave yuksekligi 9 ve ziplama tepe ~4.2 -> dalga/ziplama 
 
 ## Infaz kaymasi kisaltildi
 - ExecutionSlide: PastEdge 4.5->2.5, Duration 0.65->0.5 (savrulma/uzak firlama azaldi). Saldiri miknatisi (magnetRange 3.2, max 2.6, kilic ucunda durur) oldugu gibi birakildi. Yedek: Assets/_BackupSlideShort~. Gercek tus testi yok.
+
+
+## Dusman hasari x2, oyuncu posture 100->50
+- Assets/Enemies/Defs/*.asset: tum saldirilarin damage degeri x2 (0 olanlar ayni). Yedek: Assets/_BackupEnemyBuff~ (orijinal .asset dosyalari).
+- Sahnedeki PlayerPosture.maxPosture 100->50 (prefab override, MySceneLAST.unity kaydedildi; sahne yedegi alinmadi, eski deger 100). Oynanis testi yapilmadi.
+
+
+## Demirci charm magazasi
+- Yeni: Scripts/BlacksmithShop.cs (IMGUI mağaza, Demirci'ye yaklasinca [E] istemi, E ile acilir; 1-4 satin al, E/Esc/Tab kapat). Charms.cs: Shop* API (PlayerPrefs pm_charmlvl_i / pm_charmslot_i), seviye basina +%1, 2 slot, sadece takili charm etkili, Kuroyoru modunda etkisiz, Stacks/Power/Active gercek ruh ile (Souls) calisir. Fiyat: taban {Zehir12,Patlama16,Kan14,Firtina18} * (1+0.4*seviye), max seviye 50.
+- PlayerAbility: E KIN, demirci yakininda/magazadayken BlacksmithShop.BlocksKey ile engellenir. MainMenu: magaza acikken R/Esc pause-restart engelli.
+- Yedek: Assets/_BackupBlacksmith~. Gorsel oyun icinde kontrol edildi (ekran goruntusu), gercek E tusu / fare tiklamasi denenmedi, ses denenmedi.
+
+
+## Zehir duzeltmesi
+- Charms.cs CharmManager.OnHit: zehir artik posture (onBalance) vuruslarinda da uygulanir (eskiden 'result.onBalance' ise tamamen return ediyordu, zirhli dusmanlara zehir hic islemiyordu). Kan (can calma) hala sadece can vuruslarinda. Yedek: Assets/_BackupPoisonFix~. Gercek dusmanla test EDILMEDI (arena baslatilmadi).
+
+
+## Demirci SIFIRLA
+- BlacksmithShop: SIFIRLA butonu (2 tikla onay), Charms.ShopReset(): tum seviyeler+slotlar sifirlanir, ruh iadesi YOK. Yedek: Assets/_BackupShopReset~. Mantik test edildi, UI tiklamasi gercek fareyle denenmedi.
+
+
+## Demirci magazasi KAPALI
+- Charms.ShopEnabled=false (ana salter): magaza acilmaz/[E] istemi yok, alinan charm etkisiz (ShopEquippedLevel=0), her oyun basinda (BlacksmithShop.Boot) charm seviyeleri+slotlar sifirlanir (ruh iadesi yok). Geri acmak icin ShopEnabled=true. Yedek: Assets/_BackupShopOff~. Play modda dogrulandi (seed edilen seviye 5 -> 0).
+
+
+## Dusman donus gecikmesi
+- Enemies/EnemyUnit.cs: public float turnDelay=0.45 (sn). FaceTarget: oyuncu arkaya gecince dusman bu sure beklemeden donmez (Idle'da gecikme yok). Yedek: Assets/_BackupTurnDelay~. Derleme temiz, oyunda dusmanla test EDILMEDI.
+
+
+## Donus gecikmesi bug duzeltmesi
+- EnemyUnit.FaceTarget(bool instant): saldiri baslarken (StartAttack) ve arkaya isinlanma sonrasi yon ANINDA duzelir; ilk FaceTarget (spawn) de anlik (facedInit). Gecikme (turnDelay 0.45) sadece yururken/kovalarken arkaya gecisinde. Yedek: Assets/_BackupTurnDelay~. Derleme temiz, oyunda test EDILMEDI.
+
+
+## Chiburi (tenka) animasyon ayari
+- Editor/TenkaClipRebuild.cs: stanceSpread 90->135, impactSpreadExtra 35->55 (ayaklar daha acik); eyeSquint/eyeImpactClose (eyeA/eyeB kemikleri hareket boyunca gozleri kisar, vurusta neredeyse kapatir); savurma windUp (-150..)->(-170/-175, G90), impact (-76,45)->(-62,40), overshoot (-58,38) = daha yukaridan baslayip daha genis yay.
+- Sprites/RonniSkin/Resources/RonniIdleKatana/ronni_rig.json: idle_yuz parcasinin bones listesine eyeA, eyeB eklendi (goz kisma icin).
+- ronni_anims.json 'tenka' klibi TenkaClipRebuild.Run(true) ile yeniden uretildi (kaynak: _backup_before_tenka_slash). Yedek: Assets/_BackupChiburi~ (eski anims/rig/script). Edit modunda TenkaPreview ile kare kare gorsel kontrol edildi; oyunda canli tusla oynatilmadi. Assets/Screenshots/tenka_prev_a..d.png gecici onizleme dosyalari silinebilir.
+
+
+## Chiburi v2
+- TenkaClipRebuild: eyeSquint=1 (gozler tam kapanir, sy=0), spinLean=16 (donus sirasinda one egilme, savurma hazirliginda yumusakca cozulur), relStart=62/relEnd=71 (savurma bitince dogrulur; kina sokarken dik, bacaklar toplanir). Savurma acisi ayni (windUp -170/-175, impact -62).
+- ronni_rig.json: eyeA2/eyeB2 yardimci kemikleri eklendi; idle_yuz bones=[head,eyeA,eyeA2,eyeB,eyeB2] (iskelet zinciri: segment baslangic kemigi agirlik alir, ilk denemede tek goz tam kapanmiyordu). Klip yeniden uretildi. Yedekler: Assets/_BackupChiburi~. Edit modu TenkaPreview ile gorsel kontrol; canli oyunda test yok. Gecici tenka_prev_a..g.png dosyalari silinebilir.
+
+
+## Chiburi v3 (goz + omuz)
+- Gozler artik KEMIK/zincir degil, ayri sprite: idle_yuz.png sadece kaslar; idle_gozA.png / idle_gozB.png yeni goz parcalari (ronni_rig.json'a part eklendi, bones=[eyeA]/[eyeB], eyeA/eyeB kemikleri goz merkezine tasindi, eyeA2/eyeB2 kaldirildi). Klip: eyeA/eyeB sy olcegi (eyeClosedScale=0.93 -> ince cizgi) cokme boyunca kapanir, dogrulunca acilir; kaslar etkilenmez.
+- Omuz: TenkaClipRebuild leftShoulderClamp 25->14, leftSleeveFollow=0.4 (sol kolluk omuz donusunun %40'ini izler) -> sivri omuz kosesi azaldi.
+- Yedekler: Assets/_BackupChiburi~ (orijinal ronni_rig.json/anims/yuz.png, script v2/v3). Edit modu TenkaPreview ile gorsel kontrol; canli oyunda test yok. tenka_prev_*.png gecici dosyalar silinebilir.

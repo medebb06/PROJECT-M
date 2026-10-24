@@ -23,15 +23,127 @@ public static class Charms
     public const float PerPick = 0.02f;
     private static readonly int[] kStacks = new int[4];
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { KuroyoruMode = false; for (int i = 0; i < 4; i++) { kStacks[i] = 0; on[i] = false; } }
+    // =====================================================================
+    // DEMİRCİ (kalıcı): ruhla charm seviyesi al (+%1 / seviye, yığılır), 2 slota tak.
+    // Sadece TAKILI charm'ın seviyesi etki eder. Kuroyoru modunda devre dışı.
+    // =====================================================================
+    // ANA ŞALTER: false iken demirci mağazası açılmaz, satın alınan charm etkisizdir ve her oyun başında seviyeler sıfırlanır.
+    public static readonly bool ShopEnabled = false;
+    public const float ShopPerLevel = 0.01f;
+    public const int ShopSlots = 2;
+    public const int ShopMaxLevel = 50;
+    private static readonly int[] shopBase = { 12, 16, 14, 18 };   // Zehir, Patlama, Kan, Fırtına: 1. seviye ruh bedeli
+    public const float ShopPriceGrowth = 0.4f;                      // her seviyede temel bedelin +%40'ı
+    private static readonly int[] shopLvl = new int[4];
+    private static readonly int[] shopSlot = { -1, -1 };
+    private static bool shopLoaded;
 
-    public static int Stacks(CharmType t) { return kStacks[(int)t]; }
-    public static float Power(CharmType t) { return kStacks[(int)t] * PerPick; }
+    private static void LoadShop()
+    {
+        if (shopLoaded) return;
+        shopLoaded = true;
+        try
+        {
+            for (int i = 0; i < 4; i++) shopLvl[i] = Mathf.Clamp(PlayerPrefs.GetInt("pm_charmlvl_" + i, 0), 0, ShopMaxLevel);
+            for (int i = 0; i < ShopSlots; i++)
+            {
+                int v = PlayerPrefs.GetInt("pm_charmslot_" + i, -1);
+                shopSlot[i] = (v >= 0 && v < 4) ? v : -1;
+            }
+            if (shopSlot[0] >= 0 && shopSlot[0] == shopSlot[1]) shopSlot[1] = -1;
+        }
+        catch { }
+    }
+
+    private static void SaveShop()
+    {
+        try
+        {
+            for (int i = 0; i < 4; i++) PlayerPrefs.SetInt("pm_charmlvl_" + i, shopLvl[i]);
+            for (int i = 0; i < ShopSlots; i++) PlayerPrefs.SetInt("pm_charmslot_" + i, shopSlot[i]);
+            PlayerPrefs.Save();
+        }
+        catch { }
+    }
+
+    public static int ShopLevel(CharmType t) { LoadShop(); return shopLvl[(int)t]; }
+    public static int ShopSlotOf(CharmType t) { LoadShop(); for (int i = 0; i < ShopSlots; i++) if (shopSlot[i] == (int)t) return i; return -1; }
+    public static bool ShopEquipped(CharmType t) { return ShopSlotOf(t) >= 0; }
+    public static int ShopSlotCharm(int slot) { LoadShop(); return (slot >= 0 && slot < ShopSlots) ? shopSlot[slot] : -1; }
+    public static bool ShopMaxed(CharmType t) { return ShopLevel(t) >= ShopMaxLevel; }
+
+    public static int ShopEquippedLevel(CharmType t)
+    {
+        if (KuroyoruMode || !ShopEnabled) return 0;
+        return ShopEquipped(t) ? shopLvl[(int)t] : 0;
+    }
+
+    public static int ShopPrice(CharmType t)
+    {
+        LoadShop();
+        float p = shopBase[(int)t] * (1f + ShopPriceGrowth * shopLvl[(int)t]);
+        return Mathf.Max(1, Mathf.RoundToInt(p));
+    }
+
+    /// <summary>Bir seviye satın al (ruh harcar). Yetmiyorsa / üst sınırdaysa false.</summary>
+    public static bool ShopBuy(CharmType t)
+    {
+        LoadShop();
+        if (shopLvl[(int)t] >= ShopMaxLevel) return false;
+        if (!Souls.TrySpend(ShopPrice(t))) return false;
+        shopLvl[(int)t]++;
+        SaveShop();
+        return true;
+    }
+
+    /// <summary>Takılıysa çıkarır; değilse boş slota takar. Slot yoksa false.</summary>
+    public static bool ShopToggleEquip(CharmType t)
+    {
+        LoadShop();
+        int cur = ShopSlotOf(t);
+        if (cur >= 0) { shopSlot[cur] = -1; SaveShop(); return true; }
+        for (int i = 0; i < ShopSlots; i++)
+            if (shopSlot[i] < 0) { shopSlot[i] = (int)t; SaveShop(); return true; }
+        return false;
+    }
+
+    /// <summary>Tüm seviyeleri ve slotları sıfırlar. Ruh İADESİ YOK.</summary>
+    public static void ShopReset()
+    {
+        LoadShop();
+        for (int i = 0; i < 4; i++) shopLvl[i] = 0;
+        for (int i = 0; i < ShopSlots; i++) shopSlot[i] = -1;
+        SaveShop();
+    }
+
+    public static void ShopUnequipSlot(int slot)
+    {
+        LoadShop();
+        if (slot < 0 || slot >= ShopSlots) return;
+        shopSlot[slot] = -1;
+        SaveShop();
+    }
+
+    public static string ShopDesc(CharmType t)
+    {
+        switch (t)
+        {
+            case CharmType.Poison: return "Vurduğun düşman zehirlenir: saniyede max canının %{0}'i";
+            case CharmType.Explosion: return "Ölen düşman patlar: max canının %{0}'i kadar çevreye hasar";
+            case CharmType.Blood: return "Verdiğin can hasarının %{0}'i kadar can kazanırsın";
+            default: return "Saldırı hızı +%{0}";
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { KuroyoruMode = false; shopLoaded = false; for (int i = 0; i < 4; i++) { kStacks[i] = 0; on[i] = false; } }
+
+    public static int Stacks(CharmType t) { return kStacks[(int)t] + ShopEquippedLevel(t); }
+    public static float Power(CharmType t) { return kStacks[(int)t] * PerPick + ShopEquippedLevel(t) * ShopPerLevel; }
     public static void AddStack(CharmType t) { kStacks[(int)t]++; }
     public static void ClearStacks() { for (int i = 0; i < 4; i++) kStacks[i] = 0; }
 
-    public static bool Active(CharmType t) { return (Enabled && on[(int)t]) || kStacks[(int)t] > 0; }
+    public static bool Active(CharmType t) { return (Enabled && on[(int)t]) || Stacks(t) > 0; }
     public static void Set(CharmType t, bool v) { on[(int)t] = v; }
     public static void Toggle(CharmType t) { on[(int)t] = !on[(int)t]; }
 
@@ -201,9 +313,10 @@ public class CharmManager : MonoBehaviour
 
     private void OnHit(EnemyBase enemy, DamageInfo info, HitResult result)
     {
-        if (enemy == null || !result.hit || result.onBalance) return;
+        // Zehir posture (denge) vuruşlarında da uygulanır: zırhlı düşmanlara çoğu vuruş dengeye gider.
+        if (enemy == null || !result.hit) return;
 
-        if (Charms.Active(CharmType.Blood) && result.amount > 0)
+        if (Charms.Active(CharmType.Blood) && !result.onBalance && result.amount > 0)
         {
             GameObject pl = GameObject.FindWithTag("Player");
             Health ph = pl != null ? pl.GetComponent<Health>() : null;
@@ -272,7 +385,7 @@ public class CharmManager : MonoBehaviour
             CharmType t = (CharmType)i;
             if (!Charms.Active(t)) continue;
             int ks = Charms.Stacks(t);
-            string nm = ks > 0 ? Charms.Name(t) + "  x" + ks + "  (+%" + Mathf.RoundToInt(ks * Charms.PerPick * 100f) + ")" : Charms.Name(t);
+            string nm = ks > 0 ? Charms.Name(t) + "  x" + ks + "  (+%" + Mathf.RoundToInt(Charms.Power(t) * 100f) + ")" : Charms.Name(t);
             GUI.Label(new Rect(14f, ly, 420f, 26f), nm, Style(22, Charms.Tint(t), TextAnchor.MiddleLeft));
             ly -= 26f;
         }

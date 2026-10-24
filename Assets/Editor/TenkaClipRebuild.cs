@@ -20,18 +20,24 @@ public static partial class TenkaClipRebuild
     // ===== Ayarlar (kaynak piksel / derece) =====
     public static int slashFrames = 24;                 // araya eklenen yeni kare sayısı
     public static float crouchDepth = 55f;              // kalça inişi
-    public static float stanceSpread = 90f;             // her ayağın dışa açılması
+    public static float stanceSpread = 135f;             // her ayağın dışa açılması
     public static float impactDepthExtra = 25f;         // vuruş anında ekstra çömelme
-    public static float impactSpreadExtra = 35f;
+    public static float impactSpreadExtra = 55f;
     public static float sayaDrop = 90f;                  // kına eğilirken kına (ve kılıç kolu) bu kadar aşağı iner: sol kol daha az bükülür
     public static float handSlide = 0.25f;              // kına tam eğikken el, kınanın dibine doğru bu oranda kayar (omuz bükülmesini azaltır)
     public static float leftHandHold = 1f;              // 0..1 sol elin kınaya yapışma gücü
     // Savurma pozları: (armR1.r, armR2.r, grip.r) derece
-    public static Vector3 windUp = new Vector3(-150f, -5f, 95f);   // kol + kılıç tek hat (G~95 = bıçak ön kolla aynı yönde)
+    public static Vector3 windUp = new Vector3(-170f, -5f, 90f);   // kol + kılıç tek hat (G~95 = bıçak ön kolla aynı yönde)
     public static Vector2 shoulderPull = new Vector2(70f, 0f);   // savurma boyunca sağ omuz/kol/kılıç gövdeye doğru (geri, +x) çekilir (px)
-    public static Vector3 windUp2 = new Vector3(-154f, -6f, 95f);
-    public static Vector3 impact = new Vector3(-76f, 0f, 45f);   // G küçük = bıçak koldan daha dikey (ucu yukarıda), batırma yok
-    public static Vector3 overshoot = new Vector3(-79f, 0f, 48f);
+    public static Vector3 windUp2 = new Vector3(-175f, -6f, 90f);
+    public static Vector3 impact = new Vector3(-62f, 0f, 40f);   // G küçük = bıçak koldan daha dikey (ucu yukarıda), batırma yok
+    public static Vector3 overshoot = new Vector3(-58f, 0f, 38f);
+    public static float eyeSquint = 1f;               // çömelme boyunca göz kısma (0 = yok, 1 = tamamen kapalı)
+    public static float eyeClosedScale = 0.93f;       // kapalı göz: 1 - bu kadar dikey ölçek kalır (ince çizgi)
+    public static float eyeImpactClose = 0f;        // vuruş anında ekstra kapanma
+    public static float leftShoulderClamp = 14f;       // sol (kına) kolunun omuz sapması üst sınırı (derece): büyükse omuz sivri çıkar
+    public static float leftSleeveFollow = 0.4f;       // sol kolluk omuz dönüşünün bu kadarını izler (azalınca omuz köşesi çıkmaz)
+    public static float spinLean = 16f;                 // dönüş (spin) sırasında öne eğilme (derece); savurmaya girerken geri yaslanmaya yumuşakça döner
     public static float cutPower = 1.7f;                // kesme ivmesi (büyük = daha geç hızlanır)
 
     const string AnimsPath = "Assets/Sprites/RonniSkin/Resources/RonniIdleKatana/ronni_anims.json";
@@ -238,6 +244,15 @@ public static partial class TenkaClipRebuild
             Arr("armR1")[1][i] = shoulderPull.x * env; Arr("armR1")[2][i] = shoulderPull.y * env;
         }
 
+        // ---- 3a) dönüş (spin) boyunca öne eğilme
+        for (int i = 1; i <= 36; i++)
+        {
+            float lean = spinLean * SS(i / 10f);
+            Arr("chest")[0][i] += lean;
+            Arr("belly")[0][i] += lean * 0.5f;
+            Arr("head")[0][i] -= lean * 0.4f;
+        }
+
         // ---- 3) gövde: geriye yaslanma -> vuruşta öne eğilme -> dinlenme
         for (int s = 1; s <= S; s++)
         {
@@ -248,13 +263,14 @@ public static partial class TenkaClipRebuild
             else if (s <= 15) add = Mathf.Lerp(-4f, 7f, Mathf.Pow((s - 8) / 7f, cutPower));
             else if (s <= 18) add = Mathf.Lerp(7f, 6.5f, (s - 15) / 3f);
             else add = Mathf.Lerp(6.5f, 0f, SS((s - 18) / (float)(S + 1 - 18)));
+            add += spinLean * (1f - SS(s / 6f));   // spin eğilmesi savurma hazırlığında yumuşakça çözülür
             Arr("chest")[0][i] += add;
             Arr("belly")[0][i] += add * 0.5f;
             Arr("head")[0][i] -= add * 0.4f;
         }
 
         // ---- 4) çömelme zarfı + bacaklar
-        int relStart = 74 + S - 11, relEnd = relStart + 14;
+        int relStart = 62, relEnd = 62 + 9;   // savurma bitince (ters tutuş başlarken) doğrulur; kına sokarken dik durur
         float[] eps = new float[NF], bump = new float[NF];
         for (int i = 0; i < NF; i++)
         {
@@ -266,6 +282,13 @@ public static partial class TenkaClipRebuild
             eps[i] = e;
             float bc = 36 + 16.5f;                                  // vuruş anı (s ~ 16.5)
             bump[i] = SS(1f - Mathf.Abs(i - bc) / 6f) * e;
+        }
+        // gözler: hareket boyunca kısılır, vuruşta neredeyse kapanır (idle_gozA / idle_gozB ayrı göz parçaları, eyeA/eyeB kemiklerine bağlı; kaşlar idle_yuz'da kalır)
+        for (int i = 0; i < NF; i++)
+        {
+            float closeAmt = Mathf.Clamp01(eyeSquint * eps[i] + eyeImpactClose * bump[i]);
+            float sc = 1f - eyeClosedScale * closeAmt;   // gözler kapanır: göz sprite'ı (kaşlardan bağımsız) yukarıdan-aşağıdan bastırılır
+            Arr("eyeA")[4][i] = sc; Arr("eyeB")[4][i] = sc;
         }
         float maxScaleDev = 0f, maxRot = 0f;
         for (int i = 0; i < NF; i++)
@@ -368,11 +391,11 @@ public static partial class TenkaClipRebuild
                 IK2(new Vector2(P1.x, P1.y), new Vector2(T.x, T.y), e0, q0, rhoC, out R1, out R2);
                 float wHold = Mathf.Min(SS(i / 8f), SS((NF - 1 - i) / 10f));   // ilk/son karelerde idle ile birebir
                 float d1 = Wrap(R1 - R10) * leftHandHold * wHold, d2 = Wrap(R2 - R20) * leftHandHold * wHold;
-                d1 = Mathf.Clamp(d1, -25f, 25f);
+                d1 = Mathf.Clamp(d1, -leftShoulderClamp, leftShoulderClamp);
                 maxD1 = Mathf.Max(maxD1, Mathf.Abs(d1)); maxD2 = Mathf.Max(maxD2, Mathf.Abs(d2));
                 float nR1 = oldL1[i] + d1, nR2 = oldL2[i] + d2;
                 Arr("armL1")[0][i] = nR1; Arr("armL2")[0][i] = nR2;
-                float nS1 = oldS1[i] + d1;
+                float nS1 = oldS1[i] + d1 * leftSleeveFollow;
                 Arr("slL1")[0][i] = nS1; Arr("slL2")[0][i] = oldS2[i] + 0.35f * d2;
                 Vector2 pNew = SleeveOffset(cw, rhoC, "armL1", "armL2", "slL1", "slL2", nR1, nS1);
                 Vector2 pOld = SleeveOffset(cw, rhoC, "armL1", "armL2", "slL1", "slL2", oldL1[i], oldS1[i]);

@@ -606,11 +606,34 @@ public class EnemyUnit : EnemyBase
         return CloseRange();
     }
 
-    private void FaceTarget()
+    [Tooltip("Oyuncu düşmanın ARKASINA geçince düşmanın dönmesi için gereken süre (sn). Dönüş gecikir; arkadan vuruş / kaçış şansı verir.")]
+    public float turnDelay = 0.45f;
+    private float turnWantedSince = -1f;
+
+    private bool facedInit;
+
+    // instant: saldırı başlarken / ışınlanınca yön HEMEN düzelir (sola bakıp sağa vurma olmasın). Gecikme sadece yürürken arkaya geçişte.
+    private void FaceTarget(bool instant = false)
     {
         float dx = DxToTarget;
-        if (Mathf.Abs(dx) < 0.05f) return;
-        SetFacing(Mathf.Sign(dx));
+        if (Mathf.Abs(dx) < 0.05f) { turnWantedSince = -1f; return; }
+        float want = Mathf.Sign(dx);
+
+        if (instant || !facedInit || want == facing || turnDelay <= 0f || state == UnitState.Idle)
+        {
+            facedInit = true;
+            turnWantedSince = -1f;
+            SetFacing(want);
+            return;
+        }
+
+        // Oyuncu arkada: dönmeden önce kısa bir an bekle.
+        if (turnWantedSince < 0f) turnWantedSince = Time.time;
+        if (Time.time - turnWantedSince >= turnDelay)
+        {
+            turnWantedSince = -1f;
+            SetFacing(want);
+        }
     }
 
     private void SetFacing(float f)
@@ -657,7 +680,7 @@ public class EnemyUnit : EnemyBase
         current = a;
         if (!a.followUpOnly) hopOriginX = transform.position.x;
         if (forced == a) forced = null;
-        FaceTarget();
+        FaceTarget(true);
         burstCount++;
         if (a.endsBurst && burstTarget > 0) burstCount = burstTarget;
         cueFired = committedFired = hitDone = false;
@@ -706,7 +729,7 @@ public class EnemyUnit : EnemyBase
         transform.position = p;
         rb.position = new Vector2(x, rb.position.y);
         rb.linearVelocity = Vector2.zero;
-        FaceTarget();
+        FaceTarget(true);
         SetBodyVisible(true);
         PlayTintFlash(Color.white, 0.2f);
         SquashPunch(new Vector2(1.25f, 0.8f), 0.15f, 1f);

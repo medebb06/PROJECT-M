@@ -84,7 +84,7 @@ MonoBehaviour:
     active: 0.2
     recovery: 0.7
     cooldown: 0.5
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 7.32
     hitHeight: 8.400001
@@ -161,7 +161,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.6
     cooldown: 0.5
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 7.32
     hitHeight: 8.400001
@@ -238,7 +238,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.8
     cooldown: 0.5
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 7.32
     hitHeight: 8.400001
@@ -315,7 +315,7 @@ MonoBehaviour:
     active: 0.12
     recovery: 0.8
     cooldown: 0.5
-    damage: 1
+    damage: 2
     unblockable: 0
     hitReach: 7.32
     hitHeight: 8.400001

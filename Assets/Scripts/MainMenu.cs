@@ -42,7 +42,7 @@ public class GameFlow : MonoBehaviour
 
     private void Update()
     {
-        if (restarting || MainMenu.Active)
+        if (restarting || MainMenu.Active || BlacksmithShop.IsOpen)
             return;
 
         if (MobileInput.GetKeyDown(KeyCode.R))
