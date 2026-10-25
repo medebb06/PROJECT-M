@@ -71569,6 +71569,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: swordTipEnd
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
+      propertyPath: swordTipStart
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5800331259066331669, guid: 365000d44344c1f41a9775fc6d69d963, type: 3}
       propertyPath: attack1HitTime
       value: 0.2
       objectReference: {fileID: 0}

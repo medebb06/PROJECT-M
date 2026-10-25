@@ -138,13 +138,13 @@ namespace RonniSkin
             glowSR.sortingLayerID = frameSR.sortingLayerID; glowSR.sortingOrder = frameSR.sortingOrder + 1;
             glowSR.color = new Color(1f, 1f, 1f, alpha);
         }
-        // [saldırı, kare] = (x, y) ölçek. Kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur.
+        // [saldırı, kare] = (x, y) ölçek. Attack2-4: kare 1 hazırlık (bas), 2 vuruş (vuruş yönünde uza), 3 devam, 4 otur. Attack1 6 karelidir (bkz. satır).
         static readonly Vector2[,] SquashTable =
         {
-            { new Vector2(1.10f, 0.90f), new Vector2(1.20f, 0.87f), new Vector2(0.93f, 1.10f), Vector2.one },   // Attack1: yatay kesim -> yukarı yay
-            { new Vector2(1.08f, 0.92f), new Vector2(1.22f, 0.88f), new Vector2(0.93f, 1.10f), Vector2.one },   // Attack2: öne uzanma -> yukarı yay
-            { new Vector2(1.12f, 0.89f), new Vector2(1.26f, 0.86f), new Vector2(1.10f, 0.94f), Vector2.one },   // Attack3: gerilme -> saplama
-            { new Vector2(1.09f, 0.91f), new Vector2(0.95f, 1.08f), new Vector2(1.24f, 0.87f), Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
+            { new Vector2(0.97f, 1.05f), new Vector2(1.10f, 0.90f), new Vector2(1.05f, 0.95f), new Vector2(1.24f, 0.86f), new Vector2(0.93f, 1.10f), new Vector2(1.03f, 0.97f) },   // Attack1 (6 kare): 1 yükselen kılıç (hafif uza), 2 çömel (bas), 3 geçiş, 4 vuruş (yatay uza), 5 smear yayı (yukarı uza), 6 otur
+            { new Vector2(1.08f, 0.92f), new Vector2(1.22f, 0.88f), new Vector2(0.93f, 1.10f), Vector2.one, Vector2.one, Vector2.one },   // Attack2: öne uzanma -> yukarı yay
+            { new Vector2(1.12f, 0.89f), new Vector2(1.26f, 0.86f), new Vector2(1.10f, 0.94f), Vector2.one, Vector2.one, Vector2.one },   // Attack3: gerilme -> saplama
+            { new Vector2(1.09f, 0.91f), new Vector2(0.95f, 1.08f), new Vector2(1.24f, 0.87f), Vector2.one, Vector2.one, Vector2.one },   // Attack4: sıçrama -> dönüş -> inişte büyük kesim
         };
         // ---- Kare kare hareket akışı: sprite kareleri arasında karakter yaslanır, öne atılır, geri oturur (sprite'lara dokunmadan) ----
         [Header("Kare kare hareket akışı (lunge / yaslanma)")]
@@ -155,7 +155,7 @@ namespace RonniSkin
         // [saldırı, kare] = (ileri kayma, yukarı kayma: sprite boyunun oranı; öne eğilme: derece). Kare 1 hazırlık (geri yaslan), 2 vuruş (öne at), 3 devam, 4 otur.
         static readonly Vector3[,] FlowTable =
         {
-            { new Vector3(-0.07f, 0f, -6.5f), new Vector3(0.135f, 0f, 9f),    new Vector3(0.09f, 0f, 4.5f),   new Vector3(0.018f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack1
+            { new Vector3(-0.04f, 0f, -5f), new Vector3(-0.04f, 0f, -3f), new Vector3(0.05f, 0f, 3f), new Vector3(0.10f, 0f, 4f), new Vector3(0.06f, 0f, 3f), new Vector3(0.015f, 0f, 0f), Vector3.zero },   // Attack1 (6 kare): yükselen kılıç (geri), çömel (geri yaslan), geçiş, vuruş (öne at), smear yayı, otur
             { new Vector3(-0.07f, 0f, -6f), new Vector3(0.15f, 0f, 9f),  new Vector3(0.095f, 0f, 4.5f),    new Vector3(0.018f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack2
             { new Vector3(-0.09f, 0f, -7f), new Vector3(0.19f, 0f, 10.5f),   new Vector3(0.13f, 0f, 6f),   new Vector3(0.022f, 0f, 0f), Vector3.zero, Vector3.zero, Vector3.zero },   // Attack3 (saplama)
             { new Vector3(-0.07f, 0f, -4.5f), new Vector3(0.07f, 0.06f, 0f), new Vector3(0.12f, 0.04f, 6f), new Vector3(0.185f, 0f, 11f), new Vector3(0.06f, 0f, 3f), Vector3.zero, Vector3.zero },   // Attack4 (sıçrama -> büyük kesim)
